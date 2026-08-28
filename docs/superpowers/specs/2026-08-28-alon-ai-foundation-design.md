@@ -1,7 +1,7 @@
 # Alon AI Repository Foundation Design
 
 **Date:** 2026-08-28  
-**Status:** Awaiting written-spec review  
+**Status:** Approved
 **Product name:** Alon AI  
 **GitHub repository:** `alonbenpro/alon-ai` (private)
 
