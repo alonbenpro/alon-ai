@@ -26,16 +26,213 @@ In scope: immutable typed output, schema version, producer identity, input snaps
 
 Create `domain/artifacts.py`, `agents/contracts.py`, `application/artifacts.py`, `persistence/models/artifacts.py`, repositories, and M2 migration tables:
 
-| Table | Required columns/keys | Required constraints/indexes | Owner/event |
-| --- | --- | --- | --- |
-| `agent_runs` | `agent_run_id uuid PK`, `experiment_id FK`, `workflow_run_id FK`, `agent_type`, `agent_version`, `prompt_version`, `model_provider`, `model_name`, `model_version`, `toolset_version`, `input_snapshot_hash`, `state`, `abstained bool`, usage/cost fields, `correlation_id`, timestamps | unique `(workflow_run_id,agent_type,input_snapshot_hash,agent_version)`; state `PENDING/RUNNING/SUCCEEDED/FAILED`; nonnegative usage/cost; terminal timestamp checks; indexes workflow/type/state | agent runtime reports; no aggregate transition |
-| `artifacts` | `artifact_id uuid PK`, `experiment_id FK`, `artifact_type`, `schema_version int`, `artifact_version int`, `status text`, `agent_run_id FK null`, `content_json jsonb`, `content_hash`, `confidence numeric null`, `abstention_reason text null`, `supersedes_artifact_id FK self null`, timestamps | `status in ('PRODUCED','VALIDATED','REJECTED','ACCEPTED','SUPERSEDED')`; unique `(experiment_id,artifact_type,artifact_version)` and `(artifact_type,schema_version,content_hash)`; confidence 0..1; immutable content; indexes experiment/type/status | artifact service; exact artifact catalog events |
-| `evidence_items` | `evidence_item_id uuid PK`, `experiment_id FK`, `evidence_type`, `source_uri`, `source_provider`, `retrieved_at`, `published_at null`, `content_hash`, `capture_ref`, `mime_type`, `language`, `license_basis`, `retention_class`, `redaction_state`, timestamps | unique `(source_provider,source_uri,content_hash)`; supported scheme/type/size; immutable capture metadata; indexes experiment/retrieved/source | evidence ingest service |
-| `artifact_evidence_links` | `artifact_id FK`, `evidence_item_id FK`, `claim_pointer text`, `relationship text`, `source_excerpt_hash text null`, composite PK | relationship `SUPPORTS/CONTRADICTS/CONTEXT`; unique claim/source edge; no raw excerpt required | artifact validator |
-| `artifact_validations` | `artifact_validation_id uuid PK`, `artifact_id FK`, `validator_version`, `schema_valid bool`, `provenance_valid bool`, `reason_codes text[]`, `facts_hash`, `created_at` | unique `(artifact_id,validator_version,facts_hash)`; immutable | validator emits validated/rejected event and transition |
-| `artifact_acceptances` | `artifact_acceptance_id uuid PK`, `artifact_id FK`, `acceptance_mode`, `operator_id FK null`, `gate_version`, `scope_hash`, `command_idempotency_key`, `created_at` | one acceptance per artifact/scope; mode `OPERATOR/DETERMINISTIC_GATE`; operator required for operator mode; unique command key | artifact service emits `artifact.accepted.v1` |
-| `evaluation_cases` | `evaluation_case_id uuid PK`, `suite_name`, `suite_version`, `case_key`, `input_ref`, `expected_schema_version`, `rubric_json`, `sensitivity_class`, `created_at` | unique `(suite_name,suite_version,case_key)`; immutable/versioned | evaluation owner |
-| `evaluation_results` | `evaluation_result_id uuid PK`, `evaluation_case_id FK`, `agent_run_id FK`, `evaluator_version`, `scores_json`, `passed bool`, `reason_codes text[]`, `created_at` | unique `(evaluation_case_id,agent_run_id,evaluator_version)`; immutable; index pass/suite via case | evaluation service |
+### Exact DDL-equivalent artifact and evidence contract
+
+```sql
+CREATE TABLE agent_runs (
+    agent_run_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    workflow_run_id uuid NOT NULL,
+    agent_type text NOT NULL,
+    agent_version text NOT NULL,
+    prompt_version text NOT NULL,
+    model_provider text NOT NULL,
+    model_name text NOT NULL,
+    model_version text NOT NULL,
+    toolset_version text NOT NULL,
+    input_snapshot_hash char(64) NOT NULL,
+    state text NOT NULL DEFAULT 'PENDING',
+    abstained boolean NOT NULL DEFAULT false,
+    abstention_reason text NULL,
+    input_tokens integer NOT NULL DEFAULT 0,
+    output_tokens integer NOT NULL DEFAULT 0,
+    tool_call_count integer NOT NULL DEFAULT 0,
+    cost_minor bigint NOT NULL DEFAULT 0,
+    currency char(3) NOT NULL,
+    error_code text NULL,
+    correlation_id uuid NOT NULL,
+    started_at timestamptz NULL,
+    finished_at timestamptz NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_agent_runs PRIMARY KEY (agent_run_id),
+    CONSTRAINT fk_agent_runs_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_agent_runs_workflow FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs (workflow_run_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_agent_runs_input UNIQUE (workflow_run_id, agent_type, input_snapshot_hash, agent_version),
+    CONSTRAINT ck_agent_runs_hash CHECK (input_snapshot_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_agent_runs_state CHECK (state IN ('PENDING','RUNNING','SUCCEEDED','FAILED')),
+    CONSTRAINT ck_agent_runs_usage CHECK (input_tokens >= 0 AND output_tokens >= 0 AND tool_call_count >= 0 AND cost_minor >= 0 AND currency ~ '^[A-Z]{3}$'),
+    CONSTRAINT ck_agent_runs_abstention CHECK ((NOT abstained AND abstention_reason IS NULL) OR (abstained AND abstention_reason IS NOT NULL)),
+    CONSTRAINT ck_agent_runs_terminal CHECK ((state IN ('SUCCEEDED','FAILED')) = (finished_at IS NOT NULL)),
+    CONSTRAINT ck_agent_runs_error CHECK (state <> 'FAILED' OR error_code IS NOT NULL)
+);
+CREATE INDEX ix_agent_runs_workflow_created ON agent_runs (workflow_run_id, created_at DESC);
+CREATE INDEX ix_agent_runs_type_state ON agent_runs (agent_type, state, created_at DESC);
+CREATE INDEX ix_agent_runs_correlation ON agent_runs (correlation_id);
+
+CREATE TABLE artifacts (
+    artifact_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    artifact_type text NOT NULL,
+    schema_version integer NOT NULL,
+    artifact_version integer NOT NULL,
+    status text NOT NULL DEFAULT 'PRODUCED',
+    agent_run_id uuid NULL,
+    content_json jsonb NOT NULL,
+    content_hash char(64) NOT NULL,
+    confidence numeric(8,7) NULL,
+    abstention_reason text NULL,
+    supersedes_artifact_id uuid NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_artifacts PRIMARY KEY (artifact_id),
+    CONSTRAINT fk_artifacts_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_artifacts_agent_run FOREIGN KEY (agent_run_id) REFERENCES agent_runs (agent_run_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_artifacts_supersedes FOREIGN KEY (supersedes_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_artifacts_version UNIQUE (experiment_id, artifact_type, artifact_version),
+    CONSTRAINT uq_artifacts_content UNIQUE (artifact_type, schema_version, content_hash),
+    CONSTRAINT ck_artifacts_versions CHECK (schema_version > 0 AND artifact_version > 0),
+    CONSTRAINT ck_artifacts_status CHECK (status IN ('PRODUCED','VALIDATED','REJECTED','ACCEPTED','SUPERSEDED')),
+    CONSTRAINT ck_artifacts_content CHECK (jsonb_typeof(content_json) = 'object' AND content_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_artifacts_confidence CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1),
+    CONSTRAINT ck_artifacts_abstention CHECK (abstention_reason IS NULL OR confidence IS NULL)
+);
+CREATE INDEX ix_artifacts_experiment_type_status ON artifacts (experiment_id, artifact_type, status, artifact_version DESC);
+CREATE INDEX ix_artifacts_agent_run ON artifacts (agent_run_id) WHERE agent_run_id IS NOT NULL;
+
+CREATE TABLE evidence_items (
+    evidence_item_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    evidence_type text NOT NULL,
+    source_uri text NOT NULL,
+    source_provider text NOT NULL,
+    retrieved_at timestamptz NOT NULL,
+    published_at timestamptz NULL,
+    content_hash char(64) NOT NULL,
+    capture_ref text NOT NULL,
+    mime_type text NOT NULL,
+    language text NOT NULL,
+    license_basis text NOT NULL,
+    retention_class text NOT NULL DEFAULT 'SENSITIVE_SHORT',
+    redaction_state text NOT NULL DEFAULT 'RAW_RESTRICTED',
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_evidence_items PRIMARY KEY (evidence_item_id),
+    CONSTRAINT fk_evidence_items_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_evidence_items_capture UNIQUE (source_provider, source_uri, content_hash),
+    CONSTRAINT ck_evidence_items_hash CHECK (content_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_evidence_items_uri CHECK (source_uri ~ '^https://'),
+    CONSTRAINT ck_evidence_items_retention CHECK (retention_class = 'SENSITIVE_SHORT'),
+    CONSTRAINT ck_evidence_items_redaction CHECK (redaction_state IN ('RAW_RESTRICTED','REDACTED','PURGED'))
+);
+CREATE INDEX ix_evidence_items_experiment_retrieved ON evidence_items (experiment_id, retrieved_at DESC);
+CREATE INDEX ix_evidence_items_source ON evidence_items (source_provider, source_uri);
+
+CREATE TABLE artifact_evidence_links (
+    artifact_id uuid NOT NULL,
+    evidence_item_id uuid NOT NULL,
+    claim_pointer text NOT NULL,
+    relationship text NOT NULL,
+    source_excerpt_hash char(64) NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_artifact_evidence_links PRIMARY KEY (artifact_id, evidence_item_id, claim_pointer, relationship),
+    CONSTRAINT fk_artifact_evidence_links_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_artifact_evidence_links_evidence FOREIGN KEY (evidence_item_id) REFERENCES evidence_items (evidence_item_id) ON DELETE RESTRICT,
+    CONSTRAINT ck_artifact_evidence_links_relationship CHECK (relationship IN ('SUPPORTS','CONTRADICTS','CONTEXT')),
+    CONSTRAINT ck_artifact_evidence_links_pointer CHECK (claim_pointer LIKE '/%'),
+    CONSTRAINT ck_artifact_evidence_links_hash CHECK (source_excerpt_hash IS NULL OR source_excerpt_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_artifact_evidence_links_evidence ON artifact_evidence_links (evidence_item_id, artifact_id);
+
+CREATE TABLE artifact_validations (
+    artifact_validation_id uuid NOT NULL,
+    artifact_id uuid NOT NULL,
+    validator_version text NOT NULL,
+    schema_valid boolean NOT NULL,
+    provenance_valid boolean NOT NULL,
+    reason_codes text[] NOT NULL,
+    facts_hash char(64) NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_artifact_validations PRIMARY KEY (artifact_validation_id),
+    CONSTRAINT fk_artifact_validations_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_artifact_validations_inputs UNIQUE (artifact_id, validator_version, facts_hash),
+    CONSTRAINT ck_artifact_validations_reasons CHECK ((schema_valid AND provenance_valid AND cardinality(reason_codes) = 0) OR (NOT (schema_valid AND provenance_valid) AND cardinality(reason_codes) > 0)),
+    CONSTRAINT ck_artifact_validations_hash CHECK (facts_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_artifact_validations_artifact_created ON artifact_validations (artifact_id, created_at DESC);
+
+CREATE TABLE artifact_acceptances (
+    artifact_acceptance_id uuid NOT NULL,
+    artifact_id uuid NOT NULL,
+    acceptance_mode text NOT NULL,
+    operator_id uuid NULL,
+    gate_version text NOT NULL,
+    scope_hash char(64) NOT NULL,
+    command_idempotency_key text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_artifact_acceptances PRIMARY KEY (artifact_acceptance_id),
+    CONSTRAINT fk_artifact_acceptances_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_artifact_acceptances_operator FOREIGN KEY (operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_artifact_acceptances_scope UNIQUE (artifact_id, scope_hash),
+    CONSTRAINT uq_artifact_acceptances_command UNIQUE (command_idempotency_key),
+    CONSTRAINT ck_artifact_acceptances_mode CHECK (acceptance_mode IN ('OPERATOR','DETERMINISTIC_GATE')),
+    CONSTRAINT ck_artifact_acceptances_operator CHECK ((acceptance_mode = 'OPERATOR') = (operator_id IS NOT NULL)),
+    CONSTRAINT ck_artifact_acceptances_hash CHECK (scope_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_artifact_acceptances_created ON artifact_acceptances (created_at DESC);
+
+CREATE TABLE evaluation_cases (
+    evaluation_case_id uuid NOT NULL,
+    suite_name text NOT NULL,
+    suite_version text NOT NULL,
+    case_key text NOT NULL,
+    input_schema_version integer NOT NULL,
+    input_snapshot jsonb NOT NULL,
+    input_hash char(64) NOT NULL,
+    expected_schema_version integer NOT NULL,
+    expected_snapshot jsonb NOT NULL,
+    expected_hash char(64) NOT NULL,
+    rubric_schema_version integer NOT NULL,
+    rubric_json jsonb NOT NULL,
+    sensitivity_class text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_evaluation_cases PRIMARY KEY (evaluation_case_id),
+    CONSTRAINT uq_evaluation_cases_key UNIQUE (suite_name, suite_version, case_key),
+    CONSTRAINT ck_evaluation_cases_versions CHECK (input_schema_version > 0 AND expected_schema_version > 0 AND rubric_schema_version > 0),
+    CONSTRAINT ck_evaluation_cases_json CHECK (jsonb_typeof(input_snapshot) = 'object' AND jsonb_typeof(expected_snapshot) = 'object' AND jsonb_typeof(rubric_json) = 'object'),
+    CONSTRAINT ck_evaluation_cases_hashes CHECK (input_hash ~ '^[0-9a-f]{64}$' AND expected_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_evaluation_cases_sensitivity CHECK (sensitivity_class IN ('SYNTHETIC','REDACTED','RESTRICTED'))
+);
+CREATE INDEX ix_evaluation_cases_suite ON evaluation_cases (suite_name, suite_version, created_at DESC);
+
+CREATE TABLE evaluation_results (
+    evaluation_result_id uuid NOT NULL,
+    evaluation_case_id uuid NOT NULL,
+    agent_run_id uuid NOT NULL,
+    evaluator_version text NOT NULL,
+    scores_schema_version integer NOT NULL,
+    scores_json jsonb NOT NULL,
+    scores_hash char(64) NOT NULL,
+    passed boolean NOT NULL,
+    reason_codes text[] NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_evaluation_results PRIMARY KEY (evaluation_result_id),
+    CONSTRAINT fk_evaluation_results_case FOREIGN KEY (evaluation_case_id) REFERENCES evaluation_cases (evaluation_case_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_evaluation_results_agent_run FOREIGN KEY (agent_run_id) REFERENCES agent_runs (agent_run_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_evaluation_results_run UNIQUE (evaluation_case_id, agent_run_id, evaluator_version),
+    CONSTRAINT ck_evaluation_results_schema CHECK (scores_schema_version > 0 AND jsonb_typeof(scores_json) = 'object' AND scores_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_evaluation_results_reasons CHECK ((passed AND cardinality(reason_codes) = 0) OR (NOT passed AND cardinality(reason_codes) > 0))
+);
+CREATE INDEX ix_evaluation_results_agent_passed ON evaluation_results (agent_run_id, passed);
+```
+
+| Table | Exclusive write owner | Retention class / retention owner |
+| --- | --- | --- |
+| `agent_runs` | `AgentRunRecordingService` | `EVALUATION_VERSIONED` / `RetentionCommandService` |
+| `artifacts` | `ArtifactCommandService`; agents may request only the `PRODUCED` insert path | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `evidence_items` | `EvidenceIngestService` | `SENSITIVE_SHORT` / `RetentionCommandService` |
+| `artifact_evidence_links` | `ArtifactValidationService` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `artifact_validations` | `ArtifactValidationService` | `SAFETY_LONG` / `RetentionCommandService` |
+| `artifact_acceptances` | `ArtifactAcceptanceService` | `SAFETY_LONG` / `RetentionCommandService` |
+| `evaluation_cases` | `EvaluationSuiteCommandService` | `EVALUATION_VERSIONED` / `RetentionCommandService` |
+| `evaluation_results` | `EvaluationExecutionService` | `EVALUATION_VERSIONED` / `RetentionCommandService` |
 
 Artifact types use the product names from PRODUCT-01: `ExperimentBrief`, `IdeaCandidate`, `OfferHypothesis`, `MarketEvidence`, `LeadEvidence`, `QualificationAssessment`, `OutreachDraft`, `ReplyClassification`, `MetricSnapshot`, `EvidenceBundle`, and `ExperimentDecision` where appropriate. A business table remains authoritative when a corresponding artifact is accepted and materialized; the artifact is retained as provenance, not a competing aggregate.
 

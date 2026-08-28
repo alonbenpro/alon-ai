@@ -134,6 +134,20 @@ Canonical `CampaignState`: `DRAFT`, `READY`, `ACTIVE`, `PAUSED`, `COMPLETED`, `C
 
 Only `ACTIVE` can admit send intents, and global/experiment/approval/policy state must also permit them. Pause stops new admissions/dequeues; cancel permanently blocks unsent intents. `COMPLETED`, `CANCELLED`, and `FAILED` are terminal for that campaign version; recovery creates a revised campaign with a new ID/version.
 
+Deterministic `CampaignCommandService` owns every campaign transition and atomically appends the named specific event plus `campaign.state_changed.v1`. The complete transition table is:
+
+| From | Command / trigger | To | Guard | Specific event |
+| --- | --- | --- | --- | --- |
+| `DRAFT` | `ReadyCampaign` | `READY` | immutable campaign version, exact offer/policy version, at least one eligible member, and every draft/approval requirement is recorded | `campaign.ready.v1` |
+| `READY` | `ActivateCampaign` | `ACTIVE` | experiment is `READY_FOR_OUTREACH`; M1 and current authority gate pass; exact mailbox/campaign/approval scope is valid; suppression, budget, rate, compliance, provider, and send controls pass | `campaign.activated.v1` |
+| `ACTIVE` | `PauseCampaign` | `PAUSED` | authenticated operator or global/experiment stop; new admission and dequeue are closed before acknowledgement | `campaign.paused.v1` |
+| `PAUSED` | `ResumeCampaign` | `ACTIVE` | every activation guard is re-evaluated against current versions; no unresolved control incident | `campaign.resumed.v1` |
+| `ACTIVE` | sample/window close | `COMPLETED` | admission is closed; every message is terminal; every provider outcome is terminal or reconciled; no `AMBIGUOUS`/`RECONCILING` message remains | `campaign.completed.v1` |
+| `DRAFT`, `READY`, `ACTIVE`, or `PAUSED` | `CancelCampaign` | `CANCELLED` | admission/dequeue are closed; every unsent intent is cancelled; every possibly-started provider call is terminal or reconciled | `campaign.cancelled.v1` |
+| `DRAFT`, `READY`, `ACTIVE`, or `PAUSED` | unrecoverable campaign failure | `FAILED` | admission/dequeue are closed; every possibly-started provider call is terminal or reconciled; sanitized error and evidence reference exist | `campaign.failed.v1` |
+
+An active cancel request first closes admission/dequeue and drains/reconciles provider work; the campaign remains `ACTIVE` or moves to `PAUSED` until the `CANCELLED` guard is true. No workflow/runtime may report terminal campaign cancellation while a provider outcome is unknown.
+
 Canonical `MessageState`:
 
 `DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `SEND_INTENT_RECORDED`, `QUEUED`, `SENDING`, `AMBIGUOUS`, `RECONCILING`, `SENT`, `FAILED_RETRYABLE`, `FAILED_PERMANENT`, `SUPPRESSED`, `CANCELLED`.
@@ -203,8 +217,23 @@ Event type suffix `.v1` is part of the canonical name. Later incompatible payloa
 | `workflow.run_started.v1` | `workflow_run_id`, `workflow_type`, `workflow_version` | finite run starts |
 | `workflow.run_paused.v1` | `workflow_run_id`, `reason_code` | engine/application confirms pause |
 | `workflow.run_cancelled.v1` | `workflow_run_id`, `reason_code` | cancellation reaches terminal state |
-| `workflow.run_completed.v1` | `workflow_run_id`, `result_ref` | run succeeds |
+| `workflow.run_completed.v1` | `workflow_run_id`, `result_schema_version`, `result_hash` | run succeeds after the bounded result snapshot commits |
 | `workflow.run_failed.v1` | `workflow_run_id`, `error_code`, `retry_class` | run fails with sanitized taxonomy |
+
+### Campaigns
+
+Every campaign transition emits its specific event and `campaign.state_changed.v1` in the same aggregate transaction. All payloads include `campaign_id`, `campaign_version`, `from_state`, `to_state`, and `reason_code`; actor-driven events additionally include `operator_id`.
+
+| Event type | Required payload identifiers | Emitted when |
+| --- | --- | --- |
+| `campaign.ready.v1` | common campaign transition payload | `DRAFT -> READY` |
+| `campaign.activated.v1` | common payload, `operator_id` | `READY -> ACTIVE` |
+| `campaign.paused.v1` | common payload, `operator_id` | `ACTIVE -> PAUSED` |
+| `campaign.resumed.v1` | common payload, `operator_id` | `PAUSED -> ACTIVE` |
+| `campaign.completed.v1` | common campaign transition payload | `ACTIVE -> COMPLETED` |
+| `campaign.cancelled.v1` | common payload, `operator_id` | a cancellable state enters `CANCELLED` |
+| `campaign.failed.v1` | common payload, `error_code` | a nonterminal state enters `FAILED` |
+| `campaign.state_changed.v1` | common campaign transition payload | every valid campaign transition commits |
 
 ### Artifacts, evidence, and leads
 
@@ -226,22 +255,23 @@ Event type suffix `.v1` is part of the canonical name. Later incompatible payloa
 
 | Event type | Required payload identifiers | Emitted when |
 | --- | --- | --- |
-| `policy.evaluated.v1` | `policy_decision_id`, `policy_version`, `allowed`, `reason_codes`, `facts_hash` | deterministic evaluation recorded |
-| `approval.requested.v1` | `approval_id`, `scope_hash`, `expires_at` | review is required |
-| `approval.decided.v1` | `approval_id`, `decision`, `operator_id`, `reason_code` | operator approves/denies |
-| `approval.revoked.v1` | `approval_id`, `reason_code` | prior authority is withdrawn |
-| `send.intent_recorded.v1` | `send_intent_id`, `idempotency_key`, `message_id`, `scope_hash` | immutable intent commits |
-| `send.queued.v1` | `send_intent_id`, `queue_name`, `budget_reservation_id` | admission commits |
-| `send.attempt_started.v1` | `send_attempt_id`, `send_intent_id`, `rfc_message_id` | last policy recheck passes before provider call |
-| `send.outcome_ambiguous.v1` | `send_attempt_id`, `error_code` | acceptance cannot be known |
-| `send.reconciliation_started.v1` | `send_attempt_id`, `strategy_version` | Gmail Sent search begins |
-| `send.reconciled_as_sent.v1` | `send_attempt_id`, `gmail_message_id`, `gmail_thread_id` | exactly one conclusive match exists |
-| `send.failed.v1` | `send_attempt_id`, `retry_class`, `error_code` | conclusive failure recorded |
-| `send.retry_scheduled.v1` | `send_intent_id`, `previous_attempt_id`, `next_attempt_number`, `retry_at`, `retry_policy_version` | bounded retry eligibility commits and the intent returns to `QUEUED` |
-| `send.retry_exhausted.v1` | `send_intent_id`, `final_attempt_id`, `attempt_count`, `max_attempts`, `reason_code` | retry budget/deadline is exhausted or an operator aborts retry |
-| `send.suppressed.v1` | `send_intent_id`, `policy_decision_id`, `reason_codes` | last-mile gate denies |
+| `policy.evaluated.v1` | `policy_decision_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `policy_version`, `allowed`, `reason_codes`, `facts_hash` | deterministic send evaluation recorded |
+| `approval.requested.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `scope_hash`, `expires_at` | exact-version review is required |
+| `approval.decided.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `decision`, `operator_id`, `reason_code` | operator approves/denies exact authority |
+| `approval.revoked.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `reason_code` | prior exact authority is withdrawn |
+| `send.intent_recorded.v1` | `send_intent_id`, `mailbox_id`, `idempotency_key`, `campaign_id`, `campaign_version`, `message_id`, `scope_hash`, `policy_facts_hash` | immutable mailbox-bound intent commits |
+| `send.queued.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `queue_name`, `budget_reservation_id` | mailbox-bound admission commits |
+| `send.attempt_started.v1` | `send_attempt_id`, `send_intent_id`, `mailbox_id`, `rfc_message_id`, `policy_decision_id` | mailbox-bound last policy recheck passes before provider call |
+| `send.provider_accepted.v1` | `send_attempt_id`, `send_intent_id`, `mailbox_id`, `rfc_message_id`, `gmail_message_id`, `gmail_thread_id` | Gmail directly returns an accepted result and the captured provider result commits `SENDING -> SENT` |
+| `send.outcome_ambiguous.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `error_code` | acceptance cannot be known |
+| `send.reconciliation_started.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `strategy_version` | the authorized mailbox's Gmail Sent search begins |
+| `send.reconciled_as_sent.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `gmail_message_id`, `gmail_thread_id` | an ambiguous attempt is resolved as sent by exactly one conclusive Sent-folder match |
+| `send.failed.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `retry_class`, `error_code` | conclusive mailbox-bound failure recorded |
+| `send.retry_scheduled.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `previous_attempt_id`, `next_attempt_number`, `retry_at`, `retry_policy_version` | bounded retry eligibility commits and the same mailbox-bound intent returns to `QUEUED` |
+| `send.retry_exhausted.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `final_attempt_id`, `attempt_count`, `max_attempts`, `reason_code` | retry budget/deadline is exhausted or an operator aborts retry |
+| `send.suppressed.v1` | `send_intent_id`, `mailbox_id`, `policy_decision_id`, `reason_codes` | mailbox-bound last-mile gate denies |
 | `gmail.history_cursor_advanced.v1` | `mailbox_id`, `from_history_id`, `to_history_id` | observations and cursor commit together |
-| `reply.received.v1` | `reply_id`, `gmail_message_id`, `gmail_thread_id`, `received_at` | unique inbound message recorded |
+| `reply.received.v1` | `reply_id`, `mailbox_id`, `gmail_message_id`, `gmail_thread_id`, `received_at` | unique mailbox-bound inbound message recorded |
 | `reply.classified.v1` | `reply_id`, `artifact_id`, `classification` | accepted typed classification attaches |
 
 ### Controls, costs, and incidents
@@ -261,9 +291,10 @@ Operational logs may mirror safe identifiers, but a log line does not replace th
 
 - Aggregate updates use unique `(aggregate_type, aggregate_id, aggregate_version)` and optimistic concurrency.
 - Commands use unique `(command_scope, idempotency_key)` and persist the prior result for exact replay.
-- Send intents use unique `idempotency_key`; attempts are separate and bounded.
+- Send intents use unique `(mailbox_id, idempotency_key)` and `(mailbox_id, rfc_message_id)`; immutable mailbox binding is part of approval, policy facts/scope hashes, attempts, results, and reconciliation.
 - Provider observations deduplicate on mailbox plus provider message/history identity.
-- Outbox delivery is at least once; consumers deduplicate by `event_id` and record processing outcomes.
+- Internal outbox delivery is at least once, but each consumer's business writes and successful `outbox_deliveries` receipt commit in one PostgreSQL transaction. A crash rolls back both.
+- External side effects never claim generic effect-once delivery: they use immutable mailbox-bound intent, captured provider result or `AMBIGUOUS`, and reconciliation before retry.
 - Cross-aggregate global ordering is neither promised nor required. Consumers use aggregate version, correlation/causation, and provider sequence evidence.
 - Timestamps never decide whether a duplicate side effect is safe.
 

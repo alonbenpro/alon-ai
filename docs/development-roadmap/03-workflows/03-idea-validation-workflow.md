@@ -32,7 +32,7 @@ Exact product tables touched through application commands are `experiments`, `ex
 
 | Step | Reads | Application writes/constraints | Events/failure |
 | --- | --- | --- | --- |
-| freeze input/start | `experiments(RESEARCHING)`, active `experiment_briefs`, `metric_definitions`, `workflow_runs` | input hash/ref on run; command/event/audit/outbox bundle | existing WF-02 start events; stale version fails |
+| freeze input/start | `experiments(RESEARCHING)`, active `experiment_briefs`, `metric_definitions`, `workflow_runs` | canonical bounded JSONB `input_snapshot`, positive `input_schema_version`, and SHA-256 `input_hash` on run; command/event/audit/outbox bundle | existing WF-02 start events; schema/hash mismatch or stale version fails closed |
 | generate idea candidates | brief snapshot, budget | `agent_runs`; `artifacts(ArtifactStatus=PRODUCED,type=IdeaCandidate)`; cost/reservation | `artifact.produced.v1`; typed failure closes run |
 | validate/select idea | candidate artifact/evidence | `artifact_validations`, accepted artifact, materialized `ideas` version | validated/rejected/accepted events; deterministic/operator selection audit |
 | design offer | selected idea + brief + accepted evidence | agent run, `OfferHypothesis` artifact, validations/acceptance, `offer_hypotheses` | artifact events; invalid claim/provenance blocks |
@@ -44,7 +44,7 @@ Agents can create `PRODUCED` rows only. Deterministic validators verify typed sc
 
 ## Ordered implementation tasks
 
-- [ ] **Freeze M4 fixture/input contract —** Input: approved brief/metric versions and M3 promoted configs. Operation: compute snapshot hash and reject drift. Output: stable run input. Test evidence: `test_resume_rejects_changed_brief_without_new_run`. Failure behavior: fail run; operator revises/restarts explicitly.
+- [ ] **Freeze M4 fixture/input contract —** Input: approved brief/metric versions and M3 promoted configs. Operation: serialize the documented input schema to canonical bounded JSONB, store its schema version and SHA-256 hash, and recompute/verify before every resumed step. Output: stable run input snapshot. Test evidence: `test_resume_rejects_changed_brief_or_input_hash_without_new_run`. Failure behavior: fail run; operator revises/restarts explicitly.
 - [ ] **Implement typed artifact steps —** Input: frozen refs/read-only provider ports/budget. Operation: run each promoted agent once per command key and persist envelope/artifact/cost. Output: produced candidates/evidence. Test evidence: recorded fixture, schema, timeout, retry, and cost tests. Failure behavior: bounded retry only for classified no-side-effect provider failures.
 - [ ] **Implement validation/acceptance/materialization —** Input: produced artifact and source links. Operation: validate and accept/reject, then materialize normalized idea/offer under expected version. Output: authoritative product records with provenance. Test evidence: adversarial citation and concurrency tests. Failure behavior: retain rejection; do not transition.
 - [ ] **Complete evidence bundle and stage —** Input: all accepted required artifacts/metrics. Operation: build immutable bundle, recheck versions, and invoke WF-02 completion. Output: `READY_FOR_LEADS`. Test evidence: end-to-end synthetic fixture and restart at every step. Failure behavior: `FAILED` with closed ARCH-03 exits.

@@ -42,8 +42,8 @@ The coordinator accepts IDs/versions only; it loads no live ORM object across st
 | Command/step | Authoritative reads | Atomic writes/constraints | Events |
 | --- | --- | --- | --- |
 | start stage | `experiments`, active brief/artifact/metric/campaign gates, `system_controls` where relevant, active `workflow_runs` | update `experiments.version/state`; insert `workflow_runs`; `command_idempotency`, `domain_events`, `audit_events`, `outbox_messages`; active-run partial unique | `workflow.run_started.v1`, `experiment.state_changed.v1` |
-| child artifact/lead work | immutable IDs from `workflow_runs.input_ref`; repositories in WF-03/WF-04 | their agent/artifact/evidence/lead tables via application commands; command key uniques | artifact/lead catalog events |
-| complete stage | run row, experiment expected version, exact acceptance/gate records | update run terminal + experiment state; event/audit/outbox/idempotency in one unit | `workflow.run_completed.v1`, `experiment.state_changed.v1` |
+| child artifact/lead work | immutable IDs decoded only from verified `workflow_runs.input_snapshot` after matching `input_schema_version` and recomputed `input_hash`; repositories in WF-03/WF-04 | their agent/artifact/evidence/lead tables via application commands; command key uniques | artifact/lead catalog events |
+| complete stage | run row, experiment expected version, exact acceptance/gate records | atomically store bounded `result_snapshot/result_schema_version/result_hash`, update run terminal + experiment state, and write event/audit/outbox/idempotency | `workflow.run_completed.v1` carries result schema/hash; `experiment.state_changed.v1` |
 | fail stage | run/error taxonomy/current experiment | update run `FAILED`; update experiment `FAILED` with failure fields; same transactional safety tables | `workflow.run_failed.v1`, `experiment.failed.v1`, `experiment.state_changed.v1` |
 
 ## Ordered implementation tasks

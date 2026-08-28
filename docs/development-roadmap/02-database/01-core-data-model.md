@@ -32,17 +32,185 @@ Non-goals: multi-tenancy, organizations/RBAC, billing, event sourcing as the rea
 
 Create `backend/src/alon_ai/domain/identifiers.py`, `domain/controls.py`, `application/uow.py`, `persistence/models/core.py`, `persistence/repositories/core.py`, and an Alembic M2 revision. SQLAlchemy mappings may use Python enums, but stored state is constrained text using the exact ARCH-03 names so migrations remain explicit.
 
-### Required tables and constraints
+### Exact DDL-equivalent core contract
 
-| Table | Required columns and primary/foreign keys | Required constraints and indexes | Write owner |
-| --- | --- | --- | --- |
-| `operators` | `operator_id uuid PK`, `subject text`, `display_name text`, `timezone text`, `status text`, `created_at`, `disabled_at` | `unique(subject)`; `status in ('ACTIVE','DISABLED')`; partial index on active operator | authenticated operator bootstrap/application auth |
-| `experiments` | `experiment_id uuid PK`, `owner_operator_id FK operators`, `state text`, `version bigint`, `active_brief_version int`, `paused_from_state text null`, `failed_from_state text null`, `retryable bool`, `retry_count int`, `retry_limit int`, `correlation_id uuid`, timestamps | `state in ('DRAFT','READY_FOR_RESEARCH','RESEARCHING','READY_FOR_LEADS','QUALIFYING_LEADS','READY_FOR_OUTREACH','OUTREACH_ACTIVE','PAUSED','EVALUATING','DECIDED','CANCELLED','FAILED')`; unique `(experiment_id, version)`; checks require `paused_from_state` only in `PAUSED`, failure fields only in `FAILED`, `0 <= retry_count <= retry_limit`; index `(owner_operator_id, state, updated_at desc)` | `ExperimentCommandService` in one unit of work |
-| `workflow_runs` | `workflow_run_id uuid PK`, `experiment_id FK experiments`, `workflow_type text`, `workflow_version text`, `runtime text`, `runtime_workflow_id text`, `state text`, `attempt_no int`, `max_attempts int`, `max_runtime_seconds int`, `max_cost_minor bigint`, `currency char(3)`, `input_ref uuid null`, `result_ref uuid null`, `error_code text null`, `correlation_id uuid`, timestamps | `state in ('PENDING','RUNNING','PAUSE_REQUESTED','PAUSED','CANCEL_REQUESTED','CANCELLED','SUCCEEDED','FAILED')`; `runtime in ('DBOS','TEMPORAL')`; unique `(runtime, runtime_workflow_id)`; unique `(experiment_id, workflow_type, attempt_no)`; partial unique `uq_workflow_runs_active_experiment_type (experiment_id, workflow_type)` where state is `PENDING/RUNNING/PAUSE_REQUESTED/PAUSED/CANCEL_REQUESTED`; positive bounds; terminal-state/finished-at consistency; indexes `(experiment_id, created_at desc)` and `(state, updated_at)` | workflow runtime adapter reports; application maps to canonical state |
-| `system_controls` | singleton `control_name text PK`, `enabled bool`, `version bigint`, `reason_code text`, `changed_by_operator_id FK operators`, `changed_at`, `evidence_ref text` | `control_name in ('PRODUCT_OUTREACH','TEST_INBOX_SENDING')`; exactly one row per name; both default `false`; optimistic update on `(control_name, version)`; test-inbox control requires isolated allowlist evidence and never implies product outreach | authenticated control command service only |
-| `budget_accounts` | `budget_account_id uuid PK`, `experiment_id FK experiments null`, `scope text`, `limit_minor bigint`, `currency char(3)`, `version bigint`, timestamps | nonnegative limit; unique `(experiment_id, scope, currency)` with null-safe equivalent; no mixed currency arithmetic | budget service |
-| `budget_reservations` | `reservation_id uuid PK`, `budget_account_id FK`, `idempotency_key text`, `amount_minor bigint`, `state text`, `expires_at`, `cost_entry_id uuid null`, timestamps | `state in ('RESERVED','RELEASED','RECONCILED','EXPIRED')`; positive amount; unique `(budget_account_id,idempotency_key)`; partial index for `RESERVED`; deferred FK to `cost_entries` added in DB-05 | deterministic budget service in command/provider transaction |
-| `incidents` | `incident_id uuid PK`, `severity text`, `trigger_code text`, `state text`, `experiment_id FK null`, `opened_by_actor_type text`, `opened_by_actor_id text`, `resolution_code text null`, `evidence_ref text null`, timestamps | `severity in ('INFO','LOW','MEDIUM','HIGH','CRITICAL')`; `state in ('OPEN','MITIGATING','RESOLVED')`; resolved fields required only for `RESOLVED`; index `(state,severity,opened_at)` | incident/control service |
+The following SQL is normative for column names, PostgreSQL types, nullability, defaults, and named constraints/indexes. UUIDs have no database default because the injected application `IdGenerator` owns them.
+
+```sql
+CREATE TABLE operators (
+    operator_id uuid NOT NULL,
+    subject text NOT NULL,
+    display_name text NOT NULL,
+    timezone text NOT NULL DEFAULT 'Asia/Jerusalem',
+    status text NOT NULL DEFAULT 'ACTIVE',
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    disabled_at timestamptz NULL,
+    CONSTRAINT pk_operators PRIMARY KEY (operator_id),
+    CONSTRAINT uq_operators_subject UNIQUE (subject),
+    CONSTRAINT ck_operators_subject_nonempty CHECK (length(btrim(subject)) > 0),
+    CONSTRAINT ck_operators_status CHECK (status IN ('ACTIVE','DISABLED')),
+    CONSTRAINT ck_operators_disabled_at CHECK ((status = 'ACTIVE' AND disabled_at IS NULL) OR (status = 'DISABLED' AND disabled_at IS NOT NULL))
+);
+CREATE INDEX ix_operators_status ON operators (status, created_at DESC);
+
+CREATE TABLE experiments (
+    experiment_id uuid NOT NULL,
+    owner_operator_id uuid NOT NULL,
+    state text NOT NULL DEFAULT 'DRAFT',
+    version bigint NOT NULL DEFAULT 1,
+    active_brief_version integer NOT NULL DEFAULT 1,
+    paused_from_state text NULL,
+    failed_from_state text NULL,
+    retryable boolean NOT NULL DEFAULT false,
+    retry_count integer NOT NULL DEFAULT 0,
+    retry_limit integer NOT NULL,
+    correlation_id uuid NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_experiments PRIMARY KEY (experiment_id),
+    CONSTRAINT fk_experiments_owner FOREIGN KEY (owner_operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_experiments_id_version UNIQUE (experiment_id, version),
+    CONSTRAINT ck_experiments_state CHECK (state IN ('DRAFT','READY_FOR_RESEARCH','RESEARCHING','READY_FOR_LEADS','QUALIFYING_LEADS','READY_FOR_OUTREACH','OUTREACH_ACTIVE','PAUSED','EVALUATING','DECIDED','CANCELLED','FAILED')),
+    CONSTRAINT ck_experiments_version CHECK (version > 0 AND active_brief_version > 0),
+    CONSTRAINT ck_experiments_retry_bounds CHECK (retry_limit >= 0 AND retry_count BETWEEN 0 AND retry_limit),
+    CONSTRAINT ck_experiments_paused_fields CHECK ((state = 'PAUSED') = (paused_from_state IS NOT NULL)),
+    CONSTRAINT ck_experiments_failed_fields CHECK ((state = 'FAILED') = (failed_from_state IS NOT NULL))
+);
+CREATE INDEX ix_experiments_owner_state_updated ON experiments (owner_operator_id, state, updated_at DESC);
+CREATE INDEX ix_experiments_correlation ON experiments (correlation_id);
+
+CREATE TABLE workflow_runs (
+    workflow_run_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    workflow_type text NOT NULL,
+    workflow_version text NOT NULL,
+    runtime text NOT NULL,
+    runtime_workflow_id text NOT NULL,
+    state text NOT NULL DEFAULT 'PENDING',
+    attempt_no integer NOT NULL,
+    max_attempts integer NOT NULL,
+    max_runtime_seconds integer NOT NULL,
+    max_cost_minor bigint NOT NULL,
+    currency char(3) NOT NULL,
+    input_schema_version integer NOT NULL,
+    input_snapshot jsonb NOT NULL,
+    input_hash char(64) NOT NULL,
+    result_schema_version integer NULL,
+    result_snapshot jsonb NULL,
+    result_hash char(64) NULL,
+    error_code text NULL,
+    correlation_id uuid NOT NULL,
+    started_at timestamptz NULL,
+    finished_at timestamptz NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_workflow_runs PRIMARY KEY (workflow_run_id),
+    CONSTRAINT fk_workflow_runs_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_workflow_runs_runtime_identity UNIQUE (runtime, runtime_workflow_id),
+    CONSTRAINT uq_workflow_runs_experiment_type_attempt UNIQUE (experiment_id, workflow_type, attempt_no),
+    CONSTRAINT ck_workflow_runs_state CHECK (state IN ('PENDING','RUNNING','PAUSE_REQUESTED','PAUSED','CANCEL_REQUESTED','CANCELLED','SUCCEEDED','FAILED')),
+    CONSTRAINT ck_workflow_runs_runtime CHECK (runtime IN ('DBOS','TEMPORAL')),
+    CONSTRAINT ck_workflow_runs_bounds CHECK (attempt_no > 0 AND max_attempts > 0 AND attempt_no <= max_attempts AND max_runtime_seconds > 0 AND max_cost_minor >= 0),
+    CONSTRAINT ck_workflow_runs_currency CHECK (currency ~ '^[A-Z]{3}$'),
+    CONSTRAINT ck_workflow_runs_input CHECK (input_schema_version > 0 AND jsonb_typeof(input_snapshot) = 'object' AND input_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_workflow_runs_result_triplet CHECK ((result_schema_version IS NULL AND result_snapshot IS NULL AND result_hash IS NULL) OR (result_schema_version > 0 AND jsonb_typeof(result_snapshot) = 'object' AND result_hash ~ '^[0-9a-f]{64}$')),
+    CONSTRAINT ck_workflow_runs_success_result CHECK (state <> 'SUCCEEDED' OR result_hash IS NOT NULL),
+    CONSTRAINT ck_workflow_runs_failure_error CHECK (state <> 'FAILED' OR error_code IS NOT NULL),
+    CONSTRAINT ck_workflow_runs_terminal_finished CHECK ((state IN ('CANCELLED','SUCCEEDED','FAILED')) = (finished_at IS NOT NULL))
+);
+CREATE UNIQUE INDEX uq_workflow_runs_active_experiment_type ON workflow_runs (experiment_id, workflow_type) WHERE state IN ('PENDING','RUNNING','PAUSE_REQUESTED','PAUSED','CANCEL_REQUESTED');
+CREATE INDEX ix_workflow_runs_experiment_created ON workflow_runs (experiment_id, created_at DESC);
+CREATE INDEX ix_workflow_runs_state_updated ON workflow_runs (state, updated_at);
+CREATE INDEX ix_workflow_runs_correlation ON workflow_runs (correlation_id);
+
+CREATE TABLE system_controls (
+    control_name text NOT NULL,
+    enabled boolean NOT NULL DEFAULT false,
+    version bigint NOT NULL DEFAULT 1,
+    reason_code text NOT NULL,
+    changed_by_operator_id uuid NOT NULL,
+    changed_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    evidence_ref text NOT NULL,
+    CONSTRAINT pk_system_controls PRIMARY KEY (control_name),
+    CONSTRAINT fk_system_controls_operator FOREIGN KEY (changed_by_operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_system_controls_name_version UNIQUE (control_name, version),
+    CONSTRAINT ck_system_controls_name CHECK (control_name IN ('PRODUCT_OUTREACH','TEST_INBOX_SENDING')),
+    CONSTRAINT ck_system_controls_version CHECK (version > 0),
+    CONSTRAINT ck_system_controls_reason_nonempty CHECK (length(btrim(reason_code)) > 0)
+);
+CREATE INDEX ix_system_controls_changed ON system_controls (changed_at DESC);
+
+CREATE TABLE budget_accounts (
+    budget_account_id uuid NOT NULL,
+    experiment_id uuid NULL,
+    scope text NOT NULL,
+    limit_minor bigint NOT NULL,
+    currency char(3) NOT NULL,
+    version bigint NOT NULL DEFAULT 1,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_budget_accounts PRIMARY KEY (budget_account_id),
+    CONSTRAINT fk_budget_accounts_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_budget_accounts_scope UNIQUE NULLS NOT DISTINCT (experiment_id, scope, currency),
+    CONSTRAINT ck_budget_accounts_limit CHECK (limit_minor >= 0),
+    CONSTRAINT ck_budget_accounts_currency CHECK (currency ~ '^[A-Z]{3}$'),
+    CONSTRAINT ck_budget_accounts_version CHECK (version > 0)
+);
+CREATE INDEX ix_budget_accounts_experiment ON budget_accounts (experiment_id, scope) WHERE experiment_id IS NOT NULL;
+
+CREATE TABLE budget_reservations (
+    reservation_id uuid NOT NULL,
+    budget_account_id uuid NOT NULL,
+    idempotency_key text NOT NULL,
+    amount_minor bigint NOT NULL,
+    state text NOT NULL DEFAULT 'RESERVED',
+    expires_at timestamptz NOT NULL,
+    cost_entry_id uuid NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_budget_reservations PRIMARY KEY (reservation_id),
+    CONSTRAINT fk_budget_reservations_account FOREIGN KEY (budget_account_id) REFERENCES budget_accounts (budget_account_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_budget_reservations_idempotency UNIQUE (budget_account_id, idempotency_key),
+    CONSTRAINT ck_budget_reservations_amount CHECK (amount_minor > 0),
+    CONSTRAINT ck_budget_reservations_state CHECK (state IN ('RESERVED','RELEASED','RECONCILED','EXPIRED')),
+    CONSTRAINT ck_budget_reservations_cost CHECK ((state = 'RECONCILED') = (cost_entry_id IS NOT NULL)),
+    CONSTRAINT ck_budget_reservations_expiry CHECK (expires_at > created_at)
+);
+CREATE INDEX ix_budget_reservations_open ON budget_reservations (budget_account_id, expires_at) WHERE state = 'RESERVED';
+
+CREATE TABLE incidents (
+    incident_id uuid NOT NULL,
+    severity text NOT NULL,
+    trigger_code text NOT NULL,
+    state text NOT NULL DEFAULT 'OPEN',
+    experiment_id uuid NULL,
+    opened_by_actor_type text NOT NULL,
+    opened_by_actor_id text NOT NULL,
+    resolution_code text NULL,
+    evidence_ref text NULL,
+    opened_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    resolved_at timestamptz NULL,
+    updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_incidents PRIMARY KEY (incident_id),
+    CONSTRAINT fk_incidents_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT ck_incidents_severity CHECK (severity IN ('INFO','LOW','MEDIUM','HIGH','CRITICAL')),
+    CONSTRAINT ck_incidents_state CHECK (state IN ('OPEN','MITIGATING','RESOLVED')),
+    CONSTRAINT ck_incidents_actor_type CHECK (opened_by_actor_type IN ('OPERATOR','SYSTEM','WORKFLOW','PROVIDER')),
+    CONSTRAINT ck_incidents_resolution CHECK ((state = 'RESOLVED') = (resolution_code IS NOT NULL AND evidence_ref IS NOT NULL AND resolved_at IS NOT NULL))
+);
+CREATE INDEX ix_incidents_state_severity_opened ON incidents (state, severity, opened_at);
+CREATE INDEX ix_incidents_experiment ON incidents (experiment_id, opened_at DESC);
+```
+
+| Table | Exclusive write owner | Retention class / retention owner |
+| --- | --- | --- |
+| `operators` | `AuthenticationCommandService` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `experiments` | `ExperimentCommandService` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `workflow_runs` | application `WorkflowRunProjectionService`; runtime adapter only reports observations | `SAFETY_LONG` / `RetentionCommandService` |
+| `system_controls` | authenticated `ControlCommandService` | `SAFETY_LONG` / `RetentionCommandService` |
+| `budget_accounts` | `BudgetService` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `budget_reservations` | `BudgetService` | `SAFETY_LONG` / `RetentionCommandService` |
+| `incidents` | `IncidentCommandService` | `SAFETY_LONG` / `RetentionCommandService` |
 
 The M2 unit of work locks or version-checks one aggregate and atomically writes its row, domain event, audit event, command idempotency result, and outbox record. External calls never occur inside that transaction. `workflow_runs` is an application projection: DBOS or Temporal system tables are runtime-owned and never joined as business truth.
 

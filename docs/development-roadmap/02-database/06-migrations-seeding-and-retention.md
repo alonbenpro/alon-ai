@@ -26,6 +26,45 @@ In scope: revision order, expand/migrate/contract discipline, deterministic oper
 
 Create M2 revisions under `backend/alembic/versions/`, `persistence/seeding.py`, `application/retention.py`, CLI/admin commands, and tests/fixtures. Revision order is: core ownership/control/workflow tables; experiment/offer/metric; artifacts/evidence; lead/campaign/message; event/audit/idempotency/outbox/policy/cost; deferred cross-domain FKs; named indexes/triggers. Each revision declares minimum compatible application version and whether downgrade is data-lossy.
 
+The deferred-FK revision is normative and DDL-equivalent to the following statements (all names are stable migration API):
+
+```sql
+ALTER TABLE experiments ADD CONSTRAINT fk_experiments_active_brief FOREIGN KEY (experiment_id, active_brief_version) REFERENCES experiment_briefs (experiment_id, brief_version) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE budget_reservations ADD CONSTRAINT fk_budget_reservations_cost_entry FOREIGN KEY (cost_entry_id) REFERENCES cost_entries (cost_entry_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE ideas ADD CONSTRAINT fk_ideas_source_artifact FOREIGN KEY (source_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
+ALTER TABLE offer_hypotheses ADD CONSTRAINT fk_offer_hypotheses_source_artifact FOREIGN KEY (source_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
+ALTER TABLE experiment_decisions ADD CONSTRAINT fk_experiment_decisions_evidence_bundle FOREIGN KEY (evidence_bundle_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
+ALTER TABLE leads ADD CONSTRAINT fk_leads_suppression FOREIGN KEY (suppression_entry_id) REFERENCES suppression_entries (suppression_entry_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE lead_assessments ADD CONSTRAINT fk_lead_assessments_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
+ALTER TABLE outreach_messages ADD CONSTRAINT fk_outreach_messages_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
+ALTER TABLE send_attempts ADD CONSTRAINT fk_send_attempts_policy_mailbox FOREIGN KEY (policy_decision_id, mailbox_id) REFERENCES policy_decisions (policy_decision_id, mailbox_id) ON DELETE RESTRICT;
+ALTER TABLE replies ADD CONSTRAINT fk_replies_classification_artifact FOREIGN KEY (classification_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
+```
+
+Immutable identity is enforced in PostgreSQL, not only by application convention. The trigger raises `23514` before any protected value changes; the migration installs it on `send_intents` with the exact mailbox/approval/campaign/message/idempotency/policy/RFC/retry/budget fields named in DB-03. Equivalent table-specific invocations protect immutable version/evidence rows.
+
+```sql
+CREATE FUNCTION reject_immutable_columns() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF to_jsonb(NEW) - TG_ARGV <> to_jsonb(OLD) - TG_ARGV THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = TG_TABLE_NAME || ' immutable identity cannot change';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_campaigns_immutable_version BEFORE UPDATE ON campaigns
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','updated_at');
+CREATE TRIGGER trg_outreach_messages_immutable_authority BEFORE UPDATE ON outreach_messages
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','version','updated_at');
+CREATE TRIGGER trg_approvals_immutable_authority BEFORE UPDATE ON approvals
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','operator_id','reason_code','decided_at');
+CREATE TRIGGER trg_send_intents_immutable_identity BEFORE UPDATE ON send_intents
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('attempt_count');
+CREATE TRIGGER trg_send_attempts_immutable_identity BEFORE UPDATE ON send_attempts
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','provider_called_at','completed_at','error_code','error_fingerprint','retry_class','reconciliation_strategy_version');
+CREATE TRIGGER trg_provider_results_append_only BEFORE UPDATE ON provider_results
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
+```
+
 ### Seed manifest
 
 | Seed | Environment | Rule |
@@ -48,6 +87,58 @@ Create M2 revisions under `backend/alembic/versions/`, `persistence/seeding.py`,
 | `M1_DISPOSABLE` | `m1_spike.spike_runs`, `m1_spike.spike_send_attempts` | export signed evidence, verify export, then drop entire schema; no M2 migration |
 
 Exact durations are approved with the later privacy/legal decision for the chosen jurisdictions; until approved, the system fails closed by disabling automated purge, not by retaining raw sensitive data without review. Every table receives one class in a versioned manifest; missing classification blocks migration acceptance.
+
+### Complete product-table retention manifest
+
+This manifest is exhaustive for the 45 M2 product tables in DB-01 through DB-05. `RetentionCommandService` exclusively owns purge/redaction writes. Every row defaults to held when a legal, incident, unresolved-provider, suppression, or dependency hold applies. "Keep minimum" means retain only non-sensitive identity/hash/state evidence for the approved policy-versioned duration; "redact" is an audited payload replacement before any later FK-safe purge.
+
+| Table | Class | Retention owner | Default hold / purge behavior |
+| --- | --- | --- | --- |
+| `operators` | `BUSINESS_ACTIVE` | `RetentionCommandService` | deactivate, then purge after reference closure |
+| `experiments` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge only after terminal close and FK closure |
+| `workflow_runs` | `SAFETY_LONG` | `RetentionCommandService` | hold until terminal/reconciled; keep identity and hashes |
+| `system_controls` | `SAFETY_LONG` | `RetentionCommandService` | keep the versioned safety minimum |
+| `budget_accounts` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge only after all reservations reconcile |
+| `budget_reservations` | `SAFETY_LONG` | `RetentionCommandService` | hold until cost reconciliation; keep safety minimum |
+| `incidents` | `SAFETY_LONG` | `RetentionCommandService` | incident hold until resolved; keep safety minimum |
+| `experiment_briefs` | `BUSINESS_ACTIVE` | `RetentionCommandService` | hold active version; purge after experiment close |
+| `ideas` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after experiment close and FK closure |
+| `offer_hypotheses` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after experiment close and FK closure |
+| `metric_definitions` | `BUSINESS_ACTIVE` | `RetentionCommandService` | preserve decision-referenced versions |
+| `metric_observations` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after snapshot and experiment closure |
+| `metric_snapshots` | `BUSINESS_ACTIVE` | `RetentionCommandService` | preserve decision-referenced snapshots |
+| `experiment_decisions` | `SAFETY_LONG` | `RetentionCommandService` | keep immutable decision minimum |
+| `businesses` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after dependent lead closure |
+| `leads` | `BUSINESS_ACTIVE` | `RetentionCommandService` | suppression/incident hold; redact then purge |
+| `lead_assessments` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after lead/experiment close |
+| `gmail_mailboxes` | `SAFETY_LONG` | `RetentionCommandService` | hold while send/reply chains refer to mailbox; keep identity |
+| `campaigns` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after all messages are terminal |
+| `campaign_members` | `SENSITIVE_SHORT` | `RetentionCommandService` | suppression/incident hold; redact then purge |
+| `outreach_messages` | `SENSITIVE_SHORT` | `RetentionCommandService` | ambiguity/incident hold; redact content, retain hash |
+| `approvals` | `SAFETY_LONG` | `RetentionCommandService` | keep immutable exact-version authority tuple |
+| `suppression_entries` | `SAFETY_LONG` | `RetentionCommandService` | active suppression is an unconditional hold |
+| `send_intents` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep mailbox authority chain |
+| `send_attempts` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep attempt minimum |
+| `provider_results` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep provider IDs and hashes |
+| `provider_observations` | `SENSITIVE_SHORT` | `RetentionCommandService` | ambiguity hold; redact capture, retain fingerprint |
+| `replies` | `SENSITIVE_SHORT` | `RetentionCommandService` | legal/incident hold; redact body, retain identity hash |
+| `gmail_history_cursors` | `SAFETY_LONG` | `RetentionCommandService` | mailbox/incident hold; retain latest safe cursor |
+| `agent_runs` | `EVALUATION_VERSIONED` | `RetentionCommandService` | hold promoted gates; purge unused superseded versions |
+| `artifacts` | `BUSINESS_ACTIVE` | `RetentionCommandService` | acceptance/incident hold; purge with provenance closure |
+| `evidence_items` | `SENSITIVE_SHORT` | `RetentionCommandService` | gate/incident hold; redact payload, retain content hash |
+| `artifact_evidence_links` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge only with both closed parents |
+| `artifact_validations` | `SAFETY_LONG` | `RetentionCommandService` | gate/incident hold; keep safety minimum |
+| `artifact_acceptances` | `SAFETY_LONG` | `RetentionCommandService` | gate/incident hold; keep safety minimum |
+| `evaluation_cases` | `EVALUATION_VERSIONED` | `RetentionCommandService` | hold promoted/comparison versions; purge unused versions |
+| `evaluation_results` | `EVALUATION_VERSIONED` | `RetentionCommandService` | hold promoted/comparison versions; purge unused versions |
+| `domain_events` | `SAFETY_LONG` | `RetentionCommandService` | aggregate/incident hold; keep event minimum |
+| `audit_events` | `SAFETY_LONG` | `RetentionCommandService` | legal/incident hold; keep audit minimum |
+| `command_idempotency` | `SAFETY_LONG` | `RetentionCommandService` | hold active commands; purge after replay horizon |
+| `outbox_messages` | `SAFETY_LONG` | `RetentionCommandService` | hold undelivered messages; purge after all receipts |
+| `outbox_deliveries` | `SAFETY_LONG` | `RetentionCommandService` | purge only with source event/message |
+| `policy_decisions` | `SAFETY_LONG` | `RetentionCommandService` | send/approval hold; keep facts hash and mailbox scope |
+| `cost_entries` | `SAFETY_LONG` | `RetentionCommandService` | finance/incident hold; keep cost minimum |
+| `repair_actions` | `SAFETY_LONG` | `RetentionCommandService` | incident hold; keep immutable repair chain |
 
 ### Safe migration protocol
 

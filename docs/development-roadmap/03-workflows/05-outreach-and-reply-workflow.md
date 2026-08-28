@@ -43,21 +43,21 @@ Queue settings are pinned deployment evidence and verified from DBOS before pilo
 
 1. Draft agent writes only `OutreachDraft` `PRODUCED`; validators/approval service move artifact and `outreach_messages` through `DRAFT -> APPROVAL_PENDING -> APPROVED` using exact ARCH-03 approval/artifact events.
 2. `RecordSendIntent` reads `experiments`, active `campaigns`/member, `leads(QUALIFIED)`, `approvals`, `suppression_entries`, `system_controls`, budget, policy facts, and immutable message/artifact versions.
-3. One transaction inserts `policy_decisions`, reserves budget, inserts unique `send_intents.idempotency_key`/`rfc_message_id`, transitions message `APPROVED -> SEND_INTENT_RECORDED -> QUEUED`, appends `send.intent_recorded.v1` and `send.queued.v1`, audit/idempotency/outbox, and queues the runtime start after commit.
+3. One transaction binds the active `gmail_mailboxes.mailbox_id` into the canonical policy facts and approval scope hash, inserts a mailbox/campaign-version/message-bound `policy_decisions`, reserves budget, inserts `send_intents` under unique `(mailbox_id,idempotency_key)` and `(mailbox_id,rfc_message_id)`, transitions `APPROVED -> SEND_INTENT_RECORDED -> QUEUED`, appends the canonical send events plus audit/idempotency/outbox, and queues runtime only after commit.
 4. In M6 that transaction requires `TEST_INBOX_SENDING=true`, `PRODUCT_OUTREACH=false`, and the recipient hash in the owned-alias manifest. After M6, real-recipient mode instead requires `PRODUCT_OUTREACH=true` plus separate authority; the test control cannot authorize it.
 
 ### Gateway, ambiguity, retry, and reply map
 
 | Step | Reads | Writes/constraint | Exact event/transition |
 | --- | --- | --- | --- |
-| dequeue/recheck | message/intent, experiment/campaign/lead, approval, suppression, both controls, policy/budget/rate, no unresolved attempt | insert unique attempt number; increment intent count; message `QUEUED -> SENDING`; commit before network | `policy.evaluated.v1`, `send.attempt_started.v1` |
-| Gmail result | attempt + stable RFC ID | insert unique `provider_results`; message/attempt `SENT`; reconcile budget/cost | provider IDs retained; terminal sent uses authoritative send evidence (direct success retains `send.attempt_started.v1`; reconciled success emits the catalog event below) |
+| dequeue/recheck | message/intent plus identical immutable `mailbox_id` and `rfc_message_id`, campaign version, approval authority tuple, experiment/lead/suppression, both controls, policy/budget/rate, no unresolved attempt | recompute mailbox-inclusive facts/scope hashes; insert `send_attempts(send_intent_id,mailbox_id,rfc_message_id,...)` under composite intent/policy FKs; increment count; message `QUEUED -> SENDING`; commit before network | mailbox/RFC payload in `policy.evaluated.v1`, `send.attempt_started.v1` |
+| Gmail result | attempt + authorized mailbox + stable RFC ID | insert mailbox-bound unique `provider_results`; message/attempt `SENT`; reconcile budget/cost | direct accepted result captures provider identity and emits `send.provider_accepted.v1` |
 | unknown outcome | attempt | attempt/message `AMBIGUOUS`; provider error fingerprint/evidence | `send.outcome_ambiguous.v1`; no requeue |
-| reconcile | attempt/result/observations + Sent query | `RECONCILING`, provider observations/results; exact match or typed failure | `send.reconciliation_started.v1`; one match -> `send.reconciled_as_sent.v1`; conclusive failure -> `send.failed.v1` |
-| retry | `FAILED_RETRYABLE`, immutable retry policy/deadline, controls/policy/budget, no ambiguity | deterministic `SendRecoveryService` returns message to `QUEUED`; new attempt number later | `send.retry_scheduled.v1`; exhaustion/abort -> `send.retry_exhausted.v1` and `FAILED_PERMANENT` |
+| reconcile | unresolved attempt/result/observations plus immutable `send_intents.mailbox_id` and RFC ID | query only that authorized Gmail account; store every mailbox-bound candidate/result; one exact match or typed zero/multiple failure | mailbox payload in `send.reconciliation_started.v1`; one post-ambiguity match -> `send.reconciled_as_sent.v1`; conclusive failure -> `send.failed.v1` |
+| retry | `FAILED_RETRYABLE`, immutable mailbox/RFC/retry policy/deadline, controls/policy/budget, no ambiguity | deterministic `SendRecoveryService` preserves the same mailbox/RFC identity and returns message to `QUEUED`; new attempt number later | mailbox/RFC payload in `send.retry_scheduled.v1`; exhaustion/abort -> `send.retry_exhausted.v1` and `FAILED_PERMANENT` |
 | history/reply | cursor + Gmail page/provider identities | observations, replies, events, and cursor in one transaction | `reply.received.v1`, `gmail.history_cursor_advanced.v1`; classification artifact acceptance later emits `reply.classified.v1` |
 
-The workflow/agent never calls Gmail or updates these rows directly. `SendGateway` is the only Gmail send caller; reconciliation/history services use read-only provider primitives. A direct Gmail success must still retain provider IDs/result evidence and message `SENT`; no new event alias is invented beyond ARCH-03.
+The workflow/agent never calls Gmail or updates these rows directly. `SendGateway` is the only Gmail send caller; reconciliation/history services use read-only provider primitives scoped to the immutable authorized mailbox. Direct success uses `send.provider_accepted.v1`; `send.reconciled_as_sent.v1` is reserved for resolving a prior `AMBIGUOUS` attempt.
 
 ## Ordered implementation tasks
 
@@ -73,6 +73,7 @@ The workflow/agent never calls Gmail or updates these rows directly. `SendGatewa
 - **Contract `test_only_sendgateway_calls_gmail_send_and_agents_never_receive_port`:** one authority edge.
 - **Atomicity `test_policy_budget_intent_message_event_queue_commit_together`:** failure injection.
 - **Recovery `test_kill_after_provider_acceptance_reconciles_stable_rfc_without_resend`:** K4/K5 equivalent.
+- **Mailbox authority `test_recovery_searches_only_approved_immutable_mailbox`:** altered account, cross-mailbox candidate, and mailbox/scope-hash mismatch all fail closed and preserve the authorized account ID.
 - **Retry `test_ambiguous_never_requeues_and_exhaustion_is_terminal`:** ARCH-03 exact guards/events.
 - **History `test_observation_reply_event_cursor_are_atomic_and_deduplicated`:** crash/replay.
 - **Control `test_pause_cancel_suppression_and_global_stop_prevent_new_provider_calls`:** bounded response.

@@ -37,6 +37,15 @@ Create schema `m1_spike` containing exactly:
 
 Constraints: unique `rfc_message_id`; recipient alias must exist in the immutable operator-owned allowlist fixture; run state is `PENDING/RUNNING/PAUSE_REQUESTED/PAUSED/CANCEL_REQUESTED/CANCELLED/SUCCEEDED/FAILED`; attempt state is `INTENT_RECORDED/SENDING/AMBIGUOUS/RECONCILING/SENT/FAILED_CONCLUSIVE/CANCELLED`; provider IDs are both present for `SENT`; `reconciled_at` is present only after reconciliation. No third table or extra column is permitted. Scenario, policy, queue, typed-agent, kill schedule, expected Sent query, and evidence metadata live in immutable signed fixture/output files.
 
+### Exact append-only evidence-file contract
+
+The evidence bundle is a filesystem protocol, never a third database table. Each `records/{sequence:020d}-{record_id}.json` is RFC 8785 canonical JSON with these required fields and types: `evidence_schema_version` integer; `record_id` UUID; `sequence` positive integer; `prior_record_hash` null only at sequence 1 otherwise 64-hex; `run_id` UUID; `scenario_name`, `workflow_version`, `kill_point`, `record_type`, `occurred_at`, `idempotency_key`, `mailbox_alias`, and `rfc_message_id` strings; `attempt_state` from the spike enum; `provider_outcome` from `NOT_CALLED/ACCEPTED/CONCLUSIVE_FAILURE/AMBIGUOUS/RECONCILED_SENT/RECONCILED_ABSENT/CONFLICT`; nullable `error_code`, 64-hex `error_fingerprint`, `gmail_message_id`, and `gmail_thread_id`; 64-hex `request_hash` and nullable `response_hash`; `candidate_matches` array; 64-hex `record_hash`; `signer_key_id`; and base64 Ed25519 `signature`.
+Each candidate is exactly `{mailbox_alias,gmail_message_id,gmail_thread_id,rfc_message_id,observed_at,envelope_fingerprint,header_hash}`, with both hashes 64-hex. `record_hash` is SHA-256 over the canonical record with `record_hash` and `signature` omitted; the signature covers that hash, prior hash, run ID, and sequence.
+
+The signed canonical `manifest.json` is exactly `{manifest_schema_version,run_id,scenario_name,workflow_version,fixture_hash,queue_config_hash,control_config_hash,records:[{path,sequence,record_id,record_hash}],spike_runs_export_hash,spike_send_attempts_export_hash,final_state,created_at,signer_key_id,signature}`. Hashes are lowercase SHA-256; the Ed25519 signature covers the RFC 8785 manifest with `signature` omitted.
+
+Every record/export is exclusive-created as a same-directory `.tmp`, fully written and file-`fsync`ed, atomically renamed, then parent-directory-`fsync`ed. The manifest is written last with the same protocol and is the commit point. Recovery ignores orphan temp files but validates schema, signatures, path, strict sequence/prior-hash chain, content/export hashes, and database/provider identity agreement. It may rebuild a missing manifest only from a complete valid signed chain and freshly validated exports, after appending a signed recovery record. A gap, duplicate, invalid signature/hash, mismatched export, malformed/multiple candidate, or impossible provider outcome fails closed: disable gateway, preserve bytes, expose `CORRUPT_EVIDENCE`, and prohibit retry/send. Restore unpacks fresh, validates every byte/signature, loads both exports into an empty two-table schema, and runs the no-send reconciliation validator.
+
 ### Finite workflow and authority
 
 The DBOS workflow loads immutable fixture by `scenario_name`, obtains a typed Pydantic AI output from a deterministic local fixture model, validates the recipient alias/content, writes intent, enqueues/executes one guarded send step, records result or ambiguity, reconciles when needed, and terminates. The fixture agent cannot receive Gmail tools. The workflow cannot call Gmail: it invokes an M1 `SendGateway`, which rechecks harness-enabled flag, alias allowlist, cancellation/pause, rate/queue evidence, stable key, and attempt state before the Gmail adapter.
@@ -80,7 +89,7 @@ On unknown provider outcome, persist/retain `AMBIGUOUS`; schedule bounded reconc
 
 - [ ] **Provision isolated harness —** Input: separate Gmail test project/scopes, owned aliases, fresh PostgreSQL schema, pinned build/fixtures. Operation: verify no product/prospect data and create exactly two tables/constraints. Output: signed isolation/schema manifest. Test evidence: recipient/schema allowlist introspection. Failure behavior: abort M1 and revoke credentials.
 - [ ] **Implement typed finite fixture and sole gateway —** Input: deterministic Pydantic AI fixture and scenario. Operation: validate artifact/alias, derive identities, enforce queue/control, and expose Gmail only to gateway. Output: runnable no-branch workflow. Test evidence: import/call-path, schema, denial, replay tests. Failure behavior: no provider call.
-- [ ] **Implement kill/reconciliation instrumentation —** Input: K0-K8 barriers and stable identity. Operation: hard-kill processes, capture traces/provider evidence, and execute bounded Sent algorithm. Output: reproducible crash harness. Test evidence: each barrier proves it actually terminated at the named boundary. Failure behavior: invalid scenario; no gate credit.
+- [ ] **Implement kill/reconciliation instrumentation —** Input: K0-K8 barriers, stable identity, and signed evidence schema. Operation: hard-kill, atomically append/fsync signed provider outcome/error/candidate records, and reconcile. Output: reproducible crash harness. Test evidence: termination plus signature/hash-chain validation. Failure behavior: invalid/corrupt scenario; gateway disabled and no gate credit.
 - [ ] **Run eight-item matrix from clean state —** Input: approved repetitions/version/concurrency/rate manifest. Operation: execute every scenario, reconcile all attempts, and compare database/provider/evidence hashes. Output: raw evidence plus binary scorecard. Test evidence: automated manifest validator. Failure behavior: stop, disable, and mark DBOS rejected.
 - [ ] **Export evidence and dispose schema —** Input: all runs terminal/reconciled and scorecard. Operation: export signed/redacted ledger/traces/config/Gmail evidence, verify restore/readability, then drop `m1_spike` and revoke test credentials when no longer needed. Output: gate bundle with no promoted product data. Test evidence: export hash verification and schema-absent check. Failure behavior: retain isolated schema disabled until evidence/reconciliation is complete.
 - [ ] **Trigger Temporal handoff on any failure —** Input: first failed item/evidence. Operation: execute WF-00 stop/incident/migration procedure and rerun identical scenarios. Output: mandatory replacement evidence. Test evidence: Temporal adapter contract/eight-item matrix. Failure behavior: M2 product workflow work remains blocked.
@@ -94,6 +103,7 @@ On unknown provider outcome, persist/retain `AMBIGUOUS`; schedule bounded reconc
 - **Concurrency `test_repeated_command_and_delivery_produce_one_provider_message`:** compare provider and ledger.
 - **Versioning `test_v1_inflight_survives_v2_blue_green_upgrade`:** recover/drain evidence.
 - **Security `test_recipient_aliases_are_owned_and_logs_are_redacted`:** no address/secret leaks.
+- **Evidence `test_crash_safe_manifest_restore_rejects_gap_tamper_and_multiple_candidates`:** atomic manifest, signatures, hashes, exports, and fail-closed corruption.
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 
@@ -107,7 +117,7 @@ At any impossible state, duplicate, leakage, rate/control breach, or unresolved 
 
 - [ ] Schema has exactly the two permitted tables and no product record.
 - [ ] Every K0-K8 scenario and all eight criteria pass reproducibly with zero uncontrolled duplicate sends/blind retries.
-- [ ] Every ambiguity has stable key/RFC ID, ledger/result capture, Sent evidence, bounded reconciliation, and visible final/operator state.
+- [ ] Every ambiguity has stable key/RFC ID, signed outcome/error/candidate records, ledger/result capture, Sent evidence, bounded reconciliation, and visible final/operator state.
 - [ ] Only owned test aliases were used; M1 did not enable product outreach.
 - [ ] Any single failure produced DBOS rejection and Temporal handoff rather than a waiver.
 

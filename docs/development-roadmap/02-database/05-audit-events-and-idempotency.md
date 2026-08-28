@@ -26,29 +26,258 @@ In scope: ARCH-03 envelopes/names, security denials, exact command scope/key rep
 
 Create `domain/events.py`, `application/idempotency.py`, `application/policies.py`, `persistence/models/events.py`, outbox dispatcher/consumer registry, and M2 migration tables:
 
-| Table | Required columns/keys | Required constraints/indexes | Write/delivery rule |
-| --- | --- | --- | --- |
-| `domain_events` | ARCH-03 envelope fields: `event_id uuid PK`, `event_type`, `schema_version`, aggregate type/id/version, occurred/recorded times, actor type/id, correlation/causation UUIDs, idempotency key, `payload jsonb`, `metadata jsonb`, `supersedes_event_id FK self null` | unique `(aggregate_type,aggregate_id,aggregate_version,event_type)`; catalog/type/version checks; index aggregate/version, correlation, event_type/time; immutable | same transaction as aggregate change |
-| `audit_events` | `audit_event_id uuid PK`, `event_type`, observed aggregate refs/version null, actor type/id, `outcome`, reason codes, correlation/causation, idempotency key, safe payload/metadata, timestamps, `supersedes_audit_event_id FK self null` | outcome `ALLOWED/DENIED/FAILED`; event catalog/audit namespace check; indexes actor/time, aggregate/time, correlation; immutable | records accepted and denied security/operational actions |
-| `command_idempotency` | `command_scope`, `idempotency_key`, `command_type`, `request_hash`, actor, aggregate refs, `status`, `result_json`, `error_code`, `first_seen_at`, `completed_at`, composite PK | same key + different request hash is conflict; status `IN_PROGRESS/SUCCEEDED/FAILED`; partial index stale in-progress; result size bound | inserted/finished in command transaction; replay returns exact stored result |
-| `outbox_messages` | `outbox_message_id uuid PK`, `event_id uuid FK domain_events`, `topic`, `payload_version`, `payload jsonb`, `available_at`, `published_at null`, `attempt_count`, `last_error_code null`, timestamps | unique `(event_id,topic)`; bounded payload; index unpublished `(available_at)`; immutable payload | committed with domain event; dispatcher is at least once; audit-only records are not published without a corresponding canonical domain/control event |
-| `outbox_deliveries` | `consumer_name`, `event_id`, `handler_version`, `state`, `attempt_count`, `processed_at`, `result_hash`, composite PK | state `STARTED/SUCCEEDED/FAILED`; one successful outcome per consumer/event; stale-start index | consumer inserts before effect and replays stored result |
-| `policy_decisions` | `policy_decision_id uuid PK`, `scope`, aggregate refs, `policy_version`, `allowed bool`, `reason_codes text[]`, `facts_hash`, `facts_ref`, `scope_hash`, `correlation_id uuid`, `idempotency_key text`, `evaluated_at` | unique `(scope,idempotency_key)`; index `(policy_version,scope_hash,facts_hash)` for reproducibility without collapsing distinct evaluations; immutable | policy engine; emits `policy.evaluated.v1` |
-| `cost_entries` | `cost_entry_id uuid PK`, provider, operation, experiment/workflow/agent/send refs null, usage JSON, `amount_minor`, `currency`, `reporting_amount_minor_ils null`, `fx_rate_ref null`, `provider_invoice_ref null`, `occurred_at`, `recorded_at`, `idempotency_key` | unique `(provider,idempotency_key)`; nonnegative amounts; ILS conversion fields both present/absent; indexes experiment/provider/time | provider result reconciliation; links DB-01 reservation |
-| `repair_actions` | `repair_action_id uuid PK`, incident FK, command type, affected refs, before/after hashes, reason code, operator FK, evidence ref, idempotency key, timestamps | unique `(operator_id,idempotency_key)`; immutable; no raw SQL text | audited recovery service only |
+### Exact DDL-equivalent event, outbox, policy, and repair contract
 
-`record_kind` from ARCH-03 is represented by table membership (`DOMAIN` or `AUDIT`) and exposed as a union projection. Every event name retains its `.v1` suffix. Incompatible payloads add a new event name/version and reader/upcaster; old rows are never rewritten.
+```sql
+CREATE TABLE domain_events (
+    event_id uuid NOT NULL,
+    event_type text NOT NULL,
+    schema_version integer NOT NULL,
+    aggregate_type text NOT NULL,
+    aggregate_id uuid NOT NULL,
+    aggregate_version bigint NOT NULL,
+    occurred_at timestamptz NOT NULL,
+    recorded_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    actor_type text NOT NULL,
+    actor_id text NOT NULL,
+    correlation_id uuid NOT NULL,
+    causation_id uuid NOT NULL,
+    idempotency_key text NULL,
+    payload jsonb NOT NULL,
+    payload_hash char(64) NOT NULL,
+    metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    metadata_hash char(64) NOT NULL,
+    supersedes_event_id uuid NULL,
+    CONSTRAINT pk_domain_events PRIMARY KEY (event_id),
+    CONSTRAINT fk_domain_events_supersedes FOREIGN KEY (supersedes_event_id) REFERENCES domain_events (event_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_domain_events_aggregate_version_type UNIQUE (aggregate_type, aggregate_id, aggregate_version, event_type),
+    CONSTRAINT ck_domain_events_schema CHECK (schema_version > 0 AND aggregate_version > 0),
+    CONSTRAINT ck_domain_events_type CHECK (event_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+\.v[1-9][0-9]*$'),
+    CONSTRAINT ck_domain_events_actor CHECK (actor_type IN ('OPERATOR','SYSTEM','WORKFLOW','PROVIDER')),
+    CONSTRAINT ck_domain_events_json CHECK (jsonb_typeof(payload) = 'object' AND jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT ck_domain_events_hashes CHECK (payload_hash ~ '^[0-9a-f]{64}$' AND metadata_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_domain_events_aggregate ON domain_events (aggregate_type, aggregate_id, aggregate_version);
+CREATE INDEX ix_domain_events_correlation ON domain_events (correlation_id, recorded_at);
+CREATE INDEX ix_domain_events_type_recorded ON domain_events (event_type, recorded_at);
+
+CREATE TABLE audit_events (
+    audit_event_id uuid NOT NULL,
+    event_type text NOT NULL,
+    schema_version integer NOT NULL,
+    aggregate_type text NULL,
+    aggregate_id uuid NULL,
+    aggregate_version bigint NULL,
+    actor_type text NOT NULL,
+    actor_id text NOT NULL,
+    outcome text NOT NULL,
+    reason_codes text[] NOT NULL,
+    correlation_id uuid NOT NULL,
+    causation_id uuid NOT NULL,
+    idempotency_key text NULL,
+    payload jsonb NOT NULL DEFAULT '{}'::jsonb,
+    payload_hash char(64) NOT NULL,
+    metadata jsonb NOT NULL DEFAULT '{}'::jsonb,
+    metadata_hash char(64) NOT NULL,
+    occurred_at timestamptz NOT NULL,
+    recorded_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    supersedes_audit_event_id uuid NULL,
+    CONSTRAINT pk_audit_events PRIMARY KEY (audit_event_id),
+    CONSTRAINT fk_audit_events_supersedes FOREIGN KEY (supersedes_audit_event_id) REFERENCES audit_events (audit_event_id) ON DELETE RESTRICT,
+    CONSTRAINT ck_audit_events_schema CHECK (schema_version > 0),
+    CONSTRAINT ck_audit_events_type CHECK (event_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+\.v[1-9][0-9]*$'),
+    CONSTRAINT ck_audit_events_aggregate CHECK ((aggregate_type IS NULL AND aggregate_id IS NULL AND aggregate_version IS NULL) OR (aggregate_type IS NOT NULL AND aggregate_id IS NOT NULL AND aggregate_version > 0)),
+    CONSTRAINT ck_audit_events_actor CHECK (actor_type IN ('OPERATOR','SYSTEM','WORKFLOW','PROVIDER')),
+    CONSTRAINT ck_audit_events_outcome CHECK (outcome IN ('ALLOWED','DENIED','FAILED')),
+    CONSTRAINT ck_audit_events_reasons CHECK ((outcome = 'ALLOWED') OR cardinality(reason_codes) > 0),
+    CONSTRAINT ck_audit_events_json CHECK (jsonb_typeof(payload) = 'object' AND jsonb_typeof(metadata) = 'object'),
+    CONSTRAINT ck_audit_events_hashes CHECK (payload_hash ~ '^[0-9a-f]{64}$' AND metadata_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_audit_events_actor ON audit_events (actor_type, actor_id, recorded_at DESC);
+CREATE INDEX ix_audit_events_aggregate ON audit_events (aggregate_type, aggregate_id, recorded_at DESC) WHERE aggregate_id IS NOT NULL;
+CREATE INDEX ix_audit_events_correlation ON audit_events (correlation_id, recorded_at);
+
+CREATE TABLE command_idempotency (
+    command_scope text NOT NULL,
+    idempotency_key text NOT NULL,
+    command_type text NOT NULL,
+    request_schema_version integer NOT NULL,
+    request_json jsonb NOT NULL,
+    request_hash char(64) NOT NULL,
+    actor_type text NOT NULL,
+    actor_id text NOT NULL,
+    aggregate_type text NULL,
+    aggregate_id uuid NULL,
+    status text NOT NULL DEFAULT 'IN_PROGRESS',
+    result_schema_version integer NULL,
+    result_json jsonb NULL,
+    result_hash char(64) NULL,
+    error_code text NULL,
+    first_seen_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    completed_at timestamptz NULL,
+    CONSTRAINT pk_command_idempotency PRIMARY KEY (command_scope, idempotency_key),
+    CONSTRAINT ck_command_idempotency_request CHECK (request_schema_version > 0 AND jsonb_typeof(request_json) = 'object' AND request_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_command_idempotency_actor CHECK (actor_type IN ('OPERATOR','SYSTEM','WORKFLOW','PROVIDER')),
+    CONSTRAINT ck_command_idempotency_aggregate CHECK ((aggregate_type IS NULL) = (aggregate_id IS NULL)),
+    CONSTRAINT ck_command_idempotency_status CHECK (status IN ('IN_PROGRESS','SUCCEEDED','FAILED')),
+    CONSTRAINT ck_command_idempotency_result CHECK ((result_schema_version IS NULL AND result_json IS NULL AND result_hash IS NULL) OR (result_schema_version > 0 AND jsonb_typeof(result_json) = 'object' AND result_hash ~ '^[0-9a-f]{64}$')),
+    CONSTRAINT ck_command_idempotency_completion CHECK ((status = 'IN_PROGRESS' AND completed_at IS NULL) OR (status = 'SUCCEEDED' AND completed_at IS NOT NULL AND result_hash IS NOT NULL AND error_code IS NULL) OR (status = 'FAILED' AND completed_at IS NOT NULL AND error_code IS NOT NULL))
+);
+CREATE INDEX ix_command_idempotency_in_progress ON command_idempotency (first_seen_at) WHERE status = 'IN_PROGRESS';
+CREATE INDEX ix_command_idempotency_aggregate ON command_idempotency (aggregate_type, aggregate_id, first_seen_at DESC) WHERE aggregate_id IS NOT NULL;
+
+CREATE TABLE outbox_messages (
+    outbox_message_id uuid NOT NULL,
+    event_id uuid NOT NULL,
+    topic text NOT NULL,
+    payload_version integer NOT NULL,
+    payload jsonb NOT NULL,
+    payload_hash char(64) NOT NULL,
+    available_at timestamptz NOT NULL,
+    lease_owner text NULL,
+    lease_expires_at timestamptz NULL,
+    published_at timestamptz NULL,
+    attempt_count integer NOT NULL DEFAULT 0,
+    last_error_code text NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_outbox_messages PRIMARY KEY (outbox_message_id),
+    CONSTRAINT fk_outbox_messages_event FOREIGN KEY (event_id) REFERENCES domain_events (event_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_outbox_messages_event_topic UNIQUE (event_id, topic),
+    CONSTRAINT ck_outbox_messages_payload CHECK (payload_version > 0 AND jsonb_typeof(payload) = 'object' AND payload_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_outbox_messages_attempts CHECK (attempt_count >= 0),
+    CONSTRAINT ck_outbox_messages_lease CHECK ((lease_owner IS NULL AND lease_expires_at IS NULL) OR (lease_owner IS NOT NULL AND lease_expires_at IS NOT NULL)),
+    CONSTRAINT ck_outbox_messages_publish CHECK (published_at IS NULL OR published_at >= created_at)
+);
+CREATE INDEX ix_outbox_messages_available ON outbox_messages (available_at, created_at) WHERE published_at IS NULL;
+CREATE INDEX ix_outbox_messages_lease ON outbox_messages (lease_expires_at) WHERE published_at IS NULL AND lease_owner IS NOT NULL;
+
+CREATE TABLE outbox_deliveries (
+    consumer_name text NOT NULL,
+    event_id uuid NOT NULL,
+    handler_version text NOT NULL,
+    result_hash char(64) NOT NULL,
+    processed_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_outbox_deliveries PRIMARY KEY (consumer_name, event_id),
+    CONSTRAINT fk_outbox_deliveries_event FOREIGN KEY (event_id) REFERENCES domain_events (event_id) ON DELETE RESTRICT,
+    CONSTRAINT ck_outbox_deliveries_result_hash CHECK (result_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_outbox_deliveries_event ON outbox_deliveries (event_id, processed_at);
+
+CREATE TABLE policy_decisions (
+    policy_decision_id uuid NOT NULL,
+    scope text NOT NULL,
+    experiment_id uuid NULL,
+    campaign_id uuid NULL,
+    campaign_version integer NULL,
+    message_id uuid NULL,
+    mailbox_id uuid NULL,
+    policy_version text NOT NULL,
+    allowed boolean NOT NULL,
+    reason_codes text[] NOT NULL,
+    facts_schema_version integer NOT NULL,
+    facts_json jsonb NOT NULL,
+    facts_hash char(64) NOT NULL,
+    scope_hash char(64) NOT NULL,
+    correlation_id uuid NOT NULL,
+    idempotency_key text NOT NULL,
+    evaluated_at timestamptz NOT NULL,
+    CONSTRAINT pk_policy_decisions PRIMARY KEY (policy_decision_id),
+    CONSTRAINT fk_policy_decisions_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_policy_decisions_campaign_version FOREIGN KEY (campaign_id, campaign_version) REFERENCES campaigns (campaign_id, campaign_version) ON DELETE RESTRICT,
+    CONSTRAINT fk_policy_decisions_message_mailbox FOREIGN KEY (message_id, mailbox_id) REFERENCES outreach_messages (message_id, mailbox_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_policy_decisions_command UNIQUE (scope, idempotency_key),
+    CONSTRAINT uq_policy_decisions_mailbox_identity UNIQUE (policy_decision_id, mailbox_id),
+    CONSTRAINT ck_policy_decisions_scope CHECK (scope IN ('EXPERIMENT','CAMPAIGN','SEND','PROVIDER','CONTROL')),
+    CONSTRAINT ck_policy_decisions_campaign_pair CHECK ((campaign_id IS NULL) = (campaign_version IS NULL)),
+    CONSTRAINT ck_policy_decisions_send_binding CHECK (scope <> 'SEND' OR (experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND message_id IS NOT NULL AND mailbox_id IS NOT NULL)),
+    CONSTRAINT ck_policy_decisions_reasons CHECK ((allowed AND cardinality(reason_codes) >= 0) OR (NOT allowed AND cardinality(reason_codes) > 0)),
+    CONSTRAINT ck_policy_decisions_facts CHECK (facts_schema_version > 0 AND jsonb_typeof(facts_json) = 'object' AND facts_hash ~ '^[0-9a-f]{64}$' AND scope_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_policy_decisions_reproducibility ON policy_decisions (policy_version, scope_hash, facts_hash);
+CREATE INDEX ix_policy_decisions_mailbox ON policy_decisions (mailbox_id, evaluated_at DESC) WHERE mailbox_id IS NOT NULL;
+
+CREATE TABLE cost_entries (
+    cost_entry_id uuid NOT NULL,
+    provider text NOT NULL,
+    operation text NOT NULL,
+    experiment_id uuid NULL,
+    workflow_run_id uuid NULL,
+    agent_run_id uuid NULL,
+    send_attempt_id uuid NULL,
+    usage_schema_version integer NOT NULL,
+    usage_json jsonb NOT NULL,
+    usage_hash char(64) NOT NULL,
+    amount_minor bigint NOT NULL,
+    currency char(3) NOT NULL,
+    reporting_amount_minor_ils bigint NULL,
+    fx_rate numeric NULL,
+    fx_rate_source text NULL,
+    fx_rate_date date NULL,
+    provider_invoice_ref text NULL,
+    occurred_at timestamptz NOT NULL,
+    recorded_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    idempotency_key text NOT NULL,
+    CONSTRAINT pk_cost_entries PRIMARY KEY (cost_entry_id),
+    CONSTRAINT fk_cost_entries_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_cost_entries_workflow FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs (workflow_run_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_cost_entries_agent_run FOREIGN KEY (agent_run_id) REFERENCES agent_runs (agent_run_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_cost_entries_send_attempt FOREIGN KEY (send_attempt_id) REFERENCES send_attempts (send_attempt_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_cost_entries_provider_key UNIQUE (provider, idempotency_key),
+    CONSTRAINT ck_cost_entries_usage CHECK (usage_schema_version > 0 AND jsonb_typeof(usage_json) = 'object' AND usage_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_cost_entries_amount CHECK (amount_minor >= 0 AND currency ~ '^[A-Z]{3}$'),
+    CONSTRAINT ck_cost_entries_fx CHECK ((currency = 'ILS' AND reporting_amount_minor_ils = amount_minor AND fx_rate IS NULL AND fx_rate_source IS NULL AND fx_rate_date IS NULL) OR (currency <> 'ILS' AND reporting_amount_minor_ils IS NOT NULL AND fx_rate > 0 AND fx_rate_source IS NOT NULL AND fx_rate_date IS NOT NULL))
+);
+CREATE INDEX ix_cost_entries_experiment_provider ON cost_entries (experiment_id, provider, occurred_at DESC);
+CREATE INDEX ix_cost_entries_workflow ON cost_entries (workflow_run_id, occurred_at DESC) WHERE workflow_run_id IS NOT NULL;
+
+CREATE TABLE repair_actions (
+    repair_action_id uuid NOT NULL,
+    incident_id uuid NOT NULL,
+    command_type text NOT NULL,
+    aggregate_type text NOT NULL,
+    aggregate_id uuid NOT NULL,
+    before_hash char(64) NOT NULL,
+    after_hash char(64) NOT NULL,
+    reason_code text NOT NULL,
+    operator_id uuid NOT NULL,
+    evidence_ref text NOT NULL,
+    idempotency_key text NOT NULL,
+    executed_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_repair_actions PRIMARY KEY (repair_action_id),
+    CONSTRAINT fk_repair_actions_incident FOREIGN KEY (incident_id) REFERENCES incidents (incident_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_repair_actions_operator FOREIGN KEY (operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_repair_actions_command UNIQUE (operator_id, idempotency_key),
+    CONSTRAINT ck_repair_actions_hashes CHECK (before_hash ~ '^[0-9a-f]{64}$' AND after_hash ~ '^[0-9a-f]{64}$' AND before_hash <> after_hash),
+    CONSTRAINT ck_repair_actions_no_sql CHECK (command_type !~* 'sql')
+);
+CREATE INDEX ix_repair_actions_incident ON repair_actions (incident_id, executed_at);
+```
+
+| Table | Exclusive write owner | Retention class / retention owner |
+| --- | --- | --- |
+| `domain_events` | application `UnitOfWork` after a valid transition | `SAFETY_LONG` / `RetentionCommandService` |
+| `audit_events` | application `AuditRecorder` in the command unit of work | `SAFETY_LONG` / `RetentionCommandService` |
+| `command_idempotency` | `IdempotentCommandExecutor` in the same command transaction | `SAFETY_LONG` / `RetentionCommandService` |
+| `outbox_messages` | application `UnitOfWork` with its source domain event | `SAFETY_LONG` / `RetentionCommandService` |
+| `outbox_deliveries` | each named internal consumer's PostgreSQL unit of work | `SAFETY_LONG` / `RetentionCommandService` |
+| `policy_decisions` | deterministic `PolicyEvaluationService` | `SAFETY_LONG` / `RetentionCommandService` |
+| `cost_entries` | `ProviderCostReconciliationService` | `SAFETY_LONG` / `RetentionCommandService` |
+| `repair_actions` | authenticated `RecoveryCommandService` | `SAFETY_LONG` / `RetentionCommandService` |
+
+`record_kind` from ARCH-03 is represented by table membership (`DOMAIN` or `AUDIT`) and exposed as a union projection. Every event name retains its `.v1` suffix. The registry includes the complete `campaign.ready/activated/paused/resumed/completed/cancelled/failed/state_changed.v1` family and distinct `send.provider_accepted.v1`; `send.reconciled_as_sent.v1` is legal only after an ambiguous attempt. Incompatible payloads add a new event name/version and reader/upcaster; old rows are never rewritten.
 
 ### Command and side-effect atomicity
 
-For aggregate commands: begin; claim `(command_scope,idempotency_key)`; compare request hash; load expected version; apply pure transition; update aggregate; insert specific event plus `experiment.state_changed.v1` where required; insert audit; insert outbox; store result; commit. For provider work: the first transaction records policy/budget/intent/attempt; the network call occurs without a long transaction; the second records result or `AMBIGUOUS`. A crash in the gap enters reconciliation, never automatic retry.
+For aggregate commands: begin; claim `(command_scope,idempotency_key)`; compare request hash; load expected version; apply pure transition; update aggregate; insert the specific event plus the aggregate's canonical `*.state_changed.v1` event where defined; insert audit; insert outbox; store result; commit. For provider work: the first transaction records mailbox-bound policy/budget/intent/attempt; the network call occurs without a long transaction; the second records `send.provider_accepted.v1`, conclusive failure, or `AMBIGUOUS`. A crash in the gap enters mailbox-bound reconciliation, never automatic retry.
+
+An internal outbox consumer starts one PostgreSQL transaction, rechecks absence of `(consumer_name,event_id)`, performs all internal business writes, inserts `outbox_deliveries`, and commits once. A crash rolls back both the business writes and delivery receipt; redelivery re-executes the same transaction. External provider effects are forbidden in that transaction and forbidden from any generic “effect once” claim. Gmail/model/search/extraction effects use their explicit intent/result/error or `AMBIGUOUS`/reconciliation contracts.
 
 ## Ordered implementation tasks
 
 - [ ] **Encode event schemas/catalog —** Input: every ARCH-03 `.v1` name/payload. Operation: register typed payload, aggregate applicability, actor rules, redaction, and upcast policy. Output: executable catalog. Test evidence: `test_arch03_event_catalog_is_exact_and_complete`. Failure behavior: unknown/malformed event aborts transaction.
 - [ ] **Migrate append-only safety tables —** Input: table contract. Operation: create constraints/indexes/immutable protections and FKs. Output: M2 event/audit/idempotency/outbox/policy/cost schema. Test evidence: migration introspection and mutation-denial tests. Failure behavior: rollback revision.
 - [ ] **Implement idempotent command middleware —** Input: authenticated command, scope/key, canonical request hash. Operation: claim or replay exact result inside unit of work. Output: one command effect. Test evidence: concurrent duplicate and hash-conflict tests. Failure behavior: typed conflict; no second effect.
-- [ ] **Implement outbox and consumer dedupe —** Input: committed outbox rows. Operation: lease bounded batch, publish at least once, and require consumer delivery record. Output: eventually delivered observable events. Test evidence: crash before/after publish and handler commit. Failure behavior: bounded backoff/dead-letter incident; aggregate remains committed.
+- [ ] **Implement outbox and internal consumer atomicity —** Input: committed outbox rows. Operation: lease a bounded batch, publish at least once, and make each internal consumer commit its business writes plus `outbox_deliveries` in one PostgreSQL transaction. Output: eventually delivered internal events with atomic consumer effects. Test evidence: crash before business write, between business write and receipt, before commit, and after commit. Failure behavior: rollback/redeliver for internal writes; bounded backoff/dead-letter incident for poison events; external effects are rejected from this path.
 - [ ] **Implement policy/cost reconciliation —** Input: frozen facts/provider usage. Operation: persist decision before authority and reconcile reservation to cost afterward. Output: explainable gate and cost ledger. Test evidence: overspend, duplicate invoice, currency, and missing-result tests. Failure behavior: deny/disable paid call and open discrepancy.
 
 ## Test strategy
@@ -56,7 +285,8 @@ For aggregate commands: begin; claim `(command_scope,idempotency_key)`; compare 
 - **Contract `test_arch03_event_names_and_payload_ids_are_exact`:** no alias or missing suffix.
 - **Integration `test_command_bundle_rolls_back_at_every_write`:** aggregate/event/audit/idempotency/outbox are indivisible.
 - **Concurrency `test_same_command_key_different_hash_conflicts`:** no confused replay.
-- **Recovery `test_outbox_crash_is_at_least_once_but_consumer_effect_once`:** delivery dedupe works.
+- **Recovery `test_internal_consumer_business_writes_and_delivery_receipt_commit_together`:** every injected crash rolls back both or commits both; redelivery is safe.
+- **Contract `test_external_side_effects_cannot_run_in_outbox_consumer_transaction`:** provider effects require intent/result/ambiguity/reconciliation instead of a generic effect-once assertion.
 - **Security `test_event_payload_allowlist_excludes_secrets_pii_and_message_body`:** fixture scan.
 - **Cost `test_reservation_reconciles_original_and_ils_reporting_currency`:** no silent mixing.
 
@@ -72,7 +302,7 @@ Unknown schema, version gap, idempotency hash mismatch, impossible actor, or par
 
 - [ ] Every canonical event maps to a typed schema and exact payload identifiers.
 - [ ] Every mutation/denial has actor, authority, correlation, causation, idempotency, and audit evidence.
-- [ ] Command replay and outbox/consumer retry cannot duplicate business or provider effects.
+- [ ] Command replay cannot duplicate command effects; internal outbox consumer writes and delivery receipt are atomic; external provider effects never rely on generic outbox effect-once semantics.
 - [ ] Logs/runtime history are explicitly non-authoritative.
 - [ ] Cost and policy decisions are reproducible and linked to side effects.
 

@@ -26,15 +26,233 @@ In scope: exact normalized records for scope versions, idea candidates, offer hy
 
 Create `domain/experiments.py`, `domain/offers.py`, `domain/metrics.py`, `persistence/models/experiments.py`, repositories, and an M2 migration.
 
-| Table | Required columns and keys | Required constraints/indexes | Transition/event relationship |
+### Exact DDL-equivalent experiment contract
+
+```sql
+CREATE TABLE experiment_briefs (
+    experiment_brief_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    brief_version integer NOT NULL,
+    experiment_code text NOT NULL,
+    customer_segment text NOT NULL,
+    problem_hypothesis text NOT NULL,
+    offer_hypothesis text NOT NULL,
+    operator_advantage text NOT NULL,
+    jurisdictions_schema_version integer NOT NULL,
+    jurisdictions jsonb NOT NULL,
+    baseline_method text NOT NULL,
+    total_cash_cap_ils_minor bigint NOT NULL,
+    provider_cash_cap_ils_minor bigint NOT NULL,
+    operator_hours_cap numeric(8,2) NOT NULL,
+    max_researched_leads integer NOT NULL,
+    max_qualified_leads integer NOT NULL,
+    max_contacted_leads integer NOT NULL,
+    max_concurrently_active_leads integer NOT NULL,
+    authority_level text NOT NULL,
+    success_rule_schema_version integer NOT NULL,
+    success_rule jsonb NOT NULL,
+    kill_rule_schema_version integer NOT NULL,
+    kill_rule jsonb NOT NULL,
+    decision_date_condition text NOT NULL,
+    content_hash char(64) NOT NULL,
+    created_by_operator_id uuid NOT NULL,
+    supersedes_brief_id uuid NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_experiment_briefs PRIMARY KEY (experiment_brief_id),
+    CONSTRAINT fk_experiment_briefs_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_experiment_briefs_operator FOREIGN KEY (created_by_operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_experiment_briefs_supersedes FOREIGN KEY (supersedes_brief_id) REFERENCES experiment_briefs (experiment_brief_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_experiment_briefs_version UNIQUE (experiment_id, brief_version),
+    CONSTRAINT uq_experiment_briefs_code UNIQUE (experiment_code),
+    CONSTRAINT uq_experiment_briefs_hash UNIQUE (experiment_id, content_hash),
+    CONSTRAINT ck_experiment_briefs_versions CHECK (brief_version > 0 AND jurisdictions_schema_version > 0 AND success_rule_schema_version > 0 AND kill_rule_schema_version > 0),
+    CONSTRAINT ck_experiment_briefs_json CHECK (jsonb_typeof(jurisdictions) = 'array' AND jsonb_typeof(success_rule) = 'object' AND jsonb_typeof(kill_rule) = 'object'),
+    CONSTRAINT ck_experiment_briefs_caps CHECK (total_cash_cap_ils_minor >= 0 AND provider_cash_cap_ils_minor >= 0 AND provider_cash_cap_ils_minor <= total_cash_cap_ils_minor AND operator_hours_cap > 0 AND max_researched_leads >= 0 AND max_qualified_leads BETWEEN 0 AND max_researched_leads AND max_contacted_leads BETWEEN 0 AND max_qualified_leads AND max_concurrently_active_leads BETWEEN 0 AND max_contacted_leads),
+    CONSTRAINT ck_experiment_briefs_authority CHECK (authority_level IN ('NO_SEND','TEST_INBOX_ONLY','BOUNDED_REAL_RECIPIENTS')),
+    CONSTRAINT ck_experiment_briefs_hash CHECK (content_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_experiment_briefs_experiment_created ON experiment_briefs (experiment_id, created_at DESC);
+
+CREATE TABLE ideas (
+    idea_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    idea_version integer NOT NULL,
+    title text NOT NULL,
+    problem_statement text NOT NULL,
+    target_customer text NOT NULL,
+    status text NOT NULL DEFAULT 'PROPOSED',
+    source_artifact_id uuid NULL,
+    content_hash char(64) NOT NULL,
+    supersedes_idea_id uuid NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_ideas PRIMARY KEY (idea_id),
+    CONSTRAINT fk_ideas_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_ideas_supersedes FOREIGN KEY (supersedes_idea_id) REFERENCES ideas (idea_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_ideas_version UNIQUE (experiment_id, idea_version),
+    CONSTRAINT uq_ideas_hash UNIQUE (experiment_id, content_hash),
+    CONSTRAINT ck_ideas_version CHECK (idea_version > 0),
+    CONSTRAINT ck_ideas_status CHECK (status IN ('PROPOSED','SELECTED','REJECTED','SUPERSEDED')),
+    CONSTRAINT ck_ideas_hash CHECK (content_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE UNIQUE INDEX uq_ideas_one_selected ON ideas (experiment_id) WHERE status = 'SELECTED';
+CREATE INDEX ix_ideas_experiment_status ON ideas (experiment_id, status);
+
+CREATE TABLE offer_hypotheses (
+    offer_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    idea_id uuid NOT NULL,
+    offer_version integer NOT NULL,
+    name text NOT NULL,
+    promise text NOT NULL,
+    deliverables_schema_version integer NOT NULL,
+    deliverables jsonb NOT NULL,
+    price_minor bigint NOT NULL,
+    currency char(3) NOT NULL,
+    assumptions_schema_version integer NOT NULL,
+    assumptions jsonb NOT NULL,
+    risk_reversals_schema_version integer NOT NULL,
+    risk_reversals jsonb NOT NULL,
+    status text NOT NULL DEFAULT 'PROPOSED',
+    source_artifact_id uuid NOT NULL,
+    content_hash char(64) NOT NULL,
+    supersedes_offer_id uuid NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_offer_hypotheses PRIMARY KEY (offer_id),
+    CONSTRAINT fk_offer_hypotheses_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_offer_hypotheses_idea FOREIGN KEY (idea_id) REFERENCES ideas (idea_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_offer_hypotheses_supersedes FOREIGN KEY (supersedes_offer_id) REFERENCES offer_hypotheses (offer_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_offer_hypotheses_version UNIQUE (experiment_id, offer_version),
+    CONSTRAINT uq_offer_hypotheses_hash UNIQUE (experiment_id, content_hash),
+    CONSTRAINT ck_offer_hypotheses_versions CHECK (offer_version > 0 AND deliverables_schema_version > 0 AND assumptions_schema_version > 0 AND risk_reversals_schema_version > 0),
+    CONSTRAINT ck_offer_hypotheses_json CHECK (jsonb_typeof(deliverables) = 'array' AND jsonb_typeof(assumptions) = 'array' AND jsonb_typeof(risk_reversals) = 'array'),
+    CONSTRAINT ck_offer_hypotheses_price CHECK (price_minor > 0 AND currency ~ '^[A-Z]{3}$'),
+    CONSTRAINT ck_offer_hypotheses_status CHECK (status IN ('PROPOSED','VALIDATED','ACCEPTED','REJECTED','SUPERSEDED')),
+    CONSTRAINT ck_offer_hypotheses_hash CHECK (content_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_offer_hypotheses_experiment_status ON offer_hypotheses (experiment_id, status);
+CREATE INDEX ix_offer_hypotheses_idea ON offer_hypotheses (idea_id);
+
+CREATE TABLE metric_definitions (
+    metric_definition_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    metric_name text NOT NULL,
+    definition_version integer NOT NULL,
+    unit text NOT NULL,
+    direction text NOT NULL,
+    success_threshold numeric NOT NULL,
+    kill_threshold numeric NULL,
+    target_min numeric NULL,
+    target_max numeric NULL,
+    sample_floor integer NOT NULL,
+    window_start timestamptz NOT NULL,
+    window_end timestamptz NOT NULL,
+    query_version text NOT NULL,
+    rule_schema_version integer NOT NULL,
+    rule_json jsonb NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_metric_definitions PRIMARY KEY (metric_definition_id),
+    CONSTRAINT fk_metric_definitions_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_metric_definitions_version UNIQUE (experiment_id, metric_name, definition_version),
+    CONSTRAINT ck_metric_definitions_version CHECK (definition_version > 0 AND rule_schema_version > 0),
+    CONSTRAINT ck_metric_definitions_direction CHECK (direction IN ('HIGHER_IS_BETTER','LOWER_IS_BETTER','TARGET_RANGE')),
+    CONSTRAINT ck_metric_definitions_target CHECK ((direction <> 'TARGET_RANGE' AND target_min IS NULL AND target_max IS NULL) OR (direction = 'TARGET_RANGE' AND target_min IS NOT NULL AND target_max IS NOT NULL AND target_min <= target_max)),
+    CONSTRAINT ck_metric_definitions_sample CHECK (sample_floor >= 0),
+    CONSTRAINT ck_metric_definitions_window CHECK (window_start < window_end),
+    CONSTRAINT ck_metric_definitions_rule CHECK (jsonb_typeof(rule_json) = 'object')
+);
+CREATE INDEX ix_metric_definitions_experiment_name ON metric_definitions (experiment_id, metric_name, definition_version DESC);
+
+CREATE TABLE metric_observations (
+    metric_observation_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    metric_definition_id uuid NOT NULL,
+    metric_name text NOT NULL,
+    definition_version integer NOT NULL,
+    window_start timestamptz NOT NULL,
+    window_end timestamptz NOT NULL,
+    observed_value numeric NOT NULL,
+    numerator numeric NULL,
+    denominator numeric NULL,
+    unit text NOT NULL,
+    source_event_ids uuid[] NOT NULL,
+    computed_at timestamptz NOT NULL,
+    query_version text NOT NULL,
+    original_currency char(3) NULL,
+    original_amount numeric NULL,
+    fx_rate_to_ils numeric NULL,
+    fx_rate_source text NULL,
+    fx_rate_date date NULL,
+    amount_ils numeric NULL,
+    correlation_id uuid NOT NULL,
+    recorded_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_metric_observations PRIMARY KEY (metric_observation_id),
+    CONSTRAINT fk_metric_observations_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_metric_observations_definition FOREIGN KEY (metric_definition_id) REFERENCES metric_definitions (metric_definition_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_metric_observations_source UNIQUE (metric_definition_id, query_version, source_event_ids),
+    CONSTRAINT ck_metric_observations_window CHECK (window_start < window_end),
+    CONSTRAINT ck_metric_observations_ratio CHECK ((numerator IS NULL AND denominator IS NULL) OR (numerator IS NOT NULL AND denominator > 0)),
+    CONSTRAINT ck_metric_observations_sources CHECK (cardinality(source_event_ids) > 0),
+    CONSTRAINT ck_metric_observations_currency CHECK ((original_currency IS NULL AND original_amount IS NULL AND fx_rate_to_ils IS NULL AND fx_rate_source IS NULL AND fx_rate_date IS NULL AND amount_ils IS NULL) OR (original_currency ~ '^[A-Z]{3}$' AND original_amount IS NOT NULL AND fx_rate_to_ils > 0 AND fx_rate_source IS NOT NULL AND fx_rate_date IS NOT NULL AND amount_ils IS NOT NULL))
+);
+CREATE INDEX ix_metric_observations_experiment_computed ON metric_observations (experiment_id, computed_at DESC);
+CREATE INDEX ix_metric_observations_correlation ON metric_observations (correlation_id);
+
+CREATE TABLE metric_snapshots (
+    metric_snapshot_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    snapshot_version integer NOT NULL,
+    definition_set_hash char(64) NOT NULL,
+    observation_cutoff_at timestamptz NOT NULL,
+    values_schema_version integer NOT NULL,
+    values_json jsonb NOT NULL,
+    values_hash char(64) NOT NULL,
+    computed_by_rule_version text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_metric_snapshots PRIMARY KEY (metric_snapshot_id),
+    CONSTRAINT fk_metric_snapshots_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_metric_snapshots_version UNIQUE (experiment_id, snapshot_version),
+    CONSTRAINT uq_metric_snapshots_inputs UNIQUE (experiment_id, definition_set_hash, observation_cutoff_at),
+    CONSTRAINT ck_metric_snapshots_version CHECK (snapshot_version > 0 AND values_schema_version > 0),
+    CONSTRAINT ck_metric_snapshots_json CHECK (jsonb_typeof(values_json) = 'object'),
+    CONSTRAINT ck_metric_snapshots_hashes CHECK (definition_set_hash ~ '^[0-9a-f]{64}$' AND values_hash ~ '^[0-9a-f]{64}$')
+);
+CREATE INDEX ix_metric_snapshots_experiment_created ON metric_snapshots (experiment_id, created_at DESC);
+
+CREATE TABLE experiment_decisions (
+    experiment_decision_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    experiment_version bigint NOT NULL,
+    decision_kind text NOT NULL,
+    metric_snapshot_id uuid NOT NULL,
+    evidence_bundle_artifact_id uuid NOT NULL,
+    rule_version text NOT NULL,
+    operator_id uuid NOT NULL,
+    command_idempotency_key text NOT NULL,
+    rationale text NOT NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_experiment_decisions PRIMARY KEY (experiment_decision_id),
+    CONSTRAINT fk_experiment_decisions_experiment_version FOREIGN KEY (experiment_id, experiment_version) REFERENCES experiments (experiment_id, version) ON DELETE RESTRICT,
+    CONSTRAINT fk_experiment_decisions_snapshot FOREIGN KEY (metric_snapshot_id) REFERENCES metric_snapshots (metric_snapshot_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_experiment_decisions_operator FOREIGN KEY (operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_experiment_decisions_version UNIQUE (experiment_id, experiment_version),
+    CONSTRAINT uq_experiment_decisions_command UNIQUE (operator_id, command_idempotency_key),
+    CONSTRAINT ck_experiment_decisions_kind CHECK (decision_kind IN ('SCALE','REVISE','KILL','INCONCLUSIVE')),
+    CONSTRAINT ck_experiment_decisions_version CHECK (experiment_version > 0)
+);
+CREATE INDEX ix_experiment_decisions_snapshot ON experiment_decisions (metric_snapshot_id);
+```
+
+Deferred M2 foreign keys `fk_ideas_source_artifact`, `fk_offer_hypotheses_source_artifact`, and `fk_experiment_decisions_evidence_bundle` reference `artifacts(artifact_id)` after DB-04 exists. Metric observations instead reference their exact immutable `source_event_ids` catalog set and do not claim an artifact FK. `fk_experiments_active_brief` maps `experiments(experiment_id,active_brief_version)` to `experiment_briefs(experiment_id,brief_version)` and is `DEFERRABLE INITIALLY DEFERRED`. Exact statements are in DB-06.
+
+| Table | Exclusive write owner | Canonical events | Retention class / retention owner |
 | --- | --- | --- | --- |
-| `experiment_briefs` | `experiment_brief_id uuid PK`, `experiment_id FK`, `brief_version int`, customer/problem/offer/evidence-channel text, `jurisdictions jsonb`, `authority_level text`, cash/time/sample/success/kill fields, `content_hash text`, `created_by_operator_id FK`, `supersedes_brief_id FK self null`, `created_at` | unique `(experiment_id,brief_version)` and `(experiment_id,content_hash)`; `brief_version>0`; positive caps; `authority_level in ('NO_SEND','TEST_INBOX_ONLY','BOUNDED_REAL_RECIPIENTS')`; immutable trigger | `experiment.created.v1`, `experiment.scope_approved.v1`, `experiment.revision_started.v1` |
-| `ideas` | `idea_id uuid PK`, `experiment_id FK`, `idea_version int`, `title`, `problem_statement`, `target_customer`, `status text`, `source_artifact_id uuid null`, `content_hash`, `supersedes_idea_id FK self null`, timestamps | unique `(experiment_id,idea_version)`; unique `(experiment_id,content_hash)`; `status in ('PROPOSED','SELECTED','REJECTED','SUPERSEDED')`; one partial-unique `SELECTED` per experiment | selection is audited; artifact events remain on linked artifact |
-| `offer_hypotheses` | `offer_id uuid PK`, `experiment_id FK`, `idea_id FK`, `offer_version int`, `name`, `promise`, `deliverables jsonb`, `price_minor`, `currency char(3)`, `assumptions jsonb`, `risk_reversals jsonb`, `status text`, `source_artifact_id uuid`, `content_hash`, `supersedes_offer_id FK self null`, timestamps | unique `(experiment_id,offer_version)`; positive price; `status in ('PROPOSED','VALIDATED','ACCEPTED','REJECTED','SUPERSEDED')`; immutable trigger; indexes `(experiment_id,status)` and `idea_id` | accepted offer artifact enables research completion but does not send |
-| `metric_definitions` | `metric_definition_id uuid PK`, `experiment_id FK`, `metric_key text`, `definition_version int`, `unit text`, `direction text`, `success_threshold numeric`, `kill_threshold numeric null`, `sample_floor int`, `window_start/end`, `rule_json jsonb`, timestamps | unique `(experiment_id,metric_key,definition_version)`; `direction in ('HIGHER_IS_BETTER','LOWER_IS_BETTER','TARGET_RANGE')`; nonnegative sample; window ordering; immutable | inputs to deterministic evaluation |
-| `metric_observations` | `metric_observation_id uuid PK`, `experiment_id FK`, `metric_definition_id FK`, `observed_value numeric`, `numerator/denominator numeric null`, `source_type text`, `source_ref text`, `observed_at`, `recorded_at`, `correlation_id uuid` | unique `(metric_definition_id,source_type,source_ref)`; denominator positive when present; source check; index `(experiment_id,observed_at)` | append-only evidence, no transition alone |
-| `metric_snapshots` | `metric_snapshot_id uuid PK`, `experiment_id FK`, `snapshot_version int`, `definition_set_hash`, `observation_cutoff_at`, `values_json jsonb`, `computed_by_rule_version`, `created_at` | unique `(experiment_id,snapshot_version)` and `(experiment_id,definition_set_hash,observation_cutoff_at)`; immutable | referenced by `experiment.decision_recorded.v1` |
-| `experiment_decisions` | `experiment_decision_id uuid PK`, `experiment_id FK`, `decision_kind text`, `metric_snapshot_id FK`, `evidence_bundle_artifact_id uuid`, `rule_version text`, `operator_id FK`, `command_idempotency_key text`, `rationale text`, `created_at` | ARCH-03 decision-kind check; unique `(experiment_id)` for terminal experiment version; unique `(operator_id,command_idempotency_key)`; immutable | commits `experiment.decision_recorded.v1` and `EVALUATING -> DECIDED` |
+| `experiment_briefs` | `ExperimentBriefCommandService` | `experiment.created.v1`, `experiment.scope_approved.v1`, `experiment.revision_started.v1` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `ideas` | `IdeaMaterializationService` | source artifact events plus audited selection | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `offer_hypotheses` | `OfferMaterializationService` | source artifact events | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `metric_definitions` | `MetricDefinitionCommandService` | audit record on version approval | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `metric_observations` | `MetricObservationService` | source domain events referenced in `source_event_ids` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `metric_snapshots` | `MetricSnapshotService` | referenced by `experiment.decision_recorded.v1` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
+| `experiment_decisions` | `ExperimentCommandService` | `experiment.decision_recorded.v1`, `experiment.state_changed.v1` | `SAFETY_LONG` / `RetentionCommandService` |
 
 JSON fields have versioned Pydantic schemas and GIN indexes only after query evidence justifies them. They cannot hold identities, state, foreign keys, money, or fields that require independent retention/deletion.
 
