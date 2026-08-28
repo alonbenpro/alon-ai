@@ -41,6 +41,7 @@ Every `MetricObservation` must contain `metric_name`, `definition_version`, `exp
 | M1 cancellation/operator control | pause and cancellation stop new provider calls within the tested control bound; post-cancel provider calls = `0` | command/event timeline | disqualify DBOS; migrate to Temporal |
 | M1 workflow versioning | every in-flight fixture completes or reaches its documented operator-recovery state across the tested DBOS upgrade | before/after workflow-version traces | disqualify DBOS; migrate to Temporal |
 | M1 observability | workflow, policy, attempt, provider, ambiguity, and recovery evidence are correlated and operator-visible = `100%` | retained trace/audit bundle | disqualify DBOS; migrate to Temporal |
+| M1 rate-limit recovery | configured queue and send rate limits are never exceeded under worker restart and concurrent fixtures | DBOS queue/admission traces and provider-call timestamps | disqualify DBOS; migrate to Temporal |
 | M2 records | invalid state transitions accepted = `0`; duplicate idempotency keys committed = `0`; audit gaps = `0` | migration, constraint, property, and restore tests | block M3 |
 | M3 schema quality | valid typed artifacts = `100%` on promotion fixtures | versioned eval report | reject agent/provider version |
 | M3 evidence fidelity | unsupported material claims = `0`; citation precision at claim level >= `0.95` | operator-labeled fixtures and captured sources | reject agent/provider version |
@@ -53,7 +54,9 @@ Every `MetricObservation` must contain `metric_name`, `definition_version`, `exp
 | M8 recovery | encrypted backup restores on a fresh target and integrity checks pass; critical alerts exercised = `100%` | restore manifest and incident drill | block M9 |
 | M9 bounded authority | sends, spend, active leads, and provider calls never exceed pre-registered caps | policy and cost queries | stop experiment immediately |
 
-Later documents may make a threshold stricter. They may not weaken these hard gates without an approved architecture decision and updated risk acceptance.
+Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency is disqualifying and forces migration to Temporal before workflow product work continues.
+
+Only the isolated disposable M1 harness may send before M6, and only to operator-owned test inboxes. Product outreach remains disabled until both M1 and M6 evidence gates pass. Later documents may make a threshold stricter; they may not weaken these hard gates without an approved architecture decision and updated risk acceptance.
 
 ## Product-learning metrics
 

@@ -109,10 +109,10 @@ The eventual implementation must commit a stable idempotency key and outbound-at
 
 ## Mandatory DBOS production-acceptance spike
 
-DBOS is the selected runtime, but selection does not authorize production outreach. M1 is the immediate production-acceptance milestone and must prove all of the following with operator-owned test inboxes:
+DBOS is the selected runtime, but selection and M1 acceptance do not authorize product outreach. Only the isolated disposable M1 harness may send, and only to operator-owned test inboxes. Product outreach remains disabled until both M1 and M6 evidence gates pass; passing both only makes the later bounded real experiment eligible for separate authority.
 
 1. A scheduled finite DBOS workflow and validated Pydantic AI artifact.
-2. Five synthetic leads passing through a strictly rate-limited DBOS queue to operator-owned test recipients only.
+2. Five synthetic leads passing through a DBOS queue whose rate limits remain enforced under restart and concurrency, to operator-owned test recipients only.
 3. A stable send idempotency key, outbound-attempt ledger, and provider-result capture surrounding every Gmail call.
 4. Worker termination before, during, and after the Gmail call with zero uncontrolled duplicate messages after restart.
 5. Ambiguous outcomes enter an operator-visible state and reconcile Gmail Sent evidence before any bounded retry.
@@ -120,7 +120,7 @@ DBOS is the selected runtime, but selection does not authorize production outrea
 7. An in-flight workflow survives the tested workflow-version upgrade path.
 8. Correlated observability exposes the workflow run, policy decision, send attempt, provider evidence, and recovery action to the operator.
 
-Any disqualifying failure in restart recovery, cancellation, ambiguous-outcome reconciliation, duplicate-send prevention, workflow versioning, observability, or operator control forces migration to Temporal before further workflow product work. See [ADR 0002](docs/decisions/0002-dbos-workflow-runtime.md).
+Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency is disqualifying and forces migration to Temporal before workflow product work continues. See [ADR 0002](docs/decisions/0002-dbos-workflow-runtime.md).
 
 ## Roadmap and explicit non-goals
 

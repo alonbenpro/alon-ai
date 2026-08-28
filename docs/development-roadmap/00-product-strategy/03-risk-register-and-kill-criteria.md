@@ -30,7 +30,7 @@ The existing guard is useful but insufficient: a Boolean environment flag cannot
 | --- | --- | --- | --- | --- | --- |
 | R01 | duplicate or unintended Gmail send | Critical | durable idempotency, deterministic policy, test-recipient allowlist, `SendGateway`, reconciliation before retry | any recipient receives duplicate content for one intent; any send lacks intent/audit record | engage global kill switch, revoke queue authority, reconcile all in-flight intents, preserve evidence, return to M1/M6 |
 | R02 | Gmail call succeeds but local completion is absent | Critical | stable RFC message identifier, idempotency key, `AMBIGUOUS` state, Sent-mail search before retry | timeout/crash between provider acceptance and durable completion | prohibit retry, reconcile, require operator review if more than one candidate or no conclusive result |
-| R03 | selected DBOS runtime fails production acceptance | Critical | DBOS kill-point spike and acceptance scorecard | failed restart, cancellation, ambiguous reconciliation, duplicate-send, versioning, observability, or operator-control gate | migrate to Temporal before product workflows |
+| R03 | selected DBOS runtime fails production acceptance | Critical | DBOS kill-point spike and acceptance scorecard | failed restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency | migrate to Temporal before product workflows |
 | R04 | suppression, jurisdiction, campaign, budget, rate, or kill policy bypass | Critical | versioned deterministic policy composition rechecked immediately before provider call | any mismatch between policy facts and actual send | stop all sends, classify incident, correct data/policy, replay policy against intents before re-enable |
 | R05 | Gmail OAuth or provider credential compromise | Critical | encryption at rest, least scopes, private access, rotation and revocation runbook | secret scan, unauthorized access, provider alert, unexplained token use | revoke tokens, disable provider, rotate secrets, assess affected data and legal obligations |
 | R06 | personal or message data leaks through logs/artifacts | Critical | field allowlists, redaction, least retention, sanitized exception paths | secret/PII scan or incident alert finds disallowed content | stop affected telemetry/provider path, preserve restricted evidence, purge according to approved incident procedure |
@@ -58,22 +58,22 @@ Any trigger below sets planned `system_control.outreach_mode = DISABLED`, blocks
 - authoritative spend cannot be determined or a hard budget cap is exceeded; or
 - monitoring required to observe sends, policy decisions, and reconciliation is unavailable.
 
-In M1, the equivalent stop is implemented in the disposable spike harness rather than a product control table. This does not authorize an M1 product schema.
+In M1, the equivalent stop is implemented in the disposable isolated harness rather than a product control table; it may send only to operator-owned test inboxes. This does not authorize an M1 product schema or product outreach. Product outreach remains disabled until both M1 and M6 evidence gates pass.
 
 ## DBOS production-acceptance failure criteria
 
 DBOS is selected, but production use remains blocked. M1 disqualifies DBOS and mandates Temporal if it cannot reproducibly demonstrate every item below:
 
-1. finite scheduled workflow recovery after worker termination at every defined kill point;
-2. zero uncontrolled duplicate messages;
-3. outbound-attempt ledger and provider-result capture that reconcile every ambiguous Gmail outcome before a bounded retry;
-4. unambiguous pause, cancellation, and resume behavior with no post-cancel provider call;
-5. inspectable workflow/run/queue state correlated to policy, attempt, provider, and recovery evidence;
-6. safe workflow version rollout and recovery of in-flight executions;
-7. rate-limit enforcement under restart and concurrency; and
-8. an operator-control procedure that fits one private PostgreSQL-centered deployment.
+1. restart recovery at every defined worker-termination kill point;
+2. cancellation with unambiguous pause/resume behavior and no post-cancel provider call;
+3. ambiguous Gmail outcome reconciliation through the outbound-attempt ledger and provider-result capture before any bounded retry;
+4. duplicate-send prevention with zero uncontrolled duplicate messages;
+5. workflow versioning with safe rollout and recovery of in-flight executions;
+6. observability of workflow, queue, policy, attempt, provider, and recovery evidence;
+7. operator control that fits one private PostgreSQL-centered deployment; and
+8. rate-limit enforcement under restart and concurrency.
 
-Dependency convenience, sunk implementation cost, existing lockfile presence, or familiarity cannot waive a failure. Temporal is the mandatory fallback. Pydantic AI remains the selected typed-agent layer; LangGraph and LangChain are excluded second agent-orchestration abstractions, while Restate and Prefect are excluded runtime/pipeline alternatives recorded only as decision history.
+Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency is disqualifying and forces migration to Temporal before workflow product work continues. Dependency convenience, sunk implementation cost, existing lockfile presence, or familiarity cannot waive a failure. Pydantic AI remains the selected typed-agent layer; LangGraph and LangChain are excluded second agent-orchestration abstractions, while Restate and Prefect are excluded runtime/pipeline alternatives recorded only as decision history.
 
 ## Product kill and park criteria
 

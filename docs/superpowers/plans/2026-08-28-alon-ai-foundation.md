@@ -20,7 +20,7 @@
 - `OUTREACH_ENABLED` defaults to `false`.
 - Agents never call Gmail directly; only `SendGateway` may invoke `GmailProvider.send`.
 - Pydantic AI is selected for typed agents; DBOS is selected for finite durable workflows, queues, schedules, retries, timers, and crash recovery on PostgreSQL.
-- Production outreach remains blocked on DBOS M1 production acceptance; any disqualifying failure forces migration to Temporal before workflow product work continues.
+- Only the isolated disposable M1 harness may send, and only to operator-owned test inboxes; product outreach remains blocked until both M1 and M6 evidence gates pass.
 - Do not add Redis, Celery, RabbitMQ, LangChain, LangGraph, Restate, Prefect, Kafka, Kubernetes, Elasticsearch, a vector database, microservices, billing, or multi-user authentication.
 - Do not track real credentials, OAuth tokens, generated secrets, or local `.env` files.
 - Exact dependency versions are resolved once and committed in `uv.lock` and `frontend/package-lock.json`.
@@ -1060,7 +1060,7 @@ jobs:
 
 - [ ] **Step 2: Write architecture and decision records**
 
-Each record must state context, decision, consequences, and reconsideration trigger. The DBOS record selects Pydantic AI for typed agents and DBOS for finite durable workflows/queues/schedules on PostgreSQL; M1 is the production-acceptance gate, and any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, or operator control forces Temporal before workflow product work continues. The Gmail record must explicitly say automated sending is supported but agents cannot call Gmail directly.
+Each record must state context, decision, consequences, and reconsideration trigger. The DBOS record selects Pydantic AI for typed agents and DBOS for finite durable workflows/queues/schedules on PostgreSQL; M1 is necessary but not sufficient for product outreach, which remains disabled until both M1 and M6 evidence gates pass. Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency is disqualifying and forces migration to Temporal before workflow product work continues. The Gmail record must explicitly say automated sending is supported but agents cannot call Gmail directly.
 
 - [ ] **Step 3: Write the local runbook**
 

@@ -41,8 +41,9 @@ Pydantic AI agents must never call Gmail directly or hold unrestricted Gmail aut
 - DBOS owns finite durable workflows, queues, schedules, retries, timers, and crash recovery on PostgreSQL.
 - PostgreSQL remains the application system of record; DBOS persistence and product data keep explicit ownership.
 - Deterministic domain/policy code owns business transitions, authorization, budgets, suppression, and external side effects.
-- M1 is DBOS production acceptance, not runtime selection. Production outreach remains disabled until every restart, cancellation, ambiguity, duplicate-send, versioning, observability, and operator-control gate passes.
-- Any disqualifying M1 failure forces migration to Temporal before workflow product work continues.
+- M1 is DBOS production acceptance, not outreach authorization. Only the isolated disposable M1 harness may send, and only to operator-owned test inboxes; product outreach remains disabled until both M1 and M6 evidence gates pass.
+- Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency is disqualifying and forces migration to Temporal before workflow product work continues.
+- Passing M1 and M6 grants no recipient, campaign, or spending authority by itself; bounded real-recipient authority remains a later experiment decision.
 
 LangGraph and LangChain are excluded from the initial stack because the product does not need a second agent-orchestration abstraction beside Pydantic AI. Restate is a separate durable runtime and Prefect is pipeline/task orchestration; both are excluded because they do not improve the current gate. This classification records decision history without making them dependencies.
 

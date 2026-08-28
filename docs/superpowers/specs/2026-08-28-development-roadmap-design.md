@@ -61,7 +61,7 @@ Alon AI selects Pydantic AI plus DBOS on PostgreSQL. This is an architecture dec
 - Deterministic domain and policy code owns state transitions, budgets, suppression, authorization, and every externally visible side effect.
 - `SendGateway` remains the only application path to `GmailProvider`; agents and workflows cannot bypass it.
 
-DBOS is selected because it fits the existing Python/Pydantic/PostgreSQL stack and minimizes the operating surface for a solo developer. Selection does not authorize production outreach. M1 is a production-acceptance gate that must prove restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, and operator control. A disqualifying failure forces migration to Temporal before further workflow product work. Convenience, sunk implementation cost, or lockfile presence cannot waive that fallback.
+DBOS is selected because it fits the existing Python/Pydantic/PostgreSQL stack and minimizes the operating surface for a solo developer. Selection and M1 acceptance do not authorize product outreach. Only the isolated disposable M1 harness may send, and only to operator-owned test inboxes; product outreach remains disabled until both M1 and M6 evidence gates pass. Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency is disqualifying and forces migration to Temporal before workflow product work continues. Convenience, sunk implementation cost, or lockfile presence cannot waive that fallback.
 
 LangGraph and LangChain are excluded from the initial stack because Alon AI does not currently need a second agent orchestration abstraction. Restate and Prefect are also excluded from the initial stack because they add a separate runtime or a pipeline-oriented model without improving the current product-risk gate. The roadmap retains a concise comparison record so future maintainers understand the layer distinction and the evidence that would justify reconsideration.
 
@@ -131,7 +131,7 @@ Files may link to repeated global constraints rather than duplicate long explana
 - All approved folders and files exist.
 - The repository README links to the roadmap master index.
 - The master README maps every file into one global execution sequence.
-- Pydantic AI and DBOS are selected, their responsibilities do not overlap, and M1 blocks production outreach until DBOS passes every acceptance gate.
+- Pydantic AI and DBOS are selected, their responsibilities do not overlap, only the isolated disposable M1 harness may send to operator-owned test inboxes, and product outreach remains disabled until both M1 and M6 evidence gates pass.
 - Temporal is the mandatory fallback after a disqualifying DBOS failure; adjacent frameworks and runtimes are accurately recorded but excluded from the initial stack.
 - Root agent instructions and the engineering navigation guide enforce Graphify-first repository discovery without requiring it for exact-path or verification-only work.
 - Frontend, backend, database, workflows, agents, providers, security, observability, tests, infrastructure, and launch operations are covered.

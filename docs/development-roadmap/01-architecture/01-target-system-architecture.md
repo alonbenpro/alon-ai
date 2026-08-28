@@ -103,7 +103,7 @@ Test-recipient aliases are operator-owned inbox aliases, not prospects. The sche
 
 ## DBOS production acceptance and Temporal fallback
 
-Pydantic AI plus DBOS on PostgreSQL is the selected architecture, as recorded in the [master stack decision](../README.md#selected-agent-and-durable-workflow-stack). M1 does not reopen selection; it production-accepts DBOS. Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, or operator control mandates Temporal before workflow product work continues. Pydantic AI owns typed agent execution, while DBOS/Temporal owns durable execution mechanics; neither owns send policy, business transitions, or Gmail ambiguity decisions.
+Pydantic AI plus DBOS on PostgreSQL is the selected architecture, as recorded in the [master stack decision](../README.md#selected-agent-and-durable-workflow-stack). M1 does not reopen selection; it production-accepts DBOS. Only the isolated disposable M1 harness may send, and only to operator-owned test inboxes. Product outreach remains disabled until both M1 and M6 evidence gates pass. Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency is disqualifying and forces migration to Temporal before workflow product work continues. Pydantic AI owns typed agent execution, while DBOS/Temporal owns durable execution mechanics; neither owns send policy, business transitions, or Gmail ambiguity decisions.
 
 The runtime interface planned at the application boundary exposes finite start, pause, resume, cancel, status, queue, schedule, and correlation capabilities without leaking DBOS/Temporal handles into domain, agents, providers, API models, or frontend contracts. A mandatory Temporal migration changes composition/workflow adapters, not product state vocabulary.
 
@@ -125,11 +125,11 @@ Current `alon_ai/domain/sending.py` imports policy and provider types, which is 
 
 ## Ordered implementation tasks
 
-- [ ] **Run M1 DBOS production acceptance —** Input: disposable `m1_spike` schema, Pydantic AI typed fixture, test-inbox fixtures, and kill-point matrix. Operation: exercise DBOS against every acceptance criterion. Output: DBOS acceptance record and evidence export. Test evidence: zero uncontrolled duplicates plus restart/cancel/ambiguity/version/observability/operator-control results. Failure behavior: begin mandatory Temporal migration before product workflows.
+- [ ] **Run M1 DBOS production acceptance —** Input: disposable `m1_spike` schema, Pydantic AI typed fixture, test-inbox fixtures, and kill-point matrix. Operation: exercise DBOS against every acceptance criterion using only operator-owned inboxes. Output: DBOS acceptance record and evidence export. Test evidence: restart, cancellation, ambiguity, duplicate-send, workflow-version, observability, operator-control, and rate-limit-under-restart/concurrency results. Failure behavior: begin mandatory Temporal migration before product workflows.
 - [ ] **Build the M2 product core —** Input: ARCH-02/03 contracts. Operation: add domain/application/persistence modules, first product migrations, immutable events, idempotency, and repositories. Output: PostgreSQL-backed system of record. Test evidence: migration, constraints, transitions, concurrency, audit, and fresh-restore tests. Failure behavior: block providers and agents.
 - [ ] **Add offline intelligence vertically —** Input: product records and provider ports. Operation: implement one typed artifact path with fixtures/evals before adding each specialist. Output: M3-promoted artifacts. Test evidence: schema, provenance, adversarial quality, cost, and regression reports. Failure behavior: rollback version.
 - [ ] **Add finite no-send workflows —** Input: promoted artifacts and durable engine. Operation: produce synthetic experiment/lead outputs without Gmail authority. Output: M4/M5 evidence bundles. Test evidence: complete synthetic runs, restart, and no-provider-send assertions. Failure behavior: pause at failed artifact/transition.
-- [ ] **Earn Gmail then UI authority —** Input: M1/M5 gates, policy, OAuth, history sync, test inboxes. Operation: prove the entire send/reconcile/reply/control flow before real recipients. Output: M6/M7 gate evidence. Test evidence: kill/restart/suppression/rate/audit and browser journeys. Failure behavior: global disable.
+- [ ] **Earn Gmail then UI authority —** Input: M1/M5 gates, policy, OAuth, history sync, and operator-owned test inboxes. Operation: prove the entire send/reconcile/reply/control flow at M6; keep product outreach disabled until M6 passes. Output: M6/M7 gate evidence that can make a later bounded real experiment eligible for separate authority. Test evidence: kill/restart/suppression/rate/audit and browser journeys. Failure behavior: global disable.
 - [ ] **Prove private operations —** Input: complete private product. Operation: deploy, monitor, back up, restore, and exercise incidents. Output: M8 evidence. Test evidence: fresh-server restore and incident drills. Failure behavior: block M9.
 
 ## Test strategy
@@ -154,7 +154,8 @@ Every provider can be disabled independently. Outreach has a global fail-closed 
 - [ ] Current and target topology are distinguishable.
 - [ ] Every external side effect has one deterministic authority path and reconciliation.
 - [ ] M1 uses only disposable spike records; M2 owns the first product data model.
-- [ ] DBOS is selected but production use remains blocked on M1; every disqualifying failure mandates Temporal.
+- [ ] DBOS is selected but runtime production acceptance remains blocked on M1; every one of the eight disqualifying failures mandates Temporal.
+- [ ] M1 sends are isolated-test-inbox-only, and product outreach remains disabled until both M1 and M6 evidence gates pass.
 - [ ] The target remains operable by one person.
 
 Retain architecture decisions, import-boundary reports, DBOS acceptance scorecard, crash/ambiguity traces, OpenAPI drift checks, migration/restore reports, and deployment trust-boundary evidence. This file unlocks [module boundaries](02-module-boundaries.md) and [states/events](03-domain-events-and-state-machines.md).

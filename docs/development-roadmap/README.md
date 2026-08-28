@@ -102,7 +102,7 @@ Alon AI selects Pydantic AI plus DBOS on PostgreSQL. This is an architecture dec
 | Restate | Durable runtime with a separate server and journal | Excluded initially; a second runtime does not improve the current gate |
 | Prefect | Data-flow and task orchestration for pipeline workloads | Excluded initially; its pipeline model does not improve the Gmail side-effect gate |
 
-M1 accepts DBOS for production use; it does not choose a vendor. Selection does not authorize outreach. Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, or operator control forces Temporal before workflow product work continues.
+M1 accepts DBOS as a runtime; it does not authorize product outreach. Only the isolated disposable M1 harness may send, and only to operator-owned test inboxes. Product outreach remains disabled until both M1 and M6 evidence gates pass; passing both only makes a later bounded real experiment eligible for separate authority. Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency is disqualifying and forces migration to Temporal before workflow product work continues.
 
 Gmail ambiguity is reconciled independently of DBOS because the API call may succeed before local completion is durably recorded. The design requires a stable send idempotency key, outbound-attempt ledger, provider-result capture, Sent-folder reconciliation, bounded retry policy, and operator-visible ambiguous state.
 
@@ -261,7 +261,7 @@ Files may link to repeated global constraints here, but task-specific requiremen
 
 ## Verification and acceptance
 
-The index is acceptable when every approved path appears exactly once in the manifest, M0-M9 appear in strict order, all relative links resolve after their files are created, the M1/M2 schema boundary is explicit, Pydantic AI and DBOS remain the selected initial stack, Temporal remains the mandatory fallback, and later task files use this vocabulary without inventing a competing gate.
+The index is acceptable when every approved path appears exactly once in the manifest, M0-M9 appear in strict order, all relative links resolve after their files are created, the M1/M2 schema boundary is explicit, M1 is isolated-test-inbox-only, product outreach requires both M1 and M6 evidence gates, Pydantic AI and DBOS remain the selected initial stack, Temporal remains mandatory after any of the eight disqualifying M1 failures, and later task files use this vocabulary without inventing a competing gate.
 
 Evidence to retain: manifest command output, placeholder scan, link scan, milestone-order check, current/future truth scan, and `git diff --check` output.
 

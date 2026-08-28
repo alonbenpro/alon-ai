@@ -81,9 +81,26 @@ stateDiagram-v2
     RESEARCHING --> FAILED
     QUALIFYING_LEADS --> FAILED
     OUTREACH_ACTIVE --> FAILED
+    FAILED --> RESEARCHING: operator retries saved research stage
+    FAILED --> QUALIFYING_LEADS: operator retries saved qualification stage
+    FAILED --> READY_FOR_OUTREACH: operator retries failed outreach stage
+    FAILED --> DRAFT: operator revises brief
+    FAILED --> CANCELLED: operator cancels
 ```
 
-`DECIDED` and `CANCELLED` are terminal for that experiment version. `FAILED` requires an operator `RetryExperimentStage`, `ReviseExperiment`, or `CancelExperiment` decision; retry creates a new finite workflow run and an explicit transition back to the saved retry state, never an immortal loop. `PAUSED` stores `paused_from_state` and no workflow may infer it.
+`DECIDED` and `CANCELLED` are terminal for that experiment version. `FAILED` is non-terminal but has only the five exits below. The authenticated operator issues the command; deterministic `ExperimentCommandService` owns the transition and atomically appends the named specific event plus `experiment.state_changed.v1`. A workflow may report failure but cannot choose a recovery exit.
+
+| From | Command | To | Guard | Specific event |
+| --- | --- | --- | --- | --- |
+| `FAILED` | `RetryExperimentStage` | `RESEARCHING` | `failed_from_state = RESEARCHING`; failure is retryable; `retry_count < retry_limit`; source inputs/artifacts remain valid; no in-flight run | `experiment.retry_started.v1` |
+| `FAILED` | `RetryExperimentStage` | `QUALIFYING_LEADS` | `failed_from_state = QUALIFYING_LEADS`; failure is retryable; `retry_count < retry_limit`; criteria/artifact versions remain valid; no in-flight run | `experiment.retry_started.v1` |
+| `FAILED` | `RetryExperimentStage` | `READY_FOR_OUTREACH` | `failed_from_state = OUTREACH_ACTIVE`; failure is retryable; `retry_count < retry_limit`; every send is terminal or reconciled; no `AMBIGUOUS`/`RECONCILING` message remains; M1 and M6 evidence gates still pass | `experiment.retry_started.v1` |
+| `FAILED` | `ReviseExperiment` | `DRAFT` | no in-flight run; every external side effect is terminal/reconciled; a new `ExperimentBrief` version is supplied; prior approvals are invalidated | `experiment.revision_started.v1` |
+| `FAILED` | `CancelExperiment` | `CANCELLED` | no provider call is in flight; all queued intents are cancelled and ambiguous outcomes are reconciled/quarantined | `experiment.cancelled.v1` |
+
+Entering `FAILED` records `failed_from_state`, `retryable`, `retry_count`, and `retry_limit` in `experiment.failed.v1`. A retry increments `retry_count`, creates a new finite `workflow_run_id`, and never resumes the failed run. Exhausted or non-retryable failure denies `RetryExperimentStage`; the operator must revise or cancel. The outreach retry returns to `READY_FOR_OUTREACH`, never directly to `OUTREACH_ACTIVE`, so policy, approval, budget, suppression, and milestone authority are rechecked.
+
+`PAUSED` stores `paused_from_state` and no workflow may infer it.
 
 `READY_FOR_OUTREACH` means product/evidence preparation passed; it does not mean sending is enabled. Activation additionally requires milestone authority, global/campaign controls, compliance facts, approval, budget, rate, and provider readiness.
 
@@ -115,7 +132,7 @@ An agent run can only create `PRODUCED`. Deterministic schema/provenance checks 
 
 Canonical `CampaignState`: `DRAFT`, `READY`, `ACTIVE`, `PAUSED`, `COMPLETED`, `CANCELLED`, `FAILED`.
 
-Only `ACTIVE` can admit send intents, and global/experiment/approval/policy state must also permit them. Pause stops new admissions/dequeues; cancel permanently blocks unsent intents. Completed/cancelled campaigns cannot reactivate; a revised campaign gets a new ID/version.
+Only `ACTIVE` can admit send intents, and global/experiment/approval/policy state must also permit them. Pause stops new admissions/dequeues; cancel permanently blocks unsent intents. `COMPLETED`, `CANCELLED`, and `FAILED` are terminal for that campaign version; recovery creates a revised campaign with a new ID/version.
 
 Canonical `MessageState`:
 
@@ -142,15 +159,26 @@ stateDiagram-v2
     RECONCILING --> FAILED_RETRYABLE: conclusive absence after defined window
     RECONCILING --> FAILED_PERMANENT: conflicting evidence/operator stop
     FAILED_RETRYABLE --> QUEUED: bounded retry policy admits
+    FAILED_RETRYABLE --> FAILED_PERMANENT: retry exhausted or operator aborts
 ```
 
-The transition from `SENDING` to `FAILED_RETRYABLE` is legal only when evidence proves Gmail did not accept the message. Timeout, connection loss, worker termination, or missing local commit produces `AMBIGUOUS`. `AMBIGUOUS` can never transition directly to `QUEUED`. `SENT`, `FAILED_PERMANENT`, `SUPPRESSED`, and `CANCELLED` are terminal.
+The transition from `SENDING` to `FAILED_RETRYABLE` is legal only when evidence proves Gmail did not accept the message. Timeout, connection loss, worker termination, or missing local commit produces `AMBIGUOUS`. `AMBIGUOUS` can never transition directly to `QUEUED`.
+
+Deterministic `SendRecoveryService` owns retry transitions. The durable runtime may wake the retry timer but cannot decide eligibility. `max_attempts`, `retry_deadline`, and `retry_policy_version` are immutable on `SendIntent`; `attempt_count` increments only when `send.attempt_started.v1` commits.
+
+| From | Command / trigger | To | Guard | Event |
+| --- | --- | --- | --- | --- |
+| `FAILED_RETRYABLE` | `RetrySend` after durable timer | `QUEUED` | prior failure conclusively proves Gmail did not accept; `attempt_count < max_attempts`; current time is within `retry_deadline`; retry time has arrived; outreach/campaign/policy/budget/rate controls pass; no unresolved ambiguity | `send.retry_scheduled.v1` |
+| `FAILED_RETRYABLE` | deterministic retry-budget evaluation | `FAILED_PERMANENT` | `attempt_count >= max_attempts` or current time exceeds `retry_deadline` | `send.retry_exhausted.v1` |
+| `FAILED_RETRYABLE` | operator `AbortSendRetry` | `FAILED_PERMANENT` | authenticated operator; no provider call in flight; reason code supplied | `send.retry_exhausted.v1` |
+
+When retry admission fails only because a mutable control is temporarily closed, the message remains `FAILED_RETRYABLE` until the earlier of the next bounded evaluation or `retry_deadline`; it cannot silently queue. `SENT`, `FAILED_PERMANENT`, `SUPPRESSED`, and `CANCELLED` are terminal.
 
 ## Approval, workflow-run, and experiment-decision states
 
 Canonical `ApprovalState`: `PENDING`, `APPROVED`, `DENIED`, `EXPIRED`, `REVOKED`, `CONSUMED`. Approval is scoped to exact artifact/recipient/campaign/policy versions, cap, and expiry. A changed draft or policy fact invalidates the approval. Suppression/global stop always overrides it.
 
-Canonical `WorkflowRunState`: `PENDING`, `RUNNING`, `PAUSE_REQUESTED`, `PAUSED`, `CANCEL_REQUESTED`, `CANCELLED`, `SUCCEEDED`, `FAILED`. Engine-native states map into these application states. A run is finite, has a max attempts/time/cost policy, and never owns aggregate truth.
+Canonical `WorkflowRunState`: `PENDING`, `RUNNING`, `PAUSE_REQUESTED`, `PAUSED`, `CANCEL_REQUESTED`, `CANCELLED`, `SUCCEEDED`, `FAILED`. Engine-native states map into these application states. A run is finite, has a max attempts/time/cost policy, and never owns aggregate truth. `CANCELLED`, `SUCCEEDED`, and `FAILED` are terminal for that run; an allowed experiment retry always creates a new `workflow_run_id`.
 
 Canonical `ExperimentDecisionKind`: `SCALE`, `REVISE`, `KILL`, `INCONCLUSIVE`. The decision is immutable and links to the metric snapshot, evidence bundle, rule version, and operator command. `SCALE` authorizes no new experiment or spend by itself.
 
@@ -165,6 +193,9 @@ Event type suffix `.v1` is part of the canonical name. Later incompatible payloa
 | `experiment.created.v1` | `experiment_id`, `brief_version` | draft created |
 | `experiment.scope_approved.v1` | `experiment_id`, `brief_version`, `operator_id` | M0-valid brief approved |
 | `experiment.state_changed.v1` | `from_state`, `to_state`, `reason_code` | deterministic transition commits |
+| `experiment.failed.v1` | `failed_from_state`, `workflow_run_id`, `error_code`, `retryable`, `retry_count`, `retry_limit` | an active experiment stage enters `FAILED` |
+| `experiment.retry_started.v1` | `retry_to_state`, `workflow_run_id`, `retry_count`, `retry_limit` | an allowed `FAILED` retry creates a new finite run |
+| `experiment.revision_started.v1` | `prior_brief_version`, `new_brief_version`, `reason_code` | an operator revises `FAILED` back to `DRAFT` |
 | `experiment.paused.v1` | `paused_from_state`, `reason_code` | pause commits |
 | `experiment.resumed.v1` | `resume_to_state`, `reason_code` | resume commits after guard recheck |
 | `experiment.cancelled.v1` | `reason_code` | terminal cancellation commits |
@@ -206,6 +237,8 @@ Event type suffix `.v1` is part of the canonical name. Later incompatible payloa
 | `send.reconciliation_started.v1` | `send_attempt_id`, `strategy_version` | Gmail Sent search begins |
 | `send.reconciled_as_sent.v1` | `send_attempt_id`, `gmail_message_id`, `gmail_thread_id` | exactly one conclusive match exists |
 | `send.failed.v1` | `send_attempt_id`, `retry_class`, `error_code` | conclusive failure recorded |
+| `send.retry_scheduled.v1` | `send_intent_id`, `previous_attempt_id`, `next_attempt_number`, `retry_at`, `retry_policy_version` | bounded retry eligibility commits and the intent returns to `QUEUED` |
+| `send.retry_exhausted.v1` | `send_intent_id`, `final_attempt_id`, `attempt_count`, `max_attempts`, `reason_code` | retry budget/deadline is exhausted or an operator aborts retry |
 | `send.suppressed.v1` | `send_intent_id`, `policy_decision_id`, `reason_codes` | last-mile gate denies |
 | `gmail.history_cursor_advanced.v1` | `mailbox_id`, `from_history_id`, `to_history_id` | observations and cursor commit together |
 | `reply.received.v1` | `reply_id`, `gmail_message_id`, `gmail_thread_id`, `received_at` | unique inbound message recorded |
@@ -246,7 +279,7 @@ These surfaces do not exist today. M1 uses only `m1_spike.spike_runs` and `m1_sp
 
 ## Ordered implementation tasks
 
-- [ ] **Encode enums and transition tables at M2 —** Input: canonical states/guards above. Operation: implement pure transition functions that require explicit actor, current version, reason, and evidence IDs. Output: typed decision plus event intent. Test evidence: table-driven legal/illegal transition matrix. Failure behavior: typed rejection with no mutation.
+- [ ] **Encode enums and transition tables at M2 —** Input: canonical states/guards above. Operation: implement pure transition functions that require explicit actor, current version, reason, and evidence IDs; close every non-terminal failure state and force bounded retry exhaustion to a terminal state. Output: typed decision plus event intent. Test evidence: table-driven legal/illegal transition matrix. Failure behavior: typed rejection with no mutation.
 - [ ] **Persist events and idempotency atomically —** Input: command and transition result. Operation: commit aggregate version, domain/audit events, command result, and outbox entry in one unit of work. Output: replayable audit chain. Test evidence: rollback injection and concurrency tests on real PostgreSQL. Failure behavior: whole transaction rolls back.
 - [ ] **Map runtime states explicitly —** Input: selected DBOS runtime, or mandatory Temporal fallback after a disqualifying M1 result. Operation: translate runtime-native execution state to `WorkflowRunState` without making it aggregate truth. Output: inspectable run projection. Test evidence: restart/pause/cancel/failure contract suite. Failure behavior: unknown runtime state reports degraded and blocks unsafe commands.
 - [ ] **Implement message ambiguity path before Gmail activation —** Input: send intent/attempt states and Gmail reconciliation evidence. Operation: make every error/kill point choose a legal transition; forbid `AMBIGUOUS` retry. Output: M6-safe message history. Test evidence: exhaustive crash matrix and provider-observation dedupe tests. Failure behavior: global disable on impossible/unknown transition.
@@ -255,7 +288,9 @@ These surfaces do not exist today. M1 uses only `m1_spike.spike_runs` and `m1_sp
 ## Test strategy
 
 - **Unit `test_experiment_transition_matrix_is_exhaustive`:** every state/command pair has pass or typed denial.
+- **Unit `test_failed_experiment_exit_matrix_is_closed`:** `FAILED` has exactly the five documented exits, and every guard/event/owner is enforced.
 - **Unit `test_message_ambiguous_cannot_requeue`:** no direct or indirect transition permits blind retry.
+- **Unit `test_retryable_message_exhaustion_is_terminal`:** attempt/deadline exhaustion and operator abort reach `FAILED_PERMANENT`; no exhausted intent remains retryable.
 - **Property `test_aggregate_versions_are_monotonic_under_command_replay`:** idempotent replay never adds a second event/version.
 - **Integration `test_state_event_audit_outbox_commit_together`:** injected failures leave no partial record.
 - **Concurrency `test_two_approvals_cannot_consume_same_scope_twice`:** optimistic/unique constraints preserve one result.
@@ -273,6 +308,7 @@ Unknown or impossible state blocks mutation and raises an incident. Recovery use
 ## Acceptance and retained evidence
 
 - [ ] Every product transition has a deterministic owner, guard, event, and denial behavior.
+- [ ] Every non-terminal failure state has a complete, finite exit set; exhausted retry budgets reach an explicit terminal state.
 - [ ] Agents/providers/workflow runtime cannot author business truth directly.
 - [ ] Ambiguous Gmail outcomes cannot blind retry.
 - [ ] Event, idempotency, ordering, and correction semantics are explicit.
