@@ -1,0 +1,160 @@
+# Target System Architecture
+
+**Document ID:** ARCH-01
+**Status:** Planned target; current boundaries called out explicitly
+**Milestone:** M0 definition, implemented vertically through M8
+**Owner:** Solo operator
+**Prerequisites:** [master roadmap](../README.md), PRODUCT-01 through PRODUCT-03, ADRs 0001-0003
+**Outputs:** Selected Pydantic AI/DBOS topology, component ownership, data/side-effect paths, and production-acceptance gate
+**Unlocks:** ARCH-02 dependency rules, ARCH-03 states/events, and M1 DBOS acceptance design
+**Risk:** Critical
+**Complexity:** L
+
+## Outcome and timing
+
+Alon AI remains a modular monolith: one Python package, separate API and worker processes, one PostgreSQL system of record, replaceable external adapters, and a Next.js operator dashboard that consumes FastAPI's OpenAPI contract. This is the least architecture that can make externally visible work durable and auditable for one operator.
+
+The architecture grows by vertical risk gates. M1 proves the dangerous Gmail recovery primitive with disposable records. M2 creates the first product model. Later milestones add only components needed by the next product gate.
+
+## Current repository state
+
+The current runtime is Next.js -> FastAPI `/health/ready` -> PostgreSQL plus a separate idle Python worker. FastAPI composes settings, request logging, CORS, and database health. The frontend consumes generated OpenAPI types for readiness. The package has empty `agents/` and `workflows/` boundaries, an engine helper in `db/`, and minimal send/policy/provider protocols. Alembic has no product revision.
+
+The intended diagram below is not the current runtime. Pydantic AI and DBOS are selected, and their dependencies are installed, but no agent or workflow invokes them and DBOS is not production-accepted. Gmail settings fields exist but no OAuth flow or Gmail adapter exists. Compose is local foundation topology, not a private production deployment.
+
+## Target topology
+
+```mermaid
+flowchart TB
+    Operator["One authenticated operator"] --> UI["Next.js dashboard"]
+    UI -->|"generated OpenAPI client"| API["FastAPI API process"]
+    API --> APP["Application commands and queries"]
+    WORKER["Worker process"] --> WF["DBOS finite durable workflows"]
+    WF --> APP
+    APP --> DOMAIN["Domain models and deterministic transitions"]
+    APP --> POLICY["Deterministic policies"]
+    APP --> PORTS["Persistence and provider ports"]
+    POLICY --> DOMAIN
+    APP --> AGENTS["Pydantic AI typed agents: advisory artifacts only"]
+    AGENTS --> PORTS
+    PORTS --> PG[("PostgreSQL system of record")]
+    PORTS --> MODEL["Model/search/extraction/enrichment adapters"]
+    APP --> SEND["SendGateway"]
+    SEND --> POLICY
+    SEND --> GMAILPORT["GmailProvider port"]
+    GMAILPORT --> GMAIL["Gmail API"]
+    GMAIL --> RECON["Sent reconciliation and history sync"]
+    RECON --> PG
+    API --> OBS["Logs, metrics, traces, alerts"]
+    WORKER --> OBS
+```
+
+## Component ownership
+
+| Component | Owns | Must not own | First needed |
+| --- | --- | --- | --- |
+| Next.js dashboard | operator rendering, accessible interactions, generated API client, local presentation state | business rules, provider credentials, direct database/Gmail calls, a second backend | current readiness; M7 product control |
+| FastAPI API | authentication boundary, OpenAPI, idempotent commands, read projections, composition | durable long-running work, provider-specific business logic | current health; M4 product API |
+| Worker | DBOS workflow runner, queues/schedules, background sync composition | alternate domain rules or unbounded loops | current idle boundary; M1/M4 execution |
+| Domain | identifiers, immutable values, invariants, transition specifications, event intents | SQLAlchemy sessions, HTTP, workflow SDK, provider SDK, logging globals | M2 |
+| Application | commands, queries, transaction boundaries, gateway orchestration, deterministic state changes | framework-specific request objects or model-authored authority | M2-M4 |
+| Policies | versioned deterministic allow/deny decisions and reason codes | provider calls or state mutation | current protocol; M6 implementation |
+| DBOS workflows | finite durable sequencing, queues, schedules, timers, retries, compensation/recovery commands | policy invention, direct Gmail calls, immortal agent loops | M1 acceptance; M4 product flows |
+| Pydantic AI agents | typed immutable advisory artifacts with model/tool boundaries, provenance, evaluation, and cost | business state transitions, Gmail/send tools, unrestricted credentials | M1 typed acceptance fixture; M3 agent promotion |
+| Persistence adapters | PostgreSQL mappings, repositories, outbox/audit/idempotency transactions | business decisions | M2 |
+| Provider adapters | typed translation, timeout/error taxonomy, external request/response evidence | cross-provider orchestration or policy decisions | M3/M6 |
+| `SendGateway` | last-mile outreach-enabled check, policy recheck, durable intent/attempt protocol, sole Gmail invocation path | content generation or direct model control | current minimal contract; M6 full path |
+| Observability | safe correlation, metrics, traces, alerts, cost/evaluation outputs | source-of-truth state or secrets/PII copies | current request logs; M6-M8 expansion |
+
+## Authoritative data flow
+
+### Command and artifact flow
+
+1. The dashboard sends an idempotent command to FastAPI.
+2. FastAPI authenticates the operator, validates the OpenAPI model, and delegates to an application handler.
+3. The handler loads PostgreSQL state, applies a deterministic transition, commits domain/audit events and any workflow command transactionally, then returns the authoritative result.
+4. A finite workflow invokes typed agents through injected ports. Agents return versioned artifacts; they do not mutate experiment state.
+5. Deterministic application code validates artifact eligibility, records the artifact, and performs any allowed transition.
+6. Query services build projections from PostgreSQL. The dashboard never infers business success from a pending HTTP call.
+
+### External side-effect flow
+
+1. Deterministic code commits immutable `SendIntent` and outbound `SendAttempt` ledger records with a unique idempotency key and exact artifact/recipient/campaign versions before any provider call.
+2. Policy evaluation records all facts, rule codes, policy version, and allow/deny outcome.
+3. Queue admission reserves budget/rate capacity and records an audit event.
+4. Immediately before Gmail, `SendGateway` rechecks outreach mode, suppression, approval, jurisdiction configuration, campaign/experiment state, budget, rate limit, and intent status.
+5. The Gmail adapter sends a stable RFC message identifier and returns Gmail message/thread identifiers when known.
+6. The attempt commits `SENT`; a timeout/crash instead leaves or marks `AMBIGUOUS`.
+7. Reconciliation searches Gmail Sent evidence before any retry. Multiple or absent candidates require the defined recovery path; blind retry is forbidden.
+8. Gmail history sync advances its cursor only in the same transaction as recorded provider observations and emits reply/bounce events.
+
+Every external model/search/extraction/enrichment call follows the same general intent, timeout, cost, provenance, and audit discipline, but only Gmail has reputation-bearing send authority.
+
+## Persistence boundaries and the M1/M2 ruling
+
+PostgreSQL is the application system of record from M2 onward. Business truth is derived from product tables plus immutable audit/domain events; provider systems remain evidence sources, not silent substitutes.
+
+M1 is DBOS production acceptance, not product-schema development. It may use DBOS system tables and one disposable PostgreSQL schema named `m1_spike` with only:
+
+- `spike_runs(run_id, scenario_name, workflow_version, state, started_at, finished_at)`; and
+- `spike_send_attempts(idempotency_key, run_id, recipient_alias, state, rfc_message_id, gmail_message_id, gmail_thread_id, attempted_at, reconciled_at)`.
+
+Test-recipient aliases are operator-owned inbox aliases, not prospects. The schema is dropped after evidence export and cannot be promoted or migrated into the product. If a scenario needs more product-like data, the spike harness uses immutable fixture files. M2 independently designs the first product tables, constraints, events, retention, and migrations.
+
+## DBOS production acceptance and Temporal fallback
+
+Pydantic AI plus DBOS on PostgreSQL is the selected architecture, as recorded in the [master stack decision](../README.md#selected-agent-and-durable-workflow-stack). M1 does not reopen selection; it production-accepts DBOS. Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, or operator control mandates Temporal before workflow product work continues. Pydantic AI owns typed agent execution, while DBOS/Temporal owns durable execution mechanics; neither owns send policy, business transitions, or Gmail ambiguity decisions.
+
+The runtime interface planned at the application boundary exposes finite start, pause, resume, cancel, status, queue, schedule, and correlation capabilities without leaking DBOS/Temporal handles into domain, agents, providers, API models, or frontend contracts. A mandatory Temporal migration changes composition/workflow adapters, not product state vocabulary.
+
+## Deployment and trust boundaries
+
+The M8 target is one private deployment: TLS ingress/private access -> frontend and API; worker and PostgreSQL are not public; backups are encrypted off-host; secrets and OAuth tokens are injected from a protected store; operator access is strongly authenticated; logs/metrics avoid message bodies, secrets, and unnecessary recipient data. API and worker may share one image/package but run separately and can be stopped independently.
+
+This is not a claim that the current Compose file satisfies production security, backup, monitoring, or availability requirements.
+
+## Scope and non-goals
+
+In scope: modular boundaries, one PostgreSQL authority, finite workflows, provider ports, typed artifacts, deterministic side effects, operator control, recovery, and private operations. Non-goals: microservices, shared event bus, Kubernetes, public multi-region availability, customer tenancy, generalized plugin platform, direct browser-to-provider access, and using an agent framework as a safety boundary.
+
+## Exact planned implementation surfaces
+
+Planned package additions: `alon_ai/application/`, expanded `domain/`, `persistence/`, implemented `workflows/`, `agents/`, `providers/`, `policies/`, and `observability/`. Composition stays in `alon_ai/api/app.py` and `alon_ai/worker/main.py` or narrowly focused composition modules they call. Product migrations live under `backend/alembic/versions/` starting M2. FastAPI remains the OpenAPI source; `frontend/openapi.json` and `frontend/src/lib/api/schema.d.ts` remain generated artifacts.
+
+Current `alon_ai/domain/sending.py` imports policy and provider types, which is acceptable only as a foundation shortcut. By M2/M6, value types and provider ports move to inward-facing contract modules and the orchestrating gateway belongs in application code, so the target dependency direction in ARCH-02 is enforceable.
+
+## Ordered implementation tasks
+
+- [ ] **Run M1 DBOS production acceptance —** Input: disposable `m1_spike` schema, Pydantic AI typed fixture, test-inbox fixtures, and kill-point matrix. Operation: exercise DBOS against every acceptance criterion. Output: DBOS acceptance record and evidence export. Test evidence: zero uncontrolled duplicates plus restart/cancel/ambiguity/version/observability/operator-control results. Failure behavior: begin mandatory Temporal migration before product workflows.
+- [ ] **Build the M2 product core —** Input: ARCH-02/03 contracts. Operation: add domain/application/persistence modules, first product migrations, immutable events, idempotency, and repositories. Output: PostgreSQL-backed system of record. Test evidence: migration, constraints, transitions, concurrency, audit, and fresh-restore tests. Failure behavior: block providers and agents.
+- [ ] **Add offline intelligence vertically —** Input: product records and provider ports. Operation: implement one typed artifact path with fixtures/evals before adding each specialist. Output: M3-promoted artifacts. Test evidence: schema, provenance, adversarial quality, cost, and regression reports. Failure behavior: rollback version.
+- [ ] **Add finite no-send workflows —** Input: promoted artifacts and durable engine. Operation: produce synthetic experiment/lead outputs without Gmail authority. Output: M4/M5 evidence bundles. Test evidence: complete synthetic runs, restart, and no-provider-send assertions. Failure behavior: pause at failed artifact/transition.
+- [ ] **Earn Gmail then UI authority —** Input: M1/M5 gates, policy, OAuth, history sync, test inboxes. Operation: prove the entire send/reconcile/reply/control flow before real recipients. Output: M6/M7 gate evidence. Test evidence: kill/restart/suppression/rate/audit and browser journeys. Failure behavior: global disable.
+- [ ] **Prove private operations —** Input: complete private product. Operation: deploy, monitor, back up, restore, and exercise incidents. Output: M8 evidence. Test evidence: fresh-server restore and incident drills. Failure behavior: block M9.
+
+## Test strategy
+
+- **Architecture `test_forbidden_imports`:** automated import rules enforce ARCH-02.
+- **Contract `test_openapi_generated_client_has_no_drift`:** FastAPI remains API truth.
+- **Integration `test_command_state_event_outbox_commit_atomically`:** product state and durable command evidence cannot diverge.
+- **Recovery `test_each_side_effect_has_ambiguity_reconciliation`:** kill after provider acceptance does not cause blind retry.
+- **Security `test_public_surface_excludes_worker_database_and_credentials`:** deployment topology and probes expose only approved ingress.
+- **E2E `test_operator_controls_complete_experiment`:** one operator can create, inspect, pause, resume, cancel, and decide without database edits.
+
+## Security, privacy, compliance, idempotency, observability, and cost
+
+Authority flows inward from authenticated commands and outward through narrow ports. Credentials stay inside provider composition. Side-effect and command idempotency keys are unique and retained. All process/event/provider activity shares correlation IDs without copying sensitive payloads. Provider calls reserve and record costs. Applicable outreach rules are deterministic configuration plus operator/legal review, not model judgment.
+
+## Failure, rollback, and recovery
+
+Every provider can be disabled independently. Outreach has a global fail-closed control. Agent/model/prompt/provider versions roll back by selecting a previously promoted immutable version. Workflow changes require in-flight compatibility or drain/cancel/restart procedures. Schema changes use forward-safe migrations and tested restore. Mandatory DBOS-to-Temporal migration preserves application ports and canonical product state; M1 spike records are discarded after export.
+
+## Acceptance and retained evidence
+
+- [ ] Current and target topology are distinguishable.
+- [ ] Every external side effect has one deterministic authority path and reconciliation.
+- [ ] M1 uses only disposable spike records; M2 owns the first product data model.
+- [ ] DBOS is selected but production use remains blocked on M1; every disqualifying failure mandates Temporal.
+- [ ] The target remains operable by one person.
+
+Retain architecture decisions, import-boundary reports, DBOS acceptance scorecard, crash/ambiguity traces, OpenAPI drift checks, migration/restore reports, and deployment trust-boundary evidence. This file unlocks [module boundaries](02-module-boundaries.md) and [states/events](03-domain-events-and-state-machines.md).

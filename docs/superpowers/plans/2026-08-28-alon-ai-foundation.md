@@ -19,8 +19,9 @@
 - PostgreSQL is the only application source of truth.
 - `OUTREACH_ENABLED` defaults to `false`.
 - Agents never call Gmail directly; only `SendGateway` may invoke `GmailProvider.send`.
-- DBOS remains provisional pending the separate recovery spike.
-- Do not add Redis, Celery, RabbitMQ, LangGraph, Kafka, Kubernetes, Elasticsearch, a vector database, microservices, billing, or multi-user authentication.
+- Pydantic AI is selected for typed agents; DBOS is selected for finite durable workflows, queues, schedules, retries, timers, and crash recovery on PostgreSQL.
+- Production outreach remains blocked on DBOS M1 production acceptance; any disqualifying failure forces migration to Temporal before workflow product work continues.
+- Do not add Redis, Celery, RabbitMQ, LangChain, LangGraph, Restate, Prefect, Kafka, Kubernetes, Elasticsearch, a vector database, microservices, billing, or multi-user authentication.
 - Do not track real credentials, OAuth tokens, generated secrets, or local `.env` files.
 - Exact dependency versions are resolved once and committed in `uv.lock` and `frontend/package-lock.json`.
 - Every task ends with focused verification and a commit.
@@ -76,7 +77,7 @@
 - `.github/workflows/ci.yml`: backend, frontend, integration, and container checks.
 - `docs/architecture.md`: concise maintained architecture.
 - `docs/decisions/0001-modular-monolith.md`: service-boundary decision.
-- `docs/decisions/0002-provisional-dbos.md`: recovery-spike gate.
+- `docs/decisions/0002-dbos-workflow-runtime.md`: selected runtime, production-acceptance gate, and mandatory Temporal fallback.
 - `docs/decisions/0003-guarded-gmail-sending.md`: automatic-email authority boundary.
 - `docs/runbooks/local-development.md`: setup, startup, shutdown, and failure diagnosis.
 
@@ -949,7 +950,7 @@ Expected: all pass.
 - Create: `.github/workflows/ci.yml`
 - Create: `docs/architecture.md`
 - Create: `docs/decisions/0001-modular-monolith.md`
-- Create: `docs/decisions/0002-provisional-dbos.md`
+- Create: `docs/decisions/0002-dbos-workflow-runtime.md`
 - Create: `docs/decisions/0003-guarded-gmail-sending.md`
 - Create: `docs/runbooks/local-development.md`
 - Create: `README.md`
@@ -1059,7 +1060,7 @@ jobs:
 
 - [ ] **Step 2: Write architecture and decision records**
 
-Each record must state context, decision, consequences, and reconsideration trigger. The DBOS record's trigger is failure of crash recovery, cancellation, or duplicate-send tests. The Gmail record must explicitly say automated sending is supported but agents cannot call Gmail directly.
+Each record must state context, decision, consequences, and reconsideration trigger. The DBOS record selects Pydantic AI for typed agents and DBOS for finite durable workflows/queues/schedules on PostgreSQL; M1 is the production-acceptance gate, and any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, or operator control forces Temporal before workflow product work continues. The Gmail record must explicitly say automated sending is supported but agents cannot call Gmail directly.
 
 - [ ] **Step 3: Write the local runbook**
 
@@ -1077,7 +1078,7 @@ README sections:
 6. Development and checks.
 7. Automatic Gmail sending design.
 8. Safety boundaries.
-9. Mandatory DBOS/Gmail recovery spike.
+9. Mandatory DBOS production-acceptance spike.
 10. Roadmap and explicit non-goals.
 
 State clearly that the repository foundation does not yet send production outreach.

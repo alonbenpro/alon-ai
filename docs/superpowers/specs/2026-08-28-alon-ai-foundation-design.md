@@ -11,7 +11,7 @@ Alon AI will be a durable, auditable system that discovers service ideas, valida
 
 This design covers the repository foundation only. The outcome is a runnable monorepo with verified frontend, API, database, worker boundaries, infrastructure, tests, CI, documentation, and extension points for the complete workflow. It must not pretend that empty folders are a working product.
 
-The first feature milestone after this foundation is a mandatory DBOS and Gmail recovery spike. DBOS remains provisional until that spike proves crash recovery, cancellation, rate limiting, reply synchronization, and duplicate-send prevention.
+The first feature milestone after this foundation is the mandatory DBOS production-acceptance spike. DBOS is selected for durable workflows, queues, schedules, retries, timers, and crash recovery on PostgreSQL; Pydantic AI is selected for typed agents. Production outreach remains blocked until M1 proves restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, and operator control. Any disqualifying failure forces migration to Temporal before workflow product work continues.
 
 ## 2. Goals
 
@@ -33,10 +33,10 @@ The foundation will not implement the complete autonomous business workflow. In 
 - Call an LLM, search provider, enrichment service, or billing provider.
 - Implement production compliance rules for any jurisdiction.
 - Implement all business tables or a complete experiment state machine.
-- Prove DBOS production suitability.
+- Complete DBOS production acceptance or a Temporal migration.
 - Add public authentication, multi-user accounts, billing, or public webhooks.
 - Deploy to a VPS.
-- Add Redis, Celery, RabbitMQ, LangGraph, Kafka, Kubernetes, a vector database, Elasticsearch, or microservices.
+- Add Redis, Celery, RabbitMQ, LangChain, LangGraph, Restate, Prefect, Kafka, Kubernetes, a vector database, Elasticsearch, or microservices.
 
 These exclusions prevent the initial repository setup from becoming an unverified partial product.
 
@@ -123,8 +123,8 @@ Root-level files will include `README.md`, `.gitignore`, `.env.example`, an edit
 - `uv` for Python environments, dependency resolution, and lockfiles.
 - FastAPI, Pydantic v2, and Uvicorn for the HTTP API.
 - SQLAlchemy 2 async, Psycopg 3 async, and Alembic for persistence.
-- DBOS for workflows, schedules, queues, rate limits, retries, and recovery, subject to the mandatory spike.
-- Pydantic AI and Pydantic Evals for typed agents and versioned evaluations.
+- DBOS, selected for workflows, schedules, queues, rate limits, retries, timers, and recovery on PostgreSQL, subject to mandatory M1 production acceptance.
+- Pydantic AI and Pydantic Evals, selected for typed agents, structured artifacts, model/tool boundaries, and versioned evaluations.
 - HTTPX for normal HTTP access; Trafilatura or BeautifulSoup for extraction; Playwright Python only as a browser fallback.
 - Ruff, Pyright, and pytest for formatting, linting, type checking, and tests.
 
@@ -230,22 +230,23 @@ The foundation creates the provider and gateway contracts, safe configuration sh
 
 The README may list a command as verified only after that command has run successfully in the available environment or CI. If Docker is unavailable locally, the handoff must say so plainly and CI must validate the container configuration.
 
-## 13. Mandatory next milestone: DBOS/Gmail recovery spike
+## 13. Mandatory next milestone: DBOS production acceptance
 
-Before real outreach, the next milestone must prove:
+DBOS is selected, but before real outreach M1 must prove:
 
-1. DBOS starts a scheduled finite workflow.
+1. DBOS starts and recovers a scheduled finite workflow.
 2. Pydantic AI returns a validated structured artifact.
-3. Five synthetic leads enter a strictly rate-limited queue.
-4. Gmail sends only to the operator's test accounts.
-5. The worker is killed before, during, and after the Gmail call.
-6. Restarting never creates duplicate messages.
-7. Gmail history synchronization detects replies.
-8. A workflow can be paused, cancelled, and resumed.
-9. The dashboard shows decisions, artifacts, costs, and state transitions.
-10. A nightly backup restores into a clean PostgreSQL instance.
+3. Five synthetic leads enter a strictly rate-limited DBOS queue and Gmail sends only to operator-owned test accounts.
+4. Every send has a stable idempotency key, committed outbound-attempt ledger entry, and provider-result capture.
+5. The worker is killed before, during, and after the Gmail call; restart creates zero uncontrolled duplicate messages.
+6. An ambiguous outcome becomes operator-visible and reconciles Gmail Sent evidence before any bounded retry.
+7. Pause, cancellation, and resume are deterministic, with zero provider calls after confirmed cancellation.
+8. In-flight work survives the tested workflow-version upgrade path.
+9. Correlated observability exposes workflow, policy, attempt, provider, and recovery evidence for operator control.
 
-If DBOS fails crash recovery, cancellation, or duplicate-send tests, replace it with Temporal before building further. Convenience does not outrank domain reputation or customer-facing correctness.
+Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, or operator control is disqualifying and forces migration to Temporal before further workflow product work. Convenience, sunk implementation cost, and lockfile presence cannot waive the fallback.
+
+LangChain and LangGraph are excluded from the initial stack because Pydantic AI owns typed agent execution. Restate and Prefect are excluded because their separate-runtime or pipeline-oriented models do not improve this acceptance gate.
 
 ## 14. GitHub and Codex project integration
 

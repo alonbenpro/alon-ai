@@ -24,8 +24,8 @@ The detailed current and intended boundaries are in [docs/architecture.md](docs/
 
 - Python 3.13 with uv, FastAPI, Pydantic v2, SQLAlchemy async, Psycopg 3, Alembic, Ruff, Pyright, and pytest
 - PostgreSQL 18
-- DBOS, provisionally, for a future durable workflow boundary
-- Pydantic AI and Pydantic Evals for future typed agent work
+- DBOS, selected for future finite durable workflows, queues, schedules, retries, timers, and crash recovery on PostgreSQL; production use is blocked on M1 acceptance
+- Pydantic AI and Pydantic Evals, selected for future typed agent execution, structured artifacts, tool/model boundaries, and evaluations
 - Node.js 24 with Next.js App Router, TypeScript, TanStack Query, `openapi-fetch`, Tailwind CSS, ESLint, and Vitest
 - Docker Compose for the local process topology and GitHub Actions for CI
 
@@ -39,9 +39,15 @@ frontend/                 Next.js dashboard and generated OpenAPI TypeScript dec
 infra/compose.yaml        Local PostgreSQL, API, worker, and frontend topology
 docs/architecture.md      Current architecture and intended guarded sending design
 docs/decisions/           Architecture decision records
+docs/development-roadmap/ Authoritative vertical M0-M9 implementation roadmap
+docs/engineering/         Repository engineering workflows, including Graphify-first navigation
 docs/runbooks/            Local operating guidance
 .github/workflows/ci.yml  Backend, frontend, and container checks
 ```
+
+## Agent navigation
+
+Repository agents follow the root [AGENTS.md](AGENTS.md): query the active checkout's local Graphify graph before broad repository discovery, then verify graph-selected locations with targeted source reads. Exact-path edits and verification-only commands do not require a graph query. The executable protocol, memory/update rules, hook behavior, and failure exceptions are in the [Graphify-first navigation guide](docs/engineering/graphify-first-navigation.md). Generated `graphify-out/` state stays local and ignored.
 
 ## Quick start
 
@@ -91,7 +97,7 @@ CI has four jobs: `security` checks tracked filenames and high-signal credential
 
 Automatic Gmail sending is a planned product capability, but agents cannot call Gmail directly. Agents will produce typed artifacts. Deterministic code will create a send intent with an idempotency key, enforce suppression/jurisdiction/campaign/budget/rate-limit/kill-switch policies, and then route eligible work through a `SendGateway` to a `GmailProvider`.
 
-The eventual implementation must record Gmail message and thread identifiers. If an outcome is ambiguous, it must reconcile Gmail's Sent mailbox before retrying; blind retries are prohibited. Today this repository supplies only the guarded contracts and an `ALON_AI_OUTREACH_ENABLED=false` default. It does not send real email.
+The eventual implementation must commit a stable idempotency key and outbound-attempt ledger before the provider call, capture Gmail message/thread identifiers and provider evidence, and expose an ambiguous state. An ambiguous outcome must reconcile Gmail's Sent mailbox before any bounded retry; blind retries are prohibited. Today this repository supplies only the guarded contracts and an `ALON_AI_OUTREACH_ENABLED=false` default. It does not send real email.
 
 ## Safety boundaries
 
@@ -101,20 +107,21 @@ The eventual implementation must record Gmail message and thread identifiers. If
 - Every external side effect needs a deterministic policy decision, idempotency key, audit trail, and reconciliation strategy.
 - No claims of deployment, users, billing, production metrics, compliance coverage, or send volume are made by this foundation.
 
-## Mandatory DBOS/Gmail recovery spike
+## Mandatory DBOS production-acceptance spike
 
-This is the immediate next milestone, and real outreach is blocked on it. It must prove all of the following with operator-owned test inboxes:
+DBOS is the selected runtime, but selection does not authorize production outreach. M1 is the immediate production-acceptance milestone and must prove all of the following with operator-owned test inboxes:
 
-1. A scheduled finite DBOS workflow and validated typed artifact.
-2. Five synthetic leads passing through a strictly rate-limited queue.
-3. Worker termination before, during, and after a Gmail call without duplicate messages after restart.
-4. Gmail history synchronization detects replies.
-5. A workflow can be paused, cancelled, and resumed.
-6. The dashboard exposes decisions, artifacts, costs, and state transitions.
-7. A nightly backup restores into a clean PostgreSQL instance.
+1. A scheduled finite DBOS workflow and validated Pydantic AI artifact.
+2. Five synthetic leads passing through a strictly rate-limited DBOS queue to operator-owned test recipients only.
+3. A stable send idempotency key, outbound-attempt ledger, and provider-result capture surrounding every Gmail call.
+4. Worker termination before, during, and after the Gmail call with zero uncontrolled duplicate messages after restart.
+5. Ambiguous outcomes enter an operator-visible state and reconcile Gmail Sent evidence before any bounded retry.
+6. Pause, cancellation, and resume have deterministic behavior with zero provider calls after confirmed cancellation.
+7. An in-flight workflow survives the tested workflow-version upgrade path.
+8. Correlated observability exposes the workflow run, policy decision, send attempt, provider evidence, and recovery action to the operator.
 
-If DBOS fails crash recovery, cancellation, or duplicate-send tests, replace it with Temporal before doing further workflow product work. See [ADR 0002](docs/decisions/0002-provisional-dbos.md).
+Any disqualifying failure in restart recovery, cancellation, ambiguous-outcome reconciliation, duplicate-send prevention, workflow versioning, observability, or operator control forces migration to Temporal before further workflow product work. See [ADR 0002](docs/decisions/0002-dbos-workflow-runtime.md).
 
 ## Roadmap and explicit non-goals
 
-Near term: complete the DBOS/Gmail recovery spike, then only build controlled outreach features that the spike makes safe. The foundation explicitly does not yet include public auth, multi-user accounts, billing, public webhooks, VPS deployment, Redis/Celery/RabbitMQ/Kafka, microservices, Kubernetes, vector databases, or a complete experiment state machine.
+Near term: complete DBOS production acceptance, then follow the [development roadmap](docs/development-roadmap/README.md) and only build controlled outreach features that earlier gates make safe. Pydantic AI and DBOS are the selected initial stack; Temporal is the mandatory fallback after a disqualifying M1 result. LangChain, LangGraph, Restate, and Prefect are excluded from the initial stack. The foundation explicitly does not yet include public auth, multi-user accounts, billing, public webhooks, VPS deployment, Redis/Celery/RabbitMQ/Kafka, microservices, Kubernetes, vector databases, or a complete experiment state machine.
