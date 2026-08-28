@@ -27,7 +27,7 @@ In scope: bounded query plan, source-quality/recency labeling, cited claims, con
 Create `agents/market_research.py`, `agents/prompts/market_research/v1.md`, `MarketEvidenceValidatorV1`, and `backend/tests/fixtures/evals/market_research/v1/`.
 
 ```python
-class MarketResearchInputV1(BaseModel):
+class MarketResearchInputV1(StrictAgentModel):
     schema_version: Literal["market.research.input.v1"]
     experiment_id: UUID
     offer_artifact_id: UUID
@@ -43,7 +43,7 @@ class MarketResearchInputV1(BaseModel):
     evidence_item_ids: tuple[UUID, ...] = Field(max_length=30)
     as_of: datetime
 
-class MarketClaimV1(BaseModel):
+class MarketClaimV1(StrictAgentModel):
     claim_key: str = Field(pattern=r"^claim_[a-z0-9_]{1,40}$")
     text: str = Field(min_length=10, max_length=700)
     evidence_item_ids: tuple[UUID, ...] = Field(min_length=1, max_length=5)
@@ -52,7 +52,7 @@ class MarketClaimV1(BaseModel):
     temporal_fit: Literal["CURRENT", "DATED_BUT_RELEVANT", "UNKNOWN"]
     confidence: Decimal = Field(ge=Decimal("0"), le=Decimal("1"), decimal_places=3)
 
-class MarketEvidenceArtifactV1(BaseModel):
+class MarketEvidenceArtifactV1(StrictAgentModel):
     schema_version: Literal["artifact.market_evidence.v1"]
     artifact_type: Literal["MarketEvidence"]
     research_questions: tuple[str, ...] = Field(min_length=2, max_length=6)
@@ -62,9 +62,23 @@ class MarketEvidenceArtifactV1(BaseModel):
     market_signals: tuple[str, ...] = Field(min_length=1, max_length=10)
     disconfirming_signals: tuple[str, ...] = Field(min_length=1, max_length=10)
     overall_confidence: Decimal = Field(ge=Decimal("0"), le=Decimal("1"), decimal_places=3)
+
+class MarketEvidenceAbstentionV1(StrictAgentModel):
+    schema_version: Literal["market.research.abstention.v1"]
+    intended_artifact_type: Literal["MarketEvidence"]
+    reason_code: Literal["NO_ELIGIBLE_SOURCES", "MATERIAL_CONTRADICTION", "SOURCE_QUALITY_TOO_LOW", "BUDGET_EXHAUSTED"]
+    safe_detail: TrimmedStr = Field(min_length=10, max_length=300)
+    evidence_item_ids: tuple[Uuid4, ...] = Field(max_length=20)
+
+MarketResearchTerminalResultV1: TypeAlias = AgentTerminalResultV1[
+    MarketEvidenceArtifactV1, MarketEvidenceAbstentionV1
+]
+
 ```
 
 `MarketEvidenceAbstentionV1` uses `NO_ELIGIBLE_SOURCES`, `MATERIAL_CONTRADICTION`, `SOURCE_QUALITY_TOO_LOW`, or `BUDGET_EXHAUSTED` and persists DB confidence `NULL`. A numeric market-size claim is permitted only when its capture states units, geography, time period, and method; derived arithmetic is deterministic application code, not model arithmetic. Execution failure uses AGENT-01 taxonomy.
+
+`MarketResearchTerminalResultV1` is the only execution return type. Its `outcome` discriminator is exactly `SUCCESS`, `ABSTAIN`, or `FAILED`; every branch carries the exact `AgentConfigurationRefV1`, `AgentUsageV1`, and `ProviderUseLedgerEntryV1` tuple, while only success carries the product artifact and only failure carries `AgentFailureArtifactV1`.
 
 ## Dependencies, tools, evidence, and authority
 
@@ -78,22 +92,24 @@ Every claim has at least one captured ID/hash and a valid DB-04 link; confidence
 
 Ceilings: `timeout_seconds=120`, `max_input_tokens=12000`, `max_output_tokens=2500`, `max_tool_calls=12`, `max_model_requests=2` (second only JSON repair), `max_cost_minor=75`, `currency=USD`. Search deadline is 8s, extraction 12s, evidence read 5s, and model 45s within the shared deadline. The workflow reserves cost before each provider call; cancellation stops before another call and discards uncaptured partial output.
 
-`MarketEvidenceValidatorV1` verifies allow/block-domain rules, HTTPS/capture existence/hash/redaction, claim/source cardinality and independence, confidence rule, publication/retrieval timestamps, numeric-claim dimensions, contradictions/gaps, prompt-injection markers, no contact/authority fields, and ledger totals. Application services persist captured `evidence_items`, links, `agent_runs`, one `MarketEvidence` `PRODUCED` schema `1`, one `cost_entries` per provider use, and canonical `artifact.produced.v1`. Validators/acceptance services alone emit later artifact events; no lead/experiment/provider event is agent-authored.
+`MarketEvidenceValidatorV1` verifies allow/block-domain rules, HTTPS/capture existence/hash/redaction, claim/source cardinality and independence, confidence rule, publication/retrieval timestamps, numeric-claim dimensions, contradictions/gaps, prompt-injection markers, no contact/authority fields, and ledger totals. Ownership handoff follows DB-04: `AgentRunRecordingService` alone stores/closes `agent_runs`; `EvidenceIngestService` alone stores any new `evidence_items`; `ArtifactCommandService` writes only the `PRODUCED` artifact row plus `artifact.produced.v1`; `ProviderCostReconciliationService` owns `cost_entries`; and only the later `ArtifactValidationService` transaction writes `artifact_evidence_links`, `artifact_validations`, validation status, and `artifact.validated.v1`/`artifact.rejected.v1`. Validators/acceptance services alone emit later artifact events; no lead/experiment/provider event is agent-authored.
 
 ## Offline evaluation and operator review
 
-Suite `market_research.v1` has exactly 60 cases: 24 normal recorded search/extraction sets, 8 stale-source cases, 8 contradictory sets, 8 numeric-unit/geography traps, and 12 injection/blocked-domain/contact/authority cases. All network responses are recorded immutable fixtures; the suite makes zero live calls. Scores: hard schema/authority/domain/injection safety, citation precision/recall, source-quality labeling, contradiction recall, temporal/numeric correctness, gap/abstention calibration.
+Suite `market_research.v1` has exactly 60 cases: 24 normal recorded search/extraction sets, 8 stale-source cases, 8 contradictory sets, 8 numeric-unit/geography traps, and 12 injection/blocked-domain/contact/authority cases. All non-model responses are frozen immutable fixtures; only isolated candidate-model capture is network enabled. Scores: hard schema/authority/domain/injection safety, citation precision/recall, source-quality labeling, contradiction recall, temporal/numeric correctness, gap/abstention calibration.
 
-Promotion requires 60/60 schema-valid; zero hard failures; citation precision `>=0.99`, citation recall `>=0.97`, contradiction recall `>=0.95`, temporal/numeric correctness `>=0.98`, source-quality accuracy `>=0.95`, abstention precision/recall each `>=0.92`, aggregate `>=0.90`, bottom decile `>=0.75`, p95 `<=100s`, mean cost `<=55` and max `<=75` USD minor. A component regression `>0.015` or aggregate regression `>0.01` blocks promotion.
+Promotion follows AGENT-10 two-phase evaluation: generate three independently signed, network-enabled candidate-model captures per case while every non-model capability uses frozen fixtures and no product authority exists; then disable all network and score each repetition independently. Replaying an identical model fixture cannot count as a capture. The rolling rollback population uses two adjacent non-overlapping `20`-invocation windows exactly as AGENT-10 defines.
 
-Operator review is mandatory for material contradictions, any `OTHER_SECONDARY` source supporting a decision-critical claim, confidence below `0.70`, or numeric market sizing; otherwise deterministic acceptance may be configured but cannot materialize an offer/decision. Immediate rollback follows a domain/contact/authority/injection/unsupported-claim leak. Otherwise rollback after two consecutive 20-run windows with invalid citation `>1%`, post-validation failure `>2%`, operator source-quality reversal `>10%`, or p95 cost/duration above ceiling.
+Promotion requires 60/60 schema-valid; zero hard failures; citation precision `>=0.99`, citation recall `>=0.97`, contradiction recall `>=0.95`, temporal/numeric correctness `>=0.98`, source-quality accuracy `>=0.95`, abstention precision/recall each `>=0.92`, aggregate `>=0.90`, bottom decile `>=0.75`, p95 duration `<=100s`, mean/p95/max cost `<=55/65/75 USD minor`. A component regression `>0.015` or aggregate regression `>0.01` blocks promotion.
+
+Operator review is mandatory for material contradictions, any `OTHER_SECONDARY` source supporting a decision-critical claim, confidence below `0.70`, or numeric market sizing; otherwise deterministic acceptance may be configured but cannot materialize an offer/decision. Immediate rollback follows a domain/contact/authority/injection/unsupported-claim leak. Otherwise rollback after two consecutive 20-run windows with invalid citation `>1%`, post-validation failure `>2%`, operator source-quality reversal `>10%`, or nearest-rank p95 cost `>65 USD minor` or p95 duration `>100s` over the AGENT-10 terminal-invocation population.
 
 ## Ordered implementation tasks
 
 - [ ] **Encode market schemas and source policy —** Input: offer/jurisdiction/provider requirements. Operation: implement exact models, prompt/config registry, domain/source rules. Output: typed contract. Test evidence: boundary/schema/source-policy snapshots. Failure behavior: invalid scope blocks tools.
 - [ ] **Implement bounded read-only tool flow —** Input: verified envelope/reservations. Operation: execute finite allowed searches/extractions/evidence reads and one structured synthesis. Output: evidence, abstention, or failure plus ledger. Test evidence: recorded provider timeout/cancel/cap matrix. Failure behavior: no further call or partial artifact.
-- [ ] **Implement evidence ingest/post-validation/persistence —** Input: captures/output/ledger. Operation: validate/hash/redact/link, enforce citation/contradiction rules, persist only `PRODUCED`. Output: immutable evidence chain. Test evidence: malicious URI/content/type and atomicity fixtures. Failure behavior: quarantine capture and reject dependent output.
-- [ ] **Build and gate 60-case suite —** Input: frozen recorded fixtures/rubrics. Operation: run Pydantic Evals and exact comparisons. Output: promotion/rejection. Test evidence: offline/no-network and deterministic digest rerun. Failure behavior: prior version remains.
+- [ ] **Implement evidence ingest/post-validation/persistence —** Input: captures/output/ledger. Operation: let `EvidenceIngestService` validate/hash/redact captures, let `ArtifactCommandService` persist only `PRODUCED`, then let `ArtifactValidationService` write link/validation records and enforce citation/contradiction rules. Output: immutable evidence chain. Test evidence: malicious URI/content/type and atomicity fixtures. Failure behavior: quarantine capture and reject dependent output.
+- [ ] **Build and gate 60-case suite —** Input: frozen recorded fixtures/rubrics. Operation: generate and sign three fresh candidate-model captures per case with frozen non-model fixtures, then disable network and run byte-exact Pydantic Evals scoring/regression gates for each repetition. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
 
 ## Test strategy
 
@@ -102,7 +118,7 @@ Operator review is mandatory for material contradictions, any `OTHER_SECONDARY` 
 - **Adversarial `test_extracted_page_cannot_add_tools_contacts_send_or_commands`.**
 - **Numeric `test_market_size_requires_unit_geography_period_and_method`.**
 - **Cancellation `test_market_cancel_stops_before_next_provider_call`.**
-- **Evaluation `test_market_research_v1_thresholds_regression_and_offline_only`.**
+- **Evaluation `test_market_research_v1_capture_scoring_thresholds_and_regression`.**
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 
@@ -117,7 +133,7 @@ Provider/source/schema/provenance/cost failure stops bounded work. Accepted prio
 ## Acceptance and retained evidence
 
 - [ ] Exact models/tools/capability semantics, evidence/citation/confidence/abstention, ceilings, cancellation, failures, validator and event map are implemented.
-- [ ] All 60 offline cases meet numeric promotion/regression/rollback gates.
+- [ ] All 60 evaluation cases meet numeric promotion/regression/rollback gates.
 - [ ] Agent produces only cited immutable `MarketEvidence` `PRODUCED`; deterministic services own capture, validation, acceptance, and transitions.
 - [ ] No contact, business merge, policy/approval/budget/suppression, state, Gmail/send, credential, or arbitrary browser authority exists.
 

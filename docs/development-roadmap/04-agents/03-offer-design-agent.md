@@ -27,7 +27,7 @@ In scope: promise, deliverables, price hypothesis, assumptions, risk reversals, 
 Create `agents/offer_design.py`, `agents/prompts/offer_design/v1.md`, `OfferHypothesisValidatorV1`, and `backend/tests/fixtures/evals/offer_design/v1/`.
 
 ```python
-class OfferDesignInputV1(BaseModel):
+class OfferDesignInputV1(StrictAgentModel):
     schema_version: Literal["offer.design.input.v1"]
     experiment_id: UUID
     brief_version: int = Field(ge=1)
@@ -43,13 +43,13 @@ class OfferDesignInputV1(BaseModel):
     price_ceiling_minor: int = Field(ge=1)
     evidence_item_ids: tuple[UUID, ...] = Field(max_length=30)
 
-class OfferClaimV1(BaseModel):
+class OfferClaimV1(StrictAgentModel):
     claim_key: str = Field(pattern=r"^claim_[a-z0-9_]{1,40}$")
     text: str = Field(min_length=10, max_length=500)
     kind: Literal["HYPOTHESIS", "SUPPORTED_FACT"]
     evidence_item_ids: tuple[UUID, ...] = Field(max_length=5)
 
-class OfferHypothesisArtifactV1(BaseModel):
+class OfferHypothesisArtifactV1(StrictAgentModel):
     schema_version: Literal["artifact.offer_hypothesis.v1"]
     artifact_type: Literal["OfferHypothesis"]
     name: str = Field(min_length=3, max_length=120)
@@ -64,9 +64,23 @@ class OfferHypothesisArtifactV1(BaseModel):
     validation_questions: tuple[str, ...] = Field(min_length=2, max_length=8)
     claims: tuple[OfferClaimV1, ...] = Field(min_length=1, max_length=15)
     confidence: Decimal = Field(ge=Decimal("0"), le=Decimal("1"), decimal_places=3)
+
+class OfferHypothesisAbstentionV1(StrictAgentModel):
+    schema_version: Literal["offer.design.abstention.v1"]
+    intended_artifact_type: Literal["OfferHypothesis"]
+    reason_code: Literal["MISSING_SELECTED_IDEA", "CONTRADICTORY_CONSTRAINTS", "INSUFFICIENT_EVIDENCE"]
+    safe_detail: TrimmedStr = Field(min_length=10, max_length=300)
+    evidence_item_ids: tuple[Uuid4, ...] = Field(max_length=20)
+
+OfferDesignTerminalResultV1: TypeAlias = AgentTerminalResultV1[
+    OfferHypothesisArtifactV1, OfferHypothesisAbstentionV1
+]
+
 ```
 
 `price_ceiling_minor >= price_floor_minor`; output currency must be allowed and price within bounds. The registered `OfferHypothesisAbstentionV1` has reason `MISSING_SELECTED_IDEA`, `CONTRADICTORY_CONSTRAINTS`, or `INSUFFICIENT_EVIDENCE`, produces DB confidence `NULL`, and contains no offer fields. Execution failure is AGENT-01's failure artifact.
+
+`OfferDesignTerminalResultV1` is the only execution return type. Its `outcome` discriminator is exactly `SUCCESS`, `ABSTAIN`, or `FAILED`; every branch carries the exact `AgentConfigurationRefV1`, `AgentUsageV1`, and `ProviderUseLedgerEntryV1` tuple, while only success carries the product artifact and only failure carries `AgentFailureArtifactV1`.
 
 ## Dependencies, tools, evidence, and authority
 
@@ -78,22 +92,24 @@ Every `SUPPORTED_FACT` has a matching accepted capture; `HYPOTHESIS` has none an
 
 Ceilings are `45s`, 6000 input tokens, 1800 output tokens, two tool calls, two model requests (second only JSON repair), and 20 USD minor. Tool deadline is 5s; model deadline is at most 35s. AGENT-01 cancellation/timeout behavior is mandatory.
 
-`OfferHypothesisValidatorV1` checks price/currency bounds; uniqueness/non-overlap of deliverables/exclusions; at least two falsifiable assumptions/questions; supported-fact citation validity; no guarantee, billing/send/contact/authority fields; exact selected-idea/brief/evidence hashes; and ledger ceilings. Application services persist `agent_runs`, `OfferHypothesis` `PRODUCED` schema `1`, links/cost, and `artifact.produced.v1`. Only later services emit canonical validation/acceptance/supersession events and materialize DB-02.
+`OfferHypothesisValidatorV1` checks price/currency bounds; uniqueness/non-overlap of deliverables/exclusions; at least two falsifiable assumptions/questions; supported-fact citation validity; no guarantee, billing/send/contact/authority fields; exact selected-idea/brief/evidence hashes; and ledger ceilings. Ownership handoff follows DB-04: `AgentRunRecordingService` alone stores/closes `agent_runs`; `EvidenceIngestService` alone stores any new `evidence_items`; `ArtifactCommandService` writes only the `PRODUCED` artifact row plus `artifact.produced.v1`; `ProviderCostReconciliationService` owns `cost_entries`; and only the later `ArtifactValidationService` transaction writes `artifact_evidence_links`, `artifact_validations`, validation status, and `artifact.validated.v1`/`artifact.rejected.v1`. Only `ArtifactAcceptanceService`/operator commands emit acceptance/supersession and materialize DB-02.
 
 ## Offline evaluation and operator review
 
 Suite `offer_design.v1` has exactly 48 cases: 24 viable ideas across service price bands, 8 impossible/missing constraints requiring abstention, 8 contradictory evidence cases, and 8 injection/guarantee/send-authority adversarial cases. Rubric: hard schema/authority/unsupported-guarantee safety; supported-claim precision; idea/segment alignment; deliverable specificity; price-bound correctness; falsifiability; abstention calibration.
 
-Promotion requires 48/48 schema-valid, zero hard failures, supported-claim precision `>=0.98`, price-bound correctness `=1.00`, mean alignment `>=0.90`, specificity `>=0.88`, falsifiability `>=0.85`, abstention precision/recall each `>=0.90`, aggregate `>=0.88`, bottom decile `>=0.72`, p95 `<=36s`, mean cost `<=16` and max `<=20` USD minor. Any component regression `>0.02` or aggregate regression `>0.01` blocks promotion.
+Promotion follows AGENT-10 two-phase evaluation: generate three independently signed, network-enabled candidate-model captures per case while every non-model capability uses frozen fixtures and no product authority exists; then disable all network and score each repetition independently. Replaying an identical model fixture cannot count as a capture. The rolling rollback population uses two adjacent non-overlapping `20`-invocation windows exactly as AGENT-10 defines.
 
-Operator review is always required before offer acceptance/materialization and shows all claims/citations, assumptions, exclusions, price bounds/currency, confidence, validator reasons, versions/hashes, and cost. Immediate rollback follows any authority/guarantee/unsupported-claim leak; otherwise two consecutive 20-run windows with post-validation failure `>2%`, operator rejection `>15%` for rubric reasons, or p95 cost/duration over ceiling trigger rollback.
+Promotion requires 48/48 schema-valid, zero hard failures, supported-claim precision `>=0.98`, price-bound correctness `=1.00`, mean alignment `>=0.90`, specificity `>=0.88`, falsifiability `>=0.85`, abstention precision/recall each `>=0.90`, aggregate `>=0.88`, bottom decile `>=0.72`, p95 duration `<=36s`, mean/p95/max cost `<=16/18/20 USD minor`. Any component regression `>0.02` or aggregate regression `>0.01` blocks promotion.
+
+Operator review is always required before offer acceptance/materialization and shows all claims/citations, assumptions, exclusions, price bounds/currency, confidence, validator reasons, versions/hashes, and cost. Immediate rollback follows any authority/guarantee/unsupported-claim leak; otherwise two consecutive 20-run windows with post-validation failure `>2%`, operator rejection `>15%` for rubric reasons, or nearest-rank p95 cost `>18 USD minor` or p95 duration `>36s` over the AGENT-10 terminal-invocation population trigger rollback.
 
 ## Ordered implementation tasks
 
 - [ ] **Encode offer schemas/prompt/config —** Input: selected idea and DB-02 fields. Operation: implement exact models, hashes, registry, prompt. Output: typed agent contract. Test evidence: schema/boundary snapshots. Failure behavior: invalid input blocks model.
 - [ ] **Implement bounded execution —** Input: verified envelope/evidence IDs. Operation: expose only `evidence.read`, one structured call plus JSON repair, ceilings/cancellation. Output: offer, abstention, or failure. Test evidence: fake provider boundary matrix. Failure behavior: no partial artifact.
 - [ ] **Implement post-validation/persistence —** Input: output/ledger. Operation: verify bounds, citations, specificity, authority and persist only `PRODUCED`. Output: immutable artifact/event/cost. Test evidence: adversarial and atomicity cases. Failure behavior: WF-03 remains blocked.
-- [ ] **Build and gate 48-case suite —** Input: frozen cases/rubrics. Operation: run Pydantic Evals, persist hashes/scores, compare thresholds/prior version. Output: promotion decision. Test evidence: deterministic rerun. Failure behavior: retain prior version.
+- [ ] **Build and gate 48-case suite —** Input: frozen cases/rubrics. Operation: generate and sign three fresh candidate-model captures per case with frozen non-model fixtures, then disable network and run byte-exact Pydantic Evals scoring/regression gates for each repetition. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
 
 ## Test strategy
 

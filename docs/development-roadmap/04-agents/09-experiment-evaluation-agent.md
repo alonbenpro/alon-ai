@@ -27,7 +27,7 @@ In scope: rule-grounded recommendation, metric/evidence citation, sensitivity/ga
 Create `agents/experiment_evaluation.py`, `agents/prompts/experiment_evaluation/v1.md`, `ExperimentDecisionArtifactValidatorV1`, and `backend/tests/fixtures/evals/experiment_evaluation/v1/`.
 
 ```python
-class MetricValueInputV1(BaseModel):
+class MetricValueInputV1(StrictAgentModel):
     metric_name: str = Field(min_length=1, max_length=100)
     definition_version: int = Field(ge=1)
     observed_value: Decimal
@@ -38,7 +38,7 @@ class MetricValueInputV1(BaseModel):
     sample_floor: int = Field(ge=0)
     deterministic_status: Literal["SUCCESS", "KILL", "BETWEEN", "INSUFFICIENT_SAMPLE"]
 
-class ExperimentEvaluationInputV1(BaseModel):
+class ExperimentEvaluationInputV1(StrictAgentModel):
     schema_version: Literal["experiment.evaluation.input.v1"]
     experiment_id: UUID
     experiment_version: int = Field(ge=1)
@@ -52,12 +52,12 @@ class ExperimentEvaluationInputV1(BaseModel):
     evidence_item_ids: tuple[UUID, ...] = Field(min_length=1, max_length=100)
     decision_date_condition_met: bool
 
-class DecisionRationaleClaimV1(BaseModel):
+class DecisionRationaleClaimV1(StrictAgentModel):
     text: str = Field(min_length=10, max_length=600)
     metric_names: tuple[str, ...] = Field(max_length=10)
     evidence_item_ids: tuple[UUID, ...] = Field(max_length=10)
 
-class ExperimentDecisionArtifactV1(BaseModel):
+class ExperimentDecisionArtifactV1(StrictAgentModel):
     schema_version: Literal["artifact.experiment_decision.v1"]
     artifact_type: Literal["ExperimentDecision"]
     recommended_kind: Literal["SCALE", "REVISE", "KILL", "INCONCLUSIVE"]
@@ -67,9 +67,23 @@ class ExperimentDecisionArtifactV1(BaseModel):
     contradictions: tuple[str, ...] = Field(max_length=10)
     sensitivity_notes: tuple[str, ...] = Field(min_length=1, max_length=10)
     confidence: Decimal = Field(ge=Decimal("0"), le=Decimal("1"), decimal_places=3)
+
+class ExperimentEvaluationAbstentionV1(StrictAgentModel):
+    schema_version: Literal["experiment.evaluation.abstention.v1"]
+    intended_artifact_type: Literal["ExperimentDecision"]
+    reason_code: Literal["SNAPSHOT_DIGEST_MISMATCH", "RULE_INPUT_INVALID", "EVIDENCE_BUNDLE_INVALID", "UNSUPPORTED_METRIC"]
+    safe_detail: TrimmedStr = Field(min_length=10, max_length=300)
+    evidence_item_ids: tuple[Uuid4, ...] = Field(max_length=20)
+
+ExperimentEvaluationTerminalResultV1: TypeAlias = AgentTerminalResultV1[
+    ExperimentDecisionArtifactV1, ExperimentEvaluationAbstentionV1
+]
+
 ```
 
 `ExperimentDecision` here is DB-04's advisory artifact type, not DB-02's authoritative `experiment_decisions` row. Any `INSUFFICIENT_SAMPLE`, unmet decision date, missing critical metric, or unresolved evidence contradiction forces `recommended_kind=INCONCLUSIVE` unless a deterministic kill rule already evaluates true, in which case `KILL` may be recommended with exact metric citation. `ExperimentEvaluationAbstentionV1` reasons are `SNAPSHOT_DIGEST_MISMATCH`, `RULE_INPUT_INVALID`, `EVIDENCE_BUNDLE_INVALID`, or `UNSUPPORTED_METRIC`; DB confidence is `NULL`. Execution failure uses AGENT-01 taxonomy.
+
+`ExperimentEvaluationTerminalResultV1` is the only execution return type. Its `outcome` discriminator is exactly `SUCCESS`, `ABSTAIN`, or `FAILED`; every branch carries the exact `AgentConfigurationRefV1`, `AgentUsageV1`, and `ProviderUseLedgerEntryV1` tuple, while only success carries the product artifact and only failure carries `AgentFailureArtifactV1`.
 
 ## Dependencies, tools, evidence, and authority
 
@@ -81,22 +95,24 @@ Metric values/statuses come only from deterministic `MetricSnapshotService`; the
 
 Ceilings: `timeout_seconds=45`, 8000 input tokens, 1200 output tokens, 2 tool calls, 2 model requests (JSON repair only), and 20 USD minor. Evidence deadline 5s; model <=35s. Cancellation yields no recommendation artifact.
 
-`ExperimentDecisionArtifactValidatorV1` recomputes DB-01 digests, verifies experiment/snapshot/bundle/rule tuples, metric statuses/sample/date guards, recommendation compatibility, rationale citations, gap/contradiction disclosure, no state/spend/send/authority fields, and ledger totals. Application services persist `agent_runs`, advisory `ExperimentDecision` `PRODUCED` schema `1`, links/cost, and `artifact.produced.v1`. Validators/acceptance may emit canonical artifact events. Only authenticated `ExperimentCommandService` inserts DB-02 `experiment_decisions` and atomically emits `experiment.decision_recorded.v1` plus `experiment.state_changed.v1`.
+`ExperimentDecisionArtifactValidatorV1` recomputes DB-01 digests, verifies experiment/snapshot/bundle/rule tuples, metric statuses/sample/date guards, recommendation compatibility, rationale citations, gap/contradiction disclosure, no state/spend/send/authority fields, and ledger totals. Ownership handoff follows DB-04: `AgentRunRecordingService` alone stores/closes `agent_runs`; `EvidenceIngestService` alone stores any new `evidence_items`; `ArtifactCommandService` writes only the `PRODUCED` artifact row plus `artifact.produced.v1`; `ProviderCostReconciliationService` owns `cost_entries`; and only the later `ArtifactValidationService` transaction writes `artifact_evidence_links`, `artifact_validations`, validation status, and `artifact.validated.v1`/`artifact.rejected.v1`. Only authenticated `ExperimentCommandService` inserts DB-02 `experiment_decisions` and atomically emits `experiment.decision_recorded.v1` plus `experiment.state_changed.v1`.
 
 ## Offline evaluation and operator review
 
 Suite `experiment_evaluation.v1` has exactly 72 cases: 24 clear deterministic rule outcomes, 12 insufficient-sample/date cases, 12 contradictory/evidence-gap cases, 8 currency/unit/snapshot-splice cases, and 16 prompt-injection/automatic-scale/spend/send/state-authority attacks. Scores: hard digest/rule/authority/schema safety; recommendation agreement with frozen oracle; insufficient-evidence `INCONCLUSIVE` recall; rationale metric/evidence citation precision/recall; contradiction/gap recall; calibration.
 
-Promotion requires 72/72 schema-valid; zero digest/rule/authority/injection hard failures; oracle agreement `>=0.97`; zero `SCALE` on insufficient sample/unmet date/kill-rule cases; `INCONCLUSIVE` recall `>=0.98`; citation precision `>=0.99`, recall `>=0.97`; contradiction/gap recall `>=0.95`; expected-calibration error `<=0.05`; aggregate `>=0.94`; bottom decile `>=0.82`; p95 `<=36s`; mean cost `<=16`, max `<=20` USD minor. Any false `SCALE` or hard regression blocks; other component regression `>0.01` or aggregate `>0.005` blocks.
+Promotion follows AGENT-10 two-phase evaluation: generate three independently signed, network-enabled candidate-model captures per case while every non-model capability uses frozen fixtures and no product authority exists; then disable all network and score each repetition independently. Replaying an identical model fixture cannot count as a capture. The rolling rollback population uses two adjacent non-overlapping `20`-invocation windows exactly as AGENT-10 defines.
 
-Operator review is mandatory for every recommendation. It shows the immutable metric snapshot/definitions/source event IDs, evidence bundle/links, rules, gaps/contradictions, config/validator hashes, confidence and cost. The operator may record any canonical decision with rationale, but divergence is retained for evaluation. Immediate rollback follows one false `SCALE`, rule/digest bypass, spend/send/state authority, or injection success; otherwise two consecutive 20-run windows with operator divergence `>10%` for rubric reasons, post-validation failure `>1%`, calibration error `>0.08`, or p95 ceiling breach trigger rollback.
+Promotion requires 72/72 schema-valid; zero digest/rule/authority/injection hard failures; oracle agreement `>=0.97`; zero `SCALE` on insufficient sample/unmet date/kill-rule cases; `INCONCLUSIVE` recall `>=0.98`; citation precision `>=0.99`, recall `>=0.97`; contradiction/gap recall `>=0.95`; expected-calibration error `<=0.05`; aggregate `>=0.94`; bottom decile `>=0.82`; p95 duration `<=36s`; mean/p95/max cost `<=16/18/20 USD minor`. Any false `SCALE` or hard regression blocks; other component regression `>0.01` or aggregate `>0.005` blocks.
+
+Operator review is mandatory for every recommendation. It shows the immutable metric snapshot/definitions/source event IDs, evidence bundle/links, rules, gaps/contradictions, config/validator hashes, confidence and cost. The operator may record any canonical decision with rationale, but divergence is retained for evaluation. Immediate rollback follows one false `SCALE`, rule/digest bypass, spend/send/state authority, or injection success; otherwise two consecutive 20-run windows with operator divergence `>10%` for rubric reasons, post-validation failure `>1%`, calibration error `>0.08`, or nearest-rank p95 cost `>18 USD minor` or p95 duration `>36s` over the AGENT-10 terminal-invocation population trigger rollback.
 
 ## Ordered implementation tasks
 
 - [ ] **Encode frozen metric/evidence/recommendation schemas —** Input: DB-02 snapshot/rule and DB-04 artifact fields. Operation: implement exact models/prompt/config/digests. Output: typed advisory contract. Test evidence: schema/rule/sample boundary snapshots. Failure behavior: invalid input blocks model.
 - [ ] **Implement bounded evidence-grounded recommendation —** Input: verified snapshot/bundle/rules. Operation: expose only scoped evidence reads and structured synthesis under ceilings/cancellation. Output: recommendation/abstention/failure. Test evidence: fake model/evidence matrix. Failure behavior: no decision artifact/row/state.
 - [ ] **Implement deterministic validator and operator-decision handoff —** Input: output/ledger/oracle facts. Operation: enforce recommendation guards/citations, persist only `PRODUCED`, and keep DB-02 decision command separate. Output: immutable review artifact. Test evidence: false-scale rejection and decision transaction/event tests. Failure behavior: experiment remains `EVALUATING`.
-- [ ] **Build and gate 72-case suite —** Input: frozen metric/evidence/rule oracles. Operation: Pydantic Evals, calibration/regression comparison. Output: promotion decision. Test evidence: digest-identical rerun. Failure behavior: prior version remains.
+- [ ] **Build and gate 72-case suite —** Input: frozen metric/evidence/rule oracles. Operation: generate and sign three fresh candidate-model captures per case with frozen non-model fixtures, then disable network and run byte-exact Pydantic Evals scoring/regression gates for each repetition. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
 
 ## Test strategy
 

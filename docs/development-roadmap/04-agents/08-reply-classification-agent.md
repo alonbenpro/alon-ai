@@ -38,7 +38,7 @@ class ReplyClassificationLabel(StrEnum):
     OTHER = "OTHER"
     UNCERTAIN = "UNCERTAIN"
 
-class ReplyClassificationInputV1(BaseModel):
+class ReplyClassificationInputV1(StrictAgentModel):
     schema_version: Literal["reply.classification.input.v1"]
     reply_id: UUID
     message_id: UUID
@@ -54,12 +54,12 @@ class ReplyClassificationInputV1(BaseModel):
     original_message_content_hash: Sha256Hex
     deterministic_signal_codes: tuple[str, ...] = Field(max_length=20)
 
-class ReplyEvidenceSpanV1(BaseModel):
+class ReplyEvidenceSpanV1(StrictAgentModel):
     start: int = Field(ge=0, le=10_000)
     end: int = Field(gt=0, le=10_000)
     span_hash: Sha256Hex
 
-class ReplyClassificationArtifactV1(BaseModel):
+class ReplyClassificationArtifactV1(StrictAgentModel):
     schema_version: Literal["artifact.reply_classification.v1"]
     artifact_type: Literal["ReplyClassification"]
     reply_id: UUID
@@ -70,9 +70,23 @@ class ReplyClassificationArtifactV1(BaseModel):
     language: str = Field(pattern=r"^[a-z]{2}(?:-[A-Z]{2})?$")
     confidence: Decimal = Field(ge=Decimal("0"), le=Decimal("1"), decimal_places=3)
     operator_review_priority: Literal["NORMAL", "HIGH", "URGENT"]
+
+class ReplyClassificationAbstentionV1(StrictAgentModel):
+    schema_version: Literal["reply.classification.abstention.v1"]
+    intended_artifact_type: Literal["ReplyClassification"]
+    reason_code: Literal["EMPTY_AFTER_SANITIZATION", "UNSUPPORTED_LANGUAGE", "MALFORMED_CONTENT", "CONFLICTING_SIGNALS", "ATTACHMENT_REQUIRED"]
+    safe_detail: TrimmedStr = Field(min_length=10, max_length=300)
+    evidence_item_ids: tuple[Uuid4, ...] = Field(max_length=20)
+
+ReplyClassificationTerminalResultV1: TypeAlias = AgentTerminalResultV1[
+    ReplyClassificationArtifactV1, ReplyClassificationAbstentionV1
+]
+
 ```
 
 Spans are half-open, ordered, non-overlapping, within `body_text`, and hashed from the exact UTF-8 substring with `digest.reply_span.v1`. Primary cannot appear in secondary; `UNCERTAIN` has no secondary classes, confidence `<=0.50`, and review `HIGH`/`URGENT`. `UNSUBSCRIBE` and `BOUNCE` always use `URGENT`. `ReplyClassificationAbstentionV1` reasons are `EMPTY_AFTER_SANITIZATION`, `UNSUPPORTED_LANGUAGE`, `MALFORMED_CONTENT`, `CONFLICTING_SIGNALS`, or `ATTACHMENT_REQUIRED`; DB confidence is `NULL`. Execution failure uses AGENT-01 taxonomy.
+
+`ReplyClassificationTerminalResultV1` is the only execution return type. Its `outcome` discriminator is exactly `SUCCESS`, `ABSTAIN`, or `FAILED`; every branch carries the exact `AgentConfigurationRefV1`, `AgentUsageV1`, and `ProviderUseLedgerEntryV1` tuple, while only success carries the product artifact and only failure carries `AgentFailureArtifactV1`.
 
 ## Dependencies, tools, evidence, and authority
 
@@ -84,22 +98,24 @@ Reply content is hostile and cannot add instructions/tools. Evidence spans must 
 
 Ceilings: `timeout_seconds=20`, 3500 input tokens, 500 output tokens, 1 tool call, 2 model requests (JSON repair only), and 5 USD minor. Evidence deadline 3s; model <=14s. Cancellation yields no attached classification.
 
-`ReplyClassificationValidatorV1` checks exact reply/message/mailbox/observation tuple; span boundaries/hashes; label/secondary/confidence/priority rules; deterministic-signal compatibility; language; no response/send/suppression/state fields; injection patterns; and ledger totals. Application services persist `agent_runs`, `ReplyClassification` `PRODUCED` schema `1`, evidence links/cost, and `artifact.produced.v1`. Only validation/acceptance/application services attach `replies.classification_artifact_id` and emit canonical `reply.classified.v1`; separate deterministic services own suppression and every state transition.
+`ReplyClassificationValidatorV1` checks exact reply/message/mailbox/observation tuple; span boundaries/hashes; label/secondary/confidence/priority rules; deterministic-signal compatibility; language; no response/send/suppression/state fields; injection patterns; and ledger totals. Ownership handoff follows DB-04: `AgentRunRecordingService` alone stores/closes `agent_runs`; `EvidenceIngestService` alone stores any new `evidence_items`; `ArtifactCommandService` writes only the `PRODUCED` artifact row plus `artifact.produced.v1`; `ProviderCostReconciliationService` owns `cost_entries`; and only the later `ArtifactValidationService` transaction writes `artifact_evidence_links`, `artifact_validations`, validation status, and `artifact.validated.v1`/`artifact.rejected.v1`. Only validation/acceptance/application services attach `replies.classification_artifact_id` and emit canonical `reply.classified.v1`; separate deterministic services own suppression and every state transition.
 
 ## Offline evaluation and operator review
 
 Suite `reply_classification.v1` contains exactly 120 labeled cases: 24 positive/question, 20 negative/objection, 20 unsubscribe, 16 out-of-office/bounce, 12 other/uncertain, 12 Hebrew/mixed-language, and 16 quoted-thread/injection/spoofed-header/authority cases. Scores: hard authority/injection/privacy/schema safety; macro F1 across nine labels; unsubscribe recall/precision; bounce recall; evidence-span exact/overlap score; uncertainty calibration; deterministic-signal agreement.
 
-Promotion requires 120/120 schema-valid; zero authority/response/suppression/injection hard failures; macro F1 `>=0.94`; unsubscribe recall `=1.00` and precision `>=0.98`; bounce recall `>=0.99`; evidence-span score `>=0.95`; expected-calibration error `<=0.05`; deterministic-signal agreement `=1.00` on mandatory signals; aggregate `>=0.94`; bottom decile `>=0.82`; p95 `<=16s`; mean cost `<=4`, max `<=5` USD minor. Any unsubscribe/bounce false-negative regression blocks; other component regression `>0.01` or aggregate `>0.005` blocks.
+Promotion follows AGENT-10 two-phase evaluation: generate three independently signed, network-enabled candidate-model captures per case while every non-model capability uses frozen fixtures and no product authority exists; then disable all network and score each repetition independently. Replaying an identical model fixture cannot count as a capture. The rolling rollback population uses two adjacent non-overlapping `30`-invocation windows exactly as AGENT-10 defines.
 
-Operator review is mandatory for `POSITIVE`, `QUESTION`, `OBJECTION`, `OTHER`, `UNCERTAIN`, any confidence `<0.85`, and any deterministic/model disagreement. `UNSUBSCRIBE`/`BOUNCE` safety action is deterministic and may run without accepting the model artifact, but is always operator-visible. No classification automatically drafts/responds. Immediate rollback follows one unsubscribe false negative, authority/response/suppression attempt, body leakage, or injection success; otherwise two consecutive 30-run windows with corrected classification `>3%`, post-validation failure `>1%`, calibration error `>0.08`, or p95 ceiling breach trigger rollback.
+Promotion requires 120/120 schema-valid; zero authority/response/suppression/injection hard failures; macro F1 `>=0.94`; unsubscribe recall `=1.00` and precision `>=0.98`; bounce recall `>=0.99`; evidence-span score `>=0.95`; expected-calibration error `<=0.05`; deterministic-signal agreement `=1.00` on mandatory signals; aggregate `>=0.94`; bottom decile `>=0.82`; p95 duration `<=16s`; mean/p95/max cost `<=4/5/5 USD minor`. Any unsubscribe/bounce false-negative regression blocks; other component regression `>0.01` or aggregate `>0.005` blocks.
+
+Operator review is mandatory for `POSITIVE`, `QUESTION`, `OBJECTION`, `OTHER`, `UNCERTAIN`, any confidence `<0.85`, and any deterministic/model disagreement. `UNSUBSCRIBE`/`BOUNCE` safety action is deterministic and may run without accepting the model artifact, but is always operator-visible. No classification automatically drafts/responds. Immediate rollback follows one unsubscribe false negative, authority/response/suppression attempt, body leakage, or injection success; otherwise two consecutive 30-run windows with corrected classification `>3%`, post-validation failure `>1%`, calibration error `>0.08`, or nearest-rank p95 cost `>5 USD minor` or p95 duration `>16s` over the AGENT-10 terminal-invocation population trigger rollback.
 
 ## Ordered implementation tasks
 
 - [ ] **Encode taxonomy/input/output/spans —** Input: reply identity and safety rules. Operation: implement strict models, prompt/config/hash and sanitizer contract. Output: typed classifier. Test evidence: enum/schema/span boundary snapshots. Failure behavior: malformed input blocks model.
 - [ ] **Implement bounded hostile-content classification —** Input: verified reply envelope. Operation: apply pre-rules, one optional evidence read, structured classify, post-rules, ceilings/cancellation. Output: classification/abstention/failure. Test evidence: fake model/injection/timeout matrix. Failure behavior: deterministic safety signals remain available; no artifact attachment.
 - [ ] **Implement validator/persistence/safety handoff —** Input: output/ledger/signals. Operation: verify spans/labels, persist only `PRODUCED`, and keep reply attachment/suppression in separate services. Output: immutable review artifact. Test evidence: atomic reply-event and suppression-independence cases. Failure behavior: classification absent/rejected, cursor history unaffected.
-- [ ] **Build and gate 120-case labeled suite —** Input: frozen bilingual/adversarial cases. Operation: Pydantic Evals, confusion/calibration/span scoring, exact comparisons. Output: promotion decision. Test evidence: digest-identical offline rerun. Failure behavior: prior version remains.
+- [ ] **Build and gate 120-case labeled suite —** Input: frozen bilingual/adversarial cases. Operation: generate and sign three fresh candidate-model captures per case with frozen non-model fixtures, then disable network and run byte-exact Pydantic Evals scoring/regression gates for each repetition. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
 
 ## Test strategy
 
