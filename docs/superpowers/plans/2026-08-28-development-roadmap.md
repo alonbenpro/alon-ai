@@ -13,7 +13,7 @@
 ## Global Constraints
 
 - Preserve the exact milestone order M0 through M9 from the spec.
-- Treat DBOS as provisional; the first workflow document must compare DBOS, Temporal, LangGraph, Restate, Prefect, Pydantic AI, and LangChain by layer and risk.
+- Select Pydantic AI for typed agents and DBOS for durable workflows on PostgreSQL; M1 is a DBOS production-acceptance gate, and Temporal is mandatory after any disqualifying failure.
 - Optimize for one Israeli solo operator and a private deployment before platform features.
 - Agents produce typed artifacts and never call Gmail directly.
 - Deterministic policy plus `SendGateway` owns all Gmail side effects.
@@ -22,12 +22,21 @@
 - Use checkbox tasks, exact interfaces and evidence, no placeholders, no fake calendar estimates.
 - Use `S/M/L/XL` complexity and `Low/Medium/High/Critical` risk.
 - Distinguish current repository behavior from planned behavior.
+- Before broad repository discovery, follow the Graphify-first protocol in `AGENTS.md`; use targeted text search only after the graph, and update Graphify after tracked documentation changes.
+- LangChain, LangGraph, Restate, and Prefect are excluded from the initial runtime stack; record their layer and reconsideration triggers without planning their implementation.
 
 ---
 
 ### Task 1: Master roadmap, product strategy, and architecture
 
 **Files:**
+- Create: `AGENTS.md`
+- Create: `docs/engineering/graphify-first-navigation.md`
+- Rename: `docs/decisions/0002-provisional-dbos.md` to `docs/decisions/0002-dbos-workflow-runtime.md`
+- Modify: `README.md`
+- Modify: `docs/architecture.md`
+- Modify: `docs/superpowers/specs/2026-08-28-alon-ai-foundation-design.md`
+- Modify: `docs/superpowers/plans/2026-08-28-alon-ai-foundation.md`
 - Create: `docs/development-roadmap/README.md`
 - Create: `docs/development-roadmap/00-product-strategy/01-product-scope.md`
 - Create: `docs/development-roadmap/00-product-strategy/02-success-metrics.md`
@@ -37,15 +46,16 @@
 - Create: `docs/development-roadmap/01-architecture/03-domain-events-and-state-machines.md`
 
 **Interfaces:**
-- Consumes: Approved spec, current `README.md`, `docs/architecture.md`, ADRs 0001-0003.
-- Produces: Milestone vocabulary, document template, dependency rules, product gates, architecture boundaries, state/event names used by all later tasks.
+- Consumes: Approved spec, current `README.md`, `docs/architecture.md`, ADRs 0001-0003, and the existing Graphify graph.
+- Produces: Selected Pydantic AI/DBOS responsibilities, Temporal fallback criteria, Graphify-first agent navigation, milestone vocabulary, document template, dependency rules, product gates, architecture boundaries, and state/event names used by all later tasks.
 
-- [ ] **Step 1:** Inventory the current implemented and missing boundaries from source and architecture documents.
-- [ ] **Step 2:** Write the root index with M0-M9 order, phase gates, file manifest, dependency map, and “what not to build yet.”
-- [ ] **Step 3:** Write product scope, metrics, risk, and kill criteria with measurable evidence.
-- [ ] **Step 4:** Write target architecture, module dependency rules, core state machines, and domain-event catalog.
-- [ ] **Step 5:** Run placeholder, broken-link, milestone-order, and current/future-truth scans over these files.
-- [ ] **Step 6:** Commit exactly these files with message `docs: define roadmap strategy and architecture`.
+- [ ] **Step 1:** Use Graphify first to inventory the current implemented and missing boundaries, then validate the graph-selected source and architecture locations with targeted reads.
+- [ ] **Step 2:** Record Pydantic AI plus DBOS as the selected stack, Temporal as the mandatory fallback, the M1 production-acceptance gate, and the unchanged Gmail ambiguity safeguards across the ADR, foundation documents, architecture, and repository README.
+- [ ] **Step 3:** Add root agent instructions and the engineering guide with exact Graphify bootstrap, reflect, vocabulary expansion, query, targeted-search, memory, update, hook, and exception rules.
+- [ ] **Step 4:** Write the root roadmap index with M0-M9 order, phase gates, file manifest, dependency map, and “what not to build yet.”
+- [ ] **Step 5:** Write product scope, metrics, risk, kill criteria, target architecture, module dependency rules, core state machines, and domain-event catalog.
+- [ ] **Step 6:** Run placeholder, broken-link, milestone-order, stale-architecture, agent-instruction, and current/future-truth scans over these files.
+- [ ] **Step 7:** Commit exactly these files with message `docs: select stack and define roadmap architecture`.
 
 ### Task 2: Database and durable workflows
 
@@ -56,8 +66,8 @@
 - Create: `docs/development-roadmap/02-database/04-agent-artifacts-and-evidence.md`
 - Create: `docs/development-roadmap/02-database/05-audit-events-and-idempotency.md`
 - Create: `docs/development-roadmap/02-database/06-migrations-seeding-and-retention.md`
-- Create: `docs/development-roadmap/03-workflows/00-orchestrator-comparison-and-decision-gate.md`
-- Create: `docs/development-roadmap/03-workflows/01-dbos-gmail-recovery-spike.md`
+- Create: `docs/development-roadmap/03-workflows/00-dbos-selection-and-temporal-fallback.md`
+- Create: `docs/development-roadmap/03-workflows/01-dbos-production-acceptance-spike.md`
 - Create: `docs/development-roadmap/03-workflows/02-experiment-lifecycle.md`
 - Create: `docs/development-roadmap/03-workflows/03-idea-validation-workflow.md`
 - Create: `docs/development-roadmap/03-workflows/04-lead-qualification-workflow.md`
@@ -66,12 +76,12 @@
 
 **Interfaces:**
 - Consumes: M0-M9, architecture boundaries, state machines, domain-event names.
-- Produces: Exact PostgreSQL entities, keys, constraints, transition ownership, workflow IDs, queue semantics, recovery gates, and engine-selection record.
+- Produces: Exact PostgreSQL entities, keys, constraints, transition ownership, DBOS workflow IDs, queue semantics, production-acceptance evidence, and the documented Temporal fallback trigger.
 
 - [ ] **Step 1:** Define normalized schemas, identifiers, constraints, indexes, ownership, and retention for every product record.
 - [ ] **Step 2:** Define event, audit, artifact, provenance, idempotency, outbox, and reconciliation records.
-- [ ] **Step 3:** Write the workflow-engine comparison using current primary-source capabilities and an executable scorecard.
-- [ ] **Step 4:** Specify the DBOS-first Gmail spike including kill points, ambiguous-outcome reconciliation, and disqualifying failures.
+- [ ] **Step 3:** Record why DBOS was selected, classify adjacent frameworks and competing runtimes accurately, and define evidence-based reconsideration triggers without reopening the initial stack.
+- [ ] **Step 4:** Specify the DBOS Gmail production-acceptance spike including kill points, ambiguous-outcome reconciliation, disqualifying failures, and the mandatory Temporal migration handoff.
 - [ ] **Step 5:** Specify finite workflows for experiments, ideas, leads, outreach, replies, pause/cancel/resume, and recovery.
 - [ ] **Step 6:** Cross-check every workflow read/write against a defined table and every state change against the state machine.
 - [ ] **Step 7:** Commit exactly these files with message `docs: plan persistence and durable workflows`.
@@ -219,6 +229,6 @@
 - [ ] **Step 3:** Specify dependency/security maintenance, migrations, model/prompt upgrades, provider changes, and rollback policy.
 - [ ] **Step 4:** Update the master README file manifest, milestone map, and critical path after every file exists.
 - [ ] **Step 5:** Add a concise repository README link to `docs/development-roadmap/README.md` without duplicating the roadmap.
-- [ ] **Step 6:** Run repository-wide placeholder, empty-file, heading-contract, link, milestone, dependency, endpoint/table/artifact naming, and current/future truth scans.
+- [ ] **Step 6:** Run repository-wide placeholder, empty-file, heading-contract, link, milestone, dependency, endpoint/table/artifact naming, selected-stack, Graphify-instruction, and current/future truth scans.
 - [ ] **Step 7:** Run `make generate lint typecheck test build`; confirm generated contracts do not drift.
 - [ ] **Step 8:** Commit exactly the launch files and any audited README corrections with message `docs: complete the development roadmap`.
