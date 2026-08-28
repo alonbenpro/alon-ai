@@ -1,0 +1,119 @@
+{
+  "components": {
+    "schemas": {
+      "LivenessResponse": {
+        "properties": {
+          "service": {
+            "const": "api",
+            "title": "Service",
+            "type": "string"
+          },
+          "status": {
+            "const": "ok",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "service"
+        ],
+        "title": "LivenessResponse",
+        "type": "object"
+      },
+      "ReadinessResponse": {
+        "properties": {
+          "database": {
+            "const": "up",
+            "title": "Database",
+            "type": "string"
+          },
+          "status": {
+            "const": "ready",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database"
+        ],
+        "title": "ReadinessResponse",
+        "type": "object"
+      },
+      "ReadinessUnavailableResponse": {
+        "properties": {
+          "database": {
+            "const": "down",
+            "title": "Database",
+            "type": "string"
+          },
+          "status": {
+            "const": "not_ready",
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "status",
+          "database"
+        ],
+        "title": "ReadinessUnavailableResponse",
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "title": "Alon AI API",
+    "version": "0.1.0"
+  },
+  "openapi": "3.1.0",
+  "paths": {
+    "/health/live": {
+      "get": {
+        "operationId": "live_health_live_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LivenessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Live"
+      }
+    },
+    "/health/ready": {
+      "get": {
+        "operationId": "ready_health_ready_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "503": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReadinessUnavailableResponse"
+                }
+              }
+            },
+            "description": "Service Unavailable"
+          }
+        },
+        "summary": "Ready"
+      }
+    }
+  }
+}
