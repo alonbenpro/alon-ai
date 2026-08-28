@@ -1,7 +1,8 @@
 import shlex
 from pathlib import Path
 
-BACKEND_ROOT = Path(__file__).resolve().parents[2]
+REPOSITORY_ROOT = Path(__file__).resolve().parents[3]
+BACKEND_ROOT = REPOSITORY_ROOT / "backend"
 
 
 def docker_context_sources() -> set[str]:
@@ -18,6 +19,19 @@ def docker_context_sources() -> set[str]:
     return sources
 
 
+def docker_environment(dockerfile_path: Path) -> dict[str, str]:
+    environment: dict[str, str] = {}
+    dockerfile = dockerfile_path.read_text(encoding="utf-8")
+    for raw_line in dockerfile.splitlines():
+        line = raw_line.strip()
+        if not line.startswith("ENV "):
+            continue
+        for assignment in shlex.split(line)[1:]:
+            name, value = assignment.split("=", maxsplit=1)
+            environment[name] = value
+    return environment
+
+
 def test_backend_image_contains_alembic_runtime_contract() -> None:
     copied_sources = docker_context_sources()
 
@@ -25,3 +39,10 @@ def test_backend_image_contains_alembic_runtime_contract() -> None:
     assert "alembic" in copied_sources
     assert (BACKEND_ROOT / "alembic.ini").is_file()
     assert (BACKEND_ROOT / "alembic" / "env.py").is_file()
+
+
+def test_frontend_image_binds_standalone_server_to_all_container_interfaces() -> None:
+    environment = docker_environment(REPOSITORY_ROOT / "frontend" / "Dockerfile")
+
+    assert environment["HOSTNAME"] == "0.0.0.0"
+    assert environment["PORT"] == "3000"
