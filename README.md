@@ -45,7 +45,7 @@ docs/runbooks/            Local operating guidance
 
 ## Quick start
 
-Prerequisites: Python 3.13 with uv, and Node.js 24 with npm. In a clean environment, install the locked dependencies from the repository root:
+Prerequisites: Python 3.13 with uv 0.11.26, and Node.js 24 with npm. The backend rejects a different uv version so local, CI, and container resolution stay aligned. In a clean environment, install the locked dependencies from the repository root:
 
 ```sh
 make setup
@@ -81,7 +81,7 @@ The Docker Compose command path is documented in the [local development runbook]
 | `make build` | Build the Python package and production frontend |
 | `make containers` | Validate Compose and build images; unavailable for local verification without Docker |
 
-CI has three required jobs: `backend` provisions PostgreSQL 18, migrates it, and runs the real readiness integration test; `frontend` regenerates the contract and rejects generated drift; `containers` validates Compose and builds both images.
+CI has four jobs: `security` checks tracked filenames and high-signal credential material without printing values; `backend` provisions PostgreSQL 18, migrates it, and runs the real readiness integration test; `frontend` regenerates the contract and rejects generated drift; `containers` validates Compose, builds the images, migrates a disposable database, starts the full stack, checks service health and HTTP endpoints, verifies the worker remains running as a non-root user with outreach disabled, and always destroys the stack and its volumes.
 
 ## Automatic Gmail sending design
 

@@ -47,34 +47,36 @@ export function ApiStatus() {
       <h2 id="readiness-title">System readiness</h2>
 
       <div className="readiness-states">
-        {query.isPending ? (
-          <p className="status-row status-row--primary">
-            <StatusDot tone="unavailable" />
-            <span>Checking services…</span>
-          </p>
-        ) : query.isError ? (
-          <p className="status-row status-row--primary">
-            <StatusDot tone="unavailable" />
-            <span>Services unavailable</span>
-          </p>
-        ) : (
-          <dl>
-            <div className="status-row status-row--api">
-              <dt aria-label="API" className="visually-hidden" />
-              <dd>
-                <StatusDot tone="online" />
-                <span>API online</span>
-              </dd>
-            </div>
-            <div className="status-row status-row--database">
-              <dt aria-label="Database" className="visually-hidden" />
-              <dd>
-                <StatusDot tone="online" />
-                <span>Database online</span>
-              </dd>
-            </div>
-          </dl>
-        )}
+        <div aria-atomic="true" aria-live="polite" role="status">
+          {query.isPending ? (
+            <p className="status-row status-row--primary">
+              <StatusDot tone="unavailable" />
+              <span>Checking services…</span>
+            </p>
+          ) : query.isError ? (
+            <p className="status-row status-row--primary">
+              <StatusDot tone="unavailable" />
+              <span>Services unavailable</span>
+            </p>
+          ) : (
+            <dl>
+              <div className="status-row status-row--api">
+                <dt aria-label="API" className="visually-hidden" />
+                <dd>
+                  <StatusDot tone="online" />
+                  <span>API online</span>
+                </dd>
+              </div>
+              <div className="status-row status-row--database">
+                <dt aria-label="Database" className="visually-hidden" />
+                <dd>
+                  <StatusDot tone="online" />
+                  <span>Database online</span>
+                </dd>
+              </div>
+            </dl>
+          )}
+        </div>
 
         <p className="status-row status-row--outreach">
           <StatusDot tone="disabled" />

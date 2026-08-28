@@ -1,3 +1,4 @@
+import structlog
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
@@ -17,6 +18,11 @@ class DatabaseHealthChecker:
         try:
             async with self._engine.connect() as connection:
                 await connection.execute(text("SELECT 1"))
-        except SQLAlchemyError:
+        except SQLAlchemyError as error:
+            structlog.get_logger(__name__).warning(
+                "database_readiness_failed",
+                service="api",
+                error_type=type(error).__name__,
+            )
             return False
         return True

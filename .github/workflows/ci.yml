@@ -8,6 +8,15 @@ permissions:
   contents: read
 
 jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Scan tracked files for credential material
+        run: python3 scripts/check_secrets.py
+
   backend:
     runs-on: ubuntu-latest
     services:
@@ -27,11 +36,14 @@ jobs:
     env:
       ALON_AI_DATABASE_URL: postgresql+psycopg://alon_ai:alon_ai@localhost:5432/alon_ai
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           python-version: "3.13"
           enable-cache: true
+          version: "0.11.26"
       - run: uv sync --locked --all-extras --dev
         working-directory: backend
       - run: uv run ruff format --check .
@@ -48,13 +60,16 @@ jobs:
   frontend:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           python-version: "3.13"
+          version: "0.11.26"
       - run: uv sync --locked --all-extras --dev
         working-directory: backend
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
           node-version: "24"
           cache: npm
@@ -77,7 +92,55 @@ jobs:
   containers:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
-      - run: docker compose --env-file .env.example -f infra/compose.yaml config
-      - run: docker build -f backend/Dockerfile -t alon-ai-backend:ci backend
-      - run: docker build -f frontend/Dockerfile -t alon-ai-frontend:ci frontend
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Validate Compose configuration
+        run: docker compose --env-file .env.example -f infra/compose.yaml config
+      - name: Build container images
+        run: docker compose --env-file .env.example -f infra/compose.yaml build api worker frontend
+      - name: Migrate and smoke-test the running stack
+        env:
+          ALON_AI_ENVIRONMENT: production
+        run: |
+          set -Eeuo pipefail
+
+          compose=(docker compose --env-file .env.example -f infra/compose.yaml)
+
+          cleanup() {
+            exit_code=$?
+            trap - EXIT
+            if (( exit_code != 0 )); then
+              "${compose[@]}" ps -a || true
+              "${compose[@]}" logs --no-color --timestamps postgres api worker frontend || true
+            fi
+            "${compose[@]}" down --volumes --remove-orphans || true
+            exit "$exit_code"
+          }
+          trap cleanup EXIT
+
+          "${compose[@]}" run --rm api alembic upgrade head
+          "${compose[@]}" up --detach --no-build --wait --wait-timeout 180
+
+          curl --fail --silent --show-error http://127.0.0.1:8000/health/live |
+            python3 -c 'import json, sys; assert json.load(sys.stdin) == {"status": "ok", "service": "api"}'
+          curl --fail --silent --show-error http://127.0.0.1:8000/health/ready |
+            python3 -c 'import json, sys; assert json.load(sys.stdin) == {"status": "ready", "database": "up"}'
+          curl --fail --silent --show-error --output /dev/null http://127.0.0.1:3000/
+
+          for service in postgres api worker frontend; do
+            container_id="$("${compose[@]}" ps --quiet "$service")"
+            test -n "$container_id"
+            test "$(docker inspect --format '{{.State.Status}}' "$container_id")" = "running"
+          done
+
+          for service in postgres api frontend; do
+            container_id="$("${compose[@]}" ps --quiet "$service")"
+            test "$(docker inspect --format '{{.State.Health.Status}}' "$container_id")" = "healthy"
+          done
+
+          test "$("${compose[@]}" exec --no-TTY api id --user)" != "0"
+          test "$("${compose[@]}" exec --no-TTY worker id --user)" != "0"
+          "${compose[@]}" exec --no-TTY api python -c 'from alon_ai.config import get_settings; assert get_settings().outreach_enabled is False'
+          "${compose[@]}" exec --no-TTY worker python -c 'from alon_ai.config import get_settings; assert get_settings().outreach_enabled is False'
+          "${compose[@]}" logs --no-color worker | grep -F 'worker_ready' >/dev/null

@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock, call
 from uuid import uuid4
 
 import pytest
@@ -44,6 +44,7 @@ async def test_send_does_not_evaluate_policy_or_call_provider_when_outreach_is_d
 
 
 async def test_send_does_not_call_provider_when_policy_denies_the_request() -> None:
+    request = make_request()
     policy = AsyncMock(spec=SendPolicy)
     policy.evaluate.return_value = PolicyDecision(
         allowed=False, reason="recipient opted out"
@@ -56,8 +57,9 @@ async def test_send_does_not_call_provider_when_policy_denies_the_request() -> N
     )
 
     with pytest.raises(SendRejectedError, match="recipient opted out"):
-        await gateway.send(make_request())
+        await gateway.send(request)
 
+    policy.evaluate.assert_awaited_once_with(request)
     provider.send.assert_not_awaited()
 
 
@@ -73,6 +75,9 @@ async def test_send_returns_the_provider_result_when_policy_allows_the_request()
     policy.evaluate.return_value = PolicyDecision(allowed=True, reason="approved")
     provider = AsyncMock(spec=GmailProvider)
     provider.send.return_value = expected
+    calls = Mock()
+    calls.attach_mock(policy.evaluate, "policy")
+    calls.attach_mock(provider.send, "provider")
     gateway = SendGateway(
         outreach_enabled=True,
         policy=policy,
@@ -82,4 +87,6 @@ async def test_send_returns_the_provider_result_when_policy_allows_the_request()
     result = await gateway.send(request)
 
     assert result == expected
+    policy.evaluate.assert_awaited_once_with(request)
     provider.send.assert_awaited_once_with(request)
+    assert calls.mock_calls == [call.policy(request), call.provider(request)]

@@ -4,7 +4,7 @@ This runbook is for the repository foundation. It does not deploy anything and i
 
 ## Prerequisites
 
-- Python 3.13 and [uv](https://docs.astral.sh/uv/)
+- Python 3.13 and [uv 0.11.26](https://docs.astral.sh/uv/)
 - Node.js 24 and npm
 - PostgreSQL 18 for host-based integration testing, or Docker Engine with Docker Compose for the local stack
 

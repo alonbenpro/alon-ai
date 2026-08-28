@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from alon_ai.api.middleware.request_logging import RequestLoggingMiddleware
 from alon_ai.api.routes.health import router as health_router
 from alon_ai.config import Settings, get_settings
 from alon_ai.db.engine import DatabaseHealthChecker, create_engine
@@ -26,6 +27,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     configure_logging(configured_settings)
 
     application = FastAPI(title="Alon AI API", lifespan=lifespan)
+    application.add_middleware(RequestLoggingMiddleware)
     application.add_middleware(
         CORSMiddleware,
         allow_origins=[configured_settings.frontend_origin],

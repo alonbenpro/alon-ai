@@ -27,10 +27,42 @@ test-results/
 blob-report/
 
 # Local authentication material
+*.key
+*.jks
+*.keystore
+*.p12
+*.pem
+*.pfx
+*.token
+*.tokens
+*.token.json
+*-token
+*-token.json
+*_token
+*_token.json
+*refresh-token*.json
+*refresh_token*.json
+client-secret*.json
+client_secret*.json
+client-secrets*.json
+client_secrets*.json
+credentials.json
+id_dsa
+id_ecdsa
+id_ed25519
+id_rsa
+oauth-client*.json
+oauth_client*.json
 oauth-token.json
 oauth-tokens.json
+service-account*.json
+service_account*.json
 token.json
 tokens.json
+.vercel/
+
+# Local web-research scratch data
+.firecrawl/
 
 # OS and editors
 .DS_Store

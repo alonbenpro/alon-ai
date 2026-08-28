@@ -302,7 +302,7 @@ body {
   border: 0;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 1080px) {
   .app-shell {
     padding: 16px;
   }

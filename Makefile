@@ -30,8 +30,7 @@ build:
 
 containers:
 	docker compose --env-file .env.example -f infra/compose.yaml config
-	docker build -f backend/Dockerfile -t alon-ai-backend:local backend
-	docker build -f frontend/Dockerfile -t alon-ai-frontend:local frontend
+	docker compose --env-file .env.example -f infra/compose.yaml build api worker frontend
 
 dev:
 	docker compose --env-file .env.example -f infra/compose.yaml up --build

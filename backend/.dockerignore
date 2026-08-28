@@ -7,6 +7,33 @@ token.json
 tokens.json
 credentials.json
 *.token.json
+*.key
+*.jks
+*.keystore
+*.p12
+*.pem
+*.pfx
+*.token
+*.tokens
+*-token
+*-token.json
+*_token
+*_token.json
+*refresh-token*.json
+*refresh_token*.json
+client-secret*.json
+client_secret*.json
+client-secrets*.json
+client_secrets*.json
+id_dsa
+id_ecdsa
+id_ed25519
+id_rsa
+oauth-client*.json
+oauth_client*.json
+service-account*.json
+service_account*.json
+.vercel/
 
 # Local Python environments and caches
 .venv/

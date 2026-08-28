@@ -46,6 +46,13 @@ describe("ApiStatus", () => {
     expect(
       screen.getByText("Outreach disabled by default"),
     ).toBeInTheDocument();
+    const liveRegion = screen.getByRole("status");
+    expect(liveRegion).toHaveAttribute("aria-live", "polite");
+    expect(liveRegion).toHaveAttribute("aria-atomic", "true");
+    expect(liveRegion).toContainElement(screen.getByText("Checking services…"));
+    expect(liveRegion).not.toContainElement(
+      screen.getByText("Outreach disabled by default"),
+    );
   });
 
   it("reports both services online after a ready response", async () => {
