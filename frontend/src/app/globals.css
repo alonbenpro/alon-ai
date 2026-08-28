@@ -116,6 +116,14 @@ body {
 }
 
 .readiness {
+  --api-y: 169px;
+  --database-y: 371px;
+  --outreach-y: 521px;
+  --rail-database-x: 113px;
+  --rail-primary-x: 63px;
+  --route-bend-y: 232px;
+  --status-dot-size: 42px;
+
   position: relative;
   min-height: 650px;
   overflow: hidden;
@@ -137,29 +145,76 @@ body {
 .readiness-route {
   position: absolute;
   inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
+  pointer-events: none;
 }
 
-.readiness-route path {
-  fill: none;
-  stroke: var(--route);
-  stroke-width: 1.35;
-  vector-effect: non-scaling-stroke;
+.readiness-route span {
+  position: absolute;
+  display: block;
+  border-color: var(--route);
 }
 
-.readiness-route .route-dashed {
-  stroke-dasharray: 7 8;
+.route-entry {
+  top: 0;
+  left: 0;
+  width: var(--rail-primary-x);
+  height: var(--api-y);
+  border-top: 1px solid;
+  border-right: 1px solid;
+  border-top-right-radius: 22px;
 }
 
-.readiness-route--pending .route-solid,
-.readiness-route--failure .route-solid {
-  stroke: var(--route-soft);
+.route-top-tail {
+  top: 0;
+  right: 0;
+  left: var(--rail-primary-x);
+  border-top: 1px solid;
+}
+
+.route-primary-leg {
+  top: var(--api-y);
+  left: var(--rail-primary-x);
+  height: calc(var(--route-bend-y) - var(--api-y));
+  border-left: 1px solid;
+}
+
+.route-step {
+  top: var(--route-bend-y);
+  left: var(--rail-primary-x);
+  width: calc(var(--rail-database-x) - var(--rail-primary-x));
+  height: 24px;
+  border-bottom: 1px solid;
+  border-left: 1px solid;
+  border-bottom-left-radius: 18px;
+}
+
+.route-database-leg {
+  top: calc(var(--route-bend-y) + 24px);
+  left: var(--rail-database-x);
+  height: calc(var(--database-y) - var(--route-bend-y) - 24px);
+  border-left: 1px solid;
+}
+
+.route-dashed {
+  top: var(--database-y);
+  left: var(--rail-database-x);
+  height: calc(var(--outreach-y) - var(--database-y) - 34px);
+  border-left: 1px dashed var(--route);
+}
+
+.readiness-route--pending span,
+.readiness-route--failure span {
+  border-color: var(--route-soft);
 }
 
 .readiness-route--pending .route-dashed,
-.readiness-route--failure .route-dashed {
+.readiness-route--failure .route-dashed,
+.readiness-route--pending .route-primary-leg,
+.readiness-route--failure .route-primary-leg,
+.readiness-route--pending .route-step,
+.readiness-route--failure .route-step,
+.readiness-route--pending .route-database-leg,
+.readiness-route--failure .route-database-leg {
   display: none;
 }
 
@@ -175,7 +230,7 @@ body {
   align-items: center;
   margin: 0;
   color: var(--ink);
-  font-size: clamp(15px, 1.15vw, 18px);
+  font-size: clamp(16px, 1.15vw, 18px);
   font-weight: 430;
   line-height: 1.25;
   letter-spacing: -0.035em;
@@ -190,26 +245,26 @@ body {
 
 .status-row--primary,
 .status-row--api {
-  top: 148px;
-  left: 42px;
+  top: calc(var(--api-y) - var(--status-dot-size) / 2);
+  left: calc(var(--rail-primary-x) - var(--status-dot-size) / 2);
 }
 
 .status-row--database {
-  top: 350px;
-  left: 92px;
+  top: calc(var(--database-y) - var(--status-dot-size) / 2);
+  left: calc(var(--rail-database-x) - var(--status-dot-size) / 2);
 }
 
 .status-row--outreach {
-  top: 500px;
-  left: 42px;
+  top: calc(var(--outreach-y) - var(--status-dot-size) / 2);
+  left: calc(var(--rail-primary-x) - var(--status-dot-size) / 2);
 }
 
 .status-dot {
   position: relative;
   display: inline-grid;
-  flex: 0 0 42px;
-  width: 42px;
-  height: 42px;
+  flex: 0 0 var(--status-dot-size);
+  width: var(--status-dot-size);
+  height: var(--status-dot-size);
   margin-right: 18px;
   place-items: center;
   border: 1.5px solid currentColor;
@@ -296,6 +351,14 @@ body {
   }
 
   .readiness {
+    --api-y: 109px;
+    --database-y: 217px;
+    --outreach-y: 311px;
+    --rail-database-x: 64px;
+    --rail-primary-x: 44px;
+    --route-bend-y: 151px;
+    --status-dot-size: 32px;
+
     min-height: 350px;
     margin-top: 34px;
     border: 1px solid var(--route);
@@ -308,46 +371,12 @@ body {
     font-size: 18px;
   }
 
-  .readiness-route {
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-  }
-
-  .readiness-route .route-solid {
-    d: path("M500 1 H74 Q42 1 42 29 V188 Q42 220 74 220 H80 Q92 220 92 232 V372");
-  }
-
-  .readiness-route .route-dashed {
-    d: path("M92 372 V510");
-  }
-
   .status-row {
-    font-size: 14px;
-  }
-
-  .status-row--primary,
-  .status-row--api {
-    top: 92px;
-    left: 28px;
-  }
-
-  .status-row--database {
-    top: 200px;
-    left: 48px;
-  }
-
-  .status-row--outreach {
-    top: 294px;
-    left: 28px;
+    font-size: 16px;
   }
 
   .status-dot {
-    flex-basis: 34px;
-    width: 34px;
-    height: 34px;
-    margin-right: 15px;
+    margin-right: 12px;
     border-width: 1.25px;
   }
 
@@ -355,15 +384,20 @@ body {
     width: 14px;
     height: 14px;
   }
+
+  .status-row--outreach {
+    align-items: center;
+    right: 16px;
+  }
+
+  .status-row--outreach span:last-child {
+    white-space: normal;
+  }
 }
 
 @media (max-width: 360px) {
   .viewport-frame {
     padding-right: 20px;
     padding-left: 20px;
-  }
-
-  .status-row {
-    font-size: 13px;
   }
 }

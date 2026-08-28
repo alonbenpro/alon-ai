@@ -10,19 +10,17 @@ function StatusDot({ tone }: { tone: "online" | "unavailable" | "disabled" }) {
 
 function RouteLine({ state }: { state: "pending" | "success" | "failure" }) {
   return (
-    <svg
+    <div
       aria-hidden="true"
       className={`readiness-route readiness-route--${state}`}
-      focusable="false"
-      preserveAspectRatio="none"
-      viewBox="0 0 500 600"
     >
-      <path
-        className="route-solid"
-        d="M0 1 H18 Q42 1 42 27 V154 Q42 176 64 176 H76 Q92 176 92 192 V355 M42 1 H500"
-      />
-      <path className="route-dashed" d="M92 355 V505" />
-    </svg>
+      <span className="route-entry" />
+      <span className="route-top-tail" />
+      <span className="route-primary-leg" />
+      <span className="route-step" />
+      <span className="route-database-leg" />
+      <span className="route-dashed" />
+    </div>
   );
 }
 

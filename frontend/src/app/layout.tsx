@@ -20,6 +20,9 @@ export const metadata: Metadata = {
   title: "Alon AI",
   description:
     "A private operating system for researching offers, qualifying prospects, sending guarded Gmail outreach, and learning from real replies.",
+  icons: {
+    icon: "/alon-ai-mark.png",
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
