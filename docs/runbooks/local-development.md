@@ -68,7 +68,11 @@ Stop the stack with:
 make down
 ```
 
-Docker is unavailable in this local environment, so these Compose commands and image builds have not been executed here. The CI workflow is configured to validate Compose and build both images; its remote result is pending. Do not describe Docker as CI-validated until that workflow has passed.
+Docker is unavailable in this local environment, so these Compose commands and image builds have not been executed locally.
+
+### Auditable remote evidence
+
+On 2026-08-28, [GitHub Actions run 33178960731](https://github.com/alonbenpro/alon-ai/actions/runs/33178960731) passed at commit `f3e615710f51ab59ab883720dcf1d8c25d5e710b`. Its `containers` job validated the Compose configuration, built both application images, initialized PostgreSQL 18, ran the Alembic migration, started the stack, checked API and frontend health plus the live, ready, and frontend HTTP endpoints, verified the worker was running as a non-root user with outreach disabled, and removed the stack and volumes. That is remote CI coverage only: it does not establish a local Docker run, a read-only root filesystem, or real Gmail sending.
 
 ## Common database failures
 

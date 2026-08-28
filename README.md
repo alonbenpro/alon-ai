@@ -67,7 +67,11 @@ make test
 make build
 ```
 
-The Docker Compose command path is documented in the [local development runbook](docs/runbooks/local-development.md). Docker is not available in the local verification environment and remote CI has not yet passed, so do not treat Compose or image builds as validated yet.
+The Docker Compose command path is documented in the [local development runbook](docs/runbooks/local-development.md). Docker is not available in the local verification environment, so the container runtime was not validated locally.
+
+### Auditable container evidence
+
+On 2026-08-28, [GitHub Actions run 33178960731](https://github.com/alonbenpro/alon-ai/actions/runs/33178960731) passed at commit `f3e615710f51ab59ab883720dcf1d8c25d5e710b`. Its `containers` job validated the Compose configuration, built both application images, initialized PostgreSQL 18, ran the Alembic migration, started the stack, checked API and frontend health plus the live, ready, and frontend HTTP endpoints, verified the worker was running as a non-root user with outreach disabled, and removed the stack and volumes. This is remote CI evidence; it does not claim a local Docker run or real Gmail sending.
 
 ## Development and checks
 
