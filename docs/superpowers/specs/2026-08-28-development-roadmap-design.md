@@ -39,7 +39,7 @@ Each segment contains one detailed Markdown file per major implementation delive
 | Milestone | Outcome | Exit gate |
 | --- | --- | --- |
 | M0 | Product scope, baseline evidence, metrics, and kill criteria are explicit | The operator can state what is being tested and when to stop |
-| M1 | Durable-execution engine is selected through a DBOS-first Gmail recovery spike | Crash tests prove no uncontrolled duplicate sends; otherwise select Temporal or another proven alternative |
+| M1 | DBOS is proven safe enough for the product through a Gmail production-acceptance spike | Crash tests prove no uncontrolled duplicate sends; any disqualifying failure forces migration to Temporal before workflow product work continues |
 | M2 | Core PostgreSQL schema, event history, idempotency, and state machines exist | Migrations, constraints, audit events, and restore tests pass |
 | M3 | Provider contracts and typed agents work offline with recorded evaluations | Versioned fixtures beat defined quality and cost thresholds |
 | M4 | Idea, offer, and market-evidence workflow produces operator-reviewable artifacts | One synthetic experiment completes without outreach |
@@ -51,18 +51,36 @@ Each segment contains one detailed Markdown file per major implementation delive
 
 No later milestone may be used to justify skipping an earlier exit gate.
 
-## Workflow-engine decision gate
+## Selected agent and durable-workflow stack
 
-DBOS is provisional, not presumed superior. The roadmap must explicitly compare:
+Alon AI selects Pydantic AI plus DBOS on PostgreSQL. This is an architecture decision, not an open vendor bakeoff:
 
-- DBOS as a PostgreSQL-backed durable workflow, queue, schedule, and rate-limit engine.
-- Temporal as the mature durable-workflow fallback with separate service or cloud infrastructure.
-- LangGraph as graph-oriented agent orchestration with persistence and human-in-the-loop; it overlaps workflow orchestration but does not replace deterministic send policy, idempotency, or reconciliation.
-- Restate as a durable runtime with a separate server and journal.
-- Prefect as a data-flow/task orchestrator, useful for pipeline workloads but not automatically the right side-effect engine.
-- Pydantic AI and LangChain as agent-framework choices, not direct substitutes for durable business-workflow infrastructure.
+- Pydantic AI owns typed agent execution, model/tool boundaries, structured artifacts, and evaluation integration.
+- DBOS owns finite durable workflows, queues, schedules, retries, timers, and crash recovery.
+- PostgreSQL remains the product system of record and the DBOS persistence dependency, with product and workflow ownership kept explicit.
+- Deterministic domain and policy code owns state transitions, budgets, suppression, authorization, and every externally visible side effect.
+- `SendGateway` remains the only application path to `GmailProvider`; agents and workflows cannot bypass it.
 
-The default experiment is Pydantic AI plus DBOS because the repository already uses Python, Pydantic, and PostgreSQL. The decision changes if DBOS fails restart, cancellation, duplicate-send, versioning, observability, or operator-control gates. Gmail ambiguity must be reconciled independently of the workflow engine because an API call may succeed before its local completion is durably recorded.
+DBOS is selected because it fits the existing Python/Pydantic/PostgreSQL stack and minimizes the operating surface for a solo developer. Selection does not authorize production outreach. M1 is a production-acceptance gate that must prove restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, and operator control. A disqualifying failure forces migration to Temporal before further workflow product work. Convenience, sunk implementation cost, or lockfile presence cannot waive that fallback.
+
+LangGraph and LangChain are excluded from the initial stack because Alon AI does not currently need a second agent orchestration abstraction. Restate and Prefect are also excluded from the initial stack because they add a separate runtime or a pipeline-oriented model without improving the current product-risk gate. The roadmap retains a concise comparison record so future maintainers understand the layer distinction and the evidence that would justify reconsideration.
+
+Gmail ambiguity must be reconciled independently of DBOS because an API call may succeed before its local completion is durably recorded. The design therefore requires a stable send idempotency key, outbound-attempt ledger, provider-result capture, Sent-folder reconciliation, bounded retry policy, and operator-visible ambiguous state.
+
+## Graphify-first repository navigation
+
+Repository agents must use Graphify before broad project discovery. This rule is persisted in a root `AGENTS.md` and expanded in `docs/engineering/graphify-first-navigation.md`.
+
+The required sequence is:
+
+1. Run from the active checkout root, never from another worktree.
+2. If `graphify-out/graph.json` exists, run `graphify reflect --if-stale`, read `graphify-out/reflections/LESSONS.md`, expand the question against the graph vocabulary, and run `graphify query` before broad text search or opening many files.
+3. If the graph is absent, invoke the Graphify workflow on the checkout root, then query it.
+4. Use `rg`, targeted file reads, and direct symbol inspection only after Graphify identifies likely files, locations, or missing coverage.
+5. Save useful, dead-end, or corrected query outcomes as Graphify memory.
+6. Run an incremental Graphify update after tracked code or documentation changes; the local post-commit hook keeps code changes current, while documentation changes still require the explicit update.
+
+Exact-path edits, tests, builds, formatting, and Git status checks do not require a graph query because they are not repository discovery. Graphify output remains local and ignored so generated artifacts and query memory do not pollute commits. The repository instruction and navigation documents are versioned, and the local Graphify post-commit hook is installed in the current clone.
 
 ## Document contract
 
@@ -95,6 +113,9 @@ Files may link to repeated global constraints rather than duplicate long explana
 - Provider integrations remain replaceable.
 - Finite workflow runs replace immortal agent loops.
 - Exact dependency versions come from lockfiles; roadmap prose names only intentional runtime constraints.
+- Pydantic AI and DBOS are the selected initial agent/workflow stack; Temporal is the mandatory durable-runtime fallback after a disqualifying M1 failure.
+- LangChain, LangGraph, Restate, and Prefect are not initial runtime dependencies.
+- Agents perform Graphify-first repository discovery according to the root `AGENTS.md`.
 - No claims of production readiness, legal compliance, deployment, real users, or real sends without retained evidence.
 
 ## Quality constraints
@@ -110,7 +131,9 @@ Files may link to repeated global constraints rather than duplicate long explana
 - All approved folders and files exist.
 - The repository README links to the roadmap master index.
 - The master README maps every file into one global execution sequence.
-- DBOS is explicitly provisional and compared to adjacent and competing layers.
+- Pydantic AI and DBOS are selected, their responsibilities do not overlap, and M1 blocks production outreach until DBOS passes every acceptance gate.
+- Temporal is the mandatory fallback after a disqualifying DBOS failure; adjacent frameworks and runtimes are accurately recorded but excluded from the initial stack.
+- Root agent instructions and the engineering navigation guide enforce Graphify-first repository discovery without requiring it for exact-path or verification-only work.
 - Frontend, backend, database, workflows, agents, providers, security, observability, tests, infrastructure, and launch operations are covered.
 - Every major task has prerequisites, ordered work, tests, failure handling, and a measurable exit gate.
 - Placeholder, link, dependency, milestone, and contradiction scans pass.
