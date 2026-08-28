@@ -38,24 +38,25 @@ Exact product tables touched through application commands are `experiments`, `wo
 | history page | `gmail-sync:{mailbox_id}:from:{history_id}:run:{workflow_run_id}` | `alon-ai-gmail-sync-v1`, global/worker concurrency `1` per mailbox; schedule triggers finite page-drain runs | cursor page committed or typed cursor-reset/recovery state |
 
 Queue settings are pinned deployment evidence and verified from DBOS before pilot. Application policy, not queue configuration, is final authority. A runtime wake/dequeue can only request an application command.
+Every campaign-stage workflow input/result uses DB-01's text-versioned UTF-8 RFC 8785 envelope digest. Resume verifies stored bytes before any authority read; a different version or payload creates a new finite run.
 
 ### Pre-send state/data transaction
 
 1. Draft agent writes only `OutreachDraft` `PRODUCED`; validators/approval service move artifact and `outreach_messages` through `DRAFT -> APPROVAL_PENDING -> APPROVED` using exact ARCH-03 approval/artifact events.
-2. `RecordSendIntent` reads `experiments`, active `campaigns`/member, `leads(QUALIFIED)`, `approvals`, `suppression_entries`, `system_controls`, budget, policy facts, and immutable message/artifact versions.
-3. One transaction binds the active `gmail_mailboxes.mailbox_id` into the canonical policy facts and approval scope hash, inserts a mailbox/campaign-version/message-bound `policy_decisions`, reserves budget, inserts `send_intents` under unique `(mailbox_id,idempotency_key)` and `(mailbox_id,rfc_message_id)`, transitions `APPROVED -> SEND_INTENT_RECORDED -> QUEUED`, appends the canonical send events plus audit/idempotency/outbox, and queues runtime only after commit.
+2. `RecordSendIntent` loads one composite authority chain: campaign version+experiment, member+campaign+lead, message+experiment+campaign+lead+mailbox, approval+that message+scope/policy hashes, and one allowed `SEND` policy decision with the same experiment/campaign/lead/message/mailbox/version/scope/facts hashes.
+3. One transaction reserves budget and inserts `send_intents` with that exact approval and `policy_decision_id/policy_scope/policy_version/scope_hash/policy_facts_hash/policy_allowed`. The deferred composite policy FK and inline message/approval FKs make cross-scope construction fail; mailbox idempotency/RFC uniques remain. It then transitions `APPROVED -> SEND_INTENT_RECORDED -> QUEUED`, appends event/audit/idempotency/outbox, and queues only after commit.
 4. In M6 that transaction requires `TEST_INBOX_SENDING=true`, `PRODUCT_OUTREACH=false`, and the recipient hash in the owned-alias manifest. After M6, real-recipient mode instead requires `PRODUCT_OUTREACH=true` plus separate authority; the test control cannot authorize it.
 
 ### Gateway, ambiguity, retry, and reply map
 
 | Step | Reads | Writes/constraint | Exact event/transition |
 | --- | --- | --- | --- |
-| dequeue/recheck | message/intent plus identical immutable `mailbox_id` and `rfc_message_id`, campaign version, approval authority tuple, experiment/lead/suppression, both controls, policy/budget/rate, no unresolved attempt | recompute mailbox-inclusive facts/scope hashes; insert `send_attempts(send_intent_id,mailbox_id,rfc_message_id,...)` under composite intent/policy FKs; increment count; message `QUEUED -> SENDING`; commit before network | mailbox/RFC payload in `policy.evaluated.v1`, `send.attempt_started.v1` |
+| dequeue/recheck | exact immutable intent authority tuple, current suppression/controls/budget/rate, no unresolved attempt | recompute facts/scope; insert an attempt carrying the identical experiment/campaign/lead/message/mailbox/approval/policy/scope/facts/RFC tuple under `fk_send_attempts_intent_authority`; increment count and commit before network | full authority payload in `policy.evaluated.v1`, `send.attempt_started.v1` |
 | Gmail result | attempt + authorized mailbox + stable RFC ID | insert mailbox-bound unique `provider_results`; message/attempt `SENT`; reconcile budget/cost | direct accepted result captures provider identity and emits `send.provider_accepted.v1` |
 | unknown outcome | attempt | attempt/message `AMBIGUOUS`; provider error fingerprint/evidence | `send.outcome_ambiguous.v1`; no requeue |
 | reconcile | unresolved attempt/result/observations plus immutable `send_intents.mailbox_id` and RFC ID | query only that authorized Gmail account; store every mailbox-bound candidate/result; one exact match or typed zero/multiple failure | mailbox payload in `send.reconciliation_started.v1`; one post-ambiguity match -> `send.reconciled_as_sent.v1`; conclusive failure -> `send.failed.v1` |
 | retry | `FAILED_RETRYABLE`, immutable mailbox/RFC/retry policy/deadline, controls/policy/budget, no ambiguity | deterministic `SendRecoveryService` preserves the same mailbox/RFC identity and returns message to `QUEUED`; new attempt number later | mailbox/RFC payload in `send.retry_scheduled.v1`; exhaustion/abort -> `send.retry_exhausted.v1` and `FAILED_PERMANENT` |
-| history/reply | cursor + Gmail page/provider identities | observations, replies, events, and cursor in one transaction | `reply.received.v1`, `gmail.history_cursor_advanced.v1`; classification artifact acceptance later emits `reply.classified.v1` |
+| history/reply | mailbox cursor plus Gmail page/message/thread/history identities | insert observation; reply uses composite observation+mailbox+message+thread FK; cursor uses composite last-observation+mailbox+Gmail-message+history FK; events and cursor commit together | `reply.received.v1`, `gmail.history_cursor_advanced.v1`; classification artifact acceptance later emits `reply.classified.v1` |
 
 The workflow/agent never calls Gmail or updates these rows directly. `SendGateway` is the only Gmail send caller; reconciliation/history services use read-only provider primitives scoped to the immutable authorized mailbox. Direct success uses `send.provider_accepted.v1`; `send.reconciled_as_sent.v1` is reserved for resolving a prior `AMBIGUOUS` attempt.
 
@@ -72,10 +73,12 @@ The workflow/agent never calls Gmail or updates these rows directly. `SendGatewa
 
 - **Contract `test_only_sendgateway_calls_gmail_send_and_agents_never_receive_port`:** one authority edge.
 - **Atomicity `test_policy_budget_intent_message_event_queue_commit_together`:** failure injection.
+- **Relational authority `test_cross_experiment_campaign_member_message_approval_policy_intent_attempt_fails_fk`:** every one-column splice is rejected by PostgreSQL.
 - **Recovery `test_kill_after_provider_acceptance_reconciles_stable_rfc_without_resend`:** K4/K5 equivalent.
 - **Mailbox authority `test_recovery_searches_only_approved_immutable_mailbox`:** altered account, cross-mailbox candidate, and mailbox/scope-hash mismatch all fail closed and preserve the authorized account ID.
 - **Retry `test_ambiguous_never_requeues_and_exhaustion_is_terminal`:** ARCH-03 exact guards/events.
 - **History `test_observation_reply_event_cursor_are_atomic_and_deduplicated`:** crash/replay.
+- **Observation identity `test_reply_and_cursor_reject_observation_from_other_mailbox_or_provider_identity`:** no bare observation-ID authority.
 - **Control `test_pause_cancel_suppression_and_global_stop_prevent_new_provider_calls`:** bounded response.
 - **Security `test_m6_allows_only_owned_alias_hashes_and_redacts_content`:** no prospect leakage.
 

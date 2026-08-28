@@ -56,7 +56,7 @@ CREATE TABLE agent_runs (
     created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     CONSTRAINT pk_agent_runs PRIMARY KEY (agent_run_id),
     CONSTRAINT fk_agent_runs_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_agent_runs_workflow FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs (workflow_run_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_agent_runs_workflow_input FOREIGN KEY (workflow_run_id, input_snapshot_hash) REFERENCES workflow_runs (workflow_run_id, input_hash) ON DELETE RESTRICT,
     CONSTRAINT uq_agent_runs_input UNIQUE (workflow_run_id, agent_type, input_snapshot_hash, agent_version),
     CONSTRAINT ck_agent_runs_hash CHECK (input_snapshot_hash ~ '^[0-9a-f]{64}$'),
     CONSTRAINT ck_agent_runs_state CHECK (state IN ('PENDING','RUNNING','SUCCEEDED','FAILED')),
@@ -183,10 +183,10 @@ CREATE TABLE evaluation_cases (
     suite_name text NOT NULL,
     suite_version text NOT NULL,
     case_key text NOT NULL,
-    input_schema_version integer NOT NULL,
+    input_schema_version text NOT NULL,
     input_snapshot jsonb NOT NULL,
     input_hash char(64) NOT NULL,
-    expected_schema_version integer NOT NULL,
+    expected_schema_version text NOT NULL,
     expected_snapshot jsonb NOT NULL,
     expected_hash char(64) NOT NULL,
     rubric_schema_version integer NOT NULL,
@@ -195,7 +195,7 @@ CREATE TABLE evaluation_cases (
     created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     CONSTRAINT pk_evaluation_cases PRIMARY KEY (evaluation_case_id),
     CONSTRAINT uq_evaluation_cases_key UNIQUE (suite_name, suite_version, case_key),
-    CONSTRAINT ck_evaluation_cases_versions CHECK (input_schema_version > 0 AND expected_schema_version > 0 AND rubric_schema_version > 0),
+    CONSTRAINT ck_evaluation_cases_versions CHECK (input_schema_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$' AND expected_schema_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$' AND rubric_schema_version > 0),
     CONSTRAINT ck_evaluation_cases_json CHECK (jsonb_typeof(input_snapshot) = 'object' AND jsonb_typeof(expected_snapshot) = 'object' AND jsonb_typeof(rubric_json) = 'object'),
     CONSTRAINT ck_evaluation_cases_hashes CHECK (input_hash ~ '^[0-9a-f]{64}$' AND expected_hash ~ '^[0-9a-f]{64}$'),
     CONSTRAINT ck_evaluation_cases_sensitivity CHECK (sensitivity_class IN ('SYNTHETIC','REDACTED','RESTRICTED'))
@@ -222,6 +222,8 @@ CREATE TABLE evaluation_results (
 );
 CREATE INDEX ix_evaluation_results_agent_passed ON evaluation_results (agent_run_id, passed);
 ```
+
+`evaluation_cases.input_hash` and `expected_hash` use DB-01's canonical RFC 8785 envelope algorithm with their respective text schema versions and JSON payloads. `agent_runs.input_snapshot_hash` is not a new digest: its composite FK requires the exact verified `workflow_runs.input_hash`. Evaluation fixtures include DB-01's golden vectors; schema migration validates the old digest before an in-memory upcast and writes a new immutable evaluation-case version rather than mutating bytes.
 
 | Table | Exclusive write owner | Retention class / retention owner |
 | --- | --- | --- |

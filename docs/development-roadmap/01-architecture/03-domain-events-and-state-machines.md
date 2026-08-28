@@ -255,11 +255,11 @@ Every campaign transition emits its specific event and `campaign.state_changed.v
 
 | Event type | Required payload identifiers | Emitted when |
 | --- | --- | --- |
-| `policy.evaluated.v1` | `policy_decision_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `policy_version`, `allowed`, `reason_codes`, `facts_hash` | deterministic send evaluation recorded |
+| `policy.evaluated.v1` | `policy_decision_id`, `experiment_id`, `campaign_id`, `campaign_version`, `lead_id`, `message_id`, `mailbox_id`, `policy_version`, `scope_hash`, `facts_hash`, `allowed`, `reason_codes` | deterministic exact-scope send evaluation recorded |
 | `approval.requested.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `scope_hash`, `expires_at` | exact-version review is required |
 | `approval.decided.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `decision`, `operator_id`, `reason_code` | operator approves/denies exact authority |
 | `approval.revoked.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `reason_code` | prior exact authority is withdrawn |
-| `send.intent_recorded.v1` | `send_intent_id`, `mailbox_id`, `idempotency_key`, `campaign_id`, `campaign_version`, `message_id`, `scope_hash`, `policy_facts_hash` | immutable mailbox-bound intent commits |
+| `send.intent_recorded.v1` | `send_intent_id`, `experiment_id`, `campaign_id`, `campaign_version`, `lead_id`, `message_id`, `mailbox_id`, `approval_id`, `policy_decision_id`, `policy_version`, `idempotency_key`, `scope_hash`, `policy_facts_hash` | immutable exact-authority intent commits |
 | `send.queued.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `queue_name`, `budget_reservation_id` | mailbox-bound admission commits |
 | `send.attempt_started.v1` | `send_attempt_id`, `send_intent_id`, `mailbox_id`, `rfc_message_id`, `policy_decision_id` | mailbox-bound last policy recheck passes before provider call |
 | `send.provider_accepted.v1` | `send_attempt_id`, `send_intent_id`, `mailbox_id`, `rfc_message_id`, `gmail_message_id`, `gmail_thread_id` | Gmail directly returns an accepted result and the captured provider result commits `SENDING -> SENT` |

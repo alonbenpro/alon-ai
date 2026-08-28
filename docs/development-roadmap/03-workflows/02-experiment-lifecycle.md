@@ -28,6 +28,8 @@ Create `application/experiments.py`, `workflows/experiment_lifecycle.py`, DBOS r
 
 The coordinator accepts IDs/versions only; it loads no live ORM object across steps. Every step invokes an idempotent application command with key `workflow:{workflow_run_id}:step:{step_name}:v{step_version}`.
 
+Every stage producer constructs the DB-01 envelope `{"schema_version":<string>,"payload":<json>}`, RFC-8785-canonicalizes it to UTF-8, and stores the lowercase SHA-256 with the exact text version/payload. Every resume/child consumer recomputes and validates before decoding or upcasting. Only a successful run writes the result triplet; cancellation/failure keeps it SQL NULL. A validator migration verifies old bytes first and transforms only in memory; changed schema/payload starts a new run. WF-03, WF-04, WF-05, and WF-06 use the DB-01 golden vectors.
+
 ### Stage and transition contract
 
 | Stage run | Start guard/transition | Completion transition | Failure transition/evidence |
@@ -42,7 +44,7 @@ The coordinator accepts IDs/versions only; it loads no live ORM object across st
 | Command/step | Authoritative reads | Atomic writes/constraints | Events |
 | --- | --- | --- | --- |
 | start stage | `experiments`, active brief/artifact/metric/campaign gates, `system_controls` where relevant, active `workflow_runs` | update `experiments.version/state`; insert `workflow_runs`; `command_idempotency`, `domain_events`, `audit_events`, `outbox_messages`; active-run partial unique | `workflow.run_started.v1`, `experiment.state_changed.v1` |
-| child artifact/lead work | immutable IDs decoded only from verified `workflow_runs.input_snapshot` after matching `input_schema_version` and recomputed `input_hash`; repositories in WF-03/WF-04 | their agent/artifact/evidence/lead tables via application commands; command key uniques | artifact/lead catalog events |
+| child artifact/lead work | immutable IDs decoded only after RFC 8785 envelope verification of `workflow_runs.input_schema_version/input_snapshot/input_hash`; repositories in WF-03/WF-04 | their agent/artifact/evidence/lead tables via application commands; `agent_runs` composite workflow/input-digest FK; command key uniques | artifact/lead catalog events |
 | complete stage | run row, experiment expected version, exact acceptance/gate records | atomically store bounded `result_snapshot/result_schema_version/result_hash`, update run terminal + experiment state, and write event/audit/outbox/idempotency | `workflow.run_completed.v1` carries result schema/hash; `experiment.state_changed.v1` |
 | fail stage | run/error taxonomy/current experiment | update run `FAILED`; update experiment `FAILED` with failure fields; same transactional safety tables | `workflow.run_failed.v1`, `experiment.failed.v1`, `experiment.state_changed.v1` |
 
@@ -59,6 +61,7 @@ The coordinator accepts IDs/versions only; it loads no live ORM object across st
 - **Unit `test_stage_transition_table_matches_arch03`:** exact states/owners/events.
 - **Concurrency `test_same_experiment_stage_cannot_have_two_active_runs`:** partial unique is the last defense.
 - **Integration `test_start_and_finish_bundle_is_atomic`:** state/run/event/audit/idempotency/outbox.
+- **Digest `test_all_stage_inputs_and_results_match_rfc8785_sha256_vectors`:** independent encoders, null/result state, and schema upcast rules.
 - **Recovery `test_stage_restarts_from_durable_step_without_repeating_accepted_artifact`:** replay command results.
 - **Contract `test_workflow_cannot_mutate_repository_or_provider_directly`:** import/call boundary.
 - **Cost `test_stage_stops_before_paid_step_when_reservation_fails`:** no negative budget.

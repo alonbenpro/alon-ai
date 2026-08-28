@@ -39,12 +39,117 @@ Constraints: unique `rfc_message_id`; recipient alias must exist in the immutabl
 
 ### Exact append-only evidence-file contract
 
-The evidence bundle is a filesystem protocol, never a third database table. Each `records/{sequence:020d}-{record_id}.json` is RFC 8785 canonical JSON with these required fields and types: `evidence_schema_version` integer; `record_id` UUID; `sequence` positive integer; `prior_record_hash` null only at sequence 1 otherwise 64-hex; `run_id` UUID; `scenario_name`, `workflow_version`, `kill_point`, `record_type`, `occurred_at`, `idempotency_key`, `mailbox_alias`, and `rfc_message_id` strings; `attempt_state` from the spike enum; `provider_outcome` from `NOT_CALLED/ACCEPTED/CONCLUSIVE_FAILURE/AMBIGUOUS/RECONCILED_SENT/RECONCILED_ABSENT/CONFLICT`; nullable `error_code`, 64-hex `error_fingerprint`, `gmail_message_id`, and `gmail_thread_id`; 64-hex `request_hash` and nullable `response_hash`; `candidate_matches` array; 64-hex `record_hash`; `signer_key_id`; and base64 Ed25519 `signature`.
-Each candidate is exactly `{mailbox_alias,gmail_message_id,gmail_thread_id,rfc_message_id,observed_at,envelope_fingerprint,header_hash}`, with both hashes 64-hex. `record_hash` is SHA-256 over the canonical record with `record_hash` and `signature` omitted; the signature covers that hash, prior hash, run ID, and sequence.
+The bundle is a filesystem protocol, never a third table. One run exclusively
+creates `m1-gmail-evidence.v1-{bundle_id}`, with lowercase canonical UUID
+`bundle_id`. Its only authoritative files, in manifest order, are:
 
-The signed canonical `manifest.json` is exactly `{manifest_schema_version,run_id,scenario_name,workflow_version,fixture_hash,queue_config_hash,control_config_hash,records:[{path,sequence,record_id,record_hash}],spike_runs_export_hash,spike_send_attempts_export_hash,final_state,created_at,signer_key_id,signature}`. Hashes are lowercase SHA-256; the Ed25519 signature covers the RFC 8785 manifest with `signature` omitted.
+1. `tables/spike_runs.v1.ndjson`;
+2. `tables/spike_send_attempts.v1.ndjson`;
+3. `streams/evidence_records.v1.ndjson`; and
+4. `manifest.v1.json`, written last as the sole commit marker.
 
-Every record/export is exclusive-created as a same-directory `.tmp`, fully written and file-`fsync`ed, atomically renamed, then parent-directory-`fsync`ed. The manifest is written last with the same protocol and is the commit point. Recovery ignores orphan temp files but validates schema, signatures, path, strict sequence/prior-hash chain, content/export hashes, and database/provider identity agreement. It may rebuild a missing manifest only from a complete valid signed chain and freshly validated exports, after appending a signed recovery record. A gap, duplicate, invalid signature/hash, mismatched export, malformed/multiple candidate, or impossible provider outcome fails closed: disable gateway, preserve bytes, expose `CORRUPT_EVIDENCE`, and prohibit retry/send. Restore unpacks fresh, validates every byte/signature, loads both exports into an empty two-table schema, and runs the no-send reconciliation validator.
+All NDJSON is UTF-8 without BOM. Every RFC 8785 canonical JSON record ends in
+exactly one LF byte, including the final record; CR, blanks, trailing spaces,
+alternate normalization, or a missing final LF is invalid. SQL `NULL` becomes
+JSON `null`; UUIDs are lowercase `8-4-4-4-12`; timestamps are UTC
+`YYYY-MM-DDTHH:MM:SS.ffffffZ` with six fractional digits; strings retain their
+Unicode scalar sequence; integers use JSON integer notation. JSONB is parsed and
+canonicalized as JSON, never hashed from PostgreSQL display text. Duplicate keys,
+invalid Unicode, NaN, infinity, and non-I-JSON numbers fail export.
+
+`spike_runs.v1.ndjson` records are exactly
+`{run_id,scenario_name,workflow_version,state,started_at,finished_at}`, including
+nullable `finished_at`, ordered by canonical run-ID ASCII bytes.
+`spike_send_attempts.v1.ndjson` records are exactly
+`{idempotency_key,run_id,recipient_alias,state,rfc_message_id,gmail_message_id,gmail_thread_id,attempted_at,reconciled_at}`,
+including nullable provider/timestamp fields, ordered by raw UTF-8
+`idempotency_key` bytes. Both exports use one repeatable-read, read-only
+transaction and include every row.
+
+Each evidence-stream core is exactly: `evidence_schema_version` literal
+`m1.evidence-record.v1`; canonical `record_id` and `run_id`; positive
+`sequence`; `prior_record_hash` null only at sequence 1 otherwise lowercase
+64-hex; strings `scenario_name`, `workflow_version`, `kill_point`,
+`record_type`, `occurred_at`, `idempotency_key`, `mailbox_alias`,
+`rfc_message_id`; spike `attempt_state`; `provider_outcome` in
+`NOT_CALLED/ACCEPTED/CONCLUSIVE_FAILURE/AMBIGUOUS/RECONCILED_SENT/RECONCILED_ABSENT/CONFLICT`;
+nullable `error_code`, 64-hex `error_fingerprint`, `gmail_message_id`,
+`gmail_thread_id`, and 64-hex `response_hash`; required 64-hex `request_hash`;
+`candidate_matches`; literal `signature_algorithm="Ed25519"`; and
+`signer_key_id`. A candidate is exactly
+`{mailbox_alias,gmail_message_id,gmail_thread_id,rfc_message_id,observed_at,envelope_fingerprint,header_hash}`;
+candidates sort by the raw UTF-8 tuple of their first four fields.
+
+`signer_key_id` is `ed25519-sha256:<64 lowercase hex>`, SHA-256 of the raw
+32-byte public key. Let `C` be RFC 8785 UTF-8 core bytes including algorithm
+and key ID, excluding only `record_hash` and `signature`.
+`record_hash=hex(SHA-256(C))`. The signature preimage is ASCII
+`alon-ai:m1:evidence-record:v1\n` immediately followed by the raw 32 digest
+bytes. `signature` is unpadded RFC 4648 base64url of the 64 Ed25519 bytes.
+The final NDJSON record is the core plus `record_hash` and `signature`;
+record N's prior hash equals record N-1's hash.
+
+`manifest.v1.json` is exactly
+`{manifest_schema_version:"m1.manifest.v1",bundle_id,run_id,scenario_name,workflow_version,fixture_hash,queue_config_hash,control_config_hash,final_state,created_at,files,signature_algorithm:"Ed25519",signer_key_id,signature}`.
+`files` contains exactly the first three paths above in order. Each entry is
+`{path,media_type:"application/x-ndjson",schema_version,row_count,size_bytes,sha256}`;
+schema versions are `m1.spike-runs.v1`, `m1.spike-send-attempts.v1`, and
+`m1.evidence-records.v1`. Every digest covers raw bytes including final LFs.
+The manifest signature preimage is ASCII `alon-ai:m1:manifest:v1\n` plus raw
+SHA-256 bytes of RFC 8785 manifest content excluding only `signature`.
+The manifest has no BOM or trailing LF.
+
+Golden signature fixture: test-only private seed
+`000102030405060708090a0b0c0d0e0f101112131415161718191a1b1c1d1e1f`;
+raw public key `03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8`;
+key ID `ed25519-sha256:56475aa75463474c0285df5dbf2bcab73da651358839e9b77481b2eab107708c`.
+Its exact core values are:
+
+| Field | Exact JSON value |
+| --- | --- |
+| `evidence_schema_version` | `"m1.evidence-record.v1"` |
+| `record_id` | `"00000000-0000-4000-8000-000000000001"` |
+| `sequence` / `prior_record_hash` | `1` / `null` |
+| `run_id` | `"00000000-0000-4000-8000-000000000002"` |
+| `scenario_name` / `workflow_version` | `"k4-ambiguous"` / `"1"` |
+| `kill_point` / `record_type` | `"K4"` / `"PROVIDER_OUTCOME"` |
+| `occurred_at` | `"2026-08-28T12:34:56.000000Z"` |
+| `idempotency_key` | `"m1:k4-ambiguous:00000000-0000-4000-8000-000000000002:send:1"` |
+| `mailbox_alias` / `rfc_message_id` | `"owned-test-1"` / `"<m1-k4@example.test>"` |
+| `attempt_state` / `provider_outcome` | `"AMBIGUOUS"` / `"AMBIGUOUS"` |
+| `error_code` | `"TIMEOUT"` |
+| `error_fingerprint` | lowercase hex `11` repeated 32 times |
+| `gmail_message_id` / `gmail_thread_id` | `null` / `null` |
+| `request_hash` / `response_hash` | lowercase hex `22` repeated 32 times / `null` |
+| `candidate_matches` | `[]` |
+| `signature_algorithm` | `"Ed25519"` |
+| `signer_key_id` | the key ID above |
+
+Expected record hash is
+`33308416927a8fb8155309709c62131c44e45ed8df97830f89e0b2b2baf8f711`;
+expected signature is
+`RHskwux8dDdTY0rNBzUL88u6CYPhgpaVhlvjrce8H8Vwgazc9oCHLCXFXBhTzN9l_BSc-ZzExJRTq4mVmfYjCg`.
+Independent writers/verifiers must reproduce identical bytes and values.
+
+The writer exclusively creates the final directory and fsyncs its parent. For
+each data file in manifest order it creates `<path>.tmp` exclusively, writes,
+fsyncs the file, closes, atomically renames to `<path>`, then fsyncs the
+containing directory. After rereading and validating every digest/signature it
+writes `manifest.v1.json.tmp`, fsyncs/closes, renames to `manifest.v1.json`,
+fsyncs the bundle directory, then fsyncs its parent. Nothing is overwritten.
+
+No manifest means `PARTIAL_EVIDENCE`: preserve all bytes and temp files, disable
+the gateway, and restart export under a new bundle ID. With a manifest, validate
+exact names/no extras, encoding/LFs, sizes/digests, counts/order/schema, key ID,
+hash chain, candidate order, all signatures, and manifest signature before
+semantic reads. A gap, duplicate, malformed null/UUID/timestamp/JSONB, bad
+signature/hash, conflicting candidate, impossible outcome, extra path, or temp
+file is `CORRUPT_EVIDENCE`; no repair, retry, or send is allowed.
+
+Restore imports both table files into an empty exact two-table schema, checks
+constraints, re-exports, and requires byte-for-byte equality and equal raw
+digests. It replays evidence by sequence, compares ledger/provider candidates,
+and requires the same final state before schema disposal.
 
 ### Finite workflow and authority
 
@@ -91,7 +196,7 @@ On unknown provider outcome, persist/retain `AMBIGUOUS`; schedule bounded reconc
 - [ ] **Implement typed finite fixture and sole gateway —** Input: deterministic Pydantic AI fixture and scenario. Operation: validate artifact/alias, derive identities, enforce queue/control, and expose Gmail only to gateway. Output: runnable no-branch workflow. Test evidence: import/call-path, schema, denial, replay tests. Failure behavior: no provider call.
 - [ ] **Implement kill/reconciliation instrumentation —** Input: K0-K8 barriers, stable identity, and signed evidence schema. Operation: hard-kill, atomically append/fsync signed provider outcome/error/candidate records, and reconcile. Output: reproducible crash harness. Test evidence: termination plus signature/hash-chain validation. Failure behavior: invalid/corrupt scenario; gateway disabled and no gate credit.
 - [ ] **Run eight-item matrix from clean state —** Input: approved repetitions/version/concurrency/rate manifest. Operation: execute every scenario, reconcile all attempts, and compare database/provider/evidence hashes. Output: raw evidence plus binary scorecard. Test evidence: automated manifest validator. Failure behavior: stop, disable, and mark DBOS rejected.
-- [ ] **Export evidence and dispose schema —** Input: all runs terminal/reconciled and scorecard. Operation: export signed/redacted ledger/traces/config/Gmail evidence, verify restore/readability, then drop `m1_spike` and revoke test credentials when no longer needed. Output: gate bundle with no promoted product data. Test evidence: export hash verification and schema-absent check. Failure behavior: retain isolated schema disabled until evidence/reconciliation is complete.
+- [ ] **Export evidence and dispose schema —** Input: all runs terminal/reconciled and scorecard. Operation: write the three exact versioned RFC 8785 NDJSON files and manifest-last Ed25519 commit marker, restore into an empty two-table schema, and byte-compare re-export before dropping `m1_spike`. Output: interoperable gate bundle with no promoted product data. Test evidence: independent byte/hash/signature/golden/partial-write/restore validators plus schema-absent check. Failure behavior: retain isolated schema disabled; any partial/corrupt bundle blocks disposal.
 - [ ] **Trigger Temporal handoff on any failure —** Input: first failed item/evidence. Operation: execute WF-00 stop/incident/migration procedure and rerun identical scenarios. Output: mandatory replacement evidence. Test evidence: Temporal adapter contract/eight-item matrix. Failure behavior: M2 product workflow work remains blocked.
 
 ## Test strategy
@@ -104,6 +209,10 @@ On unknown provider outcome, persist/retain `AMBIGUOUS`; schedule bounded reconc
 - **Versioning `test_v1_inflight_survives_v2_blue_green_upgrade`:** recover/drain evidence.
 - **Security `test_recipient_aliases_are_owned_and_logs_are_redacted`:** no address/secret leaks.
 - **Evidence `test_crash_safe_manifest_restore_rejects_gap_tamper_and_multiple_candidates`:** atomic manifest, signatures, hashes, exports, and fail-closed corruption.
+- **Golden bytes `test_m1_exports_are_canonical_ndjson_with_exact_names_order_nulls_and_final_lf`:** independent writers produce byte-identical raw files.
+- **Signature `test_m1_record_and_manifest_ed25519_preimages_match_golden_vector`:** exact domain separators, key ID, base64url, hash, and signature.
+- **Partial write `test_m1_missing_manifest_or_leftover_tmp_fails_closed`:** manifest-last is the sole commit signal.
+- **Restore `test_m1_restore_reexport_is_byte_identical_and_state_equivalent`:** both table files and evidence replay compare deterministically.
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 
@@ -118,6 +227,7 @@ At any impossible state, duplicate, leakage, rate/control breach, or unresolved 
 - [ ] Schema has exactly the two permitted tables and no product record.
 - [ ] Every K0-K8 scenario and all eight criteria pass reproducibly with zero uncontrolled duplicate sends/blind retries.
 - [ ] Every ambiguity has stable key/RFC ID, signed outcome/error/candidate records, ledger/result capture, Sent evidence, bounded reconciliation, and visible final/operator state.
+- [ ] Independent implementations reproduce exact export filenames/bytes/digests, the signature golden vector, manifest-last crash behavior, and byte-identical restore.
 - [ ] Only owned test aliases were used; M1 did not enable product outreach.
 - [ ] Any single failure produced DBOS rejection and Temporal handoff rather than a waiver.
 

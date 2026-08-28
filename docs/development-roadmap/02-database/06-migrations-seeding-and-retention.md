@@ -37,7 +37,7 @@ ALTER TABLE experiment_decisions ADD CONSTRAINT fk_experiment_decisions_evidence
 ALTER TABLE leads ADD CONSTRAINT fk_leads_suppression FOREIGN KEY (suppression_entry_id) REFERENCES suppression_entries (suppression_entry_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE lead_assessments ADD CONSTRAINT fk_lead_assessments_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
 ALTER TABLE outreach_messages ADD CONSTRAINT fk_outreach_messages_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
-ALTER TABLE send_attempts ADD CONSTRAINT fk_send_attempts_policy_mailbox FOREIGN KEY (policy_decision_id, mailbox_id) REFERENCES policy_decisions (policy_decision_id, mailbox_id) ON DELETE RESTRICT;
+ALTER TABLE send_intents ADD CONSTRAINT fk_send_intents_policy_authority FOREIGN KEY (policy_decision_id, policy_scope, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, policy_version, scope_hash, policy_facts_hash, policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed) ON DELETE RESTRICT;
 ALTER TABLE replies ADD CONSTRAINT fk_replies_classification_artifact FOREIGN KEY (classification_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
 ```
 
@@ -57,11 +57,17 @@ CREATE TRIGGER trg_outreach_messages_immutable_authority BEFORE UPDATE ON outrea
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','version','updated_at');
 CREATE TRIGGER trg_approvals_immutable_authority BEFORE UPDATE ON approvals
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','operator_id','reason_code','decided_at');
+CREATE TRIGGER trg_campaign_members_immutable_authority BEFORE UPDATE ON campaign_members
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('status','removed_at');
 CREATE TRIGGER trg_send_intents_immutable_identity BEFORE UPDATE ON send_intents
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('attempt_count');
 CREATE TRIGGER trg_send_attempts_immutable_identity BEFORE UPDATE ON send_attempts
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','provider_called_at','completed_at','error_code','error_fingerprint','retry_class','reconciliation_strategy_version');
 CREATE TRIGGER trg_provider_results_append_only BEFORE UPDATE ON provider_results
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
+CREATE TRIGGER trg_provider_observations_append_only BEFORE UPDATE ON provider_observations
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
+CREATE TRIGGER trg_policy_decisions_append_only BEFORE UPDATE ON policy_decisions
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
 ```
 

@@ -92,10 +92,10 @@ CREATE TABLE workflow_runs (
     max_runtime_seconds integer NOT NULL,
     max_cost_minor bigint NOT NULL,
     currency char(3) NOT NULL,
-    input_schema_version integer NOT NULL,
+    input_schema_version text NOT NULL,
     input_snapshot jsonb NOT NULL,
     input_hash char(64) NOT NULL,
-    result_schema_version integer NULL,
+    result_schema_version text NULL,
     result_snapshot jsonb NULL,
     result_hash char(64) NULL,
     error_code text NULL,
@@ -108,13 +108,14 @@ CREATE TABLE workflow_runs (
     CONSTRAINT fk_workflow_runs_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
     CONSTRAINT uq_workflow_runs_runtime_identity UNIQUE (runtime, runtime_workflow_id),
     CONSTRAINT uq_workflow_runs_experiment_type_attempt UNIQUE (experiment_id, workflow_type, attempt_no),
+    CONSTRAINT uq_workflow_runs_input_digest UNIQUE (workflow_run_id, input_hash),
     CONSTRAINT ck_workflow_runs_state CHECK (state IN ('PENDING','RUNNING','PAUSE_REQUESTED','PAUSED','CANCEL_REQUESTED','CANCELLED','SUCCEEDED','FAILED')),
     CONSTRAINT ck_workflow_runs_runtime CHECK (runtime IN ('DBOS','TEMPORAL')),
     CONSTRAINT ck_workflow_runs_bounds CHECK (attempt_no > 0 AND max_attempts > 0 AND attempt_no <= max_attempts AND max_runtime_seconds > 0 AND max_cost_minor >= 0),
     CONSTRAINT ck_workflow_runs_currency CHECK (currency ~ '^[A-Z]{3}$'),
-    CONSTRAINT ck_workflow_runs_input CHECK (input_schema_version > 0 AND jsonb_typeof(input_snapshot) = 'object' AND input_hash ~ '^[0-9a-f]{64}$'),
-    CONSTRAINT ck_workflow_runs_result_triplet CHECK ((result_schema_version IS NULL AND result_snapshot IS NULL AND result_hash IS NULL) OR (result_schema_version > 0 AND jsonb_typeof(result_snapshot) = 'object' AND result_hash ~ '^[0-9a-f]{64}$')),
-    CONSTRAINT ck_workflow_runs_success_result CHECK (state <> 'SUCCEEDED' OR result_hash IS NOT NULL),
+    CONSTRAINT ck_workflow_runs_input CHECK (input_schema_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$' AND input_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_workflow_runs_result_triplet CHECK ((result_schema_version IS NULL AND result_snapshot IS NULL AND result_hash IS NULL) OR (result_schema_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$' AND result_snapshot IS NOT NULL AND result_hash ~ '^[0-9a-f]{64}$')),
+    CONSTRAINT ck_workflow_runs_result_state CHECK ((state = 'SUCCEEDED') = (result_schema_version IS NOT NULL AND result_snapshot IS NOT NULL AND result_hash IS NOT NULL)),
     CONSTRAINT ck_workflow_runs_failure_error CHECK (state <> 'FAILED' OR error_code IS NOT NULL),
     CONSTRAINT ck_workflow_runs_terminal_finished CHECK ((state IN ('CANCELLED','SUCCEEDED','FAILED')) = (finished_at IS NOT NULL))
 );
@@ -202,6 +203,22 @@ CREATE INDEX ix_incidents_state_severity_opened ON incidents (state, severity, o
 CREATE INDEX ix_incidents_experiment ON incidents (experiment_id, opened_at DESC);
 ```
 
+### Canonical input/result digest contract
+
+`workflow_runs.input_hash/result_hash`, `command_idempotency.request_hash/result_hash`, and `evaluation_cases.input_hash/expected_hash` use one byte-level algorithm: lowercase hexadecimal SHA-256 over the UTF-8 bytes of RFC 8785 canonical JSON for the exact envelope `{"schema_version":<string>,"payload":<json>}`. The stored `*_schema_version` string is copied byte-for-byte into `schema_version`; the stored JSONB snapshot is the `payload`. Producers reject duplicate object keys, non-I-JSON numbers, invalid Unicode, NaN, and infinities before canonicalization. Hashing PostgreSQL's textual JSON/JSONB rendering, pretty JSON, a payload without the envelope, or an integer schema version is invalid.
+
+Input schema version/snapshot/hash are always non-NULL. A workflow result is absent only when all three result columns are SQL `NULL`; only `SUCCEEDED` may carry a result. JSON `null` is a present payload, not an absent result, and therefore has a schema version and digest. A reader first validates the lowercase digest against the stored version/payload bytes, then dispatches the validator registered for that exact version. Upcasters may transform a verified snapshot in memory, but never rewrite or rehash the stored row; an incompatible input starts a new workflow run, and an incompatible result requires a new consumer/version.
+
+Normative UTF-8 fixture vectors (the canonical byte string shown has no trailing LF) are:
+
+| Schema/payload | RFC 8785 canonical envelope bytes | SHA-256 |
+| --- | --- | --- |
+| `workflow.input.v1` / `{"a":1,"b":"é","nested":[true,null]}` | `{"payload":{"a":1,"b":"é","nested":[true,null]},"schema_version":"workflow.input.v1"}` | `cdd6c7c8b49d6cd13cb6ff576332a6025726b9dc784adb9fb7b15a6da69891a0` |
+| `workflow.result.v1` / `{"count":0,"ok":true}` | `{"payload":{"count":0,"ok":true},"schema_version":"workflow.result.v1"}` | `22b3184b0e4a82b832b3cc99e2079073f4fb9b900be0c7a744b0fd9ae2755e12` |
+| `command.request.v1` / `{}` | `{"payload":{},"schema_version":"command.request.v1"}` | `d6f79e906be21e0a9a0ea9f4cec513bacb1b27126d7e4b91ab99d9e39f9bbbb3` |
+
+Migration and fixture acceptance require two independent RFC 8785 implementations to reproduce all three vectors and reject altered schema-version type, key order assumptions, extra whitespace, Unicode escaping differences, and absent-versus-JSON-null confusion.
+
 | Table | Exclusive write owner | Retention class / retention owner |
 | --- | --- | --- |
 | `operators` | `AuthenticationCommandService` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
@@ -232,6 +249,7 @@ Every product run uses application UUID `workflow_run_id` and runtime ID `experi
 
 - **Unit `test_experiment_failure_fields_match_state`:** every invalid state/field combination is rejected.
 - **Migration `test_schema_has_all_named_constraints_and_indexes`:** introspect PostgreSQL by exact name.
+- **Digest `test_rfc8785_envelope_vectors_match_two_independent_encoders`:** exact UTF-8 bytes/SHA-256, text schema version, SQL-null versus JSON-null, and invalid I-JSON fixtures.
 - **Integration `test_state_event_audit_idempotency_outbox_are_atomic`:** inject failure after every write.
 - **Concurrency `test_budget_reservation_cannot_exceed_account`:** serialize/lock the account and deny overspend.
 - **Recovery `test_workflow_projection_rebuild_does_not_mutate_aggregate`:** runtime recovery never becomes business authority.
@@ -249,6 +267,7 @@ Migration failure rolls back and leaves outreach disabled. A bad application rel
 
 - [ ] M1 has only disposable `m1_spike` records; these M2 tables begin independently.
 - [ ] Every table has a primary key, owner, constraints, indexes, retention class, and transaction boundary.
+- [ ] Every workflow/command/evaluation input or result digest reproduces the canonical envelope vectors and validates before upcast or consumption.
 - [ ] Every aggregate write uses optimistic concurrency and atomic event/audit/idempotency/outbox persistence.
 - [ ] `workflow_runs` maps runtime state but never owns aggregate truth.
 - [ ] Product outreach defaults off and requires both M1 and M6 evidence.

@@ -101,7 +101,7 @@ CREATE TABLE command_idempotency (
     command_scope text NOT NULL,
     idempotency_key text NOT NULL,
     command_type text NOT NULL,
-    request_schema_version integer NOT NULL,
+    request_schema_version text NOT NULL,
     request_json jsonb NOT NULL,
     request_hash char(64) NOT NULL,
     actor_type text NOT NULL,
@@ -109,19 +109,19 @@ CREATE TABLE command_idempotency (
     aggregate_type text NULL,
     aggregate_id uuid NULL,
     status text NOT NULL DEFAULT 'IN_PROGRESS',
-    result_schema_version integer NULL,
+    result_schema_version text NULL,
     result_json jsonb NULL,
     result_hash char(64) NULL,
     error_code text NULL,
     first_seen_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     completed_at timestamptz NULL,
     CONSTRAINT pk_command_idempotency PRIMARY KEY (command_scope, idempotency_key),
-    CONSTRAINT ck_command_idempotency_request CHECK (request_schema_version > 0 AND jsonb_typeof(request_json) = 'object' AND request_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_command_idempotency_request CHECK (request_schema_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$' AND request_hash ~ '^[0-9a-f]{64}$'),
     CONSTRAINT ck_command_idempotency_actor CHECK (actor_type IN ('OPERATOR','SYSTEM','WORKFLOW','PROVIDER')),
     CONSTRAINT ck_command_idempotency_aggregate CHECK ((aggregate_type IS NULL) = (aggregate_id IS NULL)),
     CONSTRAINT ck_command_idempotency_status CHECK (status IN ('IN_PROGRESS','SUCCEEDED','FAILED')),
-    CONSTRAINT ck_command_idempotency_result CHECK ((result_schema_version IS NULL AND result_json IS NULL AND result_hash IS NULL) OR (result_schema_version > 0 AND jsonb_typeof(result_json) = 'object' AND result_hash ~ '^[0-9a-f]{64}$')),
-    CONSTRAINT ck_command_idempotency_completion CHECK ((status = 'IN_PROGRESS' AND completed_at IS NULL) OR (status = 'SUCCEEDED' AND completed_at IS NOT NULL AND result_hash IS NOT NULL AND error_code IS NULL) OR (status = 'FAILED' AND completed_at IS NOT NULL AND error_code IS NOT NULL))
+    CONSTRAINT ck_command_idempotency_result CHECK ((result_schema_version IS NULL AND result_json IS NULL AND result_hash IS NULL) OR (result_schema_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$' AND result_json IS NOT NULL AND result_hash ~ '^[0-9a-f]{64}$')),
+    CONSTRAINT ck_command_idempotency_completion CHECK ((status = 'IN_PROGRESS' AND completed_at IS NULL AND result_hash IS NULL) OR (status = 'SUCCEEDED' AND completed_at IS NOT NULL AND result_schema_version IS NOT NULL AND result_json IS NOT NULL AND result_hash IS NOT NULL AND error_code IS NULL) OR (status = 'FAILED' AND completed_at IS NOT NULL AND result_schema_version IS NULL AND result_json IS NULL AND result_hash IS NULL AND error_code IS NOT NULL))
 );
 CREATE INDEX ix_command_idempotency_in_progress ON command_idempotency (first_seen_at) WHERE status = 'IN_PROGRESS';
 CREATE INDEX ix_command_idempotency_aggregate ON command_idempotency (aggregate_type, aggregate_id, first_seen_at DESC) WHERE aggregate_id IS NOT NULL;
@@ -169,6 +169,7 @@ CREATE TABLE policy_decisions (
     experiment_id uuid NULL,
     campaign_id uuid NULL,
     campaign_version integer NULL,
+    lead_id uuid NULL,
     message_id uuid NULL,
     mailbox_id uuid NULL,
     policy_version text NOT NULL,
@@ -183,13 +184,14 @@ CREATE TABLE policy_decisions (
     evaluated_at timestamptz NOT NULL,
     CONSTRAINT pk_policy_decisions PRIMARY KEY (policy_decision_id),
     CONSTRAINT fk_policy_decisions_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_policy_decisions_campaign_version FOREIGN KEY (campaign_id, campaign_version) REFERENCES campaigns (campaign_id, campaign_version) ON DELETE RESTRICT,
-    CONSTRAINT fk_policy_decisions_message_mailbox FOREIGN KEY (message_id, mailbox_id) REFERENCES outreach_messages (message_id, mailbox_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_policy_decisions_campaign_authority FOREIGN KEY (campaign_id, campaign_version, experiment_id) REFERENCES campaigns (campaign_id, campaign_version, experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_policy_decisions_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, lead_id, mailbox_id) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, lead_id, mailbox_id) ON DELETE RESTRICT,
     CONSTRAINT uq_policy_decisions_command UNIQUE (scope, idempotency_key),
     CONSTRAINT uq_policy_decisions_mailbox_identity UNIQUE (policy_decision_id, mailbox_id),
+    CONSTRAINT uq_policy_decisions_send_authority UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed),
     CONSTRAINT ck_policy_decisions_scope CHECK (scope IN ('EXPERIMENT','CAMPAIGN','SEND','PROVIDER','CONTROL')),
     CONSTRAINT ck_policy_decisions_campaign_pair CHECK ((campaign_id IS NULL) = (campaign_version IS NULL)),
-    CONSTRAINT ck_policy_decisions_send_binding CHECK (scope <> 'SEND' OR (experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND message_id IS NOT NULL AND mailbox_id IS NOT NULL)),
+    CONSTRAINT ck_policy_decisions_send_binding CHECK (scope <> 'SEND' OR (experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND mailbox_id IS NOT NULL)),
     CONSTRAINT ck_policy_decisions_reasons CHECK ((allowed AND cardinality(reason_codes) >= 0) OR (NOT allowed AND cardinality(reason_codes) > 0)),
     CONSTRAINT ck_policy_decisions_facts CHECK (facts_schema_version > 0 AND jsonb_typeof(facts_json) = 'object' AND facts_hash ~ '^[0-9a-f]{64}$' AND scope_hash ~ '^[0-9a-f]{64}$')
 );
@@ -253,6 +255,8 @@ CREATE TABLE repair_actions (
 CREATE INDEX ix_repair_actions_incident ON repair_actions (incident_id, executed_at);
 ```
 
+`command_idempotency.request_hash` and present `result_hash` use DB-01's exact UTF-8 RFC 8785 envelope digest with the stored text schema version and JSON payload. `IN_PROGRESS` and `FAILED` have all result columns SQL `NULL`; `SUCCEEDED` has the complete triplet. Replay verifies bytes and schema version before returning a stored result; version migration never mutates an existing command row.
+
 | Table | Exclusive write owner | Retention class / retention owner |
 | --- | --- | --- |
 | `domain_events` | application `UnitOfWork` after a valid transition | `SAFETY_LONG` / `RetentionCommandService` |
@@ -268,7 +272,7 @@ CREATE INDEX ix_repair_actions_incident ON repair_actions (incident_id, executed
 
 ### Command and side-effect atomicity
 
-For aggregate commands: begin; claim `(command_scope,idempotency_key)`; compare request hash; load expected version; apply pure transition; update aggregate; insert the specific event plus the aggregate's canonical `*.state_changed.v1` event where defined; insert audit; insert outbox; store result; commit. For provider work: the first transaction records mailbox-bound policy/budget/intent/attempt; the network call occurs without a long transaction; the second records `send.provider_accepted.v1`, conclusive failure, or `AMBIGUOUS`. A crash in the gap enters mailbox-bound reconciliation, never automatic retry.
+For aggregate commands: begin; claim `(command_scope,idempotency_key)`; verify DB-01's RFC 8785 request envelope digest and compare it; load expected version; apply pure transition; update aggregate; insert the specific event plus the aggregate's canonical `*.state_changed.v1` event where defined; insert audit; insert outbox; store result; commit. For provider work: the first transaction records the complete composite policy/approval/intent/attempt authority; the network call occurs without a long transaction; the second records `send.provider_accepted.v1`, conclusive failure, or `AMBIGUOUS`. A crash in the gap enters exact-authority reconciliation, never automatic retry.
 
 An internal outbox consumer starts one PostgreSQL transaction, rechecks absence of `(consumer_name,event_id)`, performs all internal business writes, inserts `outbox_deliveries`, and commits once. A crash rolls back both the business writes and delivery receipt; redelivery re-executes the same transaction. External provider effects are forbidden in that transaction and forbidden from any generic “effect once” claim. Gmail/model/search/extraction effects use their explicit intent/result/error or `AMBIGUOUS`/reconciliation contracts.
 
