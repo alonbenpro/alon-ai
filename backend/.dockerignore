@@ -1,0 +1,32 @@
+# Local configuration and credentials
+.env
+.env.*
+oauth-token.json
+oauth-tokens.json
+token.json
+tokens.json
+credentials.json
+*.token.json
+
+# Local Python environments and caches
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.pyright/
+.ruff_cache/
+
+# Test and coverage artifacts
+tests/
+.coverage
+coverage/
+htmlcov/
+test-results/
+playwright-report/
+blob-report/
+
+# Local build artifacts
+dist/
+build/
+*.egg-info/

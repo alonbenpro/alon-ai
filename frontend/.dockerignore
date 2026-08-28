@@ -1,0 +1,25 @@
+# Local configuration
+.env
+.env.*
+
+# Dependencies and framework caches
+node_modules/
+.next/
+.turbo/
+.cache/
+.npm/
+out/
+*.tsbuildinfo
+
+# Test and browser artifacts
+coverage/
+test-results/
+playwright-report/
+blob-report/
+
+# Local logs and editor state
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.eslintcache
+.DS_Store
