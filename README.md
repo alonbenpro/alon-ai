@@ -45,10 +45,21 @@ docs/runbooks/            Local operating guidance
 
 ## Quick start
 
-Prerequisites: Python 3.13 with uv, and Node.js 24 with npm. From the repository root, these are the locally verified foundation commands:
+Prerequisites: Python 3.13 with uv, and Node.js 24 with npm. In a clean environment, install the locked dependencies from the repository root:
 
 ```sh
 make setup
+```
+
+On this verification machine, `make setup` encountered a pre-existing global npm-cache ownership error. The exact locally verified setup command used a clean temporary npm cache while running the same locked setup recipe:
+
+```sh
+NPM_CONFIG_CACHE=/private/tmp/alon-ai-npm-cache-20260828 make setup
+```
+
+After setup, these commands were locally verified:
+
+```sh
 make generate
 make lint
 make typecheck
