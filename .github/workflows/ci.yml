@@ -1,0 +1,83 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: alon_ai
+          POSTGRES_USER: alon_ai
+          POSTGRES_PASSWORD: alon_ai
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U alon_ai -d alon_ai"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      ALON_AI_DATABASE_URL: postgresql+psycopg://alon_ai:alon_ai@localhost:5432/alon_ai
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9
+        with:
+          python-version: "3.13"
+          enable-cache: true
+      - run: uv sync --locked --all-extras --dev
+        working-directory: backend
+      - run: uv run ruff format --check .
+        working-directory: backend
+      - run: uv run ruff check .
+        working-directory: backend
+      - run: uv run pyright
+        working-directory: backend
+      - run: uv run alembic upgrade head
+        working-directory: backend
+      - run: uv run pytest tests -q
+        working-directory: backend
+
+  frontend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v9
+        with:
+          python-version: "3.13"
+      - run: uv sync --locked --all-extras --dev
+        working-directory: backend
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+        working-directory: frontend
+      - run: npm run api:generate
+        working-directory: frontend
+      - run: git diff --exit-code -- openapi.json src/lib/api/schema.d.ts
+        working-directory: frontend
+      - run: npm run lint
+        working-directory: frontend
+      - run: npm run typecheck
+        working-directory: frontend
+      - run: npm test -- --run
+        working-directory: frontend
+      - run: npm run build
+        working-directory: frontend
+
+  containers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - run: docker compose --env-file .env.example -f infra/compose.yaml config
+      - run: docker build -f backend/Dockerfile -t alon-ai-backend:ci backend
+      - run: docker build -f frontend/Dockerfile -t alon-ai-frontend:ci frontend
