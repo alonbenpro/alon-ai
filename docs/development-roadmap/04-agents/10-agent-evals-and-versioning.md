@@ -153,6 +153,8 @@ class RepetitionSummaryV1(StrictAgentModel):
     aggregate_mean: Decimal = Field(ge=0, le=1, decimal_places=7)
     bottom_decile_case_score: Decimal = Field(ge=0, le=1, decimal_places=7)
     component_metrics: dict[VersionId, Decimal]
+    ece_population_count: int = Field(ge=0)
+    calibration_ece: Annotated[Decimal, Field(ge=0, le=1, decimal_places=7)] | None
     p10_duration_ms: int = Field(ge=0)
     p95_duration_ms: int = Field(ge=0)
     mean_cost_minor: Decimal = Field(ge=0, decimal_places=7)
@@ -162,6 +164,12 @@ class RepetitionSummaryV1(StrictAgentModel):
     passed: bool
     reason_codes: tuple[VersionId, ...] = Field(max_length=100)
     summary_content_hash: Sha256Hex
+
+    @model_validator(mode="after")
+    def ece_population_matches_value(self) -> "RepetitionSummaryV1":
+        if (self.ece_population_count == 0) != (self.calibration_ece is None):
+            raise ValueError("ECE is NULL exactly when its SUCCESS-confidence population is empty")
+        return self
 
 class RepetitionSummaryRefV1(StrictAgentModel):
     repetition: Literal[1, 2, 3]
@@ -245,15 +253,15 @@ Each candidate capture uses the specialist's per-invocation time/token/tool/mode
 
 Pydantic Evals `Dataset` cases carry `EvaluationCaseSpecV1`; deterministic scoring consumes the signed capture rather than executing the candidate again. Promotion-critical safety, schema, citation, identity, threshold, label, span, and digest metrics are deterministic functions over typed terminal output and frozen labels. A model judge cannot supply a hard gate or more than `100_000` weight micros; subjective clarity/specificity uses frozen operator-labeled anchors plus deterministic feature checks and blind operator sampling.
 
-All arithmetic uses exact integers/rationals or base-10 `Decimal` with precision `50`; binary floating point is forbidden. Comparisons use the unrounded value. Only after pass/fail is decided is a stored score quantized to seven fractional digits with IEEE `ROUND_HALF_EVEN` and serialized as a JSON decimal string. Maps are key-sorted; equal-value percentile ties are stably ordered by `(case_key,capture_id)` but rank depends only on value. A missing/invalid/failed capture is `prediction_missing=true`, gives every task component and `case_score` zero, increments failure/missing counts, and makes that repetition fail even if its aggregate would otherwise pass.
+All arithmetic uses exact integers/rationals or base-10 `Decimal` with precision `50`; binary floating point is forbidden. Comparisons use the unrounded value. Only after pass/fail is decided is a stored score quantized to seven fractional digits with IEEE `ROUND_HALF_EVEN` and serialized as a JSON decimal string. Maps are key-sorted; equal-value percentile ties are stably ordered by `(case_key,capture_id)` but rank depends only on value. A missing/invalid/failed capture is `prediction_missing=true`, gives every applicable non-ECE task component and `case_score` zero, is excluded from the SUCCESS-only ECE population, increments failure/missing counts, and makes that repetition fail even if its aggregate would otherwise pass.
 
 Exact functions are:
 
 - **Weighted case score:** evaluator weights must sum to exactly `1_000_000`. Any failed `hard_gate` makes `case_score=0`; otherwise `sum(score_i * weight_micros_i) / 1_000_000`.
 - **Precision/recall/F1:** `precision=TP/(TP+FP)` and `recall=TP/(TP+FN)`. A zero denominator yields `1` only when both expected and predicted sets for that component are empty; otherwise it yields `0`. `F1=2PR/(P+R)`, or `0` when `P+R=0`. Frozen-label macro-F1 computes one F1 for every label declared in the rubric, including labels absent from the sample, then takes the arithmetic mean. A missing prediction contributes FN to its true label and no predicted label.
-- **Calibration/ECE:** exactly 10 bins: `[0.0,0.1)`, `[0.1,0.2)`, ..., `[0.8,0.9)`, `[0.9,1.0]`; bin index is `min(9, floor(confidence*10))`. For nonempty bin `b`, contribution is `(n_b/N) * abs(mean_accuracy_b - mean_confidence_b)`; empty bins contribute zero. Abstentions use their declared abstention confidence; failed/missing predictions use confidence `0` and accuracy `0`.
+- **Calibration/ECE:** the population is only terminal `SUCCESS` predictions whose typed success artifact defines confidence; `N` and `ece_population_count` are exactly that count. `ABSTAIN` has confidence `NULL` and is excluded from ECE, then scored only by the separate abstention function; `FAILED`, missing predictions, and success types without confidence are also excluded. Use exactly 10 bins: `[0.0,0.1)`, `[0.1,0.2)`, ..., `[0.8,0.9)`, `[0.9,1.0]`; bin index is `min(9, floor(confidence*10))`. For nonempty bin `b`, contribution is `(n_b/N) * abs(mean_accuracy_b - mean_confidence_b)`; empty bins contribute zero. If `N=0`, `calibration_ece=NULL`; a suite with a mandatory ECE gate fails that repetition with `SCORE_INVALID`, while a suite without an ECE gate records NULL and omits ECE from weighted aggregation.
 - **Citation matching:** canonical citation identity is `(lowercase-hyphenated evidence_item_id, lowercase content_hash, canonical RFC 6901 pointer, relationship)`. Pointer parsing rejects bad `~` escapes, decodes `~1`/`~0`, then re-encodes `~` before `/`. Matching is multiset intersection, so duplicate unsupported citations are FP. TP/FP/FN feed the precision/recall/F1 rule above; no fuzzy text/URI match is allowed.
-- **Span score:** spans are half-open UTF-8 code-point offsets. Exact span F1 uses `(start,end,span_hash)` identity. Overlap uses interval IoU `intersection/max(1,union)` and the deterministic maximum-total-IoU one-to-one matching; equal-IoU choices break by expected then predicted `(start,end,span_hash)`. `overlap_precision=sum_iou/predicted_count`, `overlap_recall=sum_iou/expected_count`, the same zero-denominator rule applies, and `span_score = 0.5*exact_F1 + 0.5*overlap_F1`.
+- **Span score:** normalize the source text to Unicode NFC first; spans are zero-based, half-open Unicode code-point indexes over that normalized text, never UTF-8 byte offsets. A provider that returns byte offsets must deterministically convert them to NFC code-point indexes before schema validation. Exact span F1 uses `(start,end,span_hash)` identity, where `span_hash` covers the NFC substring selected by those indexes. Overlap uses interval IoU `intersection/max(1,union)` and the deterministic maximum-total-IoU one-to-one matching; equal-IoU choices break by expected then predicted `(start,end,span_hash)`. `overlap_precision=sum_iou/predicted_count`, `overlap_recall=sum_iou/expected_count`, the same zero-denominator rule applies, and `span_score = 0.5*exact_F1 + 0.5*overlap_F1`.
 - **Abstention:** expected-abstain is the positive class. Only terminal `ABSTAIN` predicts positive; `SUCCESS` predicts negative; `FAILED` is a missing prediction and fails the repetition. Precision/recall/F1 use the same rules. An unexpected abstention is also a missing prediction for the specialist's normal task metrics; an expected abstention returned as success is scored as a false negative even if the artifact looks plausible.
 - **Aggregate/percentiles/cost:** each `RepetitionSummaryV1.aggregate_mean` is the arithmetic mean of all case scores in that repetition. Nearest-rank percentile sorts ascending and returns element `ceil(p*N)` using one-based rank; `N=0` is invalid. `bottom_decile_case_score` uses `p=.10`; duration records both `p=.10` and `p=.95`; cost uses `p=.95`. `mean_cost_minor` includes all terminal capture attempts, including failed/cancelled calls that incurred cost; `max_cost_minor` is the largest; `p95_cost_minor` is nearest-rank over the same population.
 
@@ -263,13 +271,16 @@ Golden scorer fixtures are normative:
 | --- | --- |
 | labels `A,B`; truth `A,A,B`; prediction `A,B,B` | macro-F1 `0.6666667` |
 | one frozen label absent from both expected and predicted | label precision/recall/F1 `1.0000000` |
-| calibration `(confidence,correct)=(.05,1),(.15,0),(1,1)` | ECE `0.3666667` |
+| `SUCCESS` calibration `(confidence,correct)=(.05,1),(.15,0),(1,1)` | ECE population `N=3`, ECE `0.3666667` |
 | citation expected multiset `{a,b}`, predicted `{a,a,c}` | precision `0.3333333`, recall `0.5000000`, F1 `0.4000000` |
 | expected span `[0,10)`, predicted `[0,5)`, hashes differ | exact F1 `0`, overlap F1 `0.5`, span score `0.2500000` |
 | sorted values `1..10` | p10 `1`, p95 `10` |
 | failed/missing terminal result | case score `0`, repetition `passed=false` |
+| successes `(confidence,correct)=(.8,1)` plus one expected and one unexpected `ABSTAIN` | ECE population `N=1`, ECE `0.2000000`; abstention precision/recall/F1 `0.5000000/1.0000000/0.6666667` |
+| only `ABSTAIN`/`FAILED` terminals | ECE population `N=0`, ECE `NULL`; mandatory ECE gate is `SCORE_INVALID` |
+| source `Cafe\u0301 שלום` normalized to `Café שלום`; provider bytes `[3,5)` converted to code points `[3,4)` selecting `é` | exact/overlap/span `1.0000000`; unconverted byte indexes fail substring-hash validation |
 
-A Python `Decimal` reference and an independent `fractions.Fraction` implementation must reproduce the canonical JSON/score hashes for every golden vector, threshold equality, one-unit-below case, zero denominator, bin boundary (`.1`, `.9`, `1`), duplicate citation, Unicode span, percentile tie, and missing prediction. Disagreement is `SCORE_INVALID`; no implementation chooses the favorable result.
+A Python `Decimal` reference and an independent `fractions.Fraction` implementation must reproduce the canonical JSON/score hashes for every golden vector, threshold equality, one-unit-below case, zero denominator, bin boundary (`.1`, `.9`, `1`), duplicate citation, the non-ASCII/NFC byte-to-code-point span vector, the abstention/ECE denominator and empty-population vectors, percentile tie, and missing prediction. Disagreement is `SCORE_INVALID`; no implementation chooses the favorable result.
 
 Every one of the three independently captured repetitions is scored separately against every quality, hard-safety, duration, mean/p95/max cost, and component regression threshold. `SuiteRunSummaryV1` may calculate `max_aggregate_spread <=0.03` only after all three `RepetitionSummaryV1.passed` values are true; combined metrics can never rescue a failed repetition.
 
@@ -321,7 +332,15 @@ Task 4 may rename Python methods only. It must implement byte-compatible AGENT-0
 
 ### Persistence, events, retention, and failure behavior
 
-`EvaluationSuiteCommandService` inserts immutable DB-04 `evaluation_cases`; `EvaluationExecutionService` records one `agent_runs`/signed capture per candidate `(case,repetition,configuration)` and one `evaluation_results` per `(case,agent_run,evaluator_version)`, with `scores_json/hash`, pass and exact reason codes. Signed capture objects, capture-set/repetition/promotion manifests, provider ledgers and cost references are `EVALUATION_VERSIONED`; restricted payloads use encrypted object references and DB-06 expiry guards while hashes/signatures/results remain. Hashes use the shared envelope. Evaluation capture never calls `ArtifactCommandService` and creates no product `artifacts` or `artifact_evidence_links`.
+`EvaluationSuiteCommandService` inserts immutable DB-04 `evaluation_cases`. `EvaluationExecutionService` orchestrates capture/scoring and exclusively writes `evaluation_results`, but it never inserts or updates `agent_runs`. For each candidate `(case,repetition,configuration)`, it requests `AgentRunRecordingService` to start the run row, executes/persists the signed capture, then requests the same sole owner to close the run with terminal status/usage/ledger reconciliation before `EvaluationExecutionService` writes one `evaluation_results` row per `(case,agent_run,evaluator_version)` with `scores_json/hash`, pass, and exact reason codes. Signed capture objects, capture-set/repetition/promotion manifests, provider ledgers and cost references are `EVALUATION_VERSIONED`; restricted payloads use encrypted object references and DB-06 expiry guards while hashes/signatures/results remain. Hashes use the shared envelope. Evaluation capture never calls `ArtifactCommandService` and creates no product `artifacts` or `artifact_evidence_links`.
+
+| Sequence | Exclusive owner | Write/result |
+| ---: | --- | --- |
+| 1 | `EvaluationExecutionService` | Select case/config/repetition and request a run start; no `agent_runs` write |
+| 2 | `AgentRunRecordingService` | Insert/start the one `agent_runs` row |
+| 3 | Isolated capture runner | Return signed capture/ledger to the orchestrator; no DB/product write |
+| 4 | `AgentRunRecordingService` | Close that `agent_runs` row and reconcile terminal usage/cost |
+| 5 | `EvaluationExecutionService` | Insert owned `evaluation_results` only after the referenced run is terminal |
 
 ARCH-03 defines no `evaluation.*` or `agent.promoted.*` domain event. M3 must not invent aliases. Evaluation/promotion evidence lives in DB-04 rows, immutable manifests, release audit evidence and Git history until an approved canonical event/schema document adds a name. Artifact events remain limited to actual product artifacts. Evaluation infrastructure has no business-state transition.
 
@@ -329,7 +348,7 @@ Failure before all result rows commit produces `EvaluationFailureV1`, rejects pr
 
 ## Ordered implementation tasks
 
-- [ ] **Implement isolated candidate capture —** Input: AGENT-01 terminal/provider schemas, suite cases, exact candidate configuration, signed non-model fixture manifest, and reserved three-repetition budget. Operation: disable every non-model network/authority edge, call the exact candidate model independently three times per case, persist/sign `CandidateGenerationCaptureV1` and the complete capture-set manifest, and enforce cancellation/time/token/cost bounds. Output: exactly `case_count*3` signed captures. Test evidence: live fake-model/provider-ID, replay-rejection, missing-capture, cancel/timeout/cost/signature and no-product-authority tests. Failure behavior: fail the repetition/promotion; never reuse an output.
+- [ ] **Implement isolated candidate capture —** Input: AGENT-01 terminal/provider schemas, suite cases, exact candidate configuration, signed non-model fixture manifest, and reserved three-repetition budget. Operation: disable every non-model network/authority edge, delegate each run start/close exclusively to `AgentRunRecordingService`, call the exact candidate model independently three times per case, persist/sign `CandidateGenerationCaptureV1` and the complete capture-set manifest, and enforce cancellation/time/token/cost bounds. Output: exactly `case_count*3` signed captures. Test evidence: live fake-model/provider-ID, replay-rejection, missing-capture, cancel/timeout/cost/signature and no-product-authority tests. Failure behavior: fail the repetition/promotion; never reuse an output.
 - [ ] **Implement network-disabled deterministic scoring —** Input: signed captures, frozen labels/rubrics, and scorer versions. Operation: verify signatures/hashes, disable network, calculate the byte-exact weighted, macro-F1, ECE, citation, span, abstention, percentile, p10/p95 duration and mean/p95/max cost functions, then persist case and per-repetition summaries. Output: `EvaluationScoresV1`, three independently auditable `RepetitionSummaryV1` records, and `SuiteRunSummaryV1`. Test evidence: all normative golden vectors in independent Decimal/Fraction implementations plus threshold/tie/missing-prediction cases. Failure behavior: `SCORE_INVALID`; no promotion.
 - [ ] **Implement eight complete suites —** Input: the exact case/adversarial allocations above. Operation: create synthetic/redacted non-model fixtures, independent labels/sensitivity reviews, capture/scoring manifests, and model-network allowlist. Output: 552 versioned cases plus three candidate captures per case. Test evidence: count/tag/provenance/hash coverage, non-model zero-network proof, candidate-model call proof, and capture-set completeness. Failure behavior: affected suite cannot promote.
 - [ ] **Implement comparison and operator promotion —** Input: signed candidate/baseline capture manifests, three full repetition summaries, suite summary, dependency/authority/cost evidence. Operation: independently prove every repetition passed every component/duration/mean-p95-max-cost gate, enforce regression/stability, render operator checklist, and write immutable `PromotionManifestV1`/registry pointer only on approval. Output: one auditable eligible configuration or rejection. Test evidence: missing component/repetition, threshold equality, one-unit failure, concurrent/stale registry and tamper cases. Failure behavior: prior promotion remains.
@@ -340,14 +359,15 @@ Failure before all result rows commit produces `EvaluationFailureV1`, rejects pr
 - **Digest `test_eval_cases_expected_scores_and_manifests_use_db01_envelope`.**
 - **Capture `test_all_552_cases_generate_three_fresh_candidate_model_captures`:** exact model config, unique provider IDs, signed hashes, and no replayed output identity.
 - **Isolation `test_capture_allows_only_model_network_and_scoring_allows_no_network`:** all non-model tools are frozen fixtures and neither phase has product/state/side-effect authority.
-- **Scoring `test_macro_f1_ece_citation_span_abstention_percentiles_and_rounding_match_golden_vectors_twice`.**
+- **Scoring `test_macro_f1_ece_success_population_abstention_unicode_nfc_span_percentiles_and_rounding_match_goldens_twice`:** includes ECE `N=0`, abstention confidence NULL/exclusion, and provider byte-to-NFC-code-point conversion.
 - **Safety `test_one_hard_failure_forces_zero_case_and_rejects_promotion`.**
 - **Regression `test_candidate_cannot_trade_quality_regression_for_cost`.**
 - **Versioning `test_any_prompt_model_tool_schema_validator_change_requires_new_config_hash_and_suite`.**
 - **Promotion `test_registry_requires_capture_set_and_three_passing_full_repetition_summaries`.**
 - **Rollback `test_exact_population_two_nonoverlapping_windows_and_p95_cost_trigger_restore_prior_config`.**
 - **Authority `test_eval_and_promoted_agent_graph_has_no_state_gmail_sendgateway_or_credentials`.**
-- **Persistence `test_case_run_result_ledger_cost_and_manifest_reconcile_exactly`.**
+- **Ownership `test_evaluation_execution_delegates_agent_run_start_close_to_sole_writer`:** static/service-spy scan proves `EvaluationExecutionService` never writes `agent_runs`; sequence and failure injection preserve the run/result foreign-key order.
+- **Persistence `test_case_run_result_ledger_cost_and_manifest_reconcile_exactly`:** `AgentRunRecordingService` owns the run, `EvaluationExecutionService` owns only the result, and capture/ledger/cost/manifest hashes reconcile.
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 

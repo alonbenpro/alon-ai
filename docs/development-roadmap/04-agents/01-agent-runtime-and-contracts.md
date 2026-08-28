@@ -309,19 +309,17 @@ Task 4 must implement byte-compatible equivalents of these six strict request/re
 
 ```python
 RequestT = TypeVar("RequestT", bound=StrictAgentModel)
-ResponseT = TypeVar("ResponseT", bound=StrictAgentModel)
+ResultT = TypeVar("ResultT", bound=StrictAgentModel)
 
 class ProviderCallContextV1(StrictAgentModel):
     provider_call_id: Uuid4
     operation_version: VersionId
     deadline_at: UtcDateTime
-    timeout_ms: int = Field(ge=1, le=120_000)
 
 class ProviderResultMetaV1(StrictAgentModel):
     provider_call_id: Uuid4
-    provider_request_id: TrimmedStr | None = None
+    provider_request_id: Annotated[TrimmedStr, Field(min_length=1, max_length=200)] | None = None
     outcome: Literal["SUCCEEDED", "FAILED", "CANCELLED", "TIMEOUT"]
-    error_code: AgentErrorCode | None = None
     started_at: UtcDateTime
     finished_at: UtcDateTime
     input_tokens: int = Field(ge=0)
@@ -330,14 +328,13 @@ class ProviderResultMetaV1(StrictAgentModel):
     currency: Currency
 
     @model_validator(mode="after")
-    def validate_outcome(self) -> "ProviderResultMetaV1":
+    def validate_time(self) -> "ProviderResultMetaV1":
         if self.finished_at < self.started_at:
             raise ValueError("provider finish precedes start")
-        if (self.outcome == "SUCCEEDED") != (self.error_code is None):
-            raise ValueError("success requires no error; non-success requires error")
         return self
 
 class ProviderSuccessResponseV1(StrictAgentModel):
+    result_type: Literal["SUCCESS"]
     meta: ProviderResultMetaV1
 
     @model_validator(mode="after")
@@ -347,22 +344,32 @@ class ProviderSuccessResponseV1(StrictAgentModel):
         return self
 
 class ProviderCapabilityFailureV1(StrictAgentModel):
-    schema_version: Literal["provider.capability_failure.v1"]
+    result_type: Literal["FAILURE"]
     meta: ProviderResultMetaV1
-    safe_error_detail: TrimmedStr = Field(min_length=1, max_length=300)
+    safe_error_detail: Annotated[TrimmedStr, Field(min_length=1, max_length=300)]
     error_fingerprint: Sha256Hex
 
     @model_validator(mode="after")
-    def require_failure(self) -> "ProviderCapabilityFailureV1":
-        if self.meta.outcome == "SUCCEEDED":
-            raise ValueError("failure response cannot be SUCCEEDED")
+    def require_matching_failure(self) -> "ProviderCapabilityFailureV1":
+        error_code = getattr(self, "error_code", None)
+        if error_code is None:
+            raise ValueError("generic provider failure is abstract; use a capability-specific failure")
+        expected = (
+            "CANCELLED" if error_code == AgentErrorCode.CANCELLED
+            else "TIMEOUT" if error_code in {AgentErrorCode.MODEL_TIMEOUT, AgentErrorCode.TOOL_TIMEOUT}
+            else "FAILED"
+        )
+        if self.meta.outcome != expected:
+            raise ValueError("failure error_code and provider outcome disagree")
         return self
 
 class ModelCompleteStructuredRequestV1(StrictAgentModel):
     schema_version: Literal["provider.model_complete.request.v1"]
+    capability: Literal["model.complete_structured"]
     context: ProviderCallContextV1
+    timeout_ms: int = Field(ge=1, le=120_000)
     model_provider: VersionId
-    model_name: TrimmedStr
+    model_name: Annotated[TrimmedStr, Field(min_length=1, max_length=128)]
     model_version: VersionId
     prompt_version: VersionId
     prompt_hash: Sha256Hex
@@ -373,112 +380,239 @@ class ModelCompleteStructuredRequestV1(StrictAgentModel):
     temperature: Decimal = Field(ge=0, le=2, decimal_places=3)
     seed: int | None = None
 
+class ModelCompleteStructuredPayloadV1(StrictAgentModel):
+    output_schema_version: VersionId
+    output_payload: dict[str, object]
+
 class ModelCompleteStructuredResponseV1(ProviderSuccessResponseV1):
     schema_version: Literal["provider.model_complete.response.v1"]
-    meta: ProviderResultMetaV1
-    output_payload: dict[str, object] | None
-    output_hash: Sha256Hex | None
+    capability: Literal["model.complete_structured"]
+    payload_schema_version: Literal["provider.model_complete.payload.v1"]
+    payload: ModelCompleteStructuredPayloadV1
+    payload_hash: Sha256Hex
+
+class ModelCompleteStructuredFailureV1(ProviderCapabilityFailureV1):
+    schema_version: Literal["provider.model_complete.failure.v1"]
+    capability: Literal["model.complete_structured"]
+    error_code: Literal[
+        AgentErrorCode.DEPENDENCY_UNAVAILABLE, AgentErrorCode.MODEL_TIMEOUT,
+        AgentErrorCode.MODEL_OUTPUT_INVALID, AgentErrorCode.MODEL_REFUSAL,
+        AgentErrorCode.MODEL_BUDGET_EXHAUSTED, AgentErrorCode.COST_BUDGET_EXHAUSTED,
+        AgentErrorCode.CANCELLED, AgentErrorCode.INTERNAL_ERROR,
+    ]
+
+type ModelCompleteStructuredResultV1 = Annotated[
+    ModelCompleteStructuredResponseV1 | ModelCompleteStructuredFailureV1,
+    Field(discriminator="result_type"),
+]
 
 class EvidenceReadRequestV1(StrictAgentModel):
     schema_version: Literal["provider.evidence_read.request.v1"]
+    capability: Literal["evidence.read"]
     context: ProviderCallContextV1
+    timeout_ms: int = Field(ge=1, le=10_000)
     evidence_item_id: Uuid4
     expected_content_hash: Sha256Hex
     max_bytes: int = Field(ge=1, le=1_000_000)
     allow_restricted: bool = False
 
-class EvidenceReadResponseV1(ProviderSuccessResponseV1):
-    schema_version: Literal["provider.evidence_read.response.v1"]
-    meta: ProviderResultMetaV1
+class EvidenceReadPayloadV1(StrictAgentModel):
     evidence_item_id: Uuid4
     content_hash: Sha256Hex
-    capture_ref: TrimmedStr
-    redaction_state: Literal["RAW_RESTRICTED", "REDACTED", "PURGED"]
-    content_payload: dict[str, object] | None
+    capture_ref: Annotated[TrimmedStr, Field(min_length=1, max_length=500)]
+    redaction_state: Literal["RAW_RESTRICTED", "REDACTED"]
+    content_payload: dict[str, object]
+
+class EvidenceReadResponseV1(ProviderSuccessResponseV1):
+    schema_version: Literal["provider.evidence_read.response.v1"]
+    capability: Literal["evidence.read"]
+    payload_schema_version: Literal["provider.evidence_read.payload.v1"]
+    payload: EvidenceReadPayloadV1
+    payload_hash: Sha256Hex
+
+class EvidenceReadFailureV1(ProviderCapabilityFailureV1):
+    schema_version: Literal["provider.evidence_read.failure.v1"]
+    capability: Literal["evidence.read"]
+    error_code: Literal[
+        AgentErrorCode.DEPENDENCY_UNAVAILABLE, AgentErrorCode.TOOL_TIMEOUT,
+        AgentErrorCode.TOOL_RESULT_INVALID, AgentErrorCode.EVIDENCE_MISSING,
+        AgentErrorCode.CANCELLED, AgentErrorCode.INTERNAL_ERROR,
+    ]
+
+type EvidenceReadResultV1 = Annotated[
+    EvidenceReadResponseV1 | EvidenceReadFailureV1,
+    Field(discriminator="result_type"),
+]
 
 class SearchResultItemV1(StrictAgentModel):
-    source_uri: TrimmedStr
-    title: TrimmedStr
-    snippet: TrimmedStr
+    source_uri: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
+    title: Annotated[TrimmedStr, Field(min_length=1, max_length=500)]
+    snippet: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
     evidence_item_id: Uuid4
     content_hash: Sha256Hex
 
 class SearchQueryRequestV1(StrictAgentModel):
     schema_version: Literal["provider.search_query.request.v1"]
+    capability: Literal["search.query"]
     context: ProviderCallContextV1
-    query: TrimmedStr
+    timeout_ms: int = Field(ge=1, le=20_000)
+    query: Annotated[TrimmedStr, Field(min_length=1, max_length=500)]
     allowed_domains: tuple[TrimmedStr, ...] = Field(min_length=1, max_length=50)
     blocked_domains: tuple[TrimmedStr, ...] = Field(max_length=50)
     max_results: int = Field(ge=1, le=20)
     as_of: UtcDateTime
 
+class SearchQueryPayloadV1(StrictAgentModel):
+    results: tuple[SearchResultItemV1, ...] = Field(max_length=20)
+
 class SearchQueryResponseV1(ProviderSuccessResponseV1):
     schema_version: Literal["provider.search_query.response.v1"]
-    meta: ProviderResultMetaV1
-    results: tuple[SearchResultItemV1, ...] = Field(max_length=20)
-    result_set_hash: Sha256Hex | None
+    capability: Literal["search.query"]
+    payload_schema_version: Literal["provider.search_query.payload.v1"]
+    payload: SearchQueryPayloadV1
+    payload_hash: Sha256Hex
+
+class SearchQueryFailureV1(ProviderCapabilityFailureV1):
+    schema_version: Literal["provider.search_query.failure.v1"]
+    capability: Literal["search.query"]
+    error_code: Literal[
+        AgentErrorCode.DEPENDENCY_UNAVAILABLE, AgentErrorCode.TOOL_TIMEOUT,
+        AgentErrorCode.TOOL_RESULT_INVALID, AgentErrorCode.TOOL_BUDGET_EXHAUSTED,
+        AgentErrorCode.COST_BUDGET_EXHAUSTED, AgentErrorCode.CANCELLED,
+        AgentErrorCode.INTERNAL_ERROR,
+    ]
+
+type SearchQueryResultV1 = Annotated[
+    SearchQueryResponseV1 | SearchQueryFailureV1,
+    Field(discriminator="result_type"),
+]
 
 class PageExtractRequestV1(StrictAgentModel):
     schema_version: Literal["provider.page_extract.request.v1"]
+    capability: Literal["page.extract"]
     context: ProviderCallContextV1
-    source_uri: TrimmedStr
+    timeout_ms: int = Field(ge=1, le=30_000)
+    source_uri: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
     allowed_domains: tuple[TrimmedStr, ...] = Field(min_length=1, max_length=50)
     max_response_bytes: int = Field(ge=1, le=5_000_000)
     allowed_mime_types: tuple[TrimmedStr, ...] = Field(min_length=1, max_length=20)
 
-class PageExtractResponseV1(ProviderSuccessResponseV1):
-    schema_version: Literal["provider.page_extract.response.v1"]
-    meta: ProviderResultMetaV1
+class PageExtractPayloadV1(StrictAgentModel):
     evidence_item_id: Uuid4
-    source_uri: TrimmedStr
+    source_uri: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
     content_hash: Sha256Hex
-    capture_ref: TrimmedStr
-    mime_type: TrimmedStr
-    language: TrimmedStr
+    capture_ref: Annotated[TrimmedStr, Field(min_length=1, max_length=500)]
+    mime_type: Annotated[TrimmedStr, Field(min_length=1, max_length=200)]
+    language: Annotated[TrimmedStr, Field(min_length=2, max_length=35)]
     extracted_text_hash: Sha256Hex
 
+class PageExtractResponseV1(ProviderSuccessResponseV1):
+    schema_version: Literal["provider.page_extract.response.v1"]
+    capability: Literal["page.extract"]
+    payload_schema_version: Literal["provider.page_extract.payload.v1"]
+    payload: PageExtractPayloadV1
+    payload_hash: Sha256Hex
+
+class PageExtractFailureV1(ProviderCapabilityFailureV1):
+    schema_version: Literal["provider.page_extract.failure.v1"]
+    capability: Literal["page.extract"]
+    error_code: Literal[
+        AgentErrorCode.DEPENDENCY_UNAVAILABLE, AgentErrorCode.TOOL_TIMEOUT,
+        AgentErrorCode.TOOL_RESULT_INVALID, AgentErrorCode.TOOL_BUDGET_EXHAUSTED,
+        AgentErrorCode.COST_BUDGET_EXHAUSTED, AgentErrorCode.CANCELLED,
+        AgentErrorCode.INTERNAL_ERROR, AgentErrorCode.PROMPT_INJECTION_DETECTED,
+    ]
+
+type PageExtractResultV1 = Annotated[
+    PageExtractResponseV1 | PageExtractFailureV1,
+    Field(discriminator="result_type"),
+]
+
 class BusinessCandidateV1(StrictAgentModel):
-    canonical_name: TrimmedStr
-    canonical_domain: TrimmedStr | None
+    canonical_name: Annotated[TrimmedStr, Field(min_length=1, max_length=300)]
+    canonical_domain: Annotated[TrimmedStr, Field(min_length=1, max_length=253)] | None
     country_code: Annotated[str, BeforeValidator(_trim_string), Field(pattern=r"^[A-Z]{2}$")]
     business_identity_key: Sha256Hex
     evidence_item_ids: tuple[Uuid4, ...] = Field(min_length=1, max_length=10)
 
 class BusinessSearchRequestV1(StrictAgentModel):
     schema_version: Literal["provider.business_search.request.v1"]
+    capability: Literal["business.search"]
     context: ProviderCallContextV1
-    canonical_name: TrimmedStr
-    canonical_domain: TrimmedStr | None
+    timeout_ms: int = Field(ge=1, le=20_000)
+    canonical_name: Annotated[TrimmedStr, Field(min_length=1, max_length=300)]
+    canonical_domain: Annotated[TrimmedStr, Field(min_length=1, max_length=253)] | None
     country_code: Annotated[str, BeforeValidator(_trim_string), Field(pattern=r"^[A-Z]{2}$")]
     max_results: int = Field(ge=1, le=10)
 
+class BusinessSearchPayloadV1(StrictAgentModel):
+    candidates: tuple[BusinessCandidateV1, ...] = Field(max_length=10)
+
 class BusinessSearchResponseV1(ProviderSuccessResponseV1):
     schema_version: Literal["provider.business_search.response.v1"]
-    meta: ProviderResultMetaV1
-    candidates: tuple[BusinessCandidateV1, ...] = Field(max_length=10)
-    candidate_set_hash: Sha256Hex | None
+    capability: Literal["business.search"]
+    payload_schema_version: Literal["provider.business_search.payload.v1"]
+    payload: BusinessSearchPayloadV1
+    payload_hash: Sha256Hex
+
+class BusinessSearchFailureV1(ProviderCapabilityFailureV1):
+    schema_version: Literal["provider.business_search.failure.v1"]
+    capability: Literal["business.search"]
+    error_code: Literal[
+        AgentErrorCode.DEPENDENCY_UNAVAILABLE, AgentErrorCode.TOOL_TIMEOUT,
+        AgentErrorCode.TOOL_RESULT_INVALID, AgentErrorCode.TOOL_BUDGET_EXHAUSTED,
+        AgentErrorCode.COST_BUDGET_EXHAUSTED, AgentErrorCode.CANCELLED,
+        AgentErrorCode.INTERNAL_ERROR,
+    ]
+
+type BusinessSearchResultV1 = Annotated[
+    BusinessSearchResponseV1 | BusinessSearchFailureV1,
+    Field(discriminator="result_type"),
+]
 
 class BusinessFactResponseV1(StrictAgentModel):
     fact_key: VersionId
-    value: TrimmedStr
+    value: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
     evidence_item_ids: tuple[Uuid4, ...] = Field(min_length=1, max_length=10)
     observed_at: UtcDateTime | None = None
 
 class BusinessDetailsRequestV1(StrictAgentModel):
     schema_version: Literal["provider.business_details.request.v1"]
+    capability: Literal["business.details"]
     context: ProviderCallContextV1
+    timeout_ms: int = Field(ge=1, le=15_000)
     business_identity_key: Sha256Hex
     requested_fact_keys: tuple[VersionId, ...] = Field(min_length=1, max_length=20)
     allowed_domains: tuple[TrimmedStr, ...] = Field(min_length=1, max_length=20)
 
-class BusinessDetailsResponseV1(ProviderSuccessResponseV1):
-    schema_version: Literal["provider.business_details.response.v1"]
-    meta: ProviderResultMetaV1
+class BusinessDetailsPayloadV1(StrictAgentModel):
     business_identity_key: Sha256Hex
     facts: tuple[BusinessFactResponseV1, ...] = Field(max_length=20)
-    contradictions: tuple[TrimmedStr, ...] = Field(max_length=10)
+    contradictions: tuple[Annotated[TrimmedStr, Field(min_length=1, max_length=500)], ...] = Field(max_length=10)
 
-class CapabilityFixtureV1(StrictAgentModel, Generic[RequestT, ResponseT]):
+class BusinessDetailsResponseV1(ProviderSuccessResponseV1):
+    schema_version: Literal["provider.business_details.response.v1"]
+    capability: Literal["business.details"]
+    payload_schema_version: Literal["provider.business_details.payload.v1"]
+    payload: BusinessDetailsPayloadV1
+    payload_hash: Sha256Hex
+
+class BusinessDetailsFailureV1(ProviderCapabilityFailureV1):
+    schema_version: Literal["provider.business_details.failure.v1"]
+    capability: Literal["business.details"]
+    error_code: Literal[
+        AgentErrorCode.DEPENDENCY_UNAVAILABLE, AgentErrorCode.TOOL_TIMEOUT,
+        AgentErrorCode.TOOL_RESULT_INVALID, AgentErrorCode.TOOL_BUDGET_EXHAUSTED,
+        AgentErrorCode.COST_BUDGET_EXHAUSTED, AgentErrorCode.CANCELLED,
+        AgentErrorCode.INTERNAL_ERROR, AgentErrorCode.EVIDENCE_CONFLICT,
+    ]
+
+type BusinessDetailsResultV1 = Annotated[
+    BusinessDetailsResponseV1 | BusinessDetailsFailureV1,
+    Field(discriminator="result_type"),
+]
+
+class CapabilityFixtureV1(StrictAgentModel, Generic[RequestT, ResultT]):
     schema_version: Literal["provider.capability_fixture.v1"]
     fixture_id: Uuid4
     capability: Literal[
@@ -487,28 +621,28 @@ class CapabilityFixtureV1(StrictAgentModel, Generic[RequestT, ResponseT]):
     ]
     request: RequestT
     request_hash: Sha256Hex
-    response: ResponseT
+    response: ResultT
     response_hash: Sha256Hex
     expected_ledger_hash: Sha256Hex
     captured_at: UtcDateTime
     fixture_content_hash: Sha256Hex
 
-class ModelCompleteStructuredFixtureV1(CapabilityFixtureV1[ModelCompleteStructuredRequestV1, ModelCompleteStructuredResponseV1 | ProviderCapabilityFailureV1]):
+class ModelCompleteStructuredFixtureV1(CapabilityFixtureV1[ModelCompleteStructuredRequestV1, ModelCompleteStructuredResultV1]):
     capability: Literal["model.complete_structured"]
 
-class EvidenceReadFixtureV1(CapabilityFixtureV1[EvidenceReadRequestV1, EvidenceReadResponseV1 | ProviderCapabilityFailureV1]):
+class EvidenceReadFixtureV1(CapabilityFixtureV1[EvidenceReadRequestV1, EvidenceReadResultV1]):
     capability: Literal["evidence.read"]
 
-class SearchQueryFixtureV1(CapabilityFixtureV1[SearchQueryRequestV1, SearchQueryResponseV1 | ProviderCapabilityFailureV1]):
+class SearchQueryFixtureV1(CapabilityFixtureV1[SearchQueryRequestV1, SearchQueryResultV1]):
     capability: Literal["search.query"]
 
-class PageExtractFixtureV1(CapabilityFixtureV1[PageExtractRequestV1, PageExtractResponseV1 | ProviderCapabilityFailureV1]):
+class PageExtractFixtureV1(CapabilityFixtureV1[PageExtractRequestV1, PageExtractResultV1]):
     capability: Literal["page.extract"]
 
-class BusinessSearchFixtureV1(CapabilityFixtureV1[BusinessSearchRequestV1, BusinessSearchResponseV1 | ProviderCapabilityFailureV1]):
+class BusinessSearchFixtureV1(CapabilityFixtureV1[BusinessSearchRequestV1, BusinessSearchResultV1]):
     capability: Literal["business.search"]
 
-class BusinessDetailsFixtureV1(CapabilityFixtureV1[BusinessDetailsRequestV1, BusinessDetailsResponseV1 | ProviderCapabilityFailureV1]):
+class BusinessDetailsFixtureV1(CapabilityFixtureV1[BusinessDetailsRequestV1, BusinessDetailsResultV1]):
     capability: Literal["business.details"]
 ```
 
@@ -521,7 +655,7 @@ class BusinessDetailsFixtureV1(CapabilityFixtureV1[BusinessDetailsRequestV1, Bus
 | `business.search` | `8_000/20_000 ms` | same tool/budget errors as search | candidate-set hash and business/evidence identities; no contacts |
 | `business.details` | `6_000/15_000 ms` | same tool/budget errors as search plus `EVIDENCE_CONFLICT` | exact business identity, requested fact keys and evidence IDs/hashes |
 
-A response with `SUCCEEDED` has `error_code=NULL`; every other outcome carries one allowed enum value. `ProviderUseLedgerEntryV1` must byte-match the request/response hashes and `ProviderResultMetaV1`; fixture validation recomputes all three DB-01 envelopes. Task 4 cannot substitute provider-native strings for the shared taxonomy, return opaque SDK objects, omit cost/usage, or expose mutation/credential authority.
+Each required request `timeout_ms` field encodes the `[1,max]` bound in its Pydantic schema; the table default is selected by deterministic dependency composition but never widens the typed maximum. Each `*ResultV1` is an exact `result_type`-discriminated union. `SUCCESS` requires the capability-specific typed `payload`, its literal `payload_schema_version`, and `payload_hash`, computed with the DB-01 RFC 8785/SHA-256 envelope over that exact payload; no success payload/hash is optional. `FAILURE` has no payload/hash fields, carries only that capability’s typed `AgentErrorCode` allowlist, and its provider outcome must match failure, timeout, or cancellation. Strict extra-forbid plus the union discriminator rejects success fields on failures, failure fields on successes, and cross-capability results. `ProviderUseLedgerEntryV1` must byte-match the request/result hashes, failure code, and `ProviderResultMetaV1`; fixture validation recomputes all three DB-01 envelopes. Task 4 cannot substitute provider-native strings for the shared taxonomy, return opaque SDK objects, omit cost/usage, or expose mutation/credential authority.
 
 ### Exact error taxonomy and finite execution
 
@@ -556,8 +690,9 @@ Each provider ledger item maps to one idempotent `cost_entries` row (`provider`,
 - **Cancellation `test_cancel_before_after_each_provider_boundary_persists_no_partial_artifact`:** finite termination.
 - **Persistence `test_success_run_artifact_event_evidence_and_cost_reconcile`:** IDs, hashes, versions, correlation/causation, counts.
 - **Ownership `test_artifact_command_service_cannot_write_evidence_links_or_validations`:** DB-04 owner boundaries and atomic validator link/validation/event transaction.
+- **Run ownership `test_agent_run_recording_service_is_the_only_agent_runs_writer_including_evaluations`:** static imports/service spies and start/close failure injection prove every runtime/evaluation caller delegates and never writes the table.
 - **Terminal union `test_every_specialist_result_is_exactly_success_abstain_or_failed`:** discriminator, config, usage, ledger, and branch payload reconcile.
-- **Capability contracts `test_six_provider_request_response_fixture_families_are_wire_exact`:** schema/hash/timeout/error/ledger parity.
+- **Capability contracts `test_six_provider_result_unions_are_wire_exact_and_reject_invalid_branches`:** for all six families, construct success/failure and reject missing payload/hash/schema identity, extra or opposite-branch fields, illegal capability error, mismatched discriminator/outcome, and `timeout_ms=0`/one above the typed maximum; also prove fixture/request/result/ledger digest parity.
 - **Security `test_agent_telemetry_and_failure_artifact_exclude_chain_of_thought_secrets_and_pii`:** allowlist scan.
 
 ## Security, privacy, compliance, idempotency, observability, and cost

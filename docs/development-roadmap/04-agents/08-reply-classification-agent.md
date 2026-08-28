@@ -84,7 +84,7 @@ ReplyClassificationTerminalResultV1: TypeAlias = AgentTerminalResultV1[
 
 ```
 
-Spans are half-open, ordered, non-overlapping, within `body_text`, and hashed from the exact UTF-8 substring with `digest.reply_span.v1`. Primary cannot appear in secondary; `UNCERTAIN` has no secondary classes, confidence `<=0.50`, and review `HIGH`/`URGENT`. `UNSUBSCRIBE` and `BOUNCE` always use `URGENT`. `ReplyClassificationAbstentionV1` reasons are `EMPTY_AFTER_SANITIZATION`, `UNSUPPORTED_LANGUAGE`, `MALFORMED_CONTENT`, `CONFLICTING_SIGNALS`, or `ATTACHMENT_REQUIRED`; DB confidence is `NULL`. Execution failure uses AGENT-01 taxonomy.
+`body_text` is Unicode NFC-normalized before indexing. Spans are zero-based, half-open Unicode code-point indexes over that normalized text, never UTF-8 byte offsets; they are ordered, non-overlapping, in bounds, and hashed from the UTF-8 encoding of the exact NFC substring with `digest.reply_span.v1`. A provider returning byte offsets must deterministically convert them to NFC code-point indexes before `ReplyClassificationV1` validation. Primary cannot appear in secondary; `UNCERTAIN` has no secondary classes, confidence `<=0.50`, and review `HIGH`/`URGENT`. `UNSUBSCRIBE` and `BOUNCE` always use `URGENT`. `ReplyClassificationAbstentionV1` reasons are `EMPTY_AFTER_SANITIZATION`, `UNSUPPORTED_LANGUAGE`, `MALFORMED_CONTENT`, `CONFLICTING_SIGNALS`, or `ATTACHMENT_REQUIRED`; DB confidence is `NULL`. Execution failure uses AGENT-01 taxonomy.
 
 `ReplyClassificationTerminalResultV1` is the only execution return type. Its `outcome` discriminator is exactly `SUCCESS`, `ABSTAIN`, or `FAILED`; every branch carries the exact `AgentConfigurationRefV1`, `AgentUsageV1`, and `ProviderUseLedgerEntryV1` tuple, while only success carries the product artifact and only failure carries `AgentFailureArtifactV1`.
 
@@ -119,7 +119,7 @@ Operator review is mandatory for `POSITIVE`, `QUESTION`, `OBJECTION`, `OTHER`, `
 
 ## Test strategy
 
-- **Schema `test_reply_models_enforce_taxonomy_confidence_priority_and_spans`.**
+- **Schema `test_reply_models_enforce_taxonomy_confidence_priority_and_nfc_code_point_spans`:** decomposed/composed accents, Hebrew, emoji, and provider byte offsets prove conversion before validation; unconverted indexes/hash mismatch fail.
 - **Safety `test_unsubscribe_and_bounce_mandatory_signals_cannot_be_overridden`.**
 - **Adversarial `test_reply_text_cannot_request_tools_response_suppression_or_send`.**
 - **Privacy `test_reply_body_and_spans_never_appear_in_logs_events_or_failure`.**
