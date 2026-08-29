@@ -119,7 +119,7 @@ Loading skeletons are `aria-hidden` with one status message. Empty, stale, error
 - **Recovery `test_recovery_overview_renders_exact_five_kinds_and_only_server_allowed_commands`:** unknown blocks.
 - **Ambiguity `test_reconcile_never_calls_send_and_cross_mailbox_evidence_stays_incident`:** network/authority proof.
 - **Kill `test_keyboard_disable_commits_once_and_does_not_claim_runtime_ack`:** both controls independently.
-- **Session `test_oidc_cookie_rotation_expiry_logout_reauth_csrf_and_exact_google_callback_union_have_no_js_token`:** configured operator only; required `iss`, both allowed issuer spellings, every allowed optional parameter, missing/duplicate/extra/cross-arm fixtures.
+- **Session `test_oidc_cookie_rotation_expiry_logout_reauth_csrf_and_exact_google_callback_union_have_no_js_token`:** configured operator only; callback `iss=https://accounts.google.com` passes and legacy callback `iss=accounts.google.com` fails; both spellings pass only for the separately verified ID-token issuer fixture; every allowed optional parameter plus missing/duplicate/extra/cross-arm fixtures.
 - **Incident catalog `test_incident_ui_rejects_unknown_or_cross_version_trigger_runbook_alert_resolution_and_repair_kind`:** no generic fallback or mutation.
 - **OAuth `test_ui_never_observes_code_state_token_and_connected_requires_committed_active_result`:** privacy/saga matrix.
 - **Errors `test_every_problem_code_has_focus_safe_copy_and_no_raw_payload`:** exact status mapping.

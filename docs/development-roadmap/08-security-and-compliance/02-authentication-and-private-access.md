@@ -83,7 +83,7 @@ Lost browser/session uses normal OIDC. Lost device invokes the local authenticat
 
 ## Test strategy
 
-- **Protocol `test_oidc_callback_requires_exact_google_parameter_arm_state_nonce_pkce_issuer_set_audience_time_and_subject`:** official success/error fixtures require `iss`; both exact issuer spellings pass; extra/duplicate/cross-arm/unknown values fail before exchange/session.
+- **Protocol `test_oidc_callback_and_id_token_issuers_are_validated_separately`:** official success/error fixtures require callback `iss` byte-equal to `https://accounts.google.com`; legacy callback `accounts.google.com` and every other/missing/duplicate issuer fail before exchange; only the later verified ID-token fixture accepts both exact issuer spellings; extra/duplicate/cross-arm/unknown values fail before exchange/session.
 - **Cookie `test_session_and_flow_cookie_attributes_match_backend02_byte_for_byte`.**
 - **Session `test_rotation_idle_absolute_overlap_logout_concurrency_and_epoch_revocation`.**
 - **CSRF `test_every_unsafe_operation_rejects_bad_origin_fetch_metadata_intent_or_content_type_before_dispatch`.**
