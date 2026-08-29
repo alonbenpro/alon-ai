@@ -49,7 +49,7 @@ Profile and fixture paths are exactly `tests/profiles/task7/PROFILE.v1.json` and
 
 | Command ID | Owner / lane | Profile and exact invocation substitution | Required artifact |
 | --- | --- | --- | --- |
-| `T7-DOC-CONTRACT` | operator / PR deterministic | `DOCS_LOCKED`; substitute `COMMAND_ID=T7-DOC-CONTRACT`, `PROFILE=DOCS_LOCKED` | source-anchor/link/terminology/count/command equality plus Bash/cwd/symlink/root/commit/profile-negative JSON |
+| `T7-DOC-CONTRACT` | operator / PR deterministic | `DOCS_LOCKED`; substitute `COMMAND_ID=T7-DOC-CONTRACT`, `PROFILE=DOCS_LOCKED` | source-anchor/link/terminology/count/command equality, sole-B2-authority/head/provider-survival equality, plus Bash/cwd/symlink/root/commit/profile-negative JSON |
 | `T7-CONTRACT-INTEGRATION` | operator / PR deterministic | `PG_EPHEMERAL`; `T7-CONTRACT-INTEGRATION`, `PG_EPHEMERAL` | catalog/OpenAPI/policy/incident JUnit plus hashes |
 | `T7-WORKFLOW-RECOVERY` | operator / scheduled recovery | `DBOS_EPHEMERAL`; `T7-WORKFLOW-RECOVERY`, `DBOS_EPHEMERAL` | finite-state/kill-point/version/Temporal evidence |
 | `T7-GMAIL-OFFLINE` | operator / PR deterministic | `GMAIL_RECORDED`; `T7-GMAIL-OFFLINE`, `GMAIL_RECORDED` | union/ambiguity/reconciliation/OAuth-saga JUnit |
@@ -67,9 +67,9 @@ Profile and fixture paths are exactly `tests/profiles/task7/PROFILE.v1.json` and
 | `T7-PUBLIC-EDGE-VERIFY` | operator / M9 public boundary | `PUBLIC_M9_READONLY`; `T7-PUBLIC-EDGE-VERIFY`, `PUBLIC_M9_READONLY` | exact two-route edge/DNS/TLS/WAF/abuse evidence |
 | `T7-BACKUP-PRIMARY` | operator / scheduled backup | `BACKUP_REPO1`; `T7-BACKUP-PRIMARY`, `BACKUP_REPO1` | pgBackRest repo-1 check/backup/info and immutable receipt |
 | `T7-BACKUP-DR` | operator / scheduled backup | `BACKUP_REPO2_B2`; `T7-BACKUP-DR`, `BACKUP_REPO2_B2` | pgBackRest repo-2 check/backup/info/Object-Lock receipt |
-| `T7-TOMBSTONE-PURGE` | retention owner / manual destructive | `RETENTION_PRODUCTION`; destructive form, `T7-TOMBSTONE-PURGE`, `RETENTION_PRODUCTION` | PREPARED receipts, irreversible DB authorization/fences, COMMITTED marker/receipts/head, applied transaction/watermark/ack |
-| `T7-RESTORE-PRIMARY` | operator / quarterly destructive drill | `RESTORE_ISOLATED_REPO1`; destructive form, `T7-RESTORE-PRIMARY`, `RESTORE_ISOLATED_REPO1` | isolated PITR, tombstone replay, validations and destroy receipt |
-| `T7-RESTORE-DR` | operator / quarterly destructive drill | `RESTORE_ISOLATED_REPO2`; destructive form, `T7-RESTORE-DR`, `RESTORE_ISOLATED_REPO2` | off-Google bootstrap/decrypt/PITR/replay and destroy receipt |
+| `T7-TOMBSTONE-PURGE` | retention owner / manual destructive | `RETENTION_PRODUCTION`; destructive form, `T7-TOMBSTONE-PURGE`, `RETENTION_PRODUCTION` | PREPARED receipts, irreversible DB authorization/fences, GCS marker mirror/receipt, B2 certificate/read receipt/sole head CAS receipt, applied transaction/watermark/ack |
+| `T7-RESTORE-PRIMARY` | operator / quarterly destructive drill | `RESTORE_ISOLATED_REPO1`; destructive form, `T7-RESTORE-PRIMARY`, `RESTORE_ISOLATED_REPO1` | repo-1 PITR, independent B2 authority-head/certificate replay, validations and destroy receipt |
+| `T7-RESTORE-DR` | operator / quarterly destructive drill | `RESTORE_ISOLATED_REPO2`; destructive form, `T7-RESTORE-DR`, `RESTORE_ISOLATED_REPO2` | off-Google bootstrap/decrypt/PITR plus sole B2 authority-head/certificate replay and destroy receipt |
 | `T7-MONITOR-VERIFY` | operator / scheduled monitoring | `MONITOR_SYNTHETIC`; `T7-MONITOR-VERIFY`, `MONITOR_SYNTHETIC` | collector/sink/policy/dashboard/receipt matrix |
 | `T7-CRITICAL-PAGE-VERIFY` | operator / daily paging synthetic | `CRITICAL_E2E`; `T7-CRITICAL-PAGE-VERIFY`, `CRITICAL_E2E` | PagerDuty ack and independent watchdog receipts |
 | `T7-DR-SCENARIO` | operator / quarterly DR destructive | `DR_ISOLATED`; destructive form, `T7-DR-SCENARIO`, `DR_ISOLATED` | exact scenario-matrix result, timelines, hashes and abort/escalation |
