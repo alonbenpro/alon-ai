@@ -18,7 +18,7 @@ The hard constraint is reputational safety: no later feature, attractive demo, o
 
 ## Current repository truth
 
-As of 2026-08-28, the repository implements a small foundation:
+As of 2026-08-29, the repository implements a small foundation:
 
 - a FastAPI application with `/health/live` and PostgreSQL-backed `/health/ready`;
 - request correlation and structured logging with secret-safe failure output;
@@ -29,7 +29,7 @@ As of 2026-08-28, the repository implements a small foundation:
 - a Next.js readiness page using generated OpenAPI types; and
 - Docker Compose and CI foundation checks.
 
-The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail history sync, product data, agents, provider adapters, operator authentication, experiment controls, public unsubscribe routes/ingress, backups, private deployment, production monitoring, real users, or real sends. Every reference below to those capabilities describes planned work until its milestone retains passing evidence.
+The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail history sync, product data, agents, provider adapters, operator authentication, experiment controls, public unsubscribe routes/ingress, backups, private deployment, production monitoring, real users, or real sends. Every reference below to those capabilities describes planned work until its milestone retains passing evidence. The roadmap now contains the full 77-file M0-M9 documentation manifest, but documentation completeness is not implementation readiness; the audited blockers below remain explicit final-review work.
 
 ## How to execute this roadmap
 
@@ -54,7 +54,7 @@ M1 may create only the smallest disposable schema needed to run DBOS production 
 | M6 | Operator-owned inboxes prove controlled Gmail sending, reconciliation, and reply sync | Kill/restart tests, suppression, rate limits, and audit evidence pass |
 | M7 | The dashboard supports experiment control, approvals, funnel analysis, and decisions | Operator can run and diagnose a complete controlled experiment |
 | M8 | Private deployment, monitoring, encrypted backups, and restore drills are proven | Fresh-server restore and incident exercises pass |
-| M9 | The first real experiment runs with bounded authority | Scale/revise/kill decision is supported by recorded evidence |
+| M9 | One consent-only real experiment runs for one offer/campaign/mailbox/policy set, at most 5 recipients/day and 10 total, one manually approved initial message each and zero follow-ups | Every attempt/signal/cost is reconciled and a recorded `SCALE`, `REVISE`, `KILL`, or `INCONCLUSIVE` decision respects the pre-registered rule |
 
 No later milestone may be used to justify skipping an earlier exit gate.
 
@@ -80,7 +80,10 @@ flowchart LR
 | Establish trustworthy records | M2-M3 | Can deterministic state and typed artifacts be reproduced, constrained, and evaluated offline? | Fix schema/contracts/evals before integrating workflows. |
 | Produce value without side effects | M4-M5 | Can the system generate reviewable offers, evidence, and qualified leads without sending? | Revise the product loop or stop; Gmail does not rescue weak evidence. |
 | Earn controlled side effects | M6-M7 | Can test inboxes and the operator UI expose, stop, reconcile, and explain every action? | Disable sending and return to the failed gate. |
-| Operate and learn | M8-M9 | Can one operator restore the service and make a scale/revise/kill decision from retained evidence? | Restore or stop the experiment; never infer success from missing telemetry. |
+| Operate privately | M8 | Can one operator privately deploy, observe, roll back and restore the exact system with current AWS-witness and incident evidence? | Keep controls/public off and return to the failed release/recovery gate. |
+| Learn from one real cohort | M9 | Does one consent-only, manually approved, capped experiment retain every legal/recipient/public-ingress/send/signal/cost fact and support an honest decision? | Stop, suppress/reconcile, and return to the failed gate; underpowered evidence is `INCONCLUSIVE`. |
+
+M1 and M6 are engineering safety gates. M8 is a separate infrastructure/recovery gate. M9 adds legal, recipient-specific affirmative-consent, campaign, mailbox, disclosure, Google-policy and scanner-safe public-ingress evidence. Every applicable gate is necessary and no gate, control, approval, agent promotion, release or autonomy level is sufficient by itself to authorize a final `SEND`.
 
 ## Selected agent and durable-workflow stack
 
@@ -207,6 +210,17 @@ The milestone column indicates the first gate that needs the file; later gates m
 | `12-launch-and-operations/04-earned-autonomy.md` | M9 | Evidence-based authority ladder |
 | `12-launch-and-operations/05-maintenance-and-upgrade-policy.md` | M8 | Safe dependency/provider/model evolution |
 
+## Launch promotion ladder
+
+| Promotion phase | Entry boundary | Execution envelope | Exit and downstream limit |
+| --- | --- | --- | --- |
+| M6 test-inbox pilot | passing M0-M5/M1 plus exact M6 offline contracts, one isolated project/mailbox and one-to-five operator-controlled aliases | at most 5 messages per rolling 24 hours and 20 total; one fresh approval per message; `TEST_INBOX_SENDING` only; product/public off | signed M6 technical record; no recipient/legal authority |
+| M8 controlled internal stack | current M0-M7, signed release/private target, real AWS S3 `eu-central-1` acceptance, backup/restore/alert/DR entry | seven complete unchanged 24-hour windows, at least 20 and at most 40 synthetic/internal runs; zero Gmail sends, real recipients and public operations | signed M8 operational record; only M9 entry assembly becomes eligible |
+| M9 first real experiment | current M1/M6/M8 plus one offer/campaign/mailbox/legal-policy set, one-to-ten consented recipients and exact 64-private/2-public evidence | at most 5 sends per rolling 24 hours and 10 total; one manually approved initial message per recipient; zero follow-ups; 14-day reply window | signed decision; no automatic scaling or cap increase |
+| earned autonomy | operated internal populations under exact immutable versions | finite `EA0_OPERATOR_STARTED` through `EA3_INTERNAL_WORKFLOW_SCHEDULED`; only research, typed artifacts, deterministic evaluation and no-send WF-02/03/04 scheduling | capability-specific internal eligibility; every Gmail/approval/control/legal/credential/delete/restore/public action remains forbidden |
+
+Every phase uses signed immutable entry/exit evidence, exact caps, immediate abort and demotion, rollback, retained artifacts and a fresh re-entry record. Test/internal resources never become consent, legal, real-user or real-recipient evidence.
+
 ## Planned dependency rules
 
 - FastAPI owns business behavior and the OpenAPI contract; Next.js is not a second backend.
@@ -232,6 +246,7 @@ The milestone column indicates the first gate that needs the file; later gates m
 | Microservices, Kubernetes, Kafka, Redis/Celery, or generalized event platforms | After M8 telemetry proves the modular monolith is constrained | Measured scaling or isolation failure |
 | Vector database or generalized knowledge platform | After retrieval evaluations beat simpler PostgreSQL/text approaches | Versioned benchmark and cost justification |
 | Autonomous agent loops or direct agent side effects | Never under this roadmap | Finite runs and deterministic authority are permanent boundaries |
+| Automated outreach follow-ups, automatic cap ramps, autonomous campaign approval or experiment scaling | Never under this roadmap | Every real message and authority increase remains a separate operator/legal/deterministic decision |
 | Broad enrichment-provider portfolio | After M5 cannot meet qualification gates with primary evidence | Recorded failure trace and replacement scorecard |
 | Polished marketing site or public sign-up | After M9 supports a repeatable value proposition | Real experiment evidence and an operational support plan |
 
@@ -259,9 +274,23 @@ Files may link to repeated global constraints here, but task-specific requiremen
 - [ ] **When a planned name changes —** Input: approved architecture decision. Operation: change the canonical name across all roadmap files and contracts. Output: one consistent vocabulary. Test evidence: repository-wide exact-name scan. Failure behavior: reject the rename until all consumers are identified.
 - [ ] **Before any production-readiness claim —** Input: M8/M9 evidence. Operation: compare the claim to retained restore, incident, send, and experiment artifacts. Output: scoped claim with evidence links. Test evidence: independent evidence-manifest review. Failure behavior: use planned or unproven language.
 
+## Audited blockers for final review
+
+The Task 8 audit found the following pre-existing issues outside its seven-file edit authorization. None may be silently treated as passed; LAUNCH-02/03/04 entry rejects while an applicable contract remains unresolved.
+
+1. `02-database/06-migrations-seeding-and-retention.md` requires operator confirmation for purge but does not freeze the deferred fail-closed manual-review SLA; retention implementation must not invent the timeout/escalation rule.
+2. `04-agents/04-market-research-agent.md` defines `MarketEvidenceArtifactV1.evidence_gaps` with `min_length=1`, conflicting with the deferred empty-tuple case; the artifact contract and fixtures need one canonical ruling before promotion.
+3. `05-providers/06-enrichment-provider.md` still contains the literal interpolation marker `#{marker}`; `T7-DOC-CONTRACT` must reject it until removed by an authorized upstream fix.
+4. `07-frontend/07-message-and-reply-timeline.md` names `test_message_page_exhaustively_renders_all_fourteen_states`, while the canonical `MessageState` set contains 13 values; the test name must match the set without changing the set.
+5. `08-security-and-compliance/02-authentication-and-private-access.md` classifies minimized terminated session storage as `SAFETY_LONG`, while `08-security-and-compliance/06-data-privacy-and-retention.md` specifies terminated session detail for 30 days. Session prune/backup/restore acceptance fails closed until one authoritative duration is chosen.
+6. The ignored historical Task 6 report retains obsolete overstatements from superseded review rounds, including old API/count/closure claims; it is not canonical evidence and requires report-history correction or an explicit superseded-results ledger in final review.
+7. Task 7 did not produce a fresh local PostgreSQL 18/Docker run. [GitHub Actions run 33179438858](https://github.com/alonbenpro/alon-ai/actions/runs/33179438858) at `8081008d13adfc7e8a09ee104e2bf54c37187e0b` is immutable green evidence only for the unchanged foundation product at that 2026-08-28 commit. It did not test this documentation branch, the 46-table product schema, DBOS/Gmail, Task 7 runner, AWS S3, VPS, backup/restore or M8/M9 systems.
+
+Graphify post-commit/post-checkout hooks are installed locally, but merge-driver registration is partial because the tracked `.gitattributes` rule is absent. This is repository-navigation hygiene for final review, not product evidence and not authorization to change an eighth tracked file in Task 8.
+
 ## Verification and acceptance
 
-The index is acceptable when every approved path appears exactly once in the manifest, M0-M9 appear in strict order, all relative links resolve after their files are created, the M1/M2 schema boundary is explicit, M1 is isolated-test-inbox-only, product outreach requires both M1 and M6 evidence gates, Pydantic AI and DBOS remain the selected initial stack, Temporal remains mandatory after any of the eight disqualifying M1 failures, and later task files use this vocabulary without inventing a competing gate.
+The index is structurally acceptable when all 77 approved task paths appear exactly once in the manifest, M0-M9 appear in strict order, all relative links resolve, the M1/M2 schema boundary is explicit, M1 is isolated-test-inbox-only, M1/M6/M8/M9 gates remain independently necessary, Pydantic AI and DBOS remain the selected initial stack, Temporal remains mandatory after any of the eight disqualifying M1 failures, and later task files use this vocabulary without inventing a competing gate. Structural acceptance does not close the audited blocker register or prove any planned product capability.
 
 Evidence to retain: manifest command output, placeholder scan, link scan, milestone-order check, current/future truth scan, and `git diff --check` output.
 

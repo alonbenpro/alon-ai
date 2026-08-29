@@ -8,6 +8,8 @@ This repository is a foundation, not the finished product. It currently proves a
 
 It **does not send production outreach**, implement a Gmail adapter or OAuth, run DBOS workflows, call models/search/enrichment providers, provide public authentication, bill customers, or deploy to a VPS. Saying otherwise would be fiction.
 
+The authoritative [M0-M9 development roadmap](docs/development-roadmap/README.md) now documents the complete planned sequence and its audited blockers. It is planning evidence, not proof that the planned product, launch gates, deployment, legal authority, or real experiment exists.
+
 ## Architecture
 
 ```mermaid
@@ -77,7 +79,7 @@ The Docker Compose command path is documented in the [local development runbook]
 
 ### Auditable container evidence
 
-On 2026-08-28, [GitHub Actions run 33178960731](https://github.com/alonbenpro/alon-ai/actions/runs/33178960731) passed at commit `f3e615710f51ab59ab883720dcf1d8c25d5e710b`. Its `containers` job validated the Compose configuration, built both application images, initialized PostgreSQL 18, ran the Alembic migration, started the stack, checked API and frontend health plus the live, ready, and frontend HTTP endpoints, verified the worker was running as a non-root user with outreach disabled, and removed the stack and volumes. This is remote CI evidence; it does not claim a local Docker run or real Gmail sending.
+On 2026-08-28, immutable [GitHub Actions run 33179438858](https://github.com/alonbenpro/alon-ai/actions/runs/33179438858) passed at commit `8081008d13adfc7e8a09ee104e2bf54c37187e0b`. Its `containers` job validated the unchanged foundation Compose configuration, built both application images, initialized PostgreSQL 18, ran the foundation Alembic migration, started the stack, checked API/frontend and live/ready endpoints, verified the worker ran as non-root with outreach disabled, and removed the stack/volumes. This baseline did not test this documentation branch or any planned product DBOS/Gmail/schema/API/UI/VPS/AWS/backup/public-ingress system, and it is not a local Docker or real-send claim.
 
 ## Development and checks
 
