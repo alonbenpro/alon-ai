@@ -91,7 +91,13 @@ CREATE INDEX ix_lead_assessments_lead_created ON lead_assessments (lead_id, crea
 CREATE TABLE gmail_mailboxes (
     mailbox_id uuid NOT NULL,
     owner_operator_id uuid NOT NULL,
+    oauth_flow_id uuid NOT NULL,
     provider_account_hash char(64) NOT NULL,
+    granted_scope_hash char(64) NOT NULL,
+    credential_handle_hash char(64) NOT NULL,
+    credential_version integer NOT NULL,
+    credential_key_version text NOT NULL,
+    credential_activation_generation bigint NOT NULL,
     mailbox_alias text NOT NULL,
     status text NOT NULL DEFAULT 'DISABLED',
     authority_mode text NOT NULL DEFAULT 'TEST_INBOX_ONLY',
@@ -100,9 +106,12 @@ CREATE TABLE gmail_mailboxes (
     revoked_at timestamptz NULL,
     CONSTRAINT pk_gmail_mailboxes PRIMARY KEY (mailbox_id),
     CONSTRAINT fk_gmail_mailboxes_operator FOREIGN KEY (owner_operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_gmail_mailboxes_oauth_flow UNIQUE (oauth_flow_id),
     CONSTRAINT uq_gmail_mailboxes_account_hash UNIQUE (provider_account_hash),
+    CONSTRAINT uq_gmail_mailboxes_credential UNIQUE (credential_handle_hash, credential_version),
     CONSTRAINT uq_gmail_mailboxes_alias UNIQUE (mailbox_alias),
-    CONSTRAINT ck_gmail_mailboxes_account_hash CHECK (provider_account_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_gmail_mailboxes_hashes CHECK (provider_account_hash ~ '^[0-9a-f]{64}$' AND granted_scope_hash ~ '^[0-9a-f]{64}$' AND credential_handle_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_gmail_mailboxes_credential_version CHECK (credential_version > 0 AND credential_activation_generation > 0 AND credential_key_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$'),
     CONSTRAINT ck_gmail_mailboxes_status CHECK (status IN ('ACTIVE','DISABLED','REVOKED')),
     CONSTRAINT ck_gmail_mailboxes_authority CHECK (authority_mode IN ('TEST_INBOX_ONLY','PRODUCT_ELIGIBLE')),
     CONSTRAINT ck_gmail_mailboxes_revoked CHECK ((status = 'REVOKED') = (revoked_at IS NOT NULL))
@@ -476,6 +485,8 @@ CREATE TABLE gmail_history_cursors (
 CREATE INDEX ix_gmail_history_cursors_advanced ON gmail_history_cursors (advanced_at);
 ```
 
+`GmailMailboxCommandService` may insert `status=ACTIVE` only inside `CompleteGmailAuthorization` after validating signed `ActiveCredentialProofV1`. The row copies exact `(oauth_flow_id,mailbox_id,provider_account_hash,granted_scope_hash,credential_handle_hash,credential_version,credential_key_version,credential_activation_generation)` from the ACTIVE secret object. Product credential resolution hashes the opaque handle and requires every value plus ACTIVE mailbox status to match; no row or mismatch means no token access. The binding tuple is immutable while mailbox status is ACTIVE. Authenticated reconnect may replace the entire tuple atomically only from DISABLED, with the same provider account, exact next credential version, no unresolved attempts, and a new ACTIVE proof; partial field patch is forbidden.
+
 Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`, `fk_outreach_messages_artifact`, `fk_approvals_eligibility_policy_authority`, `fk_send_intents_eligibility_policy_authority`, `fk_send_attempts_send_policy_authority`, and `fk_replies_classification_artifact` are added after DB-04/DB-05 exists. Exact definitions appear in DB-06. `trg_send_intents_immutable_identity` protects every experiment/campaign/member/lead/message/mailbox/approval/eligibility/scope/idempotency/RFC/retry/budget field while allowing only `attempt_count`, `open_for_attempt`, `cancelled_at`, and `cancellation_reason`; `trg_send_intent_cancellation_once` makes the true-to-false cancellation a one-way transition. `fk_send_attempts_intent_authority` copies the non-null `open_for_attempt=true` token: PostgreSQL rejects an attempt for a cancelled intent and blocks flipping the parent token after an attempt exists.
 
 | Table | Exclusive write owner | Retention class / retention owner |
@@ -514,6 +525,7 @@ Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`,
 - **Unit `test_message_transition_matrix_matches_arch03`:** all legal/illegal edges and events.
 - **Constraint `test_one_intent_per_message_approval_and_mailbox_key`:** concurrent commands cannot duplicate an intent or consume one approval twice; mailbox, campaign/member version, approval, message, eligibility basis/scope hash, RFC ID, and idempotency identity cannot mutate.
 - **Constraint `test_cross_scope_message_member_approval_eligibility_send_policy_intent_rate_attempt_rows_fail`:** every one-column splice across experiment, campaign version, `campaign_member_id`, lead, mailbox, approval, eligibility decision, final SEND decision, scope/facts hash, rate reservation/lease token/consumption timestamp, or allowed flag violates a named composite FK; a RESERVED rate row cannot back an attempt.
+- **OAuth binding `test_active_mailbox_requires_exact_active_credential_proof_tuple`:** flow/account/scope/handle/version/key/generation splice or non-ACTIVE proof creates no mailbox/SUCCEEDED result.
 - **Concurrency `test_one_active_mailbox_rate_lease_and_unique_window_slot`:** simultaneous gateway transactions produce one consumed lease/attempt winner and one typed rate denial; a RESERVED or token/timestamp-spliced reservation cannot satisfy the attempt FK.
 - **Suppression `test_last_mile_suppression_cancels_intent_without_attempt_or_provider_call`:** nullable-cancellation FK and row/event counts prove the no-call path.
 - **Recovery `test_timeout_after_gmail_acceptance_reconciles_without_resend`:** stable RFC ID finds Sent evidence.

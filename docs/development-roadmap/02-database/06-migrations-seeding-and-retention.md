@@ -112,7 +112,7 @@ Exact durations are approved with the later privacy/legal decision for the chose
 
 ### Complete product-table retention manifest
 
-This manifest is exhaustive for the 46 M2 product tables in DB-01 through DB-05, including the last-mile `send_rate_reservations` safety ledger. `RetentionCommandService` exclusively owns purge/redaction writes. Every row defaults to held when a legal, incident, unresolved-provider, suppression, or dependency hold applies. "Keep minimum" means retain only non-sensitive identity/hash/state evidence for the approved policy-versioned duration; "redact" is an audited payload replacement before any later FK-safe purge.
+This manifest is exhaustive for the 46 M2 product tables in DB-01 through DB-05, including the last-mile `send_rate_reservations` safety ledger. External OAuth flow/credential objects are not product tables: PROVIDER-01 owns their 10-minute authorization, 24-hour replay/orphan, reference-checked GC, and encrypted-token deletion lifecycle; the mailbox row retains only the exact safe ACTIVE proof tuple. `RetentionCommandService` exclusively owns purge/redaction writes. Every row defaults to held when a legal, incident, unresolved-provider, suppression, or dependency hold applies. "Keep minimum" means retain only non-sensitive identity/hash/state evidence for the approved policy-versioned duration; "redact" is an audited payload replacement before any later FK-safe purge.
 
 | Table | Class | Retention owner | Default hold / purge behavior |
 | --- | --- | --- | --- |
@@ -133,7 +133,7 @@ This manifest is exhaustive for the 46 M2 product tables in DB-01 through DB-05,
 | `businesses` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after dependent lead closure |
 | `leads` | `BUSINESS_ACTIVE` | `RetentionCommandService` | suppression/incident hold; redact then purge |
 | `lead_assessments` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after lead/experiment close |
-| `gmail_mailboxes` | `SAFETY_LONG` | `RetentionCommandService` | hold while send/reply chains refer to mailbox; keep identity |
+| `gmail_mailboxes` | `SAFETY_LONG` | `RetentionCommandService` | hold while send/reply chains refer; keep safe OAuth flow/account/scope/credential-handle hash/version/key/generation identity, never token/ciphertext |
 | `campaigns` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after all messages are terminal |
 | `campaign_members` | `SENSITIVE_SHORT` | `RetentionCommandService` | suppression/incident hold; redact then purge |
 | `outreach_messages` | `SENSITIVE_SHORT` | `RetentionCommandService` | ambiguity/incident hold; redact content, retain hash |

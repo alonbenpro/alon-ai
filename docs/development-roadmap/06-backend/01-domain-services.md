@@ -42,7 +42,8 @@ The table owners below are canonical; no route/workflow/provider/agent writes th
 | `BudgetService` | `budget_accounts`, `budget_reservations`; serial admission/release/reconcile state |
 | `BusinessIdentityService` | `businesses`; identity insert/conflict quarantine, never auto-merge |
 | `LeadCommandService`, `LeadQualificationService` | `leads`, `lead_assessments`; exact ARCH-03 lead transitions |
-| `GmailMailboxCommandService` | `gmail_mailboxes`; provider credential is an external secret reference only |
+| `GmailOAuthSagaService`, `OAuthCredentialGarbageCollector` | external versioned flow/credential objects; idempotent STAGE/ACTIVATE/bind leases, safe orphan GC; no product-table writes |
+| `GmailMailboxCommandService`, `GmailCredentialConsistencyService` | `gmail_mailboxes`; exact ACTIVE proof tuple commit, mismatch disable/incident; no secret payload writes |
 | `CampaignCommandService`, `CampaignAdmissionService` | immutable `campaigns` versions and `campaign_members` |
 | `MessageCommandService` | `outreach_messages` except SendGateway/Recovery-owned documented send transitions |
 | `ApprovalCommandService` | `approvals`; exact campaign-member approval basis, eligibility-decision binding, lifecycle, and consumption; never final SEND authority |
@@ -67,7 +68,7 @@ Every application command is a strict frozen `CommandEnvelopeV1` with `command_t
 
 The exact aggregate transaction is: begin; claim `(command_scope,idempotency_key)`; verify request bytes/schema against prior claim; lock/load or optimistic-version-check; load all named authority rows; call pure transition/policy; update the sole-writer row; insert the specific ARCH-03 event and aggregate `*.state_changed.v1` where defined; insert safe audit; insert outbox; store the complete result envelope/hash; commit. A same-key/same-hash replay returns the stored status/body without another version/event. Same key/different hash is `IDEMPOTENCY_HASH_CONFLICT`. Version loss is `VERSION_CONFLICT`. Denial records safe audit/policy evidence but no aggregate mutation unless the canonical transition itself is denial/suppression.
 
-External calls and runtime signals never occur in that transaction. Outbox internal consumers atomically commit their business writes and `outbox_deliveries`; they cannot issue external effects. PostgreSQL named unique/composite FKs and immutable triggers from DB-01/03/05/06 are last-line enforcement, not optional application validation.
+External calls and runtime signals never occur in that transaction. The OAuth callback is an explicit pre-transaction saga, not an exception to this rule: `GmailOAuthSagaService` exchanges once, makes the external credential ACTIVE, and supplies signed short-lived `ActiveCredentialProofV1`; the PostgreSQL transaction validates only that proof and copies its exact safe tuple. A 30-second secret-store bind lease plus 5-second database timeout prevents GC during commit. Only after ACTIVE proof may `GmailMailboxCommandService` atomically insert ACTIVE mailbox and SUCCEEDED command result. Outbox internal consumers atomically commit their business writes and `outbox_deliveries`; they cannot issue external effects. PostgreSQL named unique/composite FKs and immutable triggers from DB-01/03/05/06 are last-line enforcement, not optional application validation.
 
 ### Deterministic service flow by milestone
 
@@ -77,6 +78,7 @@ External calls and runtime signals never occur in that transaction. Outbox inter
 | artifact | verified run/config/provider ledger -> `PRODUCED` -> later validate/link -> later accept/materialize | DB-04 owners; `artifact.produced/validated/rejected/accepted/superseded.v1` |
 | lead | accepted evidence + identity/criteria -> conflict/research/assessment/suppression -> lead state | `lead.discovered/identity_conflict_detected/evidence_recorded/qualified/disqualified/suppressed.v1` |
 | campaign/approval | frozen campaign/member/message/artifact basis -> eligibility without ApprovalRule -> request/approve/deny/revoke -> exact basis only | complete campaign family plus `policy.evaluated.v1` and `approval.requested/decided/revoked.v1`; no send authority |
+| Gmail OAuth | claimed command/flow -> one exchange -> idempotent STAGED -> ACTIVE -> signed bind proof -> mailbox+SUCCEEDED transaction -> post-commit bind marker | audit-only OAuth lifecycle; no domain-event alias and no success without exact ACTIVE generation |
 | control/recovery | authenticated command + current evidence -> pure control/repair decision -> requested/acknowledged state | WF-06 exact experiment/run/campaign/control/send events |
 | decision/report | frozen metrics/evidence/rule + operator -> immutable decision; queries read snapshots/events | `experiment.decision_recorded.v1`; `SCALE` grants no new authority |
 
@@ -101,6 +103,7 @@ For Gmail: allowed eligibility decision -> exact campaign/version/`campaign_memb
 - **Concurrency `test_unique_and_composite_constraints_are_final_authority`:** stale/spliced rows fail.
 - **Boundary `test_routes_workflows_agents_and_providers_cannot_write_product_tables`:** import/runtime graph.
 - **Side effect `test_each_provider_effect_has_intent_result_cost_and_recovery`:** six capabilities plus Gmail.
+- **OAuth saga `test_mailbox_success_requires_exact_active_proof_and_each_pre_db_state_resumes_without_reexchange`:** six kill points and GC race.
 - **Digest `test_all_command_workflow_provider_results_reproduce_rfc8785_vectors`:** validate before upcast/use.
 
 ## Security, privacy, compliance, idempotency, observability, and cost
@@ -109,7 +112,7 @@ Authenticated actor and exact authority are explicit. Decrypted sensitive conten
 
 ## Failure, rollback, and operator recovery
 
-Unknown state/event/runtime mapping, impossible composite authority, partial-write suspicion, provider-result disagreement, or cost overrun blocks mutation, closes applicable controls, and opens an incident. Roll back code/config, preserve immutable history, compare aggregate/events/provider/runtime, then execute typed `RecoveryCommandService`; direct SQL is forbidden. Restore into an isolated database when invariants cannot be proven.
+Unknown state/event/runtime mapping, impossible composite authority, OAuth DB/secret mismatch, partial-write suspicion, provider-result disagreement, or cost overrun blocks mutation, closes applicable controls, and opens an incident. Roll back code/config, preserve immutable history, compare aggregate/events/provider/runtime, then execute typed `RecoveryCommandService`; direct SQL is forbidden. Restore into an isolated database when invariants cannot be proven.
 
 ## Acceptance and retained evidence
 
