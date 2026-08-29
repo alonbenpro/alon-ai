@@ -14,7 +14,7 @@
 
 This index turns the Alon AI foundation into an evidence-gated route to one controlled real experiment. The folders are organized by subsystem so a solo operator can find material quickly. They are not the implementation order. Implementation follows the vertical M0-M9 gates below, and every subsystem checklist must identify the gate it serves.
 
-The hard constraint is reputational safety: no later feature, attractive demo, or sunk cost excuses skipping an earlier exit gate. The product is for one Israeli solo operator first. Teams, billing, public APIs, and generalized platform work are distractions until a real experiment produces recorded evidence worth scaling.
+The hard constraint is reputational safety: no later feature, attractive demo, or sunk cost excuses skipping an earlier exit gate. The product is for one Israeli solo operator first. Teams, billing, general-purpose public APIs, and generalized platform work are distractions until a real experiment produces recorded evidence worth scaling. The only bounded exception is the exact scanner-safe GET/explicit-POST unsubscribe pair, disabled and unpublished until the M9 real-recipient/legal/suppression/ingress gate; it does not make the operator product public.
 
 ## Current repository truth
 
@@ -29,7 +29,7 @@ As of 2026-08-28, the repository implements a small foundation:
 - a Next.js readiness page using generated OpenAPI types; and
 - Docker Compose and CI foundation checks.
 
-The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail history sync, product data, agents, provider adapters, operator authentication, experiment controls, backups, private deployment, production monitoring, real users, or real sends. Every reference below to those capabilities describes planned work until its milestone retains passing evidence.
+The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail history sync, product data, agents, provider adapters, operator authentication, experiment controls, public unsubscribe routes/ingress, backups, private deployment, production monitoring, real users, or real sends. Every reference below to those capabilities describes planned work until its milestone retains passing evidence.
 
 ## How to execute this roadmap
 

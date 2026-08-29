@@ -114,7 +114,7 @@ Five dashboards only initially:
 
 1. **Safety and authority:** both controls, M1/M6/current SEC evidence age, open incidents, suppression denials, final-SEND outcomes, ambiguity age, last provider call and post-disable invariant.
 2. **Workflow/agent/provider:** run states/deadlines/replays, queue age, agent terminal outcomes, six capability latency/errors/usage, active promotion/version.
-3. **Gmail/OAuth/replies:** saga states/age/replay, mailbox consistency, send boundary/outcome, rate lease, history cursor gap/age, replies/unsubscribe/bounces—with no recipient/mailbox labels.
+3. **Gmail/OAuth/replies:** saga states/age/replay, mailbox consistency, send boundary/outcome, rate lease, history cursor gap/age, replies/unsubscribe/bounces, public-route availability/rate/WAF outcomes—with no recipient/mailbox/token/IP labels.
 4. **Cost/budget/evaluation:** reservation/reconciliation, original currencies and ILS reporting in panels (not combined metric), caps/burn, eval suite/repetition/hard gates/rolling windows.
 5. **Platform/recovery/privacy:** API/DB/worker, telemetry export, disk/cert/clock, backup/restore age, retention/rights jobs, auth/security events, release provenance.
 
@@ -131,7 +131,7 @@ Required alerts: any zero-tolerance violation; control disable ack timeout; ambi
 | `ALERT_CREDENTIAL_OR_SESSION -> AUTH_OR_SECRET_COMPROMISE -> IR-03` | confirmed credential exposure, token/session replay, subject mismatch, or five auth anomalies in 5m |
 | `ALERT_WEB_BOUNDARY -> WEB_SESSION_BOUNDARY_ATTACK -> IR-05` | one successful/bypass-indicating CSRF/XSS/session-fixation/open-redirect invariant or 20 blocked probes in 5m |
 | `ALERT_EGRESS_SSRF -> SSRF_OR_DNS_REBINDING -> IR-05` | one private/link-local/metadata connection success or ten blocked target changes in 5m |
-| `ALERT_CALLBACK_ABUSE -> CALLBACK_ABUSE -> IR-05` | one consumed-state/code splice or ten invalid callback arms in 5m |
+| `ALERT_CALLBACK_ABUSE -> CALLBACK_ABUSE -> IR-05` | one consumed-state/code splice or public unsubscribe WAF/CSRF/token-boundary bypass; or ten invalid callback arms/public token-method-CSRF probes in 5m, counted only by bounded route partition/reason |
 | `ALERT_SEND_AUTHORITY_VIOLATION -> SEND_AUTHORITY_VIOLATION -> IR-01` | one unauthorized, duplicate, suppressed, wrong-mailbox or post-disable provider call |
 | `ALERT_SUPPLY_CHAIN -> SUPPLY_CHAIN_COMPROMISE -> IR-09` | one signature/provenance/SBOM/image/lock mismatch in promoted release |
 | `ALERT_WORKFLOW_REPLAY -> WORKFLOW_REPLAY_OR_VERSION_DRIFT -> IR-07` | one snapshot/digest/version/replay side-effect invariant failure or immortal run |
@@ -140,7 +140,7 @@ Required alerts: any zero-tolerance violation; control disable ack timeout; ambi
 | `ALERT_AUTHORIZATION_ENUMERATION -> AUTHORIZATION_OR_ENUMERATION -> IR-05` | 20 uniform authorization misses in 5m from one ephemeral prefix bucket or one protected lookup bypass |
 | `ALERT_COST_QUOTA -> COST_OR_QUOTA_RUNAWAY -> IR-10` | hard budget/max-cost/quota exceeded or reconciliation missing >15m |
 | `ALERT_TELEMETRY_PRIVACY -> TELEMETRY_PRIVACY_LEAK -> IR-04` | one secret/PII/content/hash canary in telemetry/eval/Graphify/export |
-| `ALERT_COMPLIANCE_SUPPRESSION -> COMPLIANCE_OR_SUPPRESSION_BREACH -> IR-12` | complaint/unsubscribe/hard-bounce signal, any post-signal eligibility, or atomic suppression/sync failure |
+| `ALERT_COMPLIANCE_SUPPRESSION -> COMPLIANCE_OR_SUPPRESSION_BREACH -> IR-12` | complaint/unsubscribe/hard-bounce signal, any post-signal eligibility, public unsubscribe dependency failure, or atomic suppression/sync failure |
 | `ALERT_TELEMETRY_BLINDNESS -> TELEMETRY_OR_ALERT_BLINDNESS -> IR-11` | Critical exporter/alert gap >5m or both notification paths fail a canary |
 | `ALERT_GMAIL_AMBIGUITY -> GMAIL_AMBIGUITY_STALE -> IR-02` | oldest ambiguity >60s opens; >15m escalates to HIGH without a second incident |
 | `ALERT_RECIPIENT_HASH_ENUMERATION -> RECIPIENT_HASH_ENUMERATION -> IR-04` | ten denied restricted-hash queries in 60s or 100 total queries/hour outside a registered batch purpose |

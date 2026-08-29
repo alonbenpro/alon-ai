@@ -110,7 +110,7 @@ Store no actual Gmail secret, prospect personal data, or unverified legal conclu
 
 ### Non-goals before M9 evidence
 
-- multi-tenancy, teams, public sign-up, billing, subscription management, or public API;
+- multi-tenancy, teams, public sign-up, billing, subscription management, or any general-purpose public API; the sole later exception is BACKEND-02's two scanner-safe M9-gated unsubscribe operations, while the operator product remains private;
 - a generic CRM, marketing automation suite, inbox client, or agent-building platform;
 - unrestricted data scraping, mass-email volume, purchased lists, or consumer outreach;
 - legal-compliance automation presented as legal advice;

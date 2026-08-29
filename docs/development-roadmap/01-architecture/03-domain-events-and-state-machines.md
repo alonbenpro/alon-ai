@@ -252,7 +252,7 @@ Every campaign transition emits its specific event and `campaign.state_changed.v
 | `lead.qualified.v1` | `lead_id`, `assessment_id`, `criteria_version` | deterministic gate passes |
 | `lead.disqualified.v1` | `lead_id`, `reason_codes`, `criteria_version` | gate fails |
 | `lead.suppressed.v1` | `lead_id`, `suppression_entry_id`, `reason_code` | suppression applies |
-| `suppression.created.v1` | `suppression_entry_id`, `scope`, nullable `business_id`, nullable `recipient_target_ref_id`, `reason_code`, `source`, `source_actor_type`, nullable `source_observation_id`, nullable `source_reply_id`, `version` | active global/business/recipient suppression commits; no recipient hash/digest appears in the event; matching leads/messages/intents transition separately |
+| `suppression.created.v1` | `suppression_entry_id`, `scope`, nullable `business_id`, nullable `recipient_target_ref_id`, `reason_code`, `source`, `source_actor_type`, nullable `source_observation_id`, nullable `source_reply_id`, `version` | active global/business/recipient suppression commits; `recipient_target_ref_id` is non-null iff RECIPIENT, byte-copied from the durable row and stable after source-member cleanup; no recipient hash/address ciphertext/digest appears in the event; matching leads/messages/intents transition separately |
 | `suppression.deactivated.v1` | `suppression_entry_id`, `scope`, `reason_code`, `prior_version`, `version` | fail-closed operator removal commits after controls/in-flight guards |
 
 ### Policy, approval, sending, and replies

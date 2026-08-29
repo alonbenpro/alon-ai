@@ -109,7 +109,7 @@ The runtime interface planned at the application boundary exposes finite start, 
 
 ## Deployment and trust boundaries
 
-The M8 target is one private deployment: TLS ingress/private access -> frontend and API; worker and PostgreSQL are not public; backups are encrypted off-host; secrets and OAuth tokens are injected from a protected store; operator access is strongly authenticated; logs/metrics avoid message bodies, secrets, and unnecessary recipient data. API and worker may share one image/package but run separately and can be stopped independently.
+The M8 target is one private operator deployment: TLS ingress/private access -> frontend and API; worker and PostgreSQL are not public; backups are encrypted off-host; secrets and OAuth tokens are injected from a protected store; operator access is strongly authenticated; logs/metrics avoid message bodies, secrets, and unnecessary recipient data. API and worker may share one image/package but run separately and can be stopped independently. The only recipient-facing Internet surface is a later M9 exception of exactly two scanner-safe unsubscribe operations; it is disabled/unpublished before M9, partitioned from the 64 private-deployment operations by route/WAF/rate policy, and never exposes health/operator/Gmail/product routes or creates a webhook surface.
 
 This is not a claim that the current Compose file satisfies production security, backup, monitoring, or availability requirements.
 

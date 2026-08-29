@@ -57,7 +57,20 @@ Create `incidents/contracts.py`, `application/incidents.py`, `application/recove
 
 Two additional closed operational routes are `GMAIL_AMBIGUITY_STALE -> ALERT_GMAIL_AMBIGUITY -> IR-02` and `RECIPIENT_HASH_ENUMERATION -> ALERT_RECIPIENT_HASH_ENUMERATION -> IR-04`. Every OBS-02 alert rule names exactly one of these 18 alert IDs, trigger codes and runbooks; severity is a separate deterministic mapping and cannot change routing identity.
 
-Resolution codes are exactly `MITIGATED_NO_LOSS|RECONCILED_SENT|RECONCILED_NOT_SENT|CREDENTIALS_REVOKED_ROTATED|CLEAN_RESTORE_VERIFIED|CODE_CONFIG_ROLLED_BACK|DATA_REMOVED_REMEDIATED|PROVIDER_COUNSEL_CLOSED|FALSE_POSITIVE_VERIFIED|RESIDUAL_RISK_ACCEPTED_WITH_EXPIRY`. The last value is forbidden for the non-waivable Critical credential/privacy/suppression/duplicate-send/restore/Google/legal-review gates.
+Resolution codes are exactly `MITIGATED_NO_LOSS|RECONCILED_SENT|RECONCILED_NOT_SENT|CREDENTIALS_REVOKED_ROTATED|CLEAN_RESTORE_VERIFIED|CODE_CONFIG_ROLLED_BACK|DATA_REMOVED_REMEDIATED|PROVIDER_COUNSEL_CLOSED|FALSE_POSITIVE_VERIFIED|RESIDUAL_RISK_ACCEPTED_WITH_EXPIRY`. Applicability is closed, not merely enum membership:
+
+| Resolution code | Exact applicable trigger set / extra condition |
+| --- | --- |
+| `MITIGATED_NO_LOSS`, `FALSE_POSITIVE_VERIFIED` | all 18 triggers |
+| `RECONCILED_SENT`, `RECONCILED_NOT_SENT` | `SEND_AUTHORITY_VIOLATION`, `GMAIL_AMBIGUITY_STALE` |
+| `CREDENTIALS_REVOKED_ROTATED` | `PROVIDER_EXFILTRATION`, `AUTH_OR_SECRET_COMPROMISE`, `WEB_SESSION_BOUNDARY_ATTACK`, `CALLBACK_ABUSE`, `SUPPLY_CHAIN_COMPROMISE` |
+| `CLEAN_RESTORE_VERIFIED` | `DATASTORE_OR_RESTORE_FAILURE` |
+| `CODE_CONFIG_ROLLED_BACK` | `AGENT_PROMPT_INJECTION_OR_POISONING`, `PROVIDER_EXFILTRATION`, `WEB_SESSION_BOUNDARY_ATTACK`, `SSRF_OR_DNS_REBINDING`, `CALLBACK_ABUSE`, `SUPPLY_CHAIN_COMPROMISE`, `WORKFLOW_REPLAY_OR_VERSION_DRIFT`, `OPERATOR_OR_RECOVERY_ERROR`, `COST_OR_QUOTA_RUNAWAY`, `TELEMETRY_OR_ALERT_BLINDNESS` |
+| `DATA_REMOVED_REMEDIATED` | `PROVIDER_EXFILTRATION`, `TELEMETRY_PRIVACY_LEAK`, `COMPLIANCE_OR_SUPPRESSION_BREACH`, `RECIPIENT_HASH_ENUMERATION` |
+| `PROVIDER_COUNSEL_CLOSED` | `PROVIDER_EXFILTRATION`, `COST_OR_QUOTA_RUNAWAY`, `COMPLIANCE_OR_SUPPRESSION_BREACH`, `RECIPIENT_HASH_ENUMERATION` |
+| `RESIDUAL_RISK_ACCEPTED_WITH_EXPIRY` | severity only `INFO|LOW|MEDIUM`, and trigger only `AGENT_PROMPT_INJECTION_OR_POISONING`, `SSRF_OR_DNS_REBINDING`, `SUPPLY_CHAIN_COMPROMISE`, `WORKFLOW_REPLAY_OR_VERSION_DRIFT`, `OPERATOR_OR_RECOVERY_ERROR`, `AUTHORIZATION_OR_ENUMERATION`, `COST_OR_QUOTA_RUNAWAY`, `TELEMETRY_OR_ALERT_BLINDNESS` |
+
+Everything not listed rejects. Residual-risk acceptance is non-waivable for all HIGH/CRITICAL incidents and for provider exfiltration, credential/session, web-boundary/callback, send authority/Gmail ambiguity, datastore/restore, telemetry privacy, compliance/suppression/Google-policy/legal-review, and recipient-hash-enumeration triggers at every severity. DB-01 enforces both the exact 18 trigger/alert/runbook tuples and this applicability table; application routing performs the same versioned check before command claim.
 
 Repair kinds are exactly `RECONCILE_GMAIL_ATTEMPT|ABORT_OAUTH_SAGA|REVOKE_OPERATOR_SESSIONS|DISABLE_MAILBOX|ROTATE_SECRET_GENERATION|REPAIR_WORKFLOW_PROJECTION|REPAIR_EVENT_OUTBOX_LINK|RESTORE_FROM_VERIFIED_BACKUP|REAPPLY_RECIPIENT_SUPPRESSION|REPLAY_RETENTION_TOMBSTONE|RECONCILE_PROVIDER_COST|IMPORT_OFFLINE_INCIDENT_JOURNAL|ROLLBACK_AGENT_PROMOTION`. Each maps one-to-one to a typed handler, prerequisite set, allowed before/after schema, inverse/recovery behavior and compatible runbooks. Unknown catalog/version/code, code/runbook/alert mismatch, caller-supplied label, or replay with changed code is rejected before DB write/notification/repair. A v2 catalog uses additive DB checks, dual readers and a versioned migration fixture; v1 rows never mutate.
 
@@ -132,7 +145,7 @@ Re-enable checklist: incident canonical `RESOLVED`; evidence signed; root cause 
 ## Test strategy
 
 - **Coverage `test_every_sec01_critical_threat_maps_to_alert_incident_runbook_owner_test_evidence_and_recovery`.**
-- **Catalog `test_incident_trigger_resolution_repair_runbook_and_alert_v1_are_closed_db_checked_and_routed`:** exact 18 routes, resolution/repair lists, unknown/mismatch/replay rejection and v1-to-v2 migration fixture.
+- **Catalog `test_incident_trigger_resolution_repair_runbook_and_alert_v1_are_closed_db_checked_and_routed`:** exact 18 positive routes, cross-pair trigger/alert/runbook negatives, every positive resolution applicability arm, inapplicable trigger/resolution negatives, non-waivable and HIGH/CRITICAL residual-risk negatives, resolution/repair lists, unknown/replay rejection and v1-to-v2 migration fixture.
 - **Cardinality `test_incident_telemetry_uses_only_catalog_version_severity_trigger_runbook_alert_resolution_and_repair_kind`:** no record ID, recipient hash or free text becomes a metric label.
 - **State `test_incident_uses_only_open_mitigating_resolved_and_exact_arch03_events`.**
 - **Containment `test_each_runbook_first_action_stops_new_harm_when_db_worker_provider_or_alert_layer_fails`.**
