@@ -42,14 +42,49 @@ The canonical 46-table set is exactly: `operators`, `experiments`, `workflow_run
 
 The 14 dedicated denial fixtures are exactly `RECIPIENT_IDENTITY_UNVERIFIED`, `RECIPIENT_JURISDICTION_UNKNOWN`, `RECIPIENT_CONSENT_MISSING`, `RECIPIENT_CONSENT_EXPIRED`, `COUNSEL_EXCEPTION_MISSING`, `LEGAL_REVIEW_MISSING`, `LEGAL_REVIEW_STALE`, `DISCLOSURE_TEMPLATE_INVALID`, `GOOGLE_POLICY_DENIED`, `RECIPIENT_REPLIED`, `RECIPIENT_OPTED_OUT`, `RECIPIENT_HARD_BOUNCED`, `RECIPIENT_COMPLAINT`, and `RECIPIENT_SOFT_BOUNCE_LIMIT`.
 
-The complete TEST-02 requirement set maps only to `T7-CONTRACT-INTEGRATION` in the [TEST-01 closed command manifest](01-testing-strategy.md#closed-command-manifest). Its planned child entrypoint is a repository-root-anchored Bash file, never a pasted interactive sequence:
+The complete TEST-02 requirement set maps only to `T7-CONTRACT-INTEGRATION` in the [TEST-01 closed command manifest](01-testing-strategy.md#closed-command-manifest). The exact TEST-02 dispatch path inside the planned physical `scripts/task7/run` derives trust from its own file location, never the caller cwd or a root environment variable:
 
 ```bash
 #!/usr/bin/env bash
 set -Eeuo pipefail
-repo_root="$(git rev-parse --show-toplevel)"
-test "$(git -C "$repo_root" rev-parse --show-toplevel)" = "$repo_root"
-"$repo_root/scripts/task7/assert-target" --kind postgres --target-manifest "$TASK7_TARGET_MANIFEST" --expected-environment TEST_EPHEMERAL --expected-database "alon_ai_test_${TASK7_RUN_ID}" --expected-system-id "$TASK7_EXPECTED_PG_SYSTEM_ID" --require-outreach-disabled --require-zero-writers
+readonly runner_invoked="${BASH_SOURCE[0]}"
+[[ "$runner_invoked" == /* && -f "$runner_invoked" && -x "$runner_invoked" && ! -L "$runner_invoked" ]] || exit 20
+readonly runner_dir_lexical="${runner_invoked%/*}"
+readonly runner_basename="${runner_invoked##*/}"
+runner_dir_physical="$(cd -P -- "$runner_dir_lexical" && pwd -P)" || exit 20
+readonly runner_dir_physical
+readonly runner_real="$runner_dir_physical/$runner_basename"
+[[ "$runner_invoked" == "$runner_real" ]] || exit 20
+repo_root="$(cd -P -- "$runner_dir_physical/../.." && pwd -P)" || exit 20
+readonly repo_root
+[[ "$runner_real" == "$repo_root/scripts/task7/run" ]] || exit 20
+unset TASK7_REPO_ROOT REPO_ROOT GIT_DIR GIT_WORK_TREE
+git_root="$(git -C "$repo_root" rev-parse --show-toplevel)" || exit 20
+readonly git_root
+[[ "$(cd -P -- "$git_root" && pwd -P)" == "$repo_root" ]] || exit 20
+
+[[ "$#" -eq 12 ]] || exit 20
+[[ "$1" == --manifest && "$2" == tests/manifests/task7-commands.v1.json ]] || exit 20
+[[ "$3" == --command && "$4" == T7-CONTRACT-INTEGRATION ]] || exit 20
+[[ "$5" == --run-id && "$7" == --evidence-root ]] || exit 20
+[[ "$9" == --profile && "$10" == PG_EPHEMERAL ]] || exit 20
+[[ "$11" == --target-manifest ]] || exit 20
+readonly run_id="$6" evidence_root="$8" profile="$10" target_manifest="$12"
+actual_commit="$(git -C "$repo_root" rev-parse --verify HEAD)" || exit 20
+readonly actual_commit
+expected_pg_system_id="$(
+  "$repo_root/scripts/task7/verify-static-contract" \
+    --repository-identity "$repo_root/tests/manifests/repository-identity.v1.json" \
+    --command-manifest "$repo_root/tests/manifests/task7-commands.v1.json" \
+    --profile "$repo_root/tests/profiles/task7/PG_EPHEMERAL.v1.json" \
+    --fixture "$repo_root/tests/fixtures/task7/PG_EPHEMERAL.v1.json" \
+    --command T7-CONTRACT-INTEGRATION --actual-root "$repo_root" \
+    --actual-commit "$actual_commit" --run-id "$run_id" \
+    --evidence-root "$evidence_root" --emit expected_pg_system_id
+)" || exit 20
+readonly expected_pg_system_id
+
+"$repo_root/scripts/task7/assert-target" --kind postgres --target-manifest "$target_manifest" --expected-environment TEST_EPHEMERAL --expected-database "alon_ai_test_${run_id}" --expected-system-id "$expected_pg_system_id" --require-outreach-disabled --require-zero-writers
 (
   cd "$repo_root/backend"
   uv run alembic upgrade head
@@ -63,7 +98,9 @@ test "$(git -C "$repo_root" rev-parse --show-toplevel)" = "$repo_root"
 )
 ```
 
-The runner supplies `TASK7_TARGET_MANIFEST` and the expected PostgreSQL system identifier from the signed `PG_EPHEMERAL` profile; the target helper resolves the scoped secret reference without printing the URL. It queries `current_database()`, `pg_control_system().system_identifier`, the environment marker, outreach controls and writer sessions before Alembic can run. The database name, system identifier, manifest signature, repo root and cwd are retained. `bash -n` plus a simulation fixture launched from repository root, `backend/`, `frontend/` and `/tmp` proves the same root and child argv; wrong database/system ID/environment, a missing manifest, a second `backend` path component, or any writer exits `50` before migration. The exact owning invocation is `./scripts/task7/run --manifest tests/manifests/task7-commands.v1.json --command T7-CONTRACT-INTEGRATION --run-id "$TASK7_RUN_ID" --evidence-root "$TASK7_EVIDENCE_ROOT" --profile PG_EPHEMERAL --target-manifest "$TASK7_TARGET_MANIFEST"`.
+The last command uses only readonly `target_manifest`, `run_id`, and `expected_pg_system_id` values sourced from parsed argv and the verified profile; it accepts no caller replacements after verification. `verify-static-contract` reads only files beneath the script-derived root, verifies signatures, literal repository identity `alon-ai`, exact expected commit/profile/fixture/command and clean checkout, then emits one schema-validated system ID; it cannot open a target. Only afterward does `assert-target` resolve the scoped database secret without printing it and query `current_database()`, `pg_control_system().system_identifier`, environment marker, outreach controls and writer sessions.
+
+The signed command manifest materializes `argv[0]` as the absolute canonical runner path for its fixture checkout. `bash -n` parses the physical runner. Positive fixtures invoke that absolute path from repository root, `backend/`, `frontend/` and `/tmp` and require identical root/commit/child argv. Negatives use a relative path, a symlink to the valid runner, a runner copied under another Git root, symlinked parent directory, wrong repository identity/commit/profile and hostile root/Git environment variables; each exits `20` and a target-access spy stays zero. Wrong database/system ID/environment, missing/invalid target manifest or active writer exits `50` before Alembic. Root-safe subshells prevent `backend/backend`. The owning argv tail remains `--manifest tests/manifests/task7-commands.v1.json --command T7-CONTRACT-INTEGRATION --run-id "$TASK7_RUN_ID" --evidence-root "$TASK7_EVIDENCE_ROOT" --profile PG_EPHEMERAL --target-manifest "$TASK7_TARGET_MANIFEST"`, preceded by the signed checkout's canonical absolute runner path.
 
 ## Ordered implementation tasks
 
@@ -72,7 +109,7 @@ The runner supplies `TASK7_TARGET_MANIFEST` and the expected PostgreSQL system i
 - [ ] **Prove provider, agent, evaluation and cost contracts —** Input: six capability fixtures, Gmail unions, terminal agent results, exact eight-suite/552-case evaluation manifests and cost ledgers. Operation: validate every allowed branch/error/timeout/budget/cancel and cross-family denial, then prove 1,656 fresh capture completeness/signatures and two offline scorers against all AGENT-10 goldens/gates. Output: byte-compatible adapter and reproducible evaluation acceptance. Test evidence: request/result/ledger/payload/capture/scorer hashes, network isolation and usage/cost reconciliation matrix. Failure behavior: adapter/config cannot be promoted.
 - [ ] **Prove API and generated-client partition —** Input: BACKEND-02 exact manifest. Operation: compare OpenAPI, runtime router metadata, Caddy/WAF route manifest fixture and generated client operation sets. Output: exact 66/64+2 evidence. Test evidence: public pair unavailable pre-M9, GET write spy zero, POST-only suppression, and no webhook/general public route. Failure behavior: startup/release rejected.
 - [ ] **Prove policy and incident closure —** Input: fixed rules/reasons and `incident.catalog.v1`. Operation: evaluate all positive/applicable and exhaustive negative cross-pairs on real PostgreSQL. Output: matching domain/DB/API registries. Test evidence: 14 no-call denial fixtures, 18 route tuples and resolution/repair applicability. Failure behavior: sending/public ingress/recovery commands disabled.
-- [ ] **Validate the root-anchored lane —** Input: `T7-CONTRACT-INTEGRATION`, its signed target manifest, and the cwd simulation corpus. Operation: parse the Bash entrypoint, run from four starting directories, query exact target identity before Alembic, and inject every guard mismatch. Output: one immutable command/evidence record. Test evidence: syntax/cwd success and pre-write exit-`50` negatives. Failure behavior: no migration starts and TEST-02 is failed.
+- [ ] **Validate the script-derived lane —** Input: canonical absolute runner, signed repository/commit/profile/fixture/target manifests and cwd/path attack corpus. Operation: parse the Bash entrypoint; invoke its absolute path from four starting directories; prove script-derived physical root and static identity before target access; then inject relative/symlink/copied-root/env/commit/profile and target mismatches. Output: one immutable command/root/target evidence record. Test evidence: `/tmp` positive, malicious path exit-`20` with target spy zero, and database mismatch exit-`50` before Alembic. Failure behavior: no target connection/migration starts and TEST-02 is failed.
 
 ## Test strategy
 
@@ -85,7 +122,7 @@ The runner supplies `TASK7_TARGET_MANIFEST` and the expected PostgreSQL system i
 - **Policy `test_fourteen_dedicated_final_send_denials_have_zero_credential_and_provider_calls`.**
 - **Incident `test_incident_catalog_tuple_resolution_and_repair_applicability_match_database`.**
 - **Privileges `test_only_canonical_service_roles_can_write_each_product_or_security_runtime_record`.**
-- **Entrypoint `test_contract_lane_parses_resolves_repo_root_once_and_refuses_wrong_database_or_system_id_before_alembic`.**
+- **Entrypoint `test_absolute_runner_uses_bash_source_physical_root_from_tmp_and_refuses_symlink_wrong_root_env_commit_profile_or_database_before_access`.**
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 
@@ -101,7 +138,7 @@ On schema drift, irreversible migration, route widening, catalog mismatch, provi
 - [ ] PostgreSQL proves all 46 tables, declared DDL/privileges/transactions/retention behavior.
 - [ ] API/router/client/edge sets equal 66 operations with the exact private/public partition.
 - [ ] Policy 14-denial and incident catalog/applicability matrices are closed and no-call/DB-enforced.
-- [ ] `T7-CONTRACT-INTEGRATION` parses and runs from every simulated cwd; exact PostgreSQL identity is proven before migrations.
+- [ ] `T7-CONTRACT-INTEGRATION` parses and derives the same signed root from every simulated cwd; path/root/repository/commit/profile checks precede target access and exact PostgreSQL identity precedes migration.
 
 Retain signed manifests, schema/catalog/OpenAPI/client diffs, revision and seed hashes, JUnit/failure-injection results, provider/agent/cost fixture hashes, route/call/privilege traces and exact command output.
 
