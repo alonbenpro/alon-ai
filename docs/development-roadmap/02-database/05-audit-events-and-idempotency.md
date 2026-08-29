@@ -169,9 +169,11 @@ CREATE TABLE policy_decisions (
     experiment_id uuid NULL,
     campaign_id uuid NULL,
     campaign_version integer NULL,
+    campaign_member_id uuid NULL,
     lead_id uuid NULL,
     message_id uuid NULL,
     mailbox_id uuid NULL,
+    approval_id uuid NULL,
     policy_version text NOT NULL,
     allowed boolean NOT NULL,
     reason_codes text[] NOT NULL,
@@ -185,18 +187,25 @@ CREATE TABLE policy_decisions (
     CONSTRAINT pk_policy_decisions PRIMARY KEY (policy_decision_id),
     CONSTRAINT fk_policy_decisions_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
     CONSTRAINT fk_policy_decisions_campaign_authority FOREIGN KEY (campaign_id, campaign_version, experiment_id) REFERENCES campaigns (campaign_id, campaign_version, experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_policy_decisions_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, lead_id, mailbox_id) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, lead_id, mailbox_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_policy_decisions_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_policy_decisions_send_approval FOREIGN KEY (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, scope_hash) REFERENCES approvals (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, scope_hash) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED,
     CONSTRAINT uq_policy_decisions_command UNIQUE (scope, idempotency_key),
     CONSTRAINT uq_policy_decisions_mailbox_identity UNIQUE (policy_decision_id, mailbox_id),
-    CONSTRAINT uq_policy_decisions_send_authority UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed),
-    CONSTRAINT ck_policy_decisions_scope CHECK (scope IN ('EXPERIMENT','CAMPAIGN','SEND','PROVIDER','CONTROL')),
+    CONSTRAINT uq_policy_decisions_approval_basis UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed),
+    CONSTRAINT uq_policy_decisions_send_authority UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, approval_id, policy_version, scope_hash, facts_hash, allowed),
+    CONSTRAINT ck_policy_decisions_scope CHECK (scope IN ('EXPERIMENT','CAMPAIGN','APPROVAL_ELIGIBILITY','SEND','PROVIDER','CONTROL')),
     CONSTRAINT ck_policy_decisions_campaign_pair CHECK ((campaign_id IS NULL) = (campaign_version IS NULL)),
-    CONSTRAINT ck_policy_decisions_send_binding CHECK (scope <> 'SEND' OR (experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND mailbox_id IS NOT NULL)),
+    CONSTRAINT ck_policy_decisions_approval_send_binding CHECK (
+        (scope = 'APPROVAL_ELIGIBILITY' AND experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND campaign_member_id IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND mailbox_id IS NOT NULL AND approval_id IS NULL) OR
+        (scope = 'SEND' AND experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND campaign_member_id IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND mailbox_id IS NOT NULL AND approval_id IS NOT NULL) OR
+        scope NOT IN ('APPROVAL_ELIGIBILITY','SEND')
+    ),
     CONSTRAINT ck_policy_decisions_reasons CHECK ((allowed AND cardinality(reason_codes) >= 0) OR (NOT allowed AND cardinality(reason_codes) > 0)),
     CONSTRAINT ck_policy_decisions_facts CHECK (facts_schema_version > 0 AND jsonb_typeof(facts_json) = 'object' AND facts_hash ~ '^[0-9a-f]{64}$' AND scope_hash ~ '^[0-9a-f]{64}$')
 );
 CREATE INDEX ix_policy_decisions_reproducibility ON policy_decisions (policy_version, scope_hash, facts_hash);
 CREATE INDEX ix_policy_decisions_mailbox ON policy_decisions (mailbox_id, evaluated_at DESC) WHERE mailbox_id IS NOT NULL;
+CREATE INDEX ix_policy_decisions_approval ON policy_decisions (approval_id, evaluated_at DESC) WHERE approval_id IS NOT NULL;
 
 CREATE TABLE cost_entries (
     cost_entry_id uuid NOT NULL,
@@ -272,7 +281,7 @@ CREATE INDEX ix_repair_actions_incident ON repair_actions (incident_id, executed
 
 ### Command and side-effect atomicity
 
-For aggregate commands: begin; claim `(command_scope,idempotency_key)`; verify DB-01's RFC 8785 request envelope digest and compare it; load expected version; apply pure transition; update aggregate; insert the specific event plus the aggregate's canonical `*.state_changed.v1` event where defined; insert audit; insert outbox; store result; commit. For provider work: the first transaction records the complete composite policy/approval/intent/attempt authority; the network call occurs without a long transaction; the second records `send.provider_accepted.v1`, conclusive failure, or `AMBIGUOUS`. A crash in the gap enters exact-authority reconciliation, never automatic retry.
+For aggregate commands: begin; claim `(command_scope,idempotency_key)`; verify DB-01's RFC 8785 request envelope digest and compare it; load expected version; apply pure transition; update aggregate; insert the specific event plus the aggregate's canonical `*.state_changed.v1` event where defined; insert audit; insert outbox; store result; commit. For provider work: `RequestApproval` first records one `APPROVAL_ELIGIBILITY` decision and approval basis without ApprovalRule; an approved row never inherits send authority. The last-mile transaction records a new `SEND` decision with `approval_id`, the same immutable `scope_hash`, an independent current `facts_hash`, the exact rate reservation, and the attempt before the network call. The result transaction records `send.provider_accepted.v1`, conclusive failure, or `AMBIGUOUS`. A crash in the gap enters exact-authority reconciliation, never automatic retry.
 
 An internal outbox consumer starts one PostgreSQL transaction, rechecks absence of `(consumer_name,event_id)`, performs all internal business writes, inserts `outbox_deliveries`, and commits once. A crash rolls back both the business writes and delivery receipt; redelivery re-executes the same transaction. External provider effects are forbidden in that transaction and forbidden from any generic “effect once” claim. Gmail/model/search/extraction effects use their explicit intent/result/error or `AMBIGUOUS`/reconciliation contracts.
 

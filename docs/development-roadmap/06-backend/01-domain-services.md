@@ -45,10 +45,11 @@ The table owners below are canonical; no route/workflow/provider/agent writes th
 | `GmailMailboxCommandService` | `gmail_mailboxes`; provider credential is an external secret reference only |
 | `CampaignCommandService`, `CampaignAdmissionService` | immutable `campaigns` versions and `campaign_members` |
 | `MessageCommandService` | `outreach_messages` except SendGateway/Recovery-owned documented send transitions |
-| `ApprovalCommandService` | `approvals`; exact scope/version state and consumption |
+| `ApprovalCommandService` | `approvals`; exact campaign-member approval basis, eligibility-decision binding, lifecycle, and consumption; never final SEND authority |
 | `SuppressionCommandService` | `suppression_entries`; suppression always overrides eligibility/approval |
-| `PolicyEvaluationService` | append-only `policy_decisions`; pure versioned rule composition |
-| application `SendGateway` | `send_intents`; pre-call `send_attempts`; documented message/attempt transitions under BACKEND-04 |
+| `PolicyEvaluationService` | append-only `policy_decisions`; separate `APPROVAL_ELIGIBILITY` and fresh final `SEND` compositions with shared basis/independent facts hashes |
+| application `SendGateway` | eligibility-bound `send_intents`; fresh-SEND pre-call `send_attempts`; last-mile `QUEUED -> SUPPRESSED`/intent cancellation; documented transitions under BACKEND-04 |
+| `SendRateReservationService` | `send_rate_reservations`; unique mailbox/window slot and one active lease under gateway/recovery transactions |
 | `SendRecoveryService` | disjoint retry/reconciliation transitions on `send_attempts`/messages; never initial provider call |
 | `GmailResultCaptureService`, `GmailObservationService`, `GmailReplySyncService`, `GmailHistorySyncService` | respectively `provider_results`, `provider_observations`, `replies`, `gmail_history_cursors` |
 | `AgentRunRecordingService`, `ArtifactCommandService`, `EvidenceIngestService` | respectively `agent_runs`, `artifacts(PRODUCED)` plus event, and `evidence_items` |
@@ -62,7 +63,7 @@ When two services touch one aggregate, their legal transitions are disjoint and 
 
 ### Command, digest, transaction, and concurrency contract
 
-Every application command is a strict frozen `CommandEnvelopeV1` with `command_type`, `command_scope`, idempotency key, authenticated actor, expected aggregate version where applicable, correlation/causation UUIDv4, text `request_schema_version`, JSON payload, and DB-01 lowercase SHA-256 of RFC 8785 UTF-8 `{"schema_version":version,"payload":payload}`. IDs and UTC clock are injected; no service reads global time/randomness.
+Every application command is a strict frozen `CommandEnvelopeV1` with `command_type`, `command_scope`, idempotency key, authenticated actor (or operator/flow binding verified from signed OAuth state for `CompleteGmailAuthorization`), expected aggregate version where applicable, correlation/causation UUIDv4, text `request_schema_version`, JSON payload, and DB-01 lowercase SHA-256 of RFC 8785 UTF-8 `{"schema_version":version,"payload":payload}`. IDs and UTC clock are injected; no service reads global time/randomness.
 
 The exact aggregate transaction is: begin; claim `(command_scope,idempotency_key)`; verify request bytes/schema against prior claim; lock/load or optimistic-version-check; load all named authority rows; call pure transition/policy; update the sole-writer row; insert the specific ARCH-03 event and aggregate `*.state_changed.v1` where defined; insert safe audit; insert outbox; store the complete result envelope/hash; commit. A same-key/same-hash replay returns the stored status/body without another version/event. Same key/different hash is `IDEMPOTENCY_HASH_CONFLICT`. Version loss is `VERSION_CONFLICT`. Denial records safe audit/policy evidence but no aggregate mutation unless the canonical transition itself is denial/suppression.
 
@@ -75,7 +76,7 @@ External calls and runtime signals never occur in that transaction. Outbox inter
 | experiment stage | approved brief/gates/version -> start/finish/fail finite run -> stored run/result/aggregate bundle | WF-02 states; `workflow.run_*`, `experiment.*` exact `.v1` events |
 | artifact | verified run/config/provider ledger -> `PRODUCED` -> later validate/link -> later accept/materialize | DB-04 owners; `artifact.produced/validated/rejected/accepted/superseded.v1` |
 | lead | accepted evidence + identity/criteria -> conflict/research/assessment/suppression -> lead state | `lead.discovered/identity_conflict_detected/evidence_recorded/qualified/disqualified/suppressed.v1` |
-| campaign/approval | frozen campaign/member/message/artifact/policy scope -> version/approve/deny/revoke -> exact authority | complete campaign family plus `approval.requested/decided/revoked.v1` |
+| campaign/approval | frozen campaign/member/message/artifact basis -> eligibility without ApprovalRule -> request/approve/deny/revoke -> exact basis only | complete campaign family plus `policy.evaluated.v1` and `approval.requested/decided/revoked.v1`; no send authority |
 | control/recovery | authenticated command + current evidence -> pure control/repair decision -> requested/acknowledged state | WF-06 exact experiment/run/campaign/control/send events |
 | decision/report | frozen metrics/evidence/rule + operator -> immutable decision; queries read snapshots/events | `experiment.decision_recorded.v1`; `SCALE` grants no new authority |
 
@@ -83,7 +84,7 @@ External calls and runtime signals never occur in that transaction. Outbox inter
 
 For model/search/page/business calls: verified workflow/config/input -> budget reservation -> provider capability request hash/call ID -> cancellation/deadline/rate gate -> external read/model call -> exact Task 3 result and provider ledger -> evidence ingestion where applicable -> `ProviderCostReconciliationService` -> agent deterministic validation -> only then `PRODUCED` artifact and later separate validation/acceptance. Failures cannot transition aggregates merely because a provider returned data.
 
-For Gmail: approved exact message/campaign/member/mailbox/approval/allowed-policy tuple -> budget/control/owned-recipient gates -> immutable `send_intents` plus stable mailbox idempotency/RFC ID -> queue after commit -> BACKEND-04 last-mile recheck and `send_attempts` commit -> one `SendGateway -> GmailProvider.send` network call -> `GmailResultCaptureService` -> direct `send.provider_accepted.v1`, conclusive `send.failed.v1`, or `send.outcome_ambiguous.v1` -> mailbox-bound PROVIDER-02 reconciliation before retry -> cost/budget reconcile -> reply history page/observations/replies/events/cursor commit atomically. Every step carries correlation/causation and safe audit. No agent/workflow/provider chooses a transition.
+For Gmail: allowed eligibility decision -> exact campaign/version/`campaign_member_id`/message/mailbox approval basis -> operator approval -> eligibility-bound immutable `send_intents` plus stable mailbox idempotency/RFC ID -> queue after commit -> BACKEND-04 fresh final SEND decision over current facts -> suppression terminal/no-call bundle or atomic consumed `send_rate_reservations` + `send_attempts` commit -> one `SendGateway -> GmailProvider.send` network call -> `GmailResultCaptureService` -> direct `send.provider_accepted.v1`, conclusive `send.failed.v1`, or `send.outcome_ambiguous.v1` -> mailbox-bound PROVIDER-02 reconciliation before retry -> cost/budget reconcile -> reply history page/observations/replies/events/cursor commit atomically. Every step carries correlation/causation and safe audit. No agent/workflow/provider chooses a transition.
 
 ## Ordered implementation tasks
 

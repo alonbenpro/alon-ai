@@ -26,7 +26,7 @@ In scope: authenticated idempotent commands, experiment/run/campaign/send admiss
 
 Create `application/controls.py`, `application/recovery.py`, workflow runtime control adapter methods, API commands later in M7, and recovery tests. Control command keys are `control:{aggregate_type}:{aggregate_id}:{command}:{operator_request_id}`. Commands first persist intent/state/audit/outbox under expected versions, then call the runtime adapter. The runtime may implement pause cooperatively at safe step boundaries using the exact M1-proven DBOS mechanism; no claim of a native primitive is made without WF-01 evidence.
 
-Exact product tables touched through application commands are `experiments`, `workflow_runs`, `campaigns`, `outreach_messages`, `send_intents`, `send_attempts`, `provider_results`, `provider_observations`, `system_controls`, `suppression_entries`, `policy_decisions`, `incidents`, `repair_actions`, `command_idempotency`, `domain_events`, `audit_events`, and `outbox_messages`.
+Exact product tables touched through application commands are `experiments`, `workflow_runs`, `campaigns`, `outreach_messages`, `send_intents`, `send_rate_reservations`, `send_attempts`, `provider_results`, `provider_observations`, `system_controls`, `suppression_entries`, `policy_decisions`, `incidents`, `repair_actions`, `command_idempotency`, `domain_events`, `audit_events`, and `outbox_messages`.
 
 ### Canonical experiment/run control map
 
@@ -44,8 +44,8 @@ The `FAILED -> READY_FOR_OUTREACH` path is deliberate: it never jumps to `OUTREA
 ### Campaign/message/provider recovery rules
 
 - Campaign pause emits `campaign.paused.v1` plus `campaign.state_changed.v1` on the exact `(campaign_id,campaign_version)`; resume emits `campaign.resumed.v1` plus state-changed after a new deterministic policy/control check. Cancel emits `campaign.cancelled.v1` plus state-changed and may make unsent `QUEUED` messages `CANCELLED`; it cannot overwrite `SENDING`, `AMBIGUOUS`, or `RECONCILING`. Completion/failure use `campaign.completed.v1`/`campaign.failed.v1` plus state-changed.
-- A pre-provider queued message may become `CANCELLED` or `SUPPRESSED` under ARCH-03. Once the provider call may have started, cancel requests disable further calls but the attempt remains `SENDING/AMBIGUOUS/RECONCILING` until provider evidence resolves it.
-- `FAILED_RETRYABLE -> QUEUED` is owned only by `SendRecoveryService`, preserves the immutable intent mailbox/RFC identity, and requires every ARCH-03 retry guard; runtime timers merely wake evaluation. Mailbox-bound `send.retry_scheduled.v1` records admission; exhaustion/operator abort emits mailbox-bound `send.retry_exhausted.v1` and reaches `FAILED_PERMANENT`.
+- A pre-provider queued message may become `CANCELLED` or `SUPPRESSED` under ARCH-03. Last-mile suppression atomically records fresh denied SEND policy, `QUEUED -> SUPPRESSED`, `send.suppressed.v1`, one-way `open_for_attempt=false` intent cancellation, and reservation release with zero rate reservation/attempt/provider call. Once an attempt/consumed lease exists or the provider call may have started, intent cancellation is relationally forbidden; the attempt remains `SENDING/AMBIGUOUS/RECONCILING` until evidence resolves it.
+- `FAILED_RETRYABLE -> QUEUED` is owned only by `SendRecoveryService`, preserves the immutable campaign-member/approval-basis/mailbox/RFC identity, requires no active consumed rate lease and every ARCH-03 retry guard, and creates no policy decision until a later fresh last-mile SEND; runtime timers merely wake evaluation. Mailbox-bound `send.retry_scheduled.v1` records admission; exhaustion/operator abort emits mailbox-bound `send.retry_exhausted.v1` and reaches `FAILED_PERMANENT`.
 - Global `system_controls` changes are versioned/authenticated. `system.outreach_disabled.v1` is emitted for product-wide disable; re-enable uses `system.outreach_enabled.v1` only after incident/gate evidence. M6 test-inbox control cannot enable product outreach.
 - Unknown runtime/product disagreement opens `incidents`, leaves send controls false, and requires `repair_actions` with before/after hashes. Direct SQL is forbidden.
 
@@ -54,9 +54,9 @@ The `FAILED -> READY_FOR_OUTREACH` path is deliberate: it never jumps to `OUTREA
 | Recovery surface | Reads | Writes/constraints |
 | --- | --- | --- |
 | experiment/run control | `experiments`, active `workflow_runs`, command result, artifact/brief/gate versions | verify DB-01 RFC 8785 input digest before resume and result digest before consumption; optimistic versions, active-run unique, canonical safety bundle |
-| outreach stop | `system_controls`, campaign/messages/intents/attempts, suppression/policy/budget, runtime status | control version; queued message transitions; no mutation of ambiguous/terminal rows; canonical send/control events |
+| outreach stop | `system_controls`, campaign/messages/intents/rate reservations/attempts, suppression/policy/budget, runtime status | control version; queued cancellation/suppression with one-way intent marker and no attempt; release only provably uncalled leases; no mutation of ambiguous/terminal rows |
 | retry | failed experiment/message fields, attempt/deadline, all current controls | new workflow run unique ID or next attempt unique number; retry count/cap checks; retry events |
-| reconcile/repair | intent's complete immutable experiment/campaign/lead/message/mailbox/approval/policy/scope/facts/RFC tuple, matching attempt/results, composite observations/cursor, events/audit/runtime/incident | reject any tuple mismatch before querying; search only authorized account; append composite evidence/repair; direct success uses `send.provider_accepted.v1`, prior ambiguity uses `send.reconciled_as_sent.v1` |
+| reconcile/repair | intent's immutable experiment/campaign/member/lead/message/mailbox/approval/eligibility-basis/RFC tuple plus attempt's fresh SEND decision/consumed rate lease, matching results/observations/cursor/events/audit/runtime/incident | reject any tuple mismatch before querying; search only authorized account; append composite evidence/repair; direct success uses `send.provider_accepted.v1`, prior ambiguity uses `send.reconciled_as_sent.v1` |
 
 ## Ordered implementation tasks
 
@@ -72,7 +72,9 @@ The `FAILED -> READY_FOR_OUTREACH` path is deliberate: it never jumps to `OUTREA
 - **Atomicity `test_control_state_events_idempotency_outbox_commit_together`:** failure injection.
 - **Recovery `test_kill_each_control_boundary_never_starts_post_pause_cancel_provider_call`:** M1/M6 matrix.
 - **Ambiguity `test_cancel_does_not_convert_unknown_provider_outcome_to_cancelled`:** reconcile first.
-- **Mailbox `test_recovery_proves_authorized_mailbox_and_rejects_cross_account_evidence`:** immutable approval/policy/intent account is the only search/result scope.
+- **Mailbox `test_recovery_proves_authorized_mailbox_and_rejects_cross_account_evidence`:** immutable member/approval basis/intent/attempt account is the only search/result scope.
+- **Rate `test_recovery_releases_or_expires_lease_only_after_conclusive_provider_evidence`:** wall-clock expiry never grants retry.
+- **Suppression `test_recovery_never_creates_attempt_for_cancelled_suppressed_intent`:** composite FK enforcement.
 - **Digest `test_resume_and_repair_reject_noncanonical_or_wrong_schema_workflow_snapshot`:** verify before upcast/action.
 - **Retry `test_failed_stage_retry_creates_new_run_and_outreach_returns_ready`:** exact five-exit model.
 - **Security `test_only_authenticated_operator_can_control_or_repair_and_denials_are_audited`:** authority.

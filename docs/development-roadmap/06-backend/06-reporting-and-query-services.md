@@ -24,7 +24,7 @@ In scope: exact projection schemas/versions, source table/event sets, snapshot c
 
 ## Exact planned implementation surfaces
 
-Create `application/reporting.py`, `application/report_contracts.py`, `persistence/queries/experiments.py`, `funnel.py`, `costs.py`, `timeline.py`, `providers.py`, `approvals.py`, and BACKEND-02 route adapters. Do not add projection tables in v1. Queries run read-only PostgreSQL transactions with one `statement_timestamp()` cutoff and source-event high-watermark; later materialization requires measured evidence and an ADR.
+Create `application/reporting.py`, `application/report_contracts.py`, `application/report_snapshots.py`, `persistence/queries/experiments.py`, `funnel.py`, `costs.py`, `timeline.py`, `providers.py`, `approvals.py`, `recovery.py`, and BACKEND-02 route adapters. Do not add projection tables in v1. Every multi-statement report runs `BEGIN TRANSACTION ISOLATION LEVEL REPEATABLE READ READ ONLY`; its first statement captures one `transaction_timestamp()` and source-event high-watermark inside that same MVCC snapshot. No statement may open a second connection or read after commit. Later materialization requires measured evidence and an ADR.
 
 Every response includes literal `schema_version`, `projection_version`, UTC `as_of`, `source_event_high_watermark` (latest included `(recorded_at,event_id)` or null), `complete` boolean, sorted `warnings`, and `correlation_id`. `complete=false` is allowed only for explicitly non-authoritative optional sections and must list why; a missing/corrupt authoritative source is a typed 503. Query version changes create a new projection version and comparison fixtures.
 
@@ -38,7 +38,7 @@ Every response includes literal `schema_version`, `projection_version`, UTC `as_
 | `ExperimentTimelineQueryService` / `report.experiment_timeline.v1` | `domain_events`, `audit_events`, application `workflow_runs`, `policy_decisions`, send intents/attempts/results, incidents/repairs | ordered safe union with record kind, exact event/error/reason, aggregate/version, correlation/causation, authority IDs/hashes, and redacted summary. Logs/runtime history are links, not timeline truth. |
 | `ProviderOperationsQueryService` / `report.provider_operations.v1` | `agent_runs`, `cost_entries`, DB-04 evidence metadata, Gmail attempts/results/observations, incidents | capability/operation/provider/config versions, calls/outcomes/errors/time/tokens/cost, evidence counts, ambiguity age, discrepancies; no prompts/content/addresses/credentials. |
 | `ApprovalQueueQueryService` / `report.approval_queue.v1` | `approvals`, message/campaign/lead/mailbox safe metadata, current suppression/control/policy facts | exact approval state/scope/version/expiry/reason and `current_authority_valid`; changed facts show invalidation reasons and disable actions. It does not approve automatically. |
-| `RecoveryQueryService` / `report.recovery_queue.v1` | nonterminal `workflow_runs`, `IN_PROGRESS` commands, unresolved send attempts, cursor incidents, open incidents/repairs | age, last canonical state/event, exact next allowed operator commands, blocking reason/evidence IDs. Unknown is visible; nothing is auto-resolved. |
+| `RecoveryQueryService` / `report.recovery_overview.v1` | nonterminal `workflow_runs`, `IN_PROGRESS` commands, unresolved send attempts, cursor incidents, `repair_actions` plus open incidents | `RecoveryOverviewItemV1` union with kind `WORKFLOW_RUN`, `COMMAND`, `SEND_ATTEMPT`, `CURSOR_INCIDENT`, or `REPAIR_ACTION`; stable ID, attention time, state/reason, safe authority/evidence IDs, and exact next allowed commands. Served only by BACKEND-02 `GET /api/v1/recovery/overview` / `getRecoveryOverview`; unknown remains visible and nothing auto-resolves. |
 
 Sole query owners never write tables or invoke providers/runtime. API serialization converts exact domain values to OpenAPI models and cannot add presentation-derived status. Next.js display labels/colors/actions are exhaustive mappings over canonical enums.
 
@@ -57,9 +57,18 @@ All counts are distinct stable IDs at `as_of`, not event-row counts:
 
 Each conversion output includes numerator, denominator, value or null, and status `AVAILABLE`, `ZERO_DENOMINATOR`, or `INSUFFICIENT_EVIDENCE`. Missing data is never zero. Definition/rule/query versions and ID-set hashes allow metric snapshot reproduction. BACKEND-06 may display the deterministic DB-02 `MetricSnapshotService` result but does not recompute or record experiment decisions.
 
+### Repeatable-read snapshot and pagination contract
+
+Non-paginated reports execute every source query and serialization precondition in one `REPEATABLE READ READ ONLY` transaction. `as_of=transaction_timestamp()` and `source_event_high_watermark` are selected first; concurrent commits after snapshot creation cannot change any count, row, warning, or completeness result.
+
+Paginated reports/recovery use one exported PostgreSQL snapshot, not a sequence of fresh transactions. Page one starts the same read-only repeatable-read transaction, calls `pg_export_snapshot()`, and retains that exporter connection in bounded `ReportSnapshotLeaseRegistry` for 60 seconds. The signed opaque cursor contains route, normalized filter hash, order, last key, projection version, `as_of`, high-watermark, snapshot lease UUID/hash, and expiry; it never exposes the raw PostgreSQL snapshot identifier. Each subsequent page starts `REPEATABLE READ READ ONLY`, executes `SET TRANSACTION SNAPSHOT` before any query using the server-side lease, then applies keyset `>` to the last tuple. The exporter remains open until final page/expiry/cancel; registry capacity is 4 and rejects excess with 429 `RATE_LIMITED`.
+
+If the process/connection/snapshot lease disappears or expires, return 409 `STATE_TRANSITION_DENIED` with `REPORT_SNAPSHOT_EXPIRED`; the generated client discards its cursor and restarts page one. A PostgreSQL serialization/snapshot-import failure rolls back the whole page/report; the query service may restart from page one at most twice under a new correlation child span, never continue a cursor on a new snapshot, then returns 503 `DEPENDENCY_UNAVAILABLE`. Deployment with multiple API instances must route a cursor to its lease owner or supply an equivalent shared snapshot coordinator before enabling pagination; sticky routing cannot weaken token verification.
+
+
 ### Timeline ordering, pagination, freshness, and privacy
 
-Timeline total order is `(occurred_at,recorded_at,record_kind,event_or_record_id)`; it is diagnostic, not cross-aggregate causality. Causation/correlation and aggregate versions establish relationships. Pages use BACKEND-02 signed cursor containing projection/filter/order/last tuple/cutoff/expiry. All pages in one traversal reuse the original `as_of`/high-watermark, so new events appear only in a new traversal. Other lists use their documented stable order and cursor.
+Timeline total order is `(occurred_at,recorded_at,record_kind,event_or_record_id)`; recovery overview order is `(attention_since,record_kind,record_id)`. Both are diagnostic, not cross-aggregate causality. Causation/correlation and aggregate versions establish relationships. All pages import the original exported snapshot and reuse its `as_of`/high-watermark; concurrent events appear only in a new traversal. Other lists use their documented stable keyset order under the same snapshot contract.
 
 Redaction is schema-based. Reports expose recipient/domain/message/provider IDs only as safe internal IDs or non-reversible hashes; never ciphertext, decrypted address/body/subject, source text/snippet, OAuth/key, raw provider/error payload, hidden reasoning, or restricted capture ref. Purged evidence remains visible as hash/state. Operator authentication does not justify unnecessary PII.
 
@@ -86,9 +95,9 @@ V1 query responses may use private in-process/HTTP cache keyed by operator, rout
 ## Ordered implementation tasks
 
 - [ ] **Encode projection schemas/query versions —** Input: canonical tables/states/events/metrics and manifest above. Operation: define strict response unions, cutoff/high-watermark, warnings, pagination, and redaction. Output: stable report contracts. Test evidence: schema snapshots and every-state fixtures. Failure behavior: unknown source/state blocks the affected authoritative report.
-- [ ] **Implement overview/funnel/recovery queries —** Input: one read snapshot and exact filters. Operation: compute distinct ID sets/hashes/counts/statuses/attention queues without writes. Output: operator diagnosis. Test evidence: real-PostgreSQL boundary/duplicate/ambiguous/suppression fixtures. Failure behavior: visible incomplete/degraded, never inferred success.
+- [ ] **Implement overview/funnel/recovery queries —** Input: one repeatable-read snapshot and exact filters. Operation: compute distinct ID sets/hashes/counts/statuses and the five-kind recovery overview without writes. Output: operator diagnosis through exact BACKEND-02 routes. Test evidence: real-PostgreSQL boundary/duplicate/ambiguous/suppression/recovery fixtures. Failure behavior: visible incomplete/degraded, never inferred success.
 - [ ] **Implement cost/provider queries —** Input: reservations/cost/provider ledgers and conversion evidence. Operation: group original currencies, reconcile ILS/discrepancies, expose safe performance. Output: budget/cost diagnosis. Test evidence: currency/rounding/duplicate/missing-FX/provider parity fixtures. Failure behavior: incomplete ILS total and discrepancy.
-- [ ] **Implement timeline/pagination/API routes —** Input: frozen cutoff and event/audit/provider records. Operation: stable union order, signed cursor pages, and BACKEND-02 serialization. Output: replayable timeline/report API. Test evidence: concurrent insert/cursor tamper/page continuity/OpenAPI tests. Failure behavior: new traversal or typed validation/dependency error.
+- [ ] **Implement repeatable-read/exported-snapshot pagination/API routes —** Input: frozen MVCC snapshot and event/audit/provider/recovery records. Operation: retain bounded exporter lease, import before every page query, apply stable keyset order, sign cursor, and serialize BACKEND-02 models. Output: replayable report/recovery API. Test evidence: concurrent commits cannot alter report/page, snapshot expiry/restart, serialization retry, cursor tamper, page continuity, and OpenAPI tests. Failure behavior: discard traversal and restart page one or typed dependency error.
 - [ ] **Prove decision reproducibility, redaction, and UI contract —** Input: metric/report fixtures, retention/redaction states, generated client. Operation: reproduce snapshot views, scan sensitive fields, and render all states/actions. Output: M7 evidence. Test evidence: query/gate comparison, privacy scan, browser E2E/accessibility. Failure behavior: M7 blocked.
 
 ## Test strategy
@@ -97,7 +106,10 @@ V1 query responses may use private in-process/HTTP cache keyed by operator, rout
 - **Funnel `test_direct_reconciled_sent_and_reply_counts_are_distinct_and_deduplicated`:** ambiguity visible.
 - **Math `test_zero_denominator_missing_and_insufficient_evidence_are_not_conflated`:** exact statuses.
 - **Cost `test_original_currency_and_ils_conversion_evidence_never_silently_mix`:** integer rounding vectors.
-- **Pagination `test_timeline_cutoff_cursor_has_no_duplicates_or_skips_under_concurrent_events`:** stable snapshot.
+- **Snapshot `test_multi_statement_report_is_repeatable_read_and_concurrent_commit_cannot_change_result`:** one transaction timestamp/high-watermark.
+- **Pagination `test_exported_snapshot_pages_ignore_concurrent_commits_without_duplicates_or_skips`:** same MVCC snapshot/keyset.
+- **Snapshot recovery `test_expired_or_lost_snapshot_discards_cursor_and_restarts_page_one`:** no mixed snapshots.
+- **Recovery API `test_recovery_overview_five_kinds_match_get_recovery_overview_schema`:** route/client linkage.
 - **Privacy `test_all_reports_openapi_logs_and_cache_exclude_sensitive_fields`:** allowlist scan.
 
 ## Security, privacy, compliance, idempotency, observability, and cost

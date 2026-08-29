@@ -185,6 +185,7 @@ CREATE TABLE outreach_messages (
     CONSTRAINT fk_outreach_messages_mailbox FOREIGN KEY (mailbox_id) REFERENCES gmail_mailboxes (mailbox_id) ON DELETE RESTRICT,
     CONSTRAINT uq_outreach_messages_mailbox UNIQUE (message_id, mailbox_id),
     CONSTRAINT uq_outreach_messages_authority UNIQUE (message_id, experiment_id, campaign_id, campaign_version, lead_id, mailbox_id),
+    CONSTRAINT uq_outreach_messages_send_authority UNIQUE (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id),
     CONSTRAINT uq_outreach_messages_content UNIQUE (campaign_id, campaign_version, lead_id, content_hash),
     CONSTRAINT uq_outreach_messages_id_version UNIQUE (message_id, version),
     CONSTRAINT ck_outreach_messages_state CHECK (state IN ('DRAFT','APPROVAL_PENDING','APPROVED','SEND_INTENT_RECORDED','QUEUED','SENDING','AMBIGUOUS','RECONCILING','SENT','FAILED_RETRYABLE','FAILED_PERMANENT','SUPPRESSED','CANCELLED')),
@@ -199,6 +200,7 @@ CREATE TABLE approvals (
     experiment_id uuid NOT NULL,
     campaign_id uuid NOT NULL,
     campaign_version integer NOT NULL,
+    campaign_member_id uuid NOT NULL,
     lead_id uuid NOT NULL,
     message_id uuid NOT NULL,
     mailbox_id uuid NOT NULL,
@@ -207,8 +209,11 @@ CREATE TABLE approvals (
     state text NOT NULL DEFAULT 'PENDING',
     artifact_version_refs jsonb NOT NULL,
     artifact_version_refs_hash char(64) NOT NULL,
-    policy_version text NOT NULL,
-    policy_facts_hash char(64) NOT NULL,
+    eligibility_policy_decision_id uuid NOT NULL,
+    eligibility_policy_scope text NOT NULL DEFAULT 'APPROVAL_ELIGIBILITY',
+    eligibility_policy_version text NOT NULL,
+    eligibility_facts_hash char(64) NOT NULL,
+    eligibility_policy_allowed boolean NOT NULL DEFAULT true,
     max_send_count integer NOT NULL DEFAULT 1,
     expires_at timestamptz NOT NULL,
     operator_id uuid NULL,
@@ -218,11 +223,13 @@ CREATE TABLE approvals (
     CONSTRAINT pk_approvals PRIMARY KEY (approval_id),
     CONSTRAINT fk_approvals_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
     CONSTRAINT fk_approvals_campaign_version FOREIGN KEY (campaign_id, campaign_version) REFERENCES campaigns (campaign_id, campaign_version) ON DELETE RESTRICT,
-    CONSTRAINT fk_approvals_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, lead_id, mailbox_id) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, lead_id, mailbox_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT fk_approvals_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED,
     CONSTRAINT fk_approvals_operator FOREIGN KEY (operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
-    CONSTRAINT uq_approvals_authority UNIQUE (approval_id, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, scope_hash, policy_version, policy_facts_hash),
+    CONSTRAINT uq_approvals_send_basis UNIQUE (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, scope_hash),
+    CONSTRAINT uq_approvals_eligibility_authority UNIQUE (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, eligibility_policy_decision_id, eligibility_policy_scope, eligibility_policy_version, scope_hash, eligibility_facts_hash, eligibility_policy_allowed),
     CONSTRAINT ck_approvals_state CHECK (state IN ('PENDING','APPROVED','DENIED','EXPIRED','REVOKED','CONSUMED')),
-    CONSTRAINT ck_approvals_scope CHECK (scope_schema_version > 0 AND scope_hash ~ '^[0-9a-f]{64}$' AND artifact_version_refs_hash ~ '^[0-9a-f]{64}$' AND policy_facts_hash ~ '^[0-9a-f]{64}$' AND jsonb_typeof(artifact_version_refs) = 'object'),
+    CONSTRAINT ck_approvals_scope CHECK (scope_schema_version > 0 AND scope_hash ~ '^[0-9a-f]{64}$' AND artifact_version_refs_hash ~ '^[0-9a-f]{64}$' AND eligibility_facts_hash ~ '^[0-9a-f]{64}$' AND jsonb_typeof(artifact_version_refs) = 'object'),
+    CONSTRAINT ck_approvals_eligibility CHECK (eligibility_policy_scope = 'APPROVAL_ELIGIBILITY' AND eligibility_policy_allowed),
     CONSTRAINT ck_approvals_cap CHECK (max_send_count = 1),
     CONSTRAINT ck_approvals_expiry CHECK (expires_at > requested_at),
     CONSTRAINT ck_approvals_decision CHECK ((state = 'PENDING' AND operator_id IS NULL AND decided_at IS NULL) OR (state <> 'PENDING' AND reason_code IS NOT NULL AND decided_at IS NOT NULL))
@@ -253,42 +260,82 @@ CREATE UNIQUE INDEX uq_suppression_entries_active_global ON suppression_entries 
 CREATE TABLE send_intents (
     send_intent_id uuid NOT NULL,
     experiment_id uuid NOT NULL,
+    campaign_id uuid NOT NULL,
+    campaign_version integer NOT NULL,
+    campaign_member_id uuid NOT NULL,
     lead_id uuid NOT NULL,
     message_id uuid NOT NULL,
     mailbox_id uuid NOT NULL,
     approval_id uuid NOT NULL,
-    policy_decision_id uuid NOT NULL,
-    policy_scope text NOT NULL DEFAULT 'SEND',
-    policy_version text NOT NULL,
-    policy_allowed boolean NOT NULL DEFAULT true,
-    campaign_id uuid NOT NULL,
-    campaign_version integer NOT NULL,
+    eligibility_policy_decision_id uuid NOT NULL,
+    eligibility_policy_scope text NOT NULL DEFAULT 'APPROVAL_ELIGIBILITY',
+    eligibility_policy_version text NOT NULL,
+    eligibility_facts_hash char(64) NOT NULL,
+    eligibility_policy_allowed boolean NOT NULL DEFAULT true,
     idempotency_key text NOT NULL,
     scope_hash char(64) NOT NULL,
-    policy_facts_hash char(64) NOT NULL,
     rfc_message_id text NOT NULL,
     max_attempts integer NOT NULL,
     attempt_count integer NOT NULL DEFAULT 0,
     retry_deadline timestamptz NOT NULL,
     retry_policy_version text NOT NULL,
     budget_reservation_id uuid NOT NULL,
+    open_for_attempt boolean NOT NULL DEFAULT true,
+    cancelled_at timestamptz NULL,
+    cancellation_reason text NULL,
     created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     CONSTRAINT pk_send_intents PRIMARY KEY (send_intent_id),
-    CONSTRAINT fk_send_intents_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, lead_id, mailbox_id) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, lead_id, mailbox_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_send_intents_approval_authority FOREIGN KEY (approval_id, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, scope_hash, policy_version, policy_facts_hash) REFERENCES approvals (approval_id, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, scope_hash, policy_version, policy_facts_hash) ON DELETE RESTRICT,
+    CONSTRAINT fk_send_intents_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_send_intents_approval_authority FOREIGN KEY (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, scope_hash) REFERENCES approvals (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, scope_hash) ON DELETE RESTRICT,
     CONSTRAINT fk_send_intents_budget FOREIGN KEY (budget_reservation_id) REFERENCES budget_reservations (reservation_id) ON DELETE RESTRICT,
     CONSTRAINT uq_send_intents_message UNIQUE (message_id),
+    CONSTRAINT uq_send_intents_approval UNIQUE (approval_id),
     CONSTRAINT uq_send_intents_mailbox_idempotency UNIQUE (mailbox_id, idempotency_key),
     CONSTRAINT uq_send_intents_mailbox_rfc UNIQUE (mailbox_id, rfc_message_id),
     CONSTRAINT uq_send_intents_mailbox_identity UNIQUE (send_intent_id, mailbox_id),
     CONSTRAINT uq_send_intents_attempt_identity UNIQUE (send_intent_id, mailbox_id, rfc_message_id),
-    CONSTRAINT uq_send_intents_attempt_authority UNIQUE (send_intent_id, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, approval_id, policy_decision_id, policy_scope, policy_version, scope_hash, policy_facts_hash, policy_allowed, rfc_message_id),
-    CONSTRAINT ck_send_intents_hashes CHECK (scope_hash ~ '^[0-9a-f]{64}$' AND policy_facts_hash ~ '^[0-9a-f]{64}$'),
-    CONSTRAINT ck_send_intents_policy_authority CHECK (policy_scope = 'SEND' AND policy_allowed),
+    CONSTRAINT uq_send_intents_attempt_authority UNIQUE NULLS NOT DISTINCT (send_intent_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, approval_id, eligibility_policy_decision_id, eligibility_policy_scope, eligibility_policy_version, scope_hash, eligibility_facts_hash, eligibility_policy_allowed, rfc_message_id, open_for_attempt),
+    CONSTRAINT ck_send_intents_hashes CHECK (scope_hash ~ '^[0-9a-f]{64}$' AND eligibility_facts_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_send_intents_eligibility_authority CHECK (eligibility_policy_scope = 'APPROVAL_ELIGIBILITY' AND eligibility_policy_allowed),
     CONSTRAINT ck_send_intents_attempts CHECK (max_attempts > 0 AND attempt_count BETWEEN 0 AND max_attempts),
-    CONSTRAINT ck_send_intents_retry_deadline CHECK (retry_deadline > created_at)
+    CONSTRAINT ck_send_intents_retry_deadline CHECK (retry_deadline > created_at),
+    CONSTRAINT ck_send_intents_cancellation CHECK ((open_for_attempt AND cancelled_at IS NULL AND cancellation_reason IS NULL) OR (NOT open_for_attempt AND cancelled_at IS NOT NULL AND cancellation_reason IS NOT NULL))
 );
 CREATE INDEX ix_send_intents_mailbox_created ON send_intents (mailbox_id, created_at DESC);
+CREATE INDEX ix_send_intents_open ON send_intents (mailbox_id, created_at) WHERE cancelled_at IS NULL;
+
+CREATE TABLE send_rate_reservations (
+    send_rate_reservation_id uuid NOT NULL,
+    send_intent_id uuid NOT NULL,
+    mailbox_id uuid NOT NULL,
+    rate_policy_version text NOT NULL,
+    window_start timestamptz NOT NULL,
+    window_end timestamptz NOT NULL,
+    slot_number integer NOT NULL,
+    concurrency_lease_token char(64) NOT NULL,
+    state text NOT NULL DEFAULT 'RESERVED',
+    reserved_at timestamptz NOT NULL,
+    lease_expires_at timestamptz NOT NULL,
+    consumed_at timestamptz NULL,
+    released_at timestamptz NULL,
+    expired_at timestamptz NULL,
+    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
+    CONSTRAINT pk_send_rate_reservations PRIMARY KEY (send_rate_reservation_id),
+    CONSTRAINT fk_send_rate_reservations_intent FOREIGN KEY (send_intent_id, mailbox_id) REFERENCES send_intents (send_intent_id, mailbox_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_send_rate_reservations_slot UNIQUE (mailbox_id, rate_policy_version, window_start, slot_number),
+    CONSTRAINT uq_send_rate_reservations_attempt_authority UNIQUE (send_rate_reservation_id, send_intent_id, mailbox_id, rate_policy_version, window_start, slot_number, concurrency_lease_token, consumed_at),
+    CONSTRAINT ck_send_rate_reservations_state CHECK (state IN ('RESERVED','CONSUMED','RELEASED','EXPIRED')),
+    CONSTRAINT ck_send_rate_reservations_window CHECK (window_end > window_start AND slot_number >= 0),
+    CONSTRAINT ck_send_rate_reservations_lease CHECK (lease_expires_at > reserved_at AND concurrency_lease_token ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_send_rate_reservations_times CHECK (
+        (state = 'RESERVED' AND consumed_at IS NULL AND released_at IS NULL AND expired_at IS NULL) OR
+        (state = 'CONSUMED' AND consumed_at IS NOT NULL AND released_at IS NULL AND expired_at IS NULL) OR
+        (state = 'RELEASED' AND consumed_at IS NOT NULL AND released_at IS NOT NULL AND expired_at IS NULL) OR
+        (state = 'EXPIRED' AND released_at IS NULL AND expired_at IS NOT NULL)
+    )
+);
+CREATE UNIQUE INDEX uq_send_rate_reservations_active_mailbox ON send_rate_reservations (mailbox_id) WHERE state IN ('RESERVED','CONSUMED');
+CREATE INDEX ix_send_rate_reservations_expiry ON send_rate_reservations (lease_expires_at, mailbox_id) WHERE state IN ('RESERVED','CONSUMED');
 
 CREATE TABLE send_attempts (
     send_attempt_id uuid NOT NULL,
@@ -296,17 +343,30 @@ CREATE TABLE send_attempts (
     experiment_id uuid NOT NULL,
     campaign_id uuid NOT NULL,
     campaign_version integer NOT NULL,
+    campaign_member_id uuid NOT NULL,
     lead_id uuid NOT NULL,
     message_id uuid NOT NULL,
     mailbox_id uuid NOT NULL,
     approval_id uuid NOT NULL,
-    policy_decision_id uuid NOT NULL,
-    policy_scope text NOT NULL,
-    policy_version text NOT NULL,
+    eligibility_policy_decision_id uuid NOT NULL,
+    eligibility_policy_scope text NOT NULL,
+    eligibility_policy_version text NOT NULL,
+    eligibility_facts_hash char(64) NOT NULL,
+    eligibility_policy_allowed boolean NOT NULL,
+    send_policy_decision_id uuid NOT NULL,
+    send_policy_scope text NOT NULL DEFAULT 'SEND',
+    send_policy_version text NOT NULL,
     scope_hash char(64) NOT NULL,
-    policy_facts_hash char(64) NOT NULL,
-    policy_allowed boolean NOT NULL,
+    send_policy_facts_hash char(64) NOT NULL,
+    send_policy_allowed boolean NOT NULL DEFAULT true,
+    rate_reservation_id uuid NOT NULL,
+    rate_policy_version text NOT NULL,
+    rate_window_start timestamptz NOT NULL,
+    rate_slot_number integer NOT NULL,
+    rate_concurrency_lease_token char(64) NOT NULL,
+    rate_consumed_at timestamptz NOT NULL,
     rfc_message_id text NOT NULL,
+    intent_open_for_attempt boolean NOT NULL DEFAULT true,
     attempt_number integer NOT NULL,
     state text NOT NULL DEFAULT 'STARTED',
     started_at timestamptz NOT NULL,
@@ -317,7 +377,8 @@ CREATE TABLE send_attempts (
     retry_class text NULL,
     reconciliation_strategy_version text NULL,
     CONSTRAINT pk_send_attempts PRIMARY KEY (send_attempt_id),
-    CONSTRAINT fk_send_attempts_intent_authority FOREIGN KEY (send_intent_id, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, approval_id, policy_decision_id, policy_scope, policy_version, scope_hash, policy_facts_hash, policy_allowed, rfc_message_id) REFERENCES send_intents (send_intent_id, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, approval_id, policy_decision_id, policy_scope, policy_version, scope_hash, policy_facts_hash, policy_allowed, rfc_message_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_send_attempts_intent_authority FOREIGN KEY (send_intent_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, approval_id, eligibility_policy_decision_id, eligibility_policy_scope, eligibility_policy_version, scope_hash, eligibility_facts_hash, eligibility_policy_allowed, rfc_message_id, intent_open_for_attempt) REFERENCES send_intents (send_intent_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, approval_id, eligibility_policy_decision_id, eligibility_policy_scope, eligibility_policy_version, scope_hash, eligibility_facts_hash, eligibility_policy_allowed, rfc_message_id, open_for_attempt) ON DELETE RESTRICT,
+    CONSTRAINT fk_send_attempts_rate_reservation FOREIGN KEY (rate_reservation_id, send_intent_id, mailbox_id, rate_policy_version, rate_window_start, rate_slot_number, rate_concurrency_lease_token, rate_consumed_at) REFERENCES send_rate_reservations (send_rate_reservation_id, send_intent_id, mailbox_id, rate_policy_version, window_start, slot_number, concurrency_lease_token, consumed_at) ON DELETE RESTRICT,
     CONSTRAINT uq_send_attempts_number UNIQUE (send_intent_id, attempt_number),
     CONSTRAINT uq_send_attempts_mailbox_identity UNIQUE (send_attempt_id, mailbox_id),
     CONSTRAINT uq_send_attempts_provider_identity UNIQUE (send_attempt_id, mailbox_id, rfc_message_id),
@@ -326,7 +387,7 @@ CREATE TABLE send_attempts (
     CONSTRAINT ck_send_attempts_times CHECK (provider_called_at IS NULL OR provider_called_at >= started_at),
     CONSTRAINT ck_send_attempts_completed CHECK ((state = 'STARTED' AND completed_at IS NULL) OR (state <> 'STARTED' AND completed_at IS NOT NULL)),
     CONSTRAINT ck_send_attempts_error CHECK ((error_fingerprint IS NULL) OR error_fingerprint ~ '^[0-9a-f]{64}$'),
-    CONSTRAINT ck_send_attempts_authority CHECK (policy_scope = 'SEND' AND policy_allowed AND scope_hash ~ '^[0-9a-f]{64}$' AND policy_facts_hash ~ '^[0-9a-f]{64}$')
+    CONSTRAINT ck_send_attempts_authority CHECK (eligibility_policy_scope = 'APPROVAL_ELIGIBILITY' AND eligibility_policy_allowed AND send_policy_scope = 'SEND' AND send_policy_allowed AND intent_open_for_attempt AND scope_hash ~ '^[0-9a-f]{64}$' AND eligibility_facts_hash ~ '^[0-9a-f]{64}$' AND send_policy_facts_hash ~ '^[0-9a-f]{64}$' AND rate_concurrency_lease_token ~ '^[0-9a-f]{64}$' AND rate_consumed_at <= started_at)
 );
 CREATE INDEX ix_send_attempts_unresolved ON send_attempts (mailbox_id, started_at) WHERE state IN ('STARTED','AMBIGUOUS','RECONCILING');
 
@@ -415,7 +476,7 @@ CREATE TABLE gmail_history_cursors (
 CREATE INDEX ix_gmail_history_cursors_advanced ON gmail_history_cursors (advanced_at);
 ```
 
-Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`, `fk_outreach_messages_artifact`, `fk_send_intents_policy_authority`, and `fk_replies_classification_artifact` are added after DB-04/DB-05 exists. Exact definitions appear in DB-06. `trg_send_intents_immutable_identity` rejects updates to `experiment_id`, `campaign_id`, `campaign_version`, `lead_id`, `message_id`, `mailbox_id`, `approval_id`, `policy_decision_id`, policy scope/version/allow flag, `scope_hash`, `policy_facts_hash`, `idempotency_key`, `rfc_message_id`, retry bounds/version, or `budget_reservation_id` after insert.
+Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`, `fk_outreach_messages_artifact`, `fk_approvals_eligibility_policy_authority`, `fk_send_intents_eligibility_policy_authority`, `fk_send_attempts_send_policy_authority`, and `fk_replies_classification_artifact` are added after DB-04/DB-05 exists. Exact definitions appear in DB-06. `trg_send_intents_immutable_identity` protects every experiment/campaign/member/lead/message/mailbox/approval/eligibility/scope/idempotency/RFC/retry/budget field while allowing only `attempt_count`, `open_for_attempt`, `cancelled_at`, and `cancellation_reason`; `trg_send_intent_cancellation_once` makes the true-to-false cancellation a one-way transition. `fk_send_attempts_intent_authority` copies the non-null `open_for_attempt=true` token: PostgreSQL rejects an attempt for a cancelled intent and blocks flipping the parent token after an attempt exists.
 
 | Table | Exclusive write owner | Retention class / retention owner |
 | --- | --- | --- |
@@ -429,6 +490,7 @@ Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`,
 | `approvals` | `ApprovalCommandService` | `SAFETY_LONG` / `RetentionCommandService` |
 | `suppression_entries` | `SuppressionCommandService` | `SAFETY_LONG` / `RetentionCommandService` |
 | `send_intents` | application `SendGateway` | `SAFETY_LONG` / `RetentionCommandService` |
+| `send_rate_reservations` | `SendRateReservationService` under SendGateway/Recovery transactions | `SAFETY_LONG` / `RetentionCommandService` |
 | `send_attempts` | application `SendGateway` and `SendRecoveryService` under disjoint transitions | `SAFETY_LONG` / `RetentionCommandService` |
 | `provider_results` | `GmailResultCaptureService` | `SAFETY_LONG` / `RetentionCommandService` |
 | `provider_observations` | `GmailObservationService` | `SENSITIVE_SHORT` / `RetentionCommandService` |
@@ -437,7 +499,7 @@ Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`,
 
 ### Send transition reconciliation
 
-`outreach_messages.state` is the ARCH-03 message aggregate. `send_attempts.state` is ledger evidence, not a second message state machine. Direct captured acceptance commits provider result, `SENDING -> SENT`, and `send.provider_accepted.v1`. Unknown outcome commits `SENDING -> AMBIGUOUS` and `send.outcome_ambiguous.v1`; `AMBIGUOUS -> RECONCILING` commits `send.reconciliation_started.v1`. Recovery loads the intent's complete immutable experiment/campaign/lead/message/mailbox/approval/policy/scope/facts/RFC tuple, proves the attempt inherits it, and searches only that Gmail account. Exactly one mailbox-bound matching Sent observation permits `RECONCILING -> SENT` and `send.reconciled_as_sent.v1`. A conclusive absence after the configured window may produce `FAILED_RETRYABLE`; cross-mailbox or multiple matches, malformed identity, or operator stop produces `FAILED_PERMANENT`. `AMBIGUOUS` never requeues.
+`outreach_messages.state` is the ARCH-03 message aggregate. `send_attempts.state` is ledger evidence, not a second message state machine. Direct captured acceptance commits provider result, `SENDING -> SENT`, and `send.provider_accepted.v1`. Unknown outcome commits `SENDING -> AMBIGUOUS` and `send.outcome_ambiguous.v1`; `AMBIGUOUS -> RECONCILING` commits `send.reconciliation_started.v1`. Recovery loads the intent's immutable experiment/campaign/member/lead/message/mailbox/approval/eligibility-basis/RFC tuple, proves the attempt adds one fresh allowed SEND decision plus the exact consumed rate reservation, and searches only that Gmail account. Exactly one mailbox-bound matching Sent observation permits `RECONCILING -> SENT` and `send.reconciled_as_sent.v1`. A conclusive absence after the configured window may produce `FAILED_RETRYABLE`; cross-mailbox or multiple matches, malformed identity, or operator stop produces `FAILED_PERMANENT`. `AMBIGUOUS` never requeues.
 
 ## Ordered implementation tasks
 
@@ -450,8 +512,10 @@ Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`,
 ## Test strategy
 
 - **Unit `test_message_transition_matrix_matches_arch03`:** all legal/illegal edges and events.
-- **Constraint `test_one_intent_per_message_and_mailbox_key`:** concurrent commands cannot duplicate an intent; mailbox, campaign version, approval, message, policy facts/scope hash, RFC ID, and idempotency identity cannot mutate.
-- **Constraint `test_cross_scope_message_member_approval_policy_intent_attempt_rows_fail`:** mismatched experiment, campaign version, lead, mailbox, policy ID/version/scope/hash, or allowed flag violates a named composite FK.
+- **Constraint `test_one_intent_per_message_approval_and_mailbox_key`:** concurrent commands cannot duplicate an intent or consume one approval twice; mailbox, campaign/member version, approval, message, eligibility basis/scope hash, RFC ID, and idempotency identity cannot mutate.
+- **Constraint `test_cross_scope_message_member_approval_eligibility_send_policy_intent_rate_attempt_rows_fail`:** every one-column splice across experiment, campaign version, `campaign_member_id`, lead, mailbox, approval, eligibility decision, final SEND decision, scope/facts hash, rate reservation/lease token/consumption timestamp, or allowed flag violates a named composite FK; a RESERVED rate row cannot back an attempt.
+- **Concurrency `test_one_active_mailbox_rate_lease_and_unique_window_slot`:** simultaneous gateway transactions produce one consumed lease/attempt winner and one typed rate denial; a RESERVED or token/timestamp-spliced reservation cannot satisfy the attempt FK.
+- **Suppression `test_last_mile_suppression_cancels_intent_without_attempt_or_provider_call`:** nullable-cancellation FK and row/event counts prove the no-call path.
 - **Recovery `test_timeout_after_gmail_acceptance_reconciles_without_resend`:** stable RFC ID finds Sent evidence.
 - **Recovery `test_reconciliation_uses_only_the_authorized_mailbox`:** approval/intent/attempt/result account IDs agree; cross-account evidence is rejected and the searched account is retained.
 - **Recovery `test_multiple_sent_matches_require_operator_resolution`:** never guess which send won.

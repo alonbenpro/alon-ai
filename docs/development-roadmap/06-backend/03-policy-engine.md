@@ -26,70 +26,84 @@ In scope: scopes `EXPERIMENT`, `CAMPAIGN`, `SEND`, `PROVIDER`, `CONTROL`; exact 
 
 Create `domain/policy.py`, `policies/contracts.py`, `policies/rules.py`, `policies/registry.py`, `application/policies.py`, and tests/fixtures. `PolicyEvaluationService` is the only `policy_decisions` writer. Rule functions accept frozen facts plus registered `policy_version` and return reason codes; they have no I/O. Repositories assemble facts before evaluation.
 
-### Exact facts, hashes, and decision contract
+### Two policy scopes and exact immutable basis
 
-`PolicyFactsV1` is strict/frozen/extra-forbid with literal `schema_version="policy.facts.v1"`. SEND facts contain: experiment ID/state/version/authority level and M1/M6 evidence IDs+hashes; campaign ID/version/state/policy version/window-open result/window version/caps/requested units; lead ID/state/business ID; message ID/state/version/content hash; mailbox ID/status/authority mode/provider-account hash; recipient hash and owned-test-alias-manifest hash/match; approval ID/state/scope hash/policy/facts hashes/expiry-valid result/max count; active global/business/recipient suppression IDs; `PRODUCT_OUTREACH` and `TEST_INBOX_SENDING` values/versions; jurisdiction configuration version/result/evidence; budget account ID/version/limit/currency/requested amount; rate-policy version/window/cap/requested units and queue-admission configuration hash; retry-policy version/max attempts/deadline-valid result and unresolved-ambiguity result; actor and correlation IDs. `evaluated_at`, live counters, remaining balances, and incidental timestamps are decision metadata or separately locked capacity observations, not hashed policy facts; their inclusion would make an otherwise unchanged exact-scope decision unreplayable. Non-SEND scopes use the registered strict subset, never JSON omission with ambiguous meaning.
+Approval and sending use two different decisions. `APPROVAL_ELIGIBILITY` may authorize only creation of a `PENDING` approval request; it cannot create an intent, consume an approval, reserve send capacity, enqueue, create an attempt, or call a provider. It deliberately excludes ApprovalRule because the approval row does not exist yet. Final `SEND` is always a new decision after operator approval and immediately before an attempt; it includes the approved row and current mutable safety/capacity facts.
 
-`facts_hash` is DB-01 lowercase SHA-256 over RFC 8785 UTF-8 `{"schema_version":"policy.facts.v1","payload":facts_without_schema_version}`. `PolicyScopeV1` for SEND contains exactly experiment/campaign-version/lead/message/mailbox/approval/artifact-version refs plus intended operation `SEND`; `scope_hash` uses schema `policy.scope.send.v1`. Empty/missing and JSON null are distinct and validated before evaluation.
+`ApprovalBasisScopeV1` is strict/frozen/extra-forbid with literal `schema_version="policy.approval_basis.v1"` and exactly: experiment ID; campaign ID/version; `campaign_member_id`; lead ID; message ID/version/content hash; mailbox ID/provider-account hash; sorted artifact ID/version/hash references; intended operation `SEND`; `max_send_count=1`; and approval expiry. Its DB-01 envelope schema is `policy.scope.approval_basis.v1`; the result is the immutable `scope_hash` copied byte-for-byte to the eligibility decision, approval, intent, final SEND decision, attempt, provider request, events, and audit. Any immutable-basis change requires a new eligibility decision and approval UUID.
 
-`PolicyDecisionV1={policy_decision_id,scope,policy_version,allowed,reason_codes,facts_schema_version=1,facts_json,facts_hash,scope_hash,correlation_id,idempotency_key,evaluated_at}` maps byte-for-byte to DB-05. `idempotency_key="policy:{scope}:{policy_version}:{scope_hash}:{facts_hash}"`. Same inputs replay the same decision ID/result. Reason codes are sorted unique ASCII; allowed has an empty tuple, denied has at least one. The service inserts `policy_decisions`, safe audit, and exact `policy.evaluated.v1` in one transaction; it does not change message/campaign/control.
+`ApprovalEligibilityFactsV1` contains only that basis plus registered eligibility-policy/artifact-validation/configuration versions and immutable evidence hashes. Its DB-01 envelope is `policy.approval_eligibility.facts.v1`. It contains no approval state, suppression/control value, balance/counter, rate window, jurisdiction status, mutable campaign/message state, or clock-derived validity. An allowed eligibility decision therefore proves only that an exact review request may be created.
 
-### Exact rule composition and reason codes
+`SendPolicyFactsV1` contains the same immutable basis and `scope_hash`, plus exact approved row ID/state/decision/expiry validity/eligibility decision ID and basis hash; current experiment/campaign/member/lead/message/mailbox states and versions; active global/business/recipient suppression IDs; `PRODUCT_OUTREACH` and `TEST_INBOX_SENDING` values/versions; M1/M6 gate IDs/hashes; owned-test-alias match; jurisdiction configuration/result/evidence; budget account/reservation/current remaining amount; campaign daily/total/concurrency counts; send/reply window result; retry bounds/deadline; unresolved ambiguity; DBOS queue/limiter configuration; and locked `send_rate_reservations` window/slot/lease inputs. Its DB-01 envelope is `policy.send.facts.v1`. `campaign_member_id` is mandatory in both fact types and every policy scope/decision composite.
 
-Every SEND evaluation runs all applicable rules in this fixed order and returns every denial reason; it does not short-circuit evidence collection except when the authority tuple itself is malformed and further reads would be unsafe.
+The two decisions must have the same `scope_hash` and may have different `facts_hash` values; equality of eligibility and final SEND facts hashes is forbidden because it would erase current mutable safety facts. `evaluated_at` remains decision metadata, not hashed facts. Empty/missing and JSON null are distinct.
 
-1. identity/schema/version integrity;
-2. operator and global/test control plus M1/M6 evidence;
-3. experiment/campaign/lead/message/mailbox canonical states and authority mode;
-4. exact campaign-member-message-mailbox-approval-policy scope tuple;
+`PolicyDecisionV1={policy_decision_id,scope,experiment_id,campaign_id,campaign_version,campaign_member_id,lead_id,message_id,mailbox_id,approval_id,policy_version,allowed,reason_codes,facts_schema_version,facts_json,facts_hash,scope_hash,correlation_id,idempotency_key,evaluated_at}` maps byte-for-byte to DB-05. Eligibility has `approval_id=null`; SEND requires the exact approved `approval_id`. The deterministic key is `policy:{scope}:{policy_version}:{scope_hash}:{facts_hash}`. Same scope/key/hash replays the same decision; a different request hash conflicts. `PolicyEvaluationService` inserts the decision, safe audit, and exact `policy.evaluated.v1` atomically.
+
+### Scope-specific rule composition and reason codes
+
+`APPROVAL_ELIGIBILITY` runs only these fixed rules: schema/version integrity; exact experiment/campaign/version/member/lead/message/mailbox relationship; immutable message content and accepted artifact references; registered eligibility policy/configuration; single-send cap; and expiry strictly after request time and within the configured maximum approval lifetime. It never runs ApprovalRule, suppression, controls, budget, rate, jurisdiction, send window, retry, or provider readiness. Its allowed result can be consumed only by `RequestApproval` in the same transaction.
+
+Final `SEND` runs all applicable rules in this fixed order and collects every safe denial reason except where malformed authority makes further reads unsafe:
+
+1. identity/schema/version integrity including `campaign_member_id` and immutable basis hash;
+2. ApprovalRule: exact approval exists, was operator-approved and is now `CONSUMED` exactly once by the unique current `send_intents.approval_id`, remains unexpired/unrevoked, cap one, and binds the eligibility decision/basis;
+3. operator and global/test control plus M1/M6 evidence;
+4. experiment/campaign/member/lead/message/mailbox canonical states and authority mode;
 5. global, business, then recipient suppression;
-6. approval state, expiry, cap, content/artifact/policy/facts scope;
-7. jurisdiction/configuration evidence;
-8. send/reply windows, campaign daily/total/concurrency caps;
-9. budget reservation/account and provider cost ceiling;
-10. application rate window/cap/reservation;
-11. unresolved attempt/ambiguity and retry timing/attempt/deadline guards.
+6. jurisdiction/configuration evidence;
+7. send/reply windows and campaign daily/total/concurrency caps;
+8. budget reservation/account and provider cost ceiling;
+9. application rate window/slot/concurrency lease and DBOS limiter configuration;
+10. unresolved attempt/ambiguity and retry timing/attempt/deadline guards.
 
 Exact `PolicyReasonCode` values are:
 
 ```text
-AUTHORITY_TUPLE_MISMATCH, OPERATOR_DISABLED, OUTREACH_DISABLED,
-TEST_INBOX_DISABLED, M1_GATE_MISSING, M6_GATE_MISSING,
+AUTHORITY_TUPLE_MISMATCH, CAMPAIGN_MEMBER_MISMATCH,
+APPROVAL_BASIS_MISMATCH, ELIGIBILITY_POLICY_DENIED,
+OPERATOR_DISABLED, OUTREACH_DISABLED, TEST_INBOX_DISABLED,
+M1_GATE_MISSING, M6_GATE_MISSING,
 EXPERIMENT_STATE_INVALID, CAMPAIGN_STATE_INVALID, CAMPAIGN_VERSION_STALE,
 LEAD_STATE_INVALID, MESSAGE_STATE_INVALID, MAILBOX_INACTIVE,
 MAILBOX_AUTHORITY_INVALID, RECIPIENT_NOT_OWNED_TEST_ALIAS,
 GLOBAL_SUPPRESSED, BUSINESS_SUPPRESSED, RECIPIENT_SUPPRESSED,
 APPROVAL_MISSING, APPROVAL_NOT_APPROVED, APPROVAL_EXPIRED,
-APPROVAL_REVOKED, APPROVAL_SCOPE_MISMATCH, POLICY_VERSION_STALE,
-JURISDICTION_NOT_CONFIGURED, SEND_WINDOW_CLOSED, REPLY_WINDOW_CLOSED,
+APPROVAL_REVOKED, APPROVAL_NOT_CONSUMED_BY_INTENT, APPROVAL_SCOPE_MISMATCH,
+POLICY_VERSION_STALE, JURISDICTION_NOT_CONFIGURED,
+SEND_WINDOW_CLOSED, REPLY_WINDOW_CLOSED,
 DAILY_CAP_EXCEEDED, TOTAL_CAP_EXCEEDED, CONCURRENCY_CAP_EXCEEDED,
 BUDGET_UNAVAILABLE, COST_CAP_EXCEEDED, RATE_LIMIT_EXCEEDED,
+RATE_SLOT_CONFLICT, RATE_LEASE_ACTIVE,
 UNRESOLVED_ATTEMPT, RETRY_NOT_DUE, RETRY_EXHAUSTED,
 RETRY_DEADLINE_EXPIRED, FACTS_DIGEST_MISMATCH, SCOPE_DIGEST_MISMATCH.
 ```
 
-Names are application API/event vocabulary; provider-native errors cannot appear. `READY_FOR_OUTREACH`, `QUALIFIED`, `APPROVED`, mailbox `PRODUCT_ELIGIBLE`, an allowed earlier policy decision, or a passing gate is individually insufficient.
+Names are application API/event vocabulary; provider-native errors cannot appear. An approved row, passing eligibility decision, `READY_FOR_OUTREACH`, `QUALIFIED`, mailbox eligibility, or a passing gate is individually insufficient for SEND.
 
-### M6 and later authority composition
+### Approval-to-send sequence, suppression, rate, and errors
 
-M6 test send requires `TEST_INBOX_SENDING=true`, `PRODUCT_OUTREACH=false`, exact owned-alias match, mailbox `TEST_INBOX_ONLY` or otherwise explicitly test-eligible, passing M1 evidence, and all remaining rules. It never requires or permits product outreach true.
+1. `RequestApproval` computes the immutable basis; evaluates `APPROVAL_ELIGIBILITY`; and, only if allowed, atomically inserts the eligibility decision, `PENDING` approval bound to its decision/basis/facts, `approval.requested.v1`, audit, idempotent result, and message transition. A denial inserts policy/audit/idempotent failure but no approval/event.
+2. Operator approve/deny/revoke/expiry commands mutate only the approval/message lifecycle and canonical approval events. Eligibility cannot be refreshed in place; a stale basis requires a new request. Approval expiry/revocation prevents final SEND even if eligibility was allowed.
+3. `RecordSendIntent` verifies an exact approved basis, creates the immutable unsent intent/stable RFC identity under unique `approval_id`, consumes the approval in the same transaction, reserves budget, queues after commit, but does not claim final SEND authority.
+4. Last mile locks the full chain, rebuilds `SendPolicyFactsV1`, and records a new SEND decision. It never reuses the eligibility decision and never requires the two facts hashes to match.
+5. If the new SEND decision denies for suppression, one transaction commits policy denial, message `QUEUED -> SUPPRESSED`, `send.suppressed.v1`, one-way `send_intents.cancelled_at/cancellation_reason`, release of the unsent budget/queue reservation, safe audit/idempotent result/outbox, and zero `send_attempts`, rate reservations, or provider calls.
+6. If SEND allows, the same serializable last-mile transaction locks the mailbox/window, inserts and consumes one `send_rate_reservations` slot/lease, inserts the attempt carrying that reservation and final decision, transitions `QUEUED -> SENDING`, emits `send.attempt_started.v1`, audit/idempotent result/outbox, and commits before the provider call. Unique slot/active-mailbox constraints choose one concurrent winner. DBOS remains the outer queue/limiter; PostgreSQL is the last-line capacity authority.
 
-Later product send requires `PRODUCT_OUTREACH=true`, both M1 and M6 evidence IDs/hashes, experiment authority `BOUNDED_REAL_RECIPIENTS`, mailbox `PRODUCT_ELIGIBLE`, exact recipient/campaign/spend authority, and every remaining rule. `TEST_INBOX_SENDING` cannot satisfy product authority. Enabling product control is a separate authenticated CONTROL policy/command and does not enqueue/send anything.
+Eligibility denial maps to 403 `POLICY_DENIED`; stale/different immutable basis maps to 409 `VERSION_CONFLICT`; final suppression/control/jurisdiction/approval denial maps to 403 `POLICY_DENIED`; budget and rate capacity map to 429 `BUDGET_EXHAUSTED`/`RATE_LIMITED`; malformed authority maps to 409 `STATE_TRANSITION_DENIED`. Safe reason codes and both policy decision IDs/hashes remain in audit/reporting, never provider payload detail.
 
-Provider policy uses the same deterministic engine for operation enablement, provider allowlist/version, source domains, data/terms status, budget/rate, and sensitive-data class. It records scope `PROVIDER` but cannot widen AGENT-01 capability schemas/errors/ceilings.
+### M6/later composition, races, and replacement
 
-### Re-evaluation, races, time, and replacement
+M6 final SEND requires `TEST_INBOX_SENDING=true`, `PRODUCT_OUTREACH=false`, exact owned-alias match, mailbox test authority, passing M1 evidence, an approved immutable basis, and all remaining rules. Later product SEND requires `PRODUCT_OUTREACH=true`, both M1/M6 evidence, experiment authority `BOUNDED_REAL_RECIPIENTS`, mailbox `PRODUCT_ELIGIBLE`, exact campaign/member/recipient/spend authority, approval, and every rule. Test control cannot satisfy product authority; enabling a control does not enqueue/send.
 
-Campaign admission evaluates and stores the decision referenced by an approval/intent. Immediately before Gmail, BACKEND-04 rebuilds the decision-relevant normalized facts under lock at a new `evaluated_at`. It may replay the exact `policy_decision_id` only when `policy_version`, `scope_hash`, and `facts_hash` byte-match and the decision remains allowed. Separately locked live budget reservation, rate capacity, campaign counts, time-window edge, and unresolved-attempt observations must also pass before the attempt transaction; they cannot grant authority or be smuggled into a different policy decision. Any decision-relevant fact change denies and records a new denied decision, while the immutable intent/attempt remains bound to its original allowed decision. Suppression/control changes after queue but before call therefore block.
-
-Use the injected UTC clock once per evaluation. Time windows use half-open `[start,end)` and explicit timezone conversions from stored UTC; no local system timezone. Rate facts come from locked PostgreSQL reservations, not log counts or wall-clock guesses. A rule change creates a new immutable `policy_version` and fixtures; in-flight approvals/intents with stale facts cannot be silently upgraded.
+Use one injected UTC instant per evaluation. Time windows are half-open `[start,end)`. Rate facts come from locked PostgreSQL window/lease state, not logs or wall-clock guesses. A suppression/control/approval/budget/rate/jurisdiction change after queue changes the final SEND facts hash and can deny without mutating the immutable approval basis. A rule change creates a new policy version and fixtures; old decisions/approvals/intents remain immutable evidence and cannot be silently upgraded.
 
 ## Ordered implementation tasks
 
-- [ ] **Encode facts/scope/reason registry —** Input: DB/ARCH/WF gates and exact names above. Operation: implement strict scope-specific schemas, DB-01 hashes, rule/version registry, and reason enum. Output: pure policy package. Test evidence: schema/digest/reason snapshots and unknown-version denial. Failure behavior: no decision.
+- [ ] **Encode eligibility/basis/SEND facts and reason registry —** Input: DB/ARCH/WF gates and exact names above. Operation: implement strict `APPROVAL_ELIGIBILITY` and final `SEND` schemas, shared immutable basis hash, independent facts hashes, `campaign_member_id`, rule/version registry, and reason enum. Output: pure policy package. Test evidence: eligibility-to-approval-to-final-SEND construction plus stale-basis/mutable-fact hash matrix. Failure behavior: no decision.
 - [ ] **Implement deterministic rule composition —** Input: frozen facts/version. Operation: execute fixed ordered rules and collect sorted denial reasons without I/O. Output: reproducible allow/deny. Test evidence: exhaustive pairwise/boundary/property fixtures. Failure behavior: deny on unknown/incomplete fact.
 - [ ] **Implement PolicyEvaluationService —** Input: fact assembly, scope, command key. Operation: verify hashes, replay/insert immutable decision plus audit/event atomically. Output: DB-05 policy authority. Test evidence: concurrency/replay/failure injection. Failure behavior: transaction rollback and side effect denied.
-- [ ] **Implement last-mile re-evaluation and control/provider scopes —** Input: queued intent or provider/control request plus current rows. Operation: rebuild exact facts and reject stale/different authority. Output: allowed same-scope decision or explicit denial. Test evidence: changed suppression/approval/control/gate/window/budget/rate matrix. Failure behavior: no provider call/control enable.
+- [ ] **Implement last-mile SEND, suppression, and rate reservation —** Input: queued intent, approved basis, current rows, and DBOS admission. Operation: create a new SEND decision; commit suppression/no-attempt or consume one unique PostgreSQL rate lease with the attempt. Output: denied terminal suppression or exact pre-call authority. Test evidence: mutable-fact matrix, concurrent slot/lease, suppression event/no-call, and independent facts-hash tests. Failure behavior: no provider call/control enable.
 - [ ] **Gate versions and operator explainability —** Input: frozen policy fixtures and report projection. Operation: reproduce decisions/reasons/hashes and show safe facts/reasons without PII. Output: M6 policy evidence. Test evidence: golden decision replay and redaction scan. Failure behavior: policy version not promoted.
 
 ## Test strategy

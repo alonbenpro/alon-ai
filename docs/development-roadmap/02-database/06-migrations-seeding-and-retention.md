@@ -37,11 +37,13 @@ ALTER TABLE experiment_decisions ADD CONSTRAINT fk_experiment_decisions_evidence
 ALTER TABLE leads ADD CONSTRAINT fk_leads_suppression FOREIGN KEY (suppression_entry_id) REFERENCES suppression_entries (suppression_entry_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE lead_assessments ADD CONSTRAINT fk_lead_assessments_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
 ALTER TABLE outreach_messages ADD CONSTRAINT fk_outreach_messages_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
-ALTER TABLE send_intents ADD CONSTRAINT fk_send_intents_policy_authority FOREIGN KEY (policy_decision_id, policy_scope, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, policy_version, scope_hash, policy_facts_hash, policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed) ON DELETE RESTRICT;
+ALTER TABLE approvals ADD CONSTRAINT fk_approvals_eligibility_policy_authority FOREIGN KEY (eligibility_policy_decision_id, eligibility_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, eligibility_policy_version, scope_hash, eligibility_facts_hash, eligibility_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE send_intents ADD CONSTRAINT fk_send_intents_eligibility_policy_authority FOREIGN KEY (eligibility_policy_decision_id, eligibility_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, eligibility_policy_version, scope_hash, eligibility_facts_hash, eligibility_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed) ON DELETE RESTRICT;
+ALTER TABLE send_attempts ADD CONSTRAINT fk_send_attempts_send_policy_authority FOREIGN KEY (send_policy_decision_id, send_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, approval_id, send_policy_version, scope_hash, send_policy_facts_hash, send_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, approval_id, policy_version, scope_hash, facts_hash, allowed) ON DELETE RESTRICT;
 ALTER TABLE replies ADD CONSTRAINT fk_replies_classification_artifact FOREIGN KEY (classification_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
 ```
 
-Immutable identity is enforced in PostgreSQL, not only by application convention. The trigger raises `23514` before any protected value changes; the migration installs it on `send_intents` with the exact mailbox/approval/campaign/message/idempotency/policy/RFC/retry/budget fields named in DB-03. Equivalent table-specific invocations protect immutable version/evidence rows.
+Immutable identity is enforced in PostgreSQL, not only by application convention. The trigger raises `23514` before any protected value changes; the migration installs it on approvals, intents, rate reservations, and attempts with the exact experiment/campaign/member/lead/message/mailbox/approval/eligibility/final-SEND/rate/RFC fields named in DB-03/05. `send_intents` alone permits `attempt_count` and a one-way cancellation pair; a second trigger forbids clearing/changing cancellation. Equivalent table-specific invocations protect immutable version/evidence rows.
 
 ```sql
 CREATE FUNCTION reject_immutable_columns() RETURNS trigger LANGUAGE plpgsql AS $$
@@ -60,7 +62,21 @@ FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','operator_id','re
 CREATE TRIGGER trg_campaign_members_immutable_authority BEFORE UPDATE ON campaign_members
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('status','removed_at');
 CREATE TRIGGER trg_send_intents_immutable_identity BEFORE UPDATE ON send_intents
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('attempt_count');
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('attempt_count','open_for_attempt','cancelled_at','cancellation_reason');
+CREATE FUNCTION enforce_send_intent_cancellation_once() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT OLD.open_for_attempt AND (NEW.open_for_attempt, NEW.cancelled_at, NEW.cancellation_reason) IS DISTINCT FROM (OLD.open_for_attempt, OLD.cancelled_at, OLD.cancellation_reason) THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'send intent cancellation is immutable';
+  END IF;
+  IF OLD.open_for_attempt AND NOT NEW.open_for_attempt AND (NEW.cancelled_at IS NULL OR NEW.cancellation_reason IS NULL) THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'send intent cancellation reason required';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_send_intent_cancellation_once BEFORE UPDATE ON send_intents
+FOR EACH ROW EXECUTE FUNCTION enforce_send_intent_cancellation_once();
+CREATE TRIGGER trg_send_rate_reservations_immutable_identity BEFORE UPDATE ON send_rate_reservations
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','consumed_at','released_at','expired_at');
 CREATE TRIGGER trg_send_attempts_immutable_identity BEFORE UPDATE ON send_attempts
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','provider_called_at','completed_at','error_code','error_fingerprint','retry_class','reconciliation_strategy_version');
 CREATE TRIGGER trg_provider_results_append_only BEFORE UPDATE ON provider_results
@@ -96,7 +112,7 @@ Exact durations are approved with the later privacy/legal decision for the chose
 
 ### Complete product-table retention manifest
 
-This manifest is exhaustive for the 45 M2 product tables in DB-01 through DB-05. `RetentionCommandService` exclusively owns purge/redaction writes. Every row defaults to held when a legal, incident, unresolved-provider, suppression, or dependency hold applies. "Keep minimum" means retain only non-sensitive identity/hash/state evidence for the approved policy-versioned duration; "redact" is an audited payload replacement before any later FK-safe purge.
+This manifest is exhaustive for the 46 M2 product tables in DB-01 through DB-05, including the last-mile `send_rate_reservations` safety ledger. `RetentionCommandService` exclusively owns purge/redaction writes. Every row defaults to held when a legal, incident, unresolved-provider, suppression, or dependency hold applies. "Keep minimum" means retain only non-sensitive identity/hash/state evidence for the approved policy-versioned duration; "redact" is an audited payload replacement before any later FK-safe purge.
 
 | Table | Class | Retention owner | Default hold / purge behavior |
 | --- | --- | --- | --- |
@@ -123,8 +139,9 @@ This manifest is exhaustive for the 45 M2 product tables in DB-01 through DB-05.
 | `outreach_messages` | `SENSITIVE_SHORT` | `RetentionCommandService` | ambiguity/incident hold; redact content, retain hash |
 | `approvals` | `SAFETY_LONG` | `RetentionCommandService` | keep immutable exact-version authority tuple |
 | `suppression_entries` | `SAFETY_LONG` | `RetentionCommandService` | active suppression is an unconditional hold |
-| `send_intents` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep mailbox authority chain |
-| `send_attempts` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep attempt minimum |
+| `send_intents` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep mailbox/member/eligibility authority chain and cancellation evidence |
+| `send_rate_reservations` | `SAFETY_LONG` | `RetentionCommandService` | hold active leases; retain consumed slot identity with attempt/result/recovery evidence |
+| `send_attempts` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep final SEND decision and consumed rate slot minimum |
 | `provider_results` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep provider IDs and hashes |
 | `provider_observations` | `SENSITIVE_SHORT` | `RetentionCommandService` | ambiguity hold; redact capture, retain fingerprint |
 | `replies` | `SENSITIVE_SHORT` | `RetentionCommandService` | legal/incident hold; redact body, retain identity hash |
@@ -160,7 +177,8 @@ Additive nullable/backfilled columns and new tables deploy before writers. Backf
 
 ## Test strategy
 
-- **Migration `test_upgrade_empty_database_to_head`:** exact tables/constraints/indexes.
+- **Migration `test_upgrade_empty_database_to_head`:** exactly 46 tables plus every named constraint/index/trigger.
+- **Constraint `test_approval_eligibility_intent_final_send_and_rate_composites_reject_one_column_splices`:** campaign member, decision, approval, hash, mailbox, rate slot, and allowed-flag negatives.
 - **Migration `test_upgrade_from_each_supported_revision`:** no skipped compatibility edge.
 - **Seed `test_seed_is_idempotent_and_contains_no_secret_or_real_recipient`:** deterministic hash.
 - **Retention `test_purge_refuses_unresolved_ambiguous_send_and_active_hold`:** safety first.

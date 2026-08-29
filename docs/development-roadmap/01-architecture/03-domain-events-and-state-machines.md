@@ -190,7 +190,7 @@ When retry admission fails only because a mutable control is temporarily closed,
 
 ## Approval, workflow-run, and experiment-decision states
 
-Canonical `ApprovalState`: `PENDING`, `APPROVED`, `DENIED`, `EXPIRED`, `REVOKED`, `CONSUMED`. Approval is scoped to exact artifact/recipient/campaign/policy versions, cap, and expiry. A changed draft or policy fact invalidates the approval. Suppression/global stop always overrides it.
+Canonical `ApprovalState`: `PENDING`, `APPROVED`, `DENIED`, `EXPIRED`, `REVOKED`, `CONSUMED`. `RequestApproval` first records an allowed `APPROVAL_ELIGIBILITY` decision over an immutable approval basis containing exact experiment/campaign/version/`campaign_member_id`/lead/message/mailbox/content/artifact references, cap, and expiry; this scope excludes ApprovalRule and can authorize only creation of `PENDING`. The approval binds that eligibility decision, basis `scope_hash`, and eligibility `facts_hash`. Operator approval does not create SEND authority. `RecordSendIntent` consumes it exactly once; final ApprovalRule requires `CONSUMED` plus the unique current intent bearing that approval ID, not an impossible still-`APPROVED` row. A changed immutable basis revokes/expires the row; mutable suppression/control/budget/rate/jurisdiction facts are evaluated later in a new `SEND` decision and never need to equal the eligibility facts hash. Suppression/global stop always overrides an approved row.
 
 Canonical `WorkflowRunState`: `PENDING`, `RUNNING`, `PAUSE_REQUESTED`, `PAUSED`, `CANCEL_REQUESTED`, `CANCELLED`, `SUCCEEDED`, `FAILED`. Engine-native states map into these application states. A run is finite, has a max attempts/time/cost policy, and never owns aggregate truth. `CANCELLED`, `SUCCEEDED`, and `FAILED` are terminal for that run; an allowed experiment retry always creates a new `workflow_run_id`.
 
@@ -255,13 +255,13 @@ Every campaign transition emits its specific event and `campaign.state_changed.v
 
 | Event type | Required payload identifiers | Emitted when |
 | --- | --- | --- |
-| `policy.evaluated.v1` | `policy_decision_id`, `experiment_id`, `campaign_id`, `campaign_version`, `lead_id`, `message_id`, `mailbox_id`, `policy_version`, `scope_hash`, `facts_hash`, `allowed`, `reason_codes` | deterministic exact-scope send evaluation recorded |
-| `approval.requested.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `scope_hash`, `expires_at` | exact-version review is required |
-| `approval.decided.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `decision`, `operator_id`, `reason_code` | operator approves/denies exact authority |
-| `approval.revoked.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `message_id`, `reason_code` | prior exact authority is withdrawn |
-| `send.intent_recorded.v1` | `send_intent_id`, `experiment_id`, `campaign_id`, `campaign_version`, `lead_id`, `message_id`, `mailbox_id`, `approval_id`, `policy_decision_id`, `policy_version`, `idempotency_key`, `scope_hash`, `policy_facts_hash` | immutable exact-authority intent commits |
+| `policy.evaluated.v1` | `policy_decision_id`, `scope`, `experiment_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `lead_id`, `message_id`, `mailbox_id`, nullable `approval_id`, `policy_version`, `scope_hash`, `facts_hash`, `allowed`, `reason_codes` | deterministic `APPROVAL_ELIGIBILITY` or fresh final `SEND` evaluation recorded; the scopes may share the immutable basis hash but never a required facts hash |
+| `approval.requested.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `eligibility_policy_decision_id`, `scope_hash`, `eligibility_facts_hash`, `expires_at` | allowed eligibility and exact immutable basis create a pending review; no send authority |
+| `approval.decided.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `scope_hash`, `decision`, `operator_id`, `reason_code` | operator approves/denies the immutable basis; SEND still needs a new policy decision |
+| `approval.revoked.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `scope_hash`, `reason_code` | prior immutable-basis approval is withdrawn before final SEND authority |
+| `send.intent_recorded.v1` | `send_intent_id`, `experiment_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `lead_id`, `message_id`, `mailbox_id`, `approval_id`, `eligibility_policy_decision_id`, `eligibility_policy_version`, `idempotency_key`, `scope_hash`, `eligibility_facts_hash` | immutable approved-basis intent commits without claiming final SEND authority |
 | `send.queued.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `queue_name`, `budget_reservation_id` | mailbox-bound admission commits |
-| `send.attempt_started.v1` | `send_attempt_id`, `send_intent_id`, `mailbox_id`, `rfc_message_id`, `policy_decision_id` | mailbox-bound last policy recheck passes before provider call |
+| `send.attempt_started.v1` | `send_attempt_id`, `send_intent_id`, `campaign_member_id`, `mailbox_id`, `rfc_message_id`, `send_policy_decision_id`, `send_policy_facts_hash`, `rate_reservation_id`, `rate_window_start`, `rate_slot_number` | fresh final SEND policy allows and the exact rate lease is consumed atomically before provider call |
 | `send.provider_accepted.v1` | `send_attempt_id`, `send_intent_id`, `mailbox_id`, `rfc_message_id`, `gmail_message_id`, `gmail_thread_id` | Gmail directly returns an accepted result and the captured provider result commits `SENDING -> SENT` |
 | `send.outcome_ambiguous.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `error_code` | acceptance cannot be known |
 | `send.reconciliation_started.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `strategy_version` | the authorized mailbox's Gmail Sent search begins |
@@ -269,7 +269,7 @@ Every campaign transition emits its specific event and `campaign.state_changed.v
 | `send.failed.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `retry_class`, `error_code` | conclusive mailbox-bound failure recorded |
 | `send.retry_scheduled.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `previous_attempt_id`, `next_attempt_number`, `retry_at`, `retry_policy_version` | bounded retry eligibility commits and the same mailbox-bound intent returns to `QUEUED` |
 | `send.retry_exhausted.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `final_attempt_id`, `attempt_count`, `max_attempts`, `reason_code` | retry budget/deadline is exhausted or an operator aborts retry |
-| `send.suppressed.v1` | `send_intent_id`, `mailbox_id`, `policy_decision_id`, `reason_codes` | mailbox-bound last-mile gate denies |
+| `send.suppressed.v1` | `send_intent_id`, `campaign_member_id`, `mailbox_id`, `send_policy_decision_id`, `scope_hash`, `send_policy_facts_hash`, `reason_codes`, `cancelled_at` | fresh last-mile SEND denies for suppression and atomically commits `QUEUED -> SUPPRESSED`, one-way `open_for_attempt=false` intent cancellation, reservation release, and no attempt/provider call |
 | `gmail.history_cursor_advanced.v1` | `mailbox_id`, `from_history_id`, `to_history_id` | observations and cursor commit together |
 | `reply.received.v1` | `reply_id`, `mailbox_id`, `gmail_message_id`, `gmail_thread_id`, `received_at` | unique mailbox-bound inbound message recorded |
 | `reply.classified.v1` | `reply_id`, `artifact_id`, `classification` | accepted typed classification attaches |
@@ -291,7 +291,8 @@ Operational logs may mirror safe identifiers, but a log line does not replace th
 
 - Aggregate updates use unique `(aggregate_type, aggregate_id, aggregate_version)` and optimistic concurrency.
 - Commands use unique `(command_scope, idempotency_key)` and persist the prior result for exact replay.
-- Send intents use unique `(mailbox_id, idempotency_key)` and `(mailbox_id, rfc_message_id)`; immutable mailbox binding is part of approval, policy facts/scope hashes, attempts, results, and reconciliation.
+- Send intents use unique `(mailbox_id, idempotency_key)` and `(mailbox_id, rfc_message_id)`; immutable mailbox plus `campaign_member_id` binding is part of eligibility, approval basis, intent, fresh SEND decision, attempt, result, and reconciliation. Eligibility and final SEND share `scope_hash` but have independent `facts_hash` values.
+- Last-mile rate admission uses one active `send_rate_reservations` lease per mailbox and unique `(mailbox_id,rate_policy_version,window_start,slot_number)`; a consumed lease and attempt commit together before any provider call.
 - Provider observations deduplicate on mailbox plus provider message/history identity.
 - Internal outbox delivery is at least once, but each consumer's business writes and successful `outbox_deliveries` receipt commit in one PostgreSQL transaction. A crash rolls back both.
 - External side effects never claim generic effect-once delivery: they use immutable mailbox-bound intent, captured provider result or `AMBIGUOUS`, and reconciliation before retry.

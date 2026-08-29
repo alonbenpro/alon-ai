@@ -28,19 +28,23 @@ In scope: server-side OAuth authorization-code flow, exact scope grant, encrypte
 
 Create `providers/gmail/contracts.py`, `providers/gmail/oauth.py`, `providers/gmail/adapter.py`, `providers/gmail/errors.py`, `providers/gmail/fixtures.py`, and provider composition called only from API/worker composition roots. `application/gmail_mailboxes.py` owns mailbox commands; PROVIDER-02 owns read/sync composition; `application/sending.py` owns `SendGateway`. Do not add a competing mailbox/token table.
 
-### OAuth, token, and mailbox protocol
+### OAuth, token, mailbox, and callback command protocol
 
-| Phase | Exact input and operation | Authoritative output / failure |
-| --- | --- | --- |
-| start | Authenticated operator, one-time state, PKCE verifier/challenge, redirect URI allowlist, requested scope exactly `https://www.googleapis.com/auth/gmail.modify`, `access_type=offline`, and consent only when a refresh token is absent | Short-lived signed state record keyed to operator/request; browser redirect. State/PKCE mismatch is `OAUTH_STATE_MISMATCH` with no token exchange. |
-| callback | Consume state once; exchange code server-side; require returned granted scopes to equal the approved set; call `users.getProfile` before product write | `gmail_mailboxes` insert/update only through `GmailMailboxCommandService`; `provider_account_hash=sha256(UTF-8(NFC(casefold(profile.emailAddress))))`; duplicate account hash replays the same mailbox or conflicts. |
-| store | Client ID/secret are process secrets. Refresh token is envelope-encrypted in the protected secret store at logical key `gmail/mailboxes/{mailbox_id}/refresh-token`; access token is memory-only and expires. The secret metadata binds `mailbox_id`, `provider_account_hash`, scope-set hash, key version, and creation time. | PostgreSQL stores only DB-03 `gmail_mailboxes`; secret material, authorization code, PKCE verifier, and decrypted address never enter product rows, events, traces, fixtures, or logs. |
-| refresh | Single-flight per mailbox before expiry; verify scope and account hash after refresh | Invalid/revoked grant sets mailbox `DISABLED` through `GmailMailboxCommandService`, disables both send controls, opens an incident when sends are unresolved, and requires operator reconnect. |
-| revoke/disconnect | Authenticated idempotent command first disables mailbox and dequeues; reconcile unresolved attempts; then revoke/delete secret | `REVOKED` and `revoked_at` only after unresolved send safety checks. Revocation is never allowed to erase DB-03 attempt/result evidence. |
+`StartGmailAuthorization` is a normal authenticated/idempotent POST command. It creates UUIDv4 `oauth_flow_id` and an encrypted ephemeral secret-store record at `gmail/oauth-flows/{oauth_flow_id}` containing operator ID, exact requested-scope hash, fixed redirect ID, PKCE verifier, state-token hash, issued time, `authorization_expires_at=issued_at+10 minutes`, `replay_expires_at=issued_at+24 hours`, status, and optional staged-credential handle. It stores no product row. The signed+encrypted browser state contains flow ID, operator binding, scope/redirect hashes, both expiries, and nonce; only the challenge/state leave the server.
 
-OAuth audit event types are audit-only, not aggregate transitions: `gmail.oauth_authorization_started.v1`, `gmail.oauth_connected.v1`, `gmail.oauth_refresh_failed.v1`, and `gmail.oauth_revoked.v1`. Their allowlisted payload contains `mailbox_id` when known, operator ID, provider-account hash, scope-set hash, credential key version, result code, correlation/causation IDs, and no token/code/address.
+Statuses are `ISSUED`, `CLAIMED`, `EXCHANGED_UNCOMMITTED`, `CONSUMED_SUCCESS`, and `CONSUMED_FAILURE`. The secret store atomically permits only `ISSUED -> CLAIMED`; claim binds the authorization-code hash/request hash. Authorization after ten minutes cannot exchange, while a consumed tombstone survives to the 24-hour replay expiry with verifier/code/token removed. Expired flow/tombstones are deleted by secret-store TTL; no credential table is added.
 
-Google's server-side flow supplies offline refresh tokens and requires recovery when a refresh token is revoked or invalid: [server-side authorization](https://developers.google.com/workspace/gmail/api/auth/web-server). `gmail.modify` is selected because the same mailbox must send and read/synchronize; it is restricted and therefore requires the applicable Google verification and data-use controls: [Gmail scopes](https://developers.google.com/workspace/gmail/api/auth/scopes). No broader `https://mail.google.com/` scope is accepted.
+`CompleteGmailAuthorization` is registered under scope family `gmail.oauth.complete`, concrete scope `gmail.oauth.complete:{oauth_flow_id}`, and derived key `oauth-flow:{oauth_flow_id}` because browser GET cannot supply `Idempotency-Key`. The callback verifies/decrypts state and, before token exchange, claims DB-05 `command_idempotency` with request schema `api.complete_gmail_authorization.request.v1` and a hash of flow ID, state-token hash, authorization-code hash, and redirect ID. Per-request correlation is command metadata, not replay identity; a browser replay therefore cannot conflict merely because it receives a new correlation ID. Raw state/code/PKCE never enter PostgreSQL/logs.
+
+On a new exact claim: require authorization TTL valid and flow `ISSUED`; atomically claim the flow; exchange code server-side once; require returned granted scopes exactly `gmail.modify`; stage the encrypted refresh credential; call `users.getProfile`; verify account hash; then let `GmailMailboxCommandService` commit mailbox + command result/audit before the secret handle becomes the active `gmail/mailboxes/{mailbox_id}/refresh-token`. Success stores only a fixed 303 redirect result in command idempotency and marks the tombstone `CONSUMED_SUCCESS`.
+
+Same flow/key/request hash replays the stored 303 redirect and never exchanges again. Different code/state/request hash yields internal 409 `IDEMPOTENCY_HASH_CONFLICT`, consumes the flow as failure, and redirects with opaque `oauth_conflict`. Invalid/expired/state/PKCE/scope/account conditions redirect `oauth_invalid`. If a crash occurs after exchange/staging but before mailbox+command result commits, the tombstone is `EXCHANGED_UNCOMMITTED`; replay/recovery must quarantine/delete or revoke the staged credential, leave/create no active mailbox, store an opaque `oauth_restart_required` redirect as a completed command result whose payload says `outcome=FAILURE`, and require a fresh flow. DB-05 status is `SUCCEEDED` because callback handling and its safe redirect completed; business failure is carried only in the typed result, never in a `FAILED` row with a forbidden result payload. It never retries the used provider code.
+
+Refresh tokens remain envelope-encrypted outside product tables and access tokens memory-only. Refresh verifies scope/account; invalid/revoked grant disables mailbox and both send controls and opens an incident for unresolved sends. Disconnect disables/dequeues, reconciles, then revokes/deletes secret; DB-03 evidence remains.
+
+OAuth audit types are audit-only: `gmail.oauth_authorization_started.v1`, `gmail.oauth_connected.v1`, `gmail.oauth_refresh_failed.v1`, and `gmail.oauth_revoked.v1`. Callback audit also records safe flow ID, command scope/key hash, state transition, result code, exchange count, staged-credential cleanup result, correlation/causation, and no token/code/verifier/state/address. Public callback failures always use fixed frontend redirects; provider text is never rendered.
+
+Google's server-side flow supplies offline refresh tokens and requires recovery when a refresh token is revoked or invalid: [server-side authorization](https://developers.google.com/workspace/gmail/api/auth/web-server). `gmail.modify` is selected because the same mailbox must send and read/synchronize; it is restricted and requires applicable Google verification/data-use controls: [Gmail scopes](https://developers.google.com/workspace/gmail/api/auth/scopes). No broader `https://mail.google.com/` scope is accepted.
 
 ### Send-only port and immutable authority
 
@@ -51,10 +55,12 @@ schema_version="gmail.send.request.v1"; provider_call_id; send_attempt_id;
 send_intent_id; experiment_id; campaign_id; campaign_version; campaign_member_id;
 lead_id; message_id; mailbox_id; approval_id; policy_decision_id; policy_scope="SEND";
 policy_version; scope_hash; policy_facts_hash; policy_allowed=true;
+rate_reservation_id; rate_policy_version; rate_window_start; rate_slot_number;
+rate_concurrency_lease_token; rate_consumed_at;
 idempotency_key; rfc_message_id; mime_sha256; mime_bytes; timeout_ms.
 ```
 
-`campaign_version` is positive; IDs are UUIDv4; hashes are lowercase 64-hex; `timeout_ms` is `1..30_000` with deterministic default `15_000`. `mime_bytes` exists only in process memory and is excluded from repr/log/trace serialization. The locked `outreach_messages.campaign_member_id` byte-matches its `campaign_members(campaign_member_id,campaign_id,campaign_version,lead_id)` authority; every remaining field through `rfc_message_id` byte-matches the DB-03 `send_intents`/`send_attempts` composite authority. After the call, `GmailResultCaptureService` adds immutable `provider_results.provider_result_id` under `(send_attempt_id,mailbox_id,rfc_message_id)`, completing the exact experiment/campaign-version/member/lead/message/mailbox/approval/policy/scope/intent/attempt/provider-result chain. The adapter rejects mismatch before credential access.
+`campaign_version` is positive; IDs are UUIDv4; hashes are lowercase 64-hex; `timeout_ms` is `1..30_000` with deterministic default `15_000`. `mime_bytes` exists only in process memory and is excluded from repr/log/trace serialization. The locked `campaign_member_id` byte-matches `campaign_members(campaign_member_id,campaign_id,campaign_version,lead_id)`. Approval/eligibility basis fields byte-match the intent; `policy_*` fields are exclusively the fresh final SEND decision copied from `send_attempts`, never the eligibility decision; rate fields, immutable concurrency token, and non-null consumption timestamp byte-match that attempt's consumed `send_rate_reservations` row; all remaining identity through `rfc_message_id` matches DB-03 composites. Eligibility and final SEND share `scope_hash` but need not and normally do not share facts hashes. After the call, `GmailResultCaptureService` adds immutable `provider_results.provider_result_id` under `(send_attempt_id,mailbox_id,rfc_message_id)`, completing the exact experiment/campaign-version/member/lead/message/mailbox/approval/policy/scope/intent/attempt/provider-result chain. The adapter rejects mismatch before credential access.
 
 The gateway builds one RFC 5322 message with exact `From`, `To`, `Subject`, `Date`, MIME version/content type, and stable `Message-ID: {rfc_message_id}`; CR/LF header injection, Bcc, attachments, HTML, tracking pixels, and extra recipients are forbidden in v1. Gmail requires an RFC-formatted MIME message encoded into the message resource's base64url `raw` field: [create and send messages](https://developers.google.com/workspace/gmail/api/guides/sending). The call is `POST /gmail/v1/users/me/messages/send`; a successful response is a Gmail `Message`: [users.messages.send](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.messages/send).
 
@@ -70,7 +76,7 @@ All response/error fingerprints are lowercase SHA-256 over restricted normalized
 
 ### Exact Gmail error taxonomy and retry rules
 
-`GmailErrorCode` is exact: `OAUTH_STATE_MISMATCH`, `OAUTH_CODE_INVALID`, `OAUTH_SCOPE_MISSING`, `TOKEN_INVALID_GRANT`, `TOKEN_REVOKED`, `MAILBOX_IDENTITY_MISMATCH`, `GMAIL_BAD_REQUEST`, `GMAIL_UNAUTHORIZED`, `GMAIL_FORBIDDEN`, `GMAIL_RATE_LIMITED`, `GMAIL_QUOTA_EXCEEDED`, `GMAIL_NOT_FOUND`, `GMAIL_SERVER_ERROR`, `GMAIL_TRANSPORT_TIMEOUT`, `GMAIL_TRANSPORT_ERROR`, and `GMAIL_RESPONSE_INVALID`. Provider text is never an application error name.
+`GmailErrorCode` is exact: `OAUTH_STATE_MISMATCH`, `OAUTH_CODE_INVALID`, `OAUTH_SCOPE_MISSING`, `OAUTH_REPLAY_CONFLICT`, `OAUTH_EXCHANGE_OUTCOME_UNCERTAIN`, `TOKEN_INVALID_GRANT`, `TOKEN_REVOKED`, `MAILBOX_IDENTITY_MISMATCH`, `GMAIL_BAD_REQUEST`, `GMAIL_UNAUTHORIZED`, `GMAIL_FORBIDDEN`, `GMAIL_RATE_LIMITED`, `GMAIL_QUOTA_EXCEEDED`, `GMAIL_NOT_FOUND`, `GMAIL_SERVER_ERROR`, `GMAIL_TRANSPORT_TIMEOUT`, `GMAIL_TRANSPORT_ERROR`, and `GMAIL_RESPONSE_INVALID`. Provider text is never an application error name.
 
 | Observation | Send classification | Automatic adapter retry |
 | --- | --- | --- |
@@ -104,7 +110,13 @@ GmailSendRequestV1(
     policy_scope="SEND", policy_version="send-policy.v1",
     scope_hash="1111111111111111111111111111111111111111111111111111111111111111",
     policy_facts_hash="2222222222222222222222222222222222222222222222222222222222222222",
-    policy_allowed=True, idempotency_key="send-intent-1",
+    policy_allowed=True,
+    rate_reservation_id=UUID("fe88cb7a-876f-4c99-8c7c-10c52403dbb2"),
+    rate_policy_version="mailbox-rate.v1",
+    rate_window_start=datetime.fromisoformat("2026-08-28T00:00:00+00:00"), rate_slot_number=0,
+    rate_concurrency_lease_token="dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    rate_consumed_at=datetime.fromisoformat("2026-08-28T00:00:01+00:00"),
+    idempotency_key="send-intent-1",
     rfc_message_id="<send-1@test.invalid>",
     mime_sha256="a7a75fb7a7be061112e331a1fc3d0acf7145463a3487aa66190f2586f13a401c",
     mime_bytes=b"From: sender@test.invalid\r\nTo: recipient@test.invalid\r\nSubject: Controlled test\r\nMessage-ID: <send-1@test.invalid>\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=\"utf-8\"\r\n\r\nControlled M6 test.\r\n",
@@ -130,7 +142,7 @@ GmailSendRequestV1(
 
 ## Ordered implementation tasks
 
-- [ ] **Implement OAuth boundary —** Input: authenticated operator, approved redirect/scope configuration, secret-store key, and CSRF/PKCE state. Operation: implement start/callback/profile verification, exact scope check, encrypted refresh-token storage, mailbox command, and safe audit. Output: disabled or active DB-03 mailbox bound to one provider-account hash. Test evidence: `test_gmail_oauth_state_pkce_scope_account_and_single_use_callback`. Failure behavior: consume/expire state, store no credential/mailbox mutation, audit safe denial.
+- [ ] **Implement OAuth command boundary —** Input: authenticated start command, signed/encrypted flow state, secret-store TTL/PKCE, callback code. Operation: register/claim `CompleteGmailAuthorization` command before one exchange, verify scope/profile, activate only after mailbox+result commit, and retain consumed replay tombstone. Output: stored opaque redirect and disabled/active mailbox bound to one account. Test evidence: exact replay/different-code conflict/TTL/single exchange and crash-after-exchange fresh-flow matrix. Failure behavior: quarantine credential, no active mailbox, opaque redirect, safe audit.
 - [ ] **Implement strict send contracts and MIME builder —** Input: DB-03 composite intent/attempt and encrypted message fields. Operation: construct strict request, reject tuple/header mismatch, create deterministic RFC message identity and base64url MIME. Output: in-memory `GmailSendRequestV1`. Test evidence: `test_gmail_mime_is_rfc_stable_and_rejects_header_injection_or_second_recipient`. Failure behavior: no credential lookup/provider call.
 - [ ] **Implement one-call Gmail adapter —** Input: validated request, fresh mailbox-bound token, deadline. Operation: issue exactly one send POST and map every response/transport edge to the exact result taxonomy. Output: accepted, conclusive rejection, or unknown evidence. Test evidence: `test_gmail_send_status_transport_and_malformed_success_matrix_has_no_hidden_retry`. Failure behavior: return typed evidence; never mutate product state.
 - [ ] **Integrate sole SendGateway path —** Input: provider result and original authority tuple. Operation: delegate result capture/state/event/cost transactions to exact sole-writer services. Output: DB-03/ARCH-03 chain. Test evidence: `test_only_sendgateway_reaches_gmailprovider_send` and kill points before/after POST/result commit. Failure behavior: unknown acceptance becomes visible `AMBIGUOUS`; both controls close on invariant breach.
@@ -139,10 +151,14 @@ GmailSendRequestV1(
 ## Test strategy
 
 - **Contract `test_gmail_send_request_preserves_complete_db03_authority_tuple`:** every one-field splice fails before credentials.
+- **OAuth `test_callback_claims_command_before_exchange_and_exact_replay_returns_redirect`:** one exchange.
+- **OAuth crash `test_exchange_without_mailbox_commit_quarantines_token_and_requires_fresh_flow`:** no active mailbox.
+- **OAuth conflict `test_same_flow_different_code_hash_conflicts_and_consumes_flow`:** opaque redirect/no exchange.
 - **OAuth `test_revoked_refresh_token_disables_mailbox_and_send_controls`:** no silent refresh loop.
 - **Recovery `test_timeout_after_request_write_is_unknown_not_retry`:** `AMBIGUOUS` is mandatory.
 - **Event `test_direct_acceptance_emits_provider_accepted_not_reconciled`:** event meanings never collapse.
 - **Quota `test_rate_limit_response_is_conclusive_and_retry_is_recovery_owned`:** adapter call count remains one.
+- **Authority `test_provider_request_matches_campaign_member_final_send_and_consumed_rate_reservation`:** eligibility decision cannot substitute.
 - **Security `test_gmail_telemetry_fixture_and_audit_exclude_tokens_addresses_and_content`:** allowlist scan.
 
 ## Security, privacy, compliance, idempotency, observability, and cost
