@@ -24,7 +24,7 @@ In scope: PR/scheduled/release lanes, exact test evidence freshness, dependency/
 
 ## Exact planned implementation surfaces
 
-Extend `.github/workflows/ci.yml`; add `.github/workflows/release.yml`, `infra/release/release-manifest.schema.json`, `scripts/release/{build_manifest,verify_manifest,preflight,apply,rollback}.sh`, SBOM/provenance generation, and private GitHub Container Registry packages addressed as `ghcr.io/alonbenpro/alon-ai-{backend,frontend,public-edge}@sha256:<digest>`. Workflows keep `permissions: contents: read` by default; only the release job receives minimal `packages: write` and `id-token: write` for GitHub artifact attestation, protected environment approval and no runtime/VPS credential. Operator deployment uses the VPS console/private Tailscale network to pull and verify exact digests, avoiding a permanent CI-to-VPS key.
+Extend `.github/workflows/ci.yml`; add `.github/workflows/release.yml`, `infra/release/release-manifest.schema.json`, `scripts/release/{build_manifest,verify_manifest,preflight,apply,rollback}.sh`, SBOM/provenance generation, and private GitHub Container Registry packages addressed as `ghcr.io/alonbenpro/alon-ai-{backend,frontend,public-edge}@sha256:DIGEST_FROM_SIGNED_MANIFEST`. Workflows keep `permissions: contents: read` by default; only the release job receives minimal `packages: write` and `id-token: write` for GitHub artifact attestation, protected environment approval and no runtime/VPS credential. Operator deployment uses the VPS console/private Tailscale network to pull and verify exact digests, avoiding a permanent CI-to-VPS key.
 
 | Stage | Required checks/evidence | Trigger | Failure action |
 | --- | --- | --- | --- |
@@ -39,7 +39,7 @@ Extend `.github/workflows/ci.yml`; add `.github/workflows/release.yml`, `infra/r
 
 Promotion sequence:
 
-1. `preflight --release <id>` resolves exact VPS, database system ID, current release, controls, public-route flag, active/nonterminal workflows, unresolved attempts/incidents, disk/RAM and newest verified backup.
+1. `preflight --release RELEASE_ID_FROM_SIGNED_MANIFEST` resolves exact VPS, database system ID, current release, controls, public-route flag, active/nonterminal workflows, unresolved attempts/incidents, disk/RAM and newest verified backup.
 2. Pull images by digest and verify signature/SBOM/provenance; never execute an unverified candidate.
 3. Run schema compatibility check. Deploy additive migration before new writers; stop/drain workers for declared incompatible changes. No destructive migration runs without a separately proven restore and zero/compatible unresolved work.
 4. Start candidate API/frontend with workers/dequeues stopped; prove liveness/readiness, exact route partition, config/secret compatibility and controls false.
@@ -48,6 +48,8 @@ Promotion sequence:
 
 Rollback pins the prior image/config/agent/runtime-compatible digest, stops new work, drains/version-routes in-flight workflows, and runs forward-compatible schema. Database restore is not normal application rollback and is used only under INFRA-04/05 after authoritative reconciliation.
 
+CI/candidate requirements map exactly to `T7-DOC-CONTRACT|T7-CONTRACT-INTEGRATION|T7-WORKFLOW-RECOVERY|T7-GMAIL-OFFLINE|T7-BROWSER-PRIVATE|T7-LOAD|T7-SECURITY-CHAOS|T7-RELEASE-CANDIDATE`; manual promotion and application rollback map exactly to destructive `T7-RELEASE-PROMOTE` and `T7-RELEASE-ROLLBACK`. Each uses the [TEST-01 exact runner invocation](../10-testing/01-testing-strategy.md#closed-command-manifest), immutable profile/fixture hashes and declared artifacts. Promotion/rollback target manifests bind provider project, host, database system ID, current/prior release digests, control/public-route states and writer/workflow counts; mismatch exits `50` before migration/process changes. Missing CI/VPS/registry capability exits `30`, partial external state exits `60`, and neither passes. Requirement-to-command set equality is retained with the release manifest.
+
 ## Ordered implementation tasks
 
 - [ ] **Extend deterministic/deep CI gates —** Input: TEST coverage manifest and current jobs. Operation: add exact affected/full suites, strict skip policy, evidence upload and freshness checks. Output: reproducible PR/scheduled decisions. Test evidence: skipped/stale/tampered/missing lane negatives. Failure behavior: candidate blocked.
@@ -55,6 +57,7 @@ Rollback pins the prior image/config/agent/runtime-compatible digest, stops new 
 - [ ] **Implement safe migration/promotion ceremony —** Input: verified candidate, exact target, backup and runtime state. Operation: resolve target, verify compatibility, migrate/add, start without workers, smoke/soak, then start compatible worker. Output: signed promotion record. Test evidence: wrong target, stale backup, low disk, active ambiguity, incompatible runtime and migration-failure cases. Failure behavior: keep prior release/controls and stop candidate.
 - [ ] **Implement application rollback —** Input: prior signed digest/config/runtime map. Operation: stop new work, route/drain, restore prior binaries/config and verify authoritative DB compatibility. Output: signed rollback release. Test evidence: mid-promotion crash and incompatible in-flight run cases. Failure behavior: stay stopped/degraded; invoke DR rather than force schema/history.
 - [ ] **Exercise upgrade policy —** Input: dependency/base image/PostgreSQL/provider/model/KMS change. Operation: new lock/SBOM/contract/eval/recovery/restore evidence and canary promotion. Output: reviewed upgrade or rejection. Test evidence: PostgreSQL major upgrade clone, secret generation rotation, provider schema drift and rollback. Failure behavior: old supported version remains; affected capability paused if security support expires.
+- [ ] **Close CI/release command ownership —** Input: every stage/gate/promotion/rollback requirement. Operation: prove exact mapping, cwd/profile/fixture/target/artifact/exit semantics and destructive guard order. Output: signed command coverage. Test evidence: orphan/duplicate, unavailable, wrong target and partial-promotion negatives. Failure behavior: no candidate or promotion credit.
 
 ## Test strategy
 

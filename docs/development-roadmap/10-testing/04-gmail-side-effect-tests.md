@@ -50,6 +50,8 @@ assert gmail_call_recorder.count == expected_call_count
 reconcile_all_attempts_before_cleanup()
 ```
 
+Offline OAuth/provider/result/reconciliation/suppression requirements map exactly to `T7-GMAIL-OFFLINE`, invoked as `./scripts/task7/run --manifest tests/manifests/task7-commands.v1.json --command T7-GMAIL-OFFLINE --run-id "$TASK7_RUN_ID" --evidence-root "$TASK7_EVIDENCE_ROOT" --profile GMAIL_RECORDED --target-manifest "$TASK7_TARGET_MANIFEST"`. Only the bounded M6 owned-alias rows map to `T7-GMAIL-LIVE`, invoked by substituting `--command T7-GMAIL-LIVE --profile GMAIL_OWNED_ALIAS` in that exact argv. The signed fixture manifest, isolated database/system ID, Google project/mailbox binding, owned-alias allowlist, call/send/cost cap and both control values are required inputs; the live target guard refuses any non-owned address or `PRODUCT_OUTREACH=true` before credential access. Provider unavailability exits `30`; any possibly accepted but incomplete outcome exits `60` and enters reconciliation, never pass/retry. The mapping domains are disjoint and their union equals every TEST-04 requirement.
+
 ## Ordered implementation tasks
 
 - [ ] **Build strict offline Gmail fixtures —** Input: PROVIDER-01/02 request/result/error/MIME/history contracts. Operation: capture or construct redacted signed fixtures for every branch and deny network. Output: deterministic provider simulator. Test evidence: schema/hash/PII/secret/cross-mailbox/tamper matrix. Failure behavior: fixture rejected; no live fallback.
@@ -57,6 +59,7 @@ reconcile_all_attempts_before_cleanup()
 - [ ] **Prove 14-step gateway authority and results —** Input: exact product fixture and provider call recorder. Operation: deny/inject crash at every step and map all provider observations. Output: exact rows/states/events/leases/cost/call counts. Test evidence: one-field authority splices, 14 no-call denials, concurrency and cancellation. Failure behavior: ambiguity or deterministic denial; never blind retry.
 - [ ] **Prove reconciliation and recipient signals —** Input: mailbox-bound Sent/history fixtures. Operation: exercise bounded polls, cursor recovery and atomic stop-signal transaction under replay/concurrency. Output: terminal or explicit unresolved state plus active suppression. Test evidence: zero/one/many/cross-account and every write-boundary crash. Failure behavior: mailbox/product off; cursor not advanced.
 - [ ] **Run controlled M6 owned-alias gate —** Input: signed preflight, isolated credential/schema and hard caps. Operation: execute approved scenarios, reconcile every call, compare Gmail IDs/RFC IDs/ledger and revoke/clean up. Output: signed M6 bundle. Test evidence: zero duplicates/blind retries/post-control calls and complete suppression/reply evidence. Failure behavior: M6 fails and both controls false.
+- [ ] **Close offline/live command ownership —** Input: complete TEST-04 matrix. Operation: prove disjoint set equality to `T7-GMAIL-OFFLINE|T7-GMAIL-LIVE`, profile/fixture integrity, target guards, caps and exit semantics. Output: signed command mapping. Test evidence: live-row-in-offline, non-owned target, unavailable and ambiguous-outcome negatives. Failure behavior: M6 remains blocked and both controls false.
 
 ## Test strategy
 

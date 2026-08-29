@@ -37,6 +37,8 @@ Create `backend/tests/recovery/`, deterministic barrier controller `tests/recove
 
 Finite coverage includes `experiment_lifecycle`, `idea_validation`, `lead_qualification`, `outreach_and_reply`, `gmail_reconciliation`, `gmail_history_sync`, agent evaluation capture/scoring coordination, retention batches, backup verification, and incident exercises. The manifest derives exact workflow/run/campaign/message state and event sets from ARCH-03 and rejects unregistered names.
 
+Every requirement in this document maps exactly to `T7-WORKFLOW-RECOVERY` in the [TEST-01 closed command manifest](01-testing-strategy.md#closed-command-manifest), invoked from the repository root as `./scripts/task7/run --manifest tests/manifests/task7-commands.v1.json --command T7-WORKFLOW-RECOVERY --run-id "$TASK7_RUN_ID" --evidence-root "$TASK7_EVIDENCE_ROOT" --profile DBOS_EPHEMERAL --target-manifest "$TASK7_TARGET_MANIFEST"`. The immutable scenario fixture supplies runtime/version, barrier, expected state/event/row/call sets and timeout; the runner proves the ephemeral database/system identifier and disposable process group before killing anything. A missing DBOS/Temporal binary exits `30`, a target/process mismatch exits `50`, and any incomplete kill/evidence set exits `40`; none is a pass.
+
 Reference harness pseudocode:
 
 ```python
@@ -60,6 +62,7 @@ evidence.sign_manifest_last()
 - [ ] **Prove every finite workflow and delivery edge —** Input: ARCH-03 states/events, DB read/write maps and workflow versions. Operation: inject failures at each command/step/transaction/delivery/snapshot edge. Output: complete state-event-row-result matrix. Test evidence: legal/illegal transition and digest set equality. Failure behavior: owning milestone remains blocked.
 - [ ] **Prove controls, versioning and migration —** Input: pause/cancel/resume/retry and v1/v2/rollback scenarios. Operation: kill around request/signal/ack, drain in-flight runs, and preserve application IDs/correlation. Output: operator-visible bounded recovery. Test evidence: no post-bound call and no wrong-version replay. Failure behavior: stop/dequeue disabled and incident open.
 - [ ] **Prove typed repair and isolated restore —** Input: corrupted projection/outbox/runtime mapping fixtures and verified backup. Operation: compare authoritative records, run only compatible repair kind or isolated restore, then rerun affected matrix. Output: signed recovery proof. Test evidence: direct SQL/free-form repair/provider call spies remain zero. Failure behavior: system remains degraded/off.
+- [ ] **Close command ownership —** Input: every M1/finite/delivery/control/version/repair scenario ID. Operation: prove exact set equality to `T7-WORKFLOW-RECOVERY`, its immutable fixture/profile, target guard and declared artifacts. Output: one signed command mapping. Test evidence: missing/duplicate scenario and unavailable-runtime negatives. Failure behavior: recovery gate remains failed.
 
 ## Test strategy
 

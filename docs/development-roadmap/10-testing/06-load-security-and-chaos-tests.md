@@ -38,6 +38,8 @@ Initial safe-capacity acceptance for the planned 4-vCPU/8-GiB single-VPS topolog
 | chaos | DB restart/read-only/latency, worker/API kill, full disk, WAL/archive loss, clock skew, DNS/egress/provider/secret/KMS/telemetry/alert outage, corrupt backup/key | authoritative state preserved/unknown explicit; controls false where visibility/authority uncertain; no blind call/automatic enable |
 | supply chain | changed lock, mutable tag, unsigned image/SBOM/provenance, stale base/vulnerability/license exception | candidate rejected or documented risk expires; rollback by digest |
 
+Capacity/rate/budget rows map exactly to `T7-LOAD`; T01-T16, secret/PII/recipient-hash/supply-chain and bounded fault rows map exactly to `T7-SECURITY-CHAOS`; public abuse/WAF rows map exactly to `T7-PUBLIC-EDGE-VERIFY`; restore-specific corrupt-chain/key rows delegate to `T7-RESTORE-PRIMARY|T7-RESTORE-DR` without duplicate ownership. Each uses the exact [TEST-01 runner form](01-testing-strategy.md#closed-command-manifest) and its named profile. `T7-LOAD` and `T7-SECURITY-CHAOS` target a signed isolated target; any destructive injection additionally requires the target manifest and confirmation digest. Threshold stop, unsafe target or absent injector exits `10`, `50` or `30` respectively, never pass. Set equality rejects an unmapped or multiply owned requirement.
+
 ## Ordered implementation tasks
 
 - [ ] **Freeze capacity and destructive-target guards —** Input: planned VPS resources, SLOs, pools/queues/caps and disposable target. Operation: encode thresholds/stop conditions and resolve target identity before any load/fault. Output: signed capacity scenario. Test evidence: production-like name, unresolved variable, wrong DB/system ID and threshold-stop self-tests. Failure behavior: refuse execution.
@@ -45,6 +47,7 @@ Initial safe-capacity acceptance for the planned 4-vCPU/8-GiB single-VPS topolog
 - [ ] **Execute T01-T16 and canary corpus —** Input: SEC-01 closure matrix, secret/PII/hash canaries and candidate artifacts. Operation: attack every boundary and verify exact alert/incident/runbook/disable evidence. Output: signed security matrix. Test evidence: no orphan threat and zero uncontrolled data/authority path. Failure behavior: Critical incident and release blocked.
 - [ ] **Prove public route/WAF abuse controls —** Input: exact 64+2 manifests and synthetic unsubscribe tokens. Operation: exercise scanners, method/path/body/token/origin/fetch/CSRF/rate/timeout/upstream failures from distinct sources. Output: M9 public-ingress evidence. Test evidence: route set equality, DB write/call/telemetry counts and dependency product-off. Failure behavior: public hostname/ruleset stays disabled and product outreach false.
 - [ ] **Execute bounded chaos and rollback —** Input: disposable environment, fault schedule, backup and last release. Operation: inject one fault at a time, capture detection/containment/recovery, and restore/rollback without live-target mutation. Output: recovery-time/data-loss measurements. Test evidence: each fault meets its RPO/RTO/invariant or records failure. Failure behavior: M8 blocked; preserve environment for diagnosis.
+- [ ] **Close adversarial command ownership —** Input: every capacity/security/privacy/public/fault requirement and TEST-01 registry. Operation: prove exact mapping to `T7-LOAD`, `T7-SECURITY-CHAOS`, `T7-PUBLIC-EDGE-VERIFY` or the restore owner; validate profile, guard, stop and artifact semantics. Output: signed command-coverage report. Test evidence: orphan/duplicate/unsafe/unavailable negatives. Failure behavior: M8/M9 remains blocked.
 
 ## Test strategy
 
@@ -63,7 +66,7 @@ All attacks use synthetic targets and bounded rates. Public per-source evidence 
 
 ## Failure, rollback, and operator recovery
 
-Any integrity breach, post-disable call, cap overrun, public route widening, GET mutation, canary leak, hash exposure, unalerted Critical condition, uncontrolled destructive target, or RPO/RTO miss stops the test and candidate. Disable both controls/public ingress as applicable, revoke exposed material, preserve minimized evidence, restore disposable state, and execute the exact IR runbook. Roll back by immutable digest/config/WAF version; never increase capacity/caps or delete evidence to obtain a pass.
+Any integrity breach, post-disable call, cap overrun, public route widening, GET mutation, canary leak, hash exposure, unalerted Critical condition, uncontrolled destructive target, or RPO/RTO miss stops the test and candidate. Set both controls false; disable public ingress for every public-boundary or suppression-observability fault; revoke exposed material, preserve minimized evidence, restore disposable state, and execute the exact IR runbook. Roll back by immutable digest/config/WAF version; never increase capacity/caps or delete evidence to obtain a pass.
 
 ## Acceptance and retained evidence
 

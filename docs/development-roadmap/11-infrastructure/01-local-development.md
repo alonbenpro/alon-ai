@@ -55,6 +55,8 @@ docker compose --project-name alon-ai-dev --env-file .env.example -f infra/compo
 
 Reset is deliberately separate. `scripts/dev/reset_database.sh --project alon-ai-dev --database alon_ai --confirm alon-ai-dev:alon_ai` first resolves Compose labels, container ID, database name, PostgreSQL system identifier, mounted volume name/path and both controls; it refuses wildcard/empty/mismatched/live labels. It takes a disposable schema manifest, stops API/worker, removes only `alon-ai-dev_postgres_data`, recreates/migrates/seeds, then proves controls false. No `docker system prune`, broad volume glob, or unresolved variable is permitted.
 
+All setup/migration/generation/smoke requirements map exactly to `T7-LOCAL-SMOKE`; reset/cleanup requirements map exactly to destructive `T7-LOCAL-RESET` in the [TEST-01 closed command manifest](../10-testing/01-testing-strategy.md#closed-command-manifest). The invocations use profiles `LOCAL_COMPOSE` and `LOCAL_DISPOSABLE` respectively; reset must include the signed target manifest and confirmation digest. Docker unavailable exits `30`, a label/database/system-ID/volume/control mismatch exits `50` before stop/removal, and incomplete cleanup exits `40`; none counts as pass. Set equality proves the two domains are disjoint and complete.
+
 ## Ordered implementation tasks
 
 - [ ] **Freeze prerequisites and preflight —** Input: lockfiles, runtime floors, repository root and environment enum. Operation: verify exact uv/Python/Node/npm/Docker/PostgreSQL versions, ignored config and no real secrets. Output: machine-readable preflight. Test evidence: wrong version/root/tracked-env/provider-secret negatives. Failure behavior: stop before install/start.
@@ -62,6 +64,7 @@ Reset is deliberately separate. `scripts/dev/reset_database.sh --project alon-ai
 - [ ] **Implement migration/seed/generation workflow —** Input: DB-06 seed manifest and BACKEND-02 OpenAPI. Operation: upgrade, seed twice, generate client and compare committed outputs. Output: deterministic local truth. Test evidence: catalog/seed hash and generated no-diff. Failure behavior: no app start on stale schema/client.
 - [ ] **Implement safe reset and cleanup —** Input: explicit project/database confirmation and resolved resource labels. Operation: stop writers, remove only verified local volume/database, recreate, migrate and prove controls false. Output: clean local environment. Test evidence: empty/wildcard/wrong-system-ID/production-like target refusal. Failure behavior: perform no deletion.
 - [ ] **Document and retain local smoke evidence —** Input: running stack. Operation: check live/ready/frontend, non-root users, worker readiness, schema head, fixture mode and controls. Output: local run manifest. Test evidence: unavailable Docker/provider reported as unavailable, not passed. Failure behavior: leave stack stopped or degraded and show exact failed check.
+- [ ] **Close local command ownership —** Input: every setup/smoke/reset requirement and TEST-01 registry. Operation: bind exact cwd/profile/target guard/artifacts/exit semantics to the two commands and inject target mismatches. Output: signed mapping. Test evidence: unavailable Docker=`30` and pre-delete wrong identity=`50`. Failure behavior: local lane receives no gate credit.
 
 ## Test strategy
 
