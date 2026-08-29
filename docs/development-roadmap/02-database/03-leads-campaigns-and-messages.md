@@ -156,6 +156,28 @@ CREATE TABLE campaign_members (
     lead_id uuid NOT NULL,
     recipient_address_ciphertext bytea NOT NULL,
     recipient_address_hash char(64) NOT NULL,
+    recipient_identity_evidence_artifact_id uuid NOT NULL,
+    recipient_identity_evidence_artifact_version bigint NOT NULL,
+    recipient_identity_evidence_artifact_hash char(64) NOT NULL,
+    jurisdiction_evidence_artifact_id uuid NOT NULL,
+    jurisdiction_evidence_artifact_version bigint NOT NULL,
+    jurisdiction_evidence_artifact_hash char(64) NOT NULL,
+    affirmative_consent_evidence_artifact_id uuid NULL,
+    affirmative_consent_evidence_artifact_version bigint NULL,
+    affirmative_consent_evidence_artifact_hash char(64) NULL,
+    counsel_exception_evidence_artifact_id uuid NULL,
+    counsel_exception_evidence_artifact_version bigint NULL,
+    counsel_exception_evidence_artifact_hash char(64) NULL,
+    legal_review_artifact_id uuid NOT NULL,
+    legal_review_artifact_version bigint NOT NULL,
+    legal_review_artifact_hash char(64) NOT NULL,
+    disclosure_sender_template_artifact_id uuid NOT NULL,
+    disclosure_sender_template_artifact_version bigint NOT NULL,
+    disclosure_sender_template_artifact_hash char(64) NOT NULL,
+    google_policy_review_artifact_id uuid NOT NULL,
+    google_policy_review_artifact_version bigint NOT NULL,
+    google_policy_review_artifact_hash char(64) NOT NULL,
+    legal_policy_version text NOT NULL,
     status text NOT NULL DEFAULT 'ELIGIBLE',
     created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     removed_at timestamptz NULL,
@@ -166,6 +188,8 @@ CREATE TABLE campaign_members (
     CONSTRAINT uq_campaign_members_authority UNIQUE (campaign_member_id, campaign_id, campaign_version, lead_id),
     CONSTRAINT uq_campaign_members_recipient UNIQUE (campaign_id, campaign_version, recipient_address_hash),
     CONSTRAINT ck_campaign_members_hash CHECK (recipient_address_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_campaign_members_compliance CHECK (recipient_identity_evidence_artifact_version > 0 AND jurisdiction_evidence_artifact_version > 0 AND legal_review_artifact_version > 0 AND disclosure_sender_template_artifact_version > 0 AND google_policy_review_artifact_version > 0 AND recipient_identity_evidence_artifact_hash ~ '^[0-9a-f]{64}$' AND jurisdiction_evidence_artifact_hash ~ '^[0-9a-f]{64}$' AND legal_review_artifact_hash ~ '^[0-9a-f]{64}$' AND disclosure_sender_template_artifact_hash ~ '^[0-9a-f]{64}$' AND google_policy_review_artifact_hash ~ '^[0-9a-f]{64}$' AND legal_policy_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$'),
+    CONSTRAINT ck_campaign_members_authority_route CHECK (((affirmative_consent_evidence_artifact_id IS NOT NULL)::integer + (counsel_exception_evidence_artifact_id IS NOT NULL)::integer) = 1 AND (affirmative_consent_evidence_artifact_id IS NULL) = (affirmative_consent_evidence_artifact_version IS NULL) AND (affirmative_consent_evidence_artifact_id IS NULL) = (affirmative_consent_evidence_artifact_hash IS NULL) AND (counsel_exception_evidence_artifact_id IS NULL) = (counsel_exception_evidence_artifact_version IS NULL) AND (counsel_exception_evidence_artifact_id IS NULL) = (counsel_exception_evidence_artifact_hash IS NULL) AND (affirmative_consent_evidence_artifact_version IS NULL OR affirmative_consent_evidence_artifact_version > 0) AND (counsel_exception_evidence_artifact_version IS NULL OR counsel_exception_evidence_artifact_version > 0) AND (affirmative_consent_evidence_artifact_hash IS NULL OR affirmative_consent_evidence_artifact_hash ~ '^[0-9a-f]{64}$') AND (counsel_exception_evidence_artifact_hash IS NULL OR counsel_exception_evidence_artifact_hash ~ '^[0-9a-f]{64}$')),
     CONSTRAINT ck_campaign_members_status CHECK (status IN ('ELIGIBLE','REMOVED')),
     CONSTRAINT ck_campaign_members_removed CHECK ((status = 'REMOVED') = (removed_at IS NOT NULL))
 );
@@ -253,6 +277,10 @@ CREATE TABLE suppression_entries (
     business_id uuid NULL,
     reason_code text NOT NULL,
     source text NOT NULL,
+    source_actor_type text NOT NULL,
+    source_observation_id uuid NULL,
+    source_reply_id uuid NULL,
+    source_command_ref text NOT NULL,
     active boolean NOT NULL DEFAULT true,
     version bigint NOT NULL DEFAULT 1,
     created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
@@ -262,6 +290,10 @@ CREATE TABLE suppression_entries (
     CONSTRAINT uq_suppression_entries_id_version UNIQUE (suppression_entry_id, version),
     CONSTRAINT ck_suppression_entries_scope CHECK (scope IN ('GLOBAL','BUSINESS','RECIPIENT')),
     CONSTRAINT ck_suppression_entries_target CHECK ((scope = 'GLOBAL' AND recipient_hash IS NULL AND business_id IS NULL) OR (scope = 'BUSINESS' AND recipient_hash IS NULL AND business_id IS NOT NULL) OR (scope = 'RECIPIENT' AND recipient_hash ~ '^[0-9a-f]{64}$' AND business_id IS NULL)),
+    CONSTRAINT ck_suppression_entries_source CHECK (source IN ('OPERATOR','GMAIL_REPLY','GMAIL_UNSUBSCRIBE','GMAIL_HARD_BOUNCE','GMAIL_COMPLAINT','GMAIL_SOFT_BOUNCE_LIMIT','PUBLIC_UNSUBSCRIBE')),
+    CONSTRAINT ck_suppression_entries_actor CHECK (source_actor_type IN ('OPERATOR','SYSTEM','PROVIDER')),
+    CONSTRAINT ck_suppression_entries_source_refs CHECK ((source = 'OPERATOR' AND source_actor_type = 'OPERATOR' AND source_observation_id IS NULL AND source_reply_id IS NULL) OR (source IN ('GMAIL_REPLY','GMAIL_UNSUBSCRIBE') AND source_actor_type = 'PROVIDER' AND source_observation_id IS NOT NULL AND source_reply_id IS NOT NULL) OR (source IN ('GMAIL_HARD_BOUNCE','GMAIL_COMPLAINT','GMAIL_SOFT_BOUNCE_LIMIT') AND source_actor_type = 'PROVIDER' AND source_observation_id IS NOT NULL AND source_reply_id IS NULL) OR (source = 'PUBLIC_UNSUBSCRIBE' AND source_actor_type = 'SYSTEM' AND source_observation_id IS NULL AND source_reply_id IS NULL)),
+    CONSTRAINT ck_suppression_entries_command_ref CHECK (source_command_ref ~ '^[a-z0-9][a-z0-9:._-]{0,199}$'),
     CONSTRAINT ck_suppression_entries_active CHECK ((active AND deactivated_at IS NULL) OR (NOT active AND deactivated_at IS NOT NULL)),
     CONSTRAINT ck_suppression_entries_version CHECK (version > 0)
 );
@@ -435,6 +467,8 @@ CREATE TABLE provider_observations (
     history_id text NULL,
     rfc_message_id text NULL,
     direction text NOT NULL,
+    signal_kind text NOT NULL DEFAULT 'NONE',
+    signal_reason_code text NULL,
     observed_at timestamptz NOT NULL,
     payload_ref text NOT NULL,
     fingerprint char(64) NOT NULL,
@@ -446,6 +480,7 @@ CREATE TABLE provider_observations (
     CONSTRAINT uq_provider_observations_reply_identity UNIQUE (provider_observation_id, mailbox_id, gmail_message_id, gmail_thread_id),
     CONSTRAINT uq_provider_observations_cursor_identity UNIQUE (provider_observation_id, mailbox_id, gmail_message_id, history_id),
     CONSTRAINT ck_provider_observations_direction CHECK (direction IN ('INBOUND','OUTBOUND')),
+    CONSTRAINT ck_provider_observations_signal CHECK (signal_kind IN ('NONE','REPLY','UNSUBSCRIBE','HARD_BOUNCE','SOFT_BOUNCE','COMPLAINT') AND ((signal_kind = 'NONE' AND signal_reason_code IS NULL) OR (signal_kind <> 'NONE' AND signal_reason_code IS NOT NULL))),
     CONSTRAINT ck_provider_observations_fingerprint CHECK (fingerprint ~ '^[0-9a-f]{64}$')
 );
 CREATE INDEX ix_provider_observations_thread ON provider_observations (mailbox_id, gmail_thread_id, observed_at);
@@ -490,7 +525,11 @@ CREATE INDEX ix_gmail_history_cursors_advanced ON gmail_history_cursors (advance
 
 `GmailMailboxCommandService` may insert `status=ACTIVE` only inside `CompleteGmailAuthorization` after validating signed `ActiveCredentialProofV1`. The row copies exact `(oauth_flow_id,mailbox_id,provider_account_hash,granted_scope_hash,credential_handle_hash,credential_version,credential_key_version,credential_activation_generation)` from the ACTIVE secret object. Product credential resolution hashes the opaque handle and requires every value plus ACTIVE mailbox status to match; no row or mismatch means no token access. The binding tuple is immutable while mailbox status is ACTIVE. Authenticated reconnect may replace the entire tuple atomically only from DISABLED, with the same provider account, exact next credential version, no unresolved attempts, and a new ACTIVE proof; partial field patch is forbidden.
 
-Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`, `fk_outreach_messages_artifact`, `fk_approvals_eligibility_policy_authority`, `fk_send_intents_eligibility_policy_authority`, `fk_send_attempts_send_policy_authority`, and `fk_replies_classification_artifact` are added after DB-04/DB-05 exists. Exact definitions appear in DB-06. `trg_send_intents_immutable_identity` protects every experiment/campaign/member/lead/message/mailbox/approval/eligibility/scope/idempotency/RFC/retry/budget field while allowing only `attempt_count`, `open_for_attempt`, `cancelled_at`, and `cancellation_reason`; `trg_send_intent_cancellation_once` makes the true-to-false cancellation a one-way transition. `fk_send_attempts_intent_authority` copies the non-null `open_for_attempt=true` token: PostgreSQL rejects an attempt for a cancelled intent and blocks flipping the parent token after an attempt exists.
+Deferred M2 foreign keys `fk_leads_suppression`, the seven exact `fk_campaign_members_*_artifact` identity/jurisdiction/consent-or-exception/legal/disclosure/Google-policy references, `fk_lead_assessments_artifact`, `fk_outreach_messages_artifact`, `fk_suppression_entries_source_observation`, `fk_suppression_entries_source_reply`, `fk_approvals_eligibility_policy_authority`, `fk_send_intents_eligibility_policy_authority`, `fk_send_attempts_send_policy_authority`, and `fk_replies_classification_artifact` are added after DB-04/DB-05 exists. Exact definitions appear in DB-06. `trg_send_intents_immutable_identity` protects every experiment/campaign/member/lead/message/mailbox/approval/eligibility/scope/idempotency/RFC/retry/budget field while allowing only `attempt_count`, `open_for_attempt`, `cancelled_at`, and `cancellation_reason`; `trg_send_intent_cancellation_once` makes the true-to-false cancellation a one-way transition. `fk_send_attempts_intent_authority` copies the non-null `open_for_attempt=true` token: PostgreSQL rejects an attempt for a cancelled intent and blocks flipping the parent token after an attempt exists.
+
+`RecipientLookupKeyService` is the only constructor/reader of recipient lookup material. It normalizes the address and computes the existing deterministic lowercase SHA-256 digest for v1 equality/deduplication/suppression compatibility. `recipient_address_hash` and `recipient_hash` are pseudonymous personal-risk data: equality leaks and the small, guessable email-address space permits offline dictionary enumeration. Keeping this construction in v1 is an explicit residual-risk decision, never anonymization or a claim of non-reversibility. PostgreSQL column privileges allow only the lookup service and the single suppression/final-SEND transaction; API/report/log/event/export paths never serialize the digest, recipient domain, or a derived fingerprint. Reads require registered purpose, are rate-limited and audited by bounded outcome/reason without target material, and enumeration alarms map to OBS-05. Database volumes, WAL, snapshots and backups are encrypted and separately access-controlled; the delivery address remains separately field-encrypted.
+
+`RecipientSignalSuppressionService` is the sole atomic coordinator for observed stop signals and invokes the canonical `SuppressionCommandService.record_observed_signal` internal command; it is not a second suppression writer. One serializable transaction claims the provider-page or public-token command key; locks the campaign member/message/intent, current suppression target and `PRODUCT_OUTREACH`; stores the Gmail observation and reply where applicable or the strict `UnsubscribeTokenResultV1` in `command_idempotency`; creates or idempotently returns the active recipient suppression with the exact source/actor/reference enum; transitions every matching nonarchived lead to `SUPPRESSED`; moves `APPROVED|SEND_INTENT_RECORDED|QUEUED` messages to `SUPPRESSED`; one-way closes every provably uncalled open intent and releases its unsent reservation; emits `suppression.created.v1`, applicable `lead.suppressed.v1` and `send.suppressed.v1`, safe audit/outbox; advances the Gmail cursor when applicable; stores the command result; and commits once. `SENDING|AMBIGUOUS|RECONCILING` is retained for reconciliation and still blocks every next send. A crash rolls back the page/token result, suppression, intent closure, cursor and receipts together; redelivery is exact. Any transaction/sync/schema failure commits `PRODUCT_OUTREACH=false` through the independent fail-closed control path and pages closed catalog alert `ALERT_COMPLIANCE_SUPPRESSION`; it remains off until a typed repair proves the observation-to-suppression and no-next-SEND invariants.
 
 | Table | Exclusive write owner | Retention class / retention owner |
 | --- | --- | --- |
@@ -502,7 +541,7 @@ Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`,
 | `campaign_members` | `CampaignAdmissionService` | `SENSITIVE_SHORT` / `RetentionCommandService` |
 | `outreach_messages` | `MessageCommandService` | `SENSITIVE_SHORT` / `RetentionCommandService` |
 | `approvals` | `ApprovalCommandService` | `SAFETY_LONG` / `RetentionCommandService` |
-| `suppression_entries` | `SuppressionCommandService` | `SAFETY_LONG` / `RetentionCommandService` |
+| `suppression_entries` | `SuppressionCommandService`; observed-signal calls only through `RecipientSignalSuppressionService` transaction coordinator | `SAFETY_LONG` / `RetentionCommandService` |
 | `send_intents` | application `SendGateway` | `SAFETY_LONG` / `RetentionCommandService` |
 | `send_rate_reservations` | `SendRateReservationService` under SendGateway/Recovery transactions | `SAFETY_LONG` / `RetentionCommandService` |
 | `send_attempts` | application `SendGateway` and `SendRecoveryService` under disjoint transitions | `SAFETY_LONG` / `RetentionCommandService` |
@@ -531,6 +570,8 @@ Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`,
 - **OAuth binding `test_active_mailbox_requires_exact_active_credential_proof_tuple`:** flow/account/scope/handle/version/key/generation splice or non-ACTIVE proof creates no mailbox/SUCCEEDED result.
 - **Concurrency `test_one_active_mailbox_rate_lease_and_unique_window_slot`:** simultaneous gateway transactions produce one consumed lease/attempt winner and one typed rate denial; a RESERVED or token/timestamp-spliced reservation cannot satisfy the attempt FK.
 - **Suppression `test_last_mile_suppression_cancels_intent_without_attempt_or_provider_call`:** nullable-cancellation FK and row/event counts prove the no-call path.
+- **Observed suppression `test_reply_unsubscribe_bounce_complaint_and_soft_limit_commit_suppression_cursor_and_no_next_send_atomically`:** crash before every row/event/cursor/receipt and concurrent gateway races either roll back fully or leave suppression visible before any later call; failure forces product control false.
+- **Lookup privacy `test_recipient_hash_is_pseudonymous_least_access_and_absent_from_api_log_event_report_export`:** known-address enumeration/query-rate fixtures trigger bounded alerts; encrypted volume/WAL/backup and column-privilege checks prove compensating controls without claiming anonymity.
 - **Recovery `test_timeout_after_gmail_acceptance_reconciles_without_resend`:** stable RFC ID finds Sent evidence.
 - **Recovery `test_reconciliation_uses_only_the_authorized_mailbox`:** approval/intent/attempt/result account IDs agree; cross-account evidence is rejected and the searched account is retained.
 - **Recovery `test_multiple_sent_matches_require_operator_resolution`:** never guess which send won.
@@ -541,7 +582,7 @@ Deferred M2 foreign keys `fk_leads_suppression`, `fk_lead_assessments_artifact`,
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 
-Recipient addresses and message content are encrypted; normalized hashes support scoped dedupe/suppression without appearing in logs. Legal/compliance facts and approval versions are deterministic inputs; model prose cannot authorize send. The stable idempotency key and RFC Message-ID survive retries/restarts. Every provider call records policy, budget, correlation, attempt, result/ambiguity, and cost reference. Retention minimizes personal/message data while preserving safety evidence hashes and suppression requirements.
+Recipient addresses and message content are field-encrypted. The stored deterministic SHA-256 recipient hash is pseudonymous personal-risk data with offline-enumeration/equality risk, never anonymous or “non-reversible”; it is restricted by column privilege and appears in no API, log, event, report, export, or fixture. Legal/compliance facts and approval versions are deterministic inputs; model prose cannot authorize send. The stable idempotency key and RFC Message-ID survive retries/restarts. Every provider call records policy, budget, correlation, attempt, result/ambiguity, and cost reference. Retention minimizes personal/message data while preserving restricted safety linkage and suppression requirements.
 
 ## Failure, rollback, and operator recovery
 

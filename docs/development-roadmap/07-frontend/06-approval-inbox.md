@@ -41,9 +41,9 @@ The detail view must show every safe field from strict `ApprovalBasisScopeV1`:
 - intended operation exactly `SEND`;
 - `max_send_count=1`;
 - approval expiry;
-- immutable `scope_hash`, eligibility policy decision ID/version/facts hash/allowed result, approval ID/state, request/decision/revocation timestamps and returned safe reason fields.
+- immutable `scope_hash`; exact accepted recipient-identity, jurisdiction, affirmative-consent-or-counsel-exception, legal-review, disclosure/sender-template, and Google-policy artifact ID/version/hash references plus legal-policy version; eligibility policy decision ID/version/facts hash/allowed result; approval ID/state; request/decision/revocation timestamps; and returned safe reason fields.
 
-The queue report adds current `current_authority_valid` and server invalidation reason codes from current suppression/control/policy facts. Changed immutable basis requires a new approval UUID. Changed mutable suppression/control/budget/rate/jurisdiction does not rewrite the row but can invalidate current send authority. The browser never compares hashes or recomputes validity.
+The queue report adds current `current_authority_valid` and server invalidation reason codes from current suppression/control/policy facts. It renders recipient identity/jurisdiction status, consent-or-exception and legal-review expiry, legal-policy/template/Google-review version/status, and reply/unsubscribe/hard-bounce/complaint/soft-bounce-limit observations only from the safe BACKEND-06 projection. Each failure uses the dedicated BACKEND-03 code; generic “jurisdiction,” “authority,” or “suppressed” copy cannot replace it. Changed immutable basis requires a new approval UUID. Changed mutable facts do not rewrite the row but can invalidate current send authority. The browser never compares hashes or recomputes validity.
 
 ### Exact operations, keys, polling, and reconciliation
 
@@ -81,7 +81,7 @@ Dialog initial focus is the heading; tab is trapped; Escape/close is unavailable
 - **Lifecycle `test_only_pending_decides_approved_revokes_and_consumed_is_readonly`:** exhaustive state matrix.
 - **Race `test_two_tabs_deciding_same_approval_have_one_winner_and_loser_refetches`:** expected state/idempotency.
 - **Authority `test_approve_never_records_intent_or_renders_send_complete`:** final SEND remains separate.
-- **Staleness `test_changed_basis_artifact_version_hash_acceptance_or_current_authority_invalid_disables_and_server_denies`:** exact reasons.
+- **Staleness `test_changed_basis_artifact_version_hash_acceptance_or_current_authority_invalid_disables_and_server_denies`:** all 14 dedicated compliance/signal denial fixtures render distinct reason copy and safe evidence refs; generic substitutions fail.
 - **Accessibility `test_queue_cards_table_dialog_error_summary_and_focus_are_keyboard_complete`:** axe/breakpoints.
 
 ## Security, privacy, compliance, idempotency, observability, and cost

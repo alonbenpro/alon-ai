@@ -89,6 +89,7 @@ CREATE TABLE artifacts (
     CONSTRAINT fk_artifacts_supersedes FOREIGN KEY (supersedes_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT,
     CONSTRAINT uq_artifacts_version UNIQUE (experiment_id, artifact_type, artifact_version),
     CONSTRAINT uq_artifacts_content UNIQUE (artifact_type, schema_version, content_hash),
+    CONSTRAINT uq_artifacts_exact_version_hash UNIQUE (artifact_id, artifact_version, content_hash),
     CONSTRAINT ck_artifacts_versions CHECK (schema_version > 0 AND artifact_version > 0),
     CONSTRAINT ck_artifacts_status CHECK (status IN ('PRODUCED','VALIDATED','REJECTED','ACCEPTED','SUPERSEDED')),
     CONSTRAINT ck_artifacts_content CHECK (jsonb_typeof(content_json) = 'object' AND content_hash ~ '^[0-9a-f]{64}$'),
@@ -236,7 +237,7 @@ CREATE INDEX ix_evaluation_results_agent_passed ON evaluation_results (agent_run
 | `evaluation_cases` | `EvaluationSuiteCommandService` | `EVALUATION_VERSIONED` / `RetentionCommandService` |
 | `evaluation_results` | `EvaluationExecutionService` | `EVALUATION_VERSIONED` / `RetentionCommandService` |
 
-Artifact types use the product names from PRODUCT-01: `ExperimentBrief`, `IdeaCandidate`, `OfferHypothesis`, `MarketEvidence`, `LeadEvidence`, `QualificationAssessment`, `OutreachDraft`, `ReplyClassification`, `MetricSnapshot`, `EvidenceBundle`, and `ExperimentDecision` where appropriate. A business table remains authoritative when a corresponding artifact is accepted and materialized; the artifact is retained as provenance, not a competing aggregate.
+Artifact types use the product names from PRODUCT-01: `ExperimentBrief`, `IdeaCandidate`, `OfferHypothesis`, `MarketEvidence`, `LeadEvidence`, `QualificationAssessment`, `OutreachDraft`, `ReplyClassification`, `MetricSnapshot`, `EvidenceBundle`, and `ExperimentDecision` where appropriate. The deterministic compliance registry additionally permits only `CompliancePolicyV1`, `RecipientIdentityEvidenceV1`, `RecipientJurisdictionEvidenceV1`, `AffirmativeConsentEvidenceV1`, `CounselExceptionRecordV1`, `LegalReviewRecordV1`, `DisclosureSenderTemplateV1`, and `GooglePolicyReviewV1`; these are created through `ArtifactCommandService` and the existing validation/acceptance owners by application/legal-policy workflows, never agents. Every recipient-bound record must be `ACCEPTED` before DB-03 can bind its exact `(artifact_id,artifact_version,content_hash)` tuple. A business table remains authoritative when a corresponding artifact is accepted and materialized; the artifact is retained as provenance, not a competing aggregate.
 
 ## Ordered implementation tasks
 

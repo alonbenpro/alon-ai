@@ -6,7 +6,7 @@
 **Owner:** Solo operator
 **Prerequisites:** [BACKEND-01 `OperatorSessionService`](../06-backend/01-domain-services.md), [BACKEND-02 exact auth/session API](../06-backend/02-api-contracts.md), [FRONTEND-01](../07-frontend/01-information-architecture.md), [FRONTEND-09](../07-frontend/09-error-recovery-and-accessibility.md), SEC-01, and SEC-03
 **Outputs:** Configured-subject Google OIDC, server-side opaque sessions, CSRF/private-ingress enforcement, rotation/revocation/bootstrap/recovery, and retained authentication evidence
-**Unlocks:** Authenticated use of the exact 64-operation product API and M8 private operation
+**Unlocks:** Authenticated use of the exact 66-operation API and M8 private operation
 **Risk:** Critical
 **Complexity:** XL
 
@@ -32,7 +32,7 @@ Create `api/operator_sessions.py`, `api/dependencies/auth.py`, `api/dependencies
 
 ### Exact configuration and subject authority
 
-Required secret/non-public configuration: one HTTPS `operator_origin`; exact Google issuer `https://accounts.google.com`; client ID and secret references; exact callback URI; a non-empty allowlist of `(issuer,subject)` with one active subject for the initial solo deployment; fixed internal return-path prefixes; cookie/flow key-ring generations; and trusted reverse-proxy CIDRs. Email, hosted domain, display name, tenant/domain membership, or an `email_verified` claim never substitutes for byte-exact issuer/subject.
+Required secret/non-public configuration: one HTTPS `operator_origin`; fixed Google issuer set exactly `{accounts.google.com, https://accounts.google.com}`; client ID and secret references; exact callback URI; a non-empty subject allowlist with one active subject for the initial solo deployment; fixed internal return-path prefixes; cookie/flow key-ring generations; and trusted reverse-proxy CIDRs. The authorization tuple is `(validated issuer-set member, exact subject)`; issuer-set membership is byte-exact before the authority check. Email, hosted domain, display name, tenant/domain membership, or an `email_verified` claim never substitutes. Google's [OIDC API reference](https://developers.google.com/identity/openid-connect/reference) documents RFC 9207 response-issuer support and both issuer representations; [RFC 9207](https://www.rfc-editor.org/rfc/rfc9207) defines the authorization-response `iss` parameter (both accessed 2026-08-29).
 
 Startup refuses product routes when configuration is missing, wildcarded, HTTP outside explicit local development, mismatched to deployment origin, contains a query/fragment, trusts an unbounded proxy range, or has no active subject. `/health/live` remains process liveness; readiness reports only a safe `authentication_configuration` dependency state. It never returns subjects/client IDs/secrets.
 
@@ -41,8 +41,8 @@ Startup refuses product routes when configuration is missing, wildcarded, HTTP o
 1. `POST /api/v1/auth/authorizations` validates exact Origin, `Sec-Fetch-Site: same-origin`, JSON content type, anonymous-flow idempotency key, and a relative return path under the fixed allowlist.
 2. Generate 256-bit flow handle, 256-bit `state`, 256-bit `nonce`, and PKCE verifier using the platform CSPRNG. Persist only flow-handle/state/nonce lookup digests; encrypt the verifier and required flow payload under SEC-03. Store exact issuer/client/redirect/return path, creation/expiry, idempotency request hash/result, and state `PENDING`.
 3. Return only the allowlisted Google authorization URL and set `__Host-alon_ai_oidc_flow`: opaque, `Secure`, `HttpOnly`, `SameSite=Lax`, `Path=/`, no `Domain`, `Max-Age=600`. Use authorization code flow plus PKCE S256 and minimal `openid` subject-identification scopes; do not request Gmail scopes.
-4. `GET /api/v1/auth/callback` accepts exactly `{code,state}` or `{error,state}` and the flow cookie; rejects body, duplicate parameters, unsupported error, oversized/malformed values, wrong method/host/origin callback URI, or missing flow.
-5. Atomically claim and consume the flow once before code exchange. Constant-time verify state digest. On the code arm verify TLS response, PKCE, provider signature/JWK/algorithm, exact issuer, client audience/authorized party, nonce, issued/expiry/not-before bounds with tested clock skew, and exact configured subject. Provider email/text/claims/tokens are never logged or rendered.
+4. `GET /api/v1/auth/callback` accepts the configured authorization-code response only: a duplicate-free strict success arm requiring `code,state,iss` with optional `scope`, or an error arm requiring `error,state,iss` with optional `error_description`, plus the flow cookie. It rejects body, code/error splice, missing `iss`, every other documented response-table field for a different response type, arbitrary extras (`authuser`, `hd`, `prompt`, `error_uri` included), duplicates, unknown error value, oversized/malformed values, wrong method/host/callback URI, or missing flow. The Google documented redirected-error values are exactly `access_denied|invalid_request|unauthorized_client|unsupported_response_type|invalid_scope`; the optional description is size-validated then discarded.
+5. Validate callback `iss` byte-for-byte against the fixed two-value issuer set, then atomically claim and consume the flow once before code exchange. Constant-time verify state digest. On the code arm verify TLS response, PKCE, provider signature/JWK/algorithm, ID-token `iss` against the same exact set, client audience/authorized party, nonce, issued/expiry/not-before bounds with tested clock skew, and exact configured subject. Provider email/text/claims/tokens are never logged or rendered.
 6. Rotate to a completely new session handle; clear the flow cookie; return only the stored relative success path or fixed `auth_invalid`, `auth_denied`, `auth_expired` redirect defined by BACKEND-02. Callback replay returns a safe fixed failure and creates no session.
 
 ### Server-side session store and frozen cookie contract
@@ -83,7 +83,7 @@ Lost browser/session uses normal OIDC. Lost device invokes the local authenticat
 
 ## Test strategy
 
-- **Protocol `test_oidc_callback_requires_state_nonce_pkce_issuer_audience_time_and_exact_subject`.**
+- **Protocol `test_oidc_callback_requires_exact_google_parameter_arm_state_nonce_pkce_issuer_set_audience_time_and_subject`:** official success/error fixtures require `iss`; both exact issuer spellings pass; extra/duplicate/cross-arm/unknown values fail before exchange/session.
 - **Cookie `test_session_and_flow_cookie_attributes_match_backend02_byte_for_byte`.**
 - **Session `test_rotation_idle_absolute_overlap_logout_concurrency_and_epoch_revocation`.**
 - **CSRF `test_every_unsafe_operation_rejects_bad_origin_fetch_metadata_intent_or_content_type_before_dispatch`.**

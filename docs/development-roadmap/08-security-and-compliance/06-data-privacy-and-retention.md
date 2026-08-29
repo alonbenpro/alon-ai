@@ -54,7 +54,7 @@ DB-06 classes and the 46-table mapping remain canonical. `RetentionPolicyV1` sup
 
 | Class/object | Planned maximum before purge/redaction | Minimum retained after payload removal | Blocking hold |
 | --- | --- | --- | --- |
-| `SENSITIVE_SHORT` raw recipient/message/reply/provider observation | active operational need, then 30 days after close | non-reversible recipient/content/provider identity hash, UTC, authority/suppression/incident refs | active suppression/consent dispute, unresolved send/reply, complaint, rights/legal/incident |
+| `SENSITIVE_SHORT` raw recipient/message/reply/provider observation | active operational need, then 30 days after close | pseudonymous deterministic recipient hash under least DB access plus non-recipient content/provider hashes, UTC, authority/suppression/incident refs; never treat recipient hash as anonymous/non-reversible | active suppression/consent dispute, unresolved send/reply, complaint, rights/legal/incident |
 | raw `evidence_items`/captures | 30 days after acceptance/rejection or experiment close, whichever is later; 7 days for unused failed capture | content hash, source URI only if approved/minimized, retrieval/publication dates, redaction/deletion evidence | decision/gate/citation dispute, incident/legal hold |
 | `BUSINESS_ACTIVE` | active experiment plus 12 months after terminal decision | decision/suppression/safety references and deletion evidence | active relationship/experiment, legal/rights/incident |
 | `SAFETY_LONG` | 24 months after final terminal/reconciled event as the provisional product maximum | immutable minimized IDs/hashes/state/reason/time/policy/authority chain | unresolved ambiguity/incident, active suppression, counsel/accounting/legal hold |
@@ -71,6 +71,8 @@ DB-06 classes and the 46-table mapping remain canonical. `RetentionPolicyV1` sup
 These are maximums, not minimum legal retention. Accounting invoices may require a different period; `cost_entries.provider_invoice_ref` and finance evidence must receive an explicit counsel/accountant schedule without extending provider prompts, recipient bodies, or tokens. Until real-data policy approval, use synthetic/owned aliases only. A missing duration blocks collection/send and automated purge job activation; it does not justify indefinite raw retention.
 
 ### Holds, purge/redaction, and restored data
+
+Active suppression may retain the deterministic SHA-256 recipient hash after contact/address deletion only for the counsel-approved safety hold. It remains pseudonymous/offline enumerable, column-restricted, purpose/query-rate/audit/alert controlled, absent from API/log/event/report/export, and protected by encrypted volume/WAL/snapshot/backups. Hash access anomaly opens `RECIPIENT_HASH_ENUMERATION` through IR-04. The current SHA-256 lookup is an explicit residual risk for this roadmap revision, not anonymization.
 
 Hold precedence is legal/regulator, incident/security, unresolved provider/send, active suppression/opt-out, rights dispute, decision/gate, dependency/reference, then normal expiry. Holds have exact target scope, reason enum, authority/reference, created/expiry/review, and immutable audit. They cannot be silently permanent; expired holds require review, not automatic release when risk remains.
 

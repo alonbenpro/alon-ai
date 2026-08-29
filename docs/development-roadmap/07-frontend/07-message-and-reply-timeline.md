@@ -36,6 +36,8 @@ The authority chain renders only safe generated fields and makes each layer dist
 
 The timeline uses server order and exact canonical events when returned: `approval.requested.v1`, `approval.decided.v1`, `approval.revoked.v1`, `send.intent_recorded.v1`, `send.queued.v1`, `send.attempt_started.v1`, `send.provider_accepted.v1`, `send.outcome_ambiguous.v1`, `send.reconciliation_started.v1`, `send.reconciled_as_sent.v1`, `send.failed.v1`, `send.retry_scheduled.v1`, `send.retry_exhausted.v1`, `send.suppressed.v1`, `reply.received.v1`, `reply.classified.v1`, plus safe policy/control/audit records actually present. Direct acceptance and reconciled acceptance use different labels.
 
+The nullable `final_send_compliance` block is server truth for the last evaluation. Render its exact identity/jurisdiction/authority-route statuses and evidence/retrieved/published/verified/effective/expiry times; consent-or-exception/legal-review decision and expiry; legal-policy current flag/version; disclosure/sender-template and Google-review ID/version/content hash/status/validator/effective/expiry; reply/unsubscribe/hard-bounce/complaint flags; soft-bounce count/limit/last-observed time; exact safe evidence artifact ID/version/hash tuples and observation references; and dedicated reason codes. Every one of `RECIPIENT_IDENTITY_UNVERIFIED`, `RECIPIENT_JURISDICTION_UNKNOWN`, `RECIPIENT_CONSENT_MISSING`, `RECIPIENT_CONSENT_EXPIRED`, `COUNSEL_EXCEPTION_MISSING`, `LEGAL_REVIEW_MISSING`, `LEGAL_REVIEW_STALE`, `DISCLOSURE_TEMPLATE_INVALID`, `GOOGLE_POLICY_DENIED`, `RECIPIENT_REPLIED`, `RECIPIENT_OPTED_OUT`, `RECIPIENT_HARD_BOUNCED`, `RECIPIENT_COMPLAINT`, and `RECIPIENT_SOFT_BOUNCE_LIMIT` has distinct generated copy and fixture. Before evaluation, render “Not yet evaluated,” not passing. Unknown/missing status or reason blocks authority actions; the UI never substitutes a generic jurisdiction/authority/suppression label.
+
 Reply classification is advisory. Render primary label/action/confidence/evidence-span hashes only when returned and accepted; abstained/rejected/unaccepted classification does not become positive reply truth. The operator does not edit classification through an absent API.
 
 ### Exact operations, headers, query keys, and invalidation
@@ -69,6 +71,7 @@ Dialogs follow heading-first focus, trap, pending no-close, focus return, Enter/
 
 - **States `test_message_page_exhaustively_renders_all_fourteen_states`:** unknown blocks.
 - **Authority `test_record_intent_confirmation_displays_full_scope_and_does_not_claim_final_send`:** gateway remains sole authority.
+- **Compliance `test_all_fourteen_final_send_denials_render_distinct_safe_facts_reasons_and_evidence_refs`:** missing/unknown/generic mappings block actions.
 - **Ambiguity `test_ambiguous_and_reconciling_have_no_send_or_retry_action`:** only recovery deep link.
 - **Events `test_direct_provider_acceptance_and_reconciled_acceptance_are_never_interchanged`:** exact labels.
 - **Concurrency `test_message_etag_conflict_refetches_and_requires_reconfirmation`:** no stale intent/abort.

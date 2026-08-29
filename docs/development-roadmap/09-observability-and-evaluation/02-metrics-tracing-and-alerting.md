@@ -34,38 +34,55 @@ Create `observability/metrics.py`, `observability/spans.py`, `observability/slo.
 
 All names below use OpenTelemetry dotted form; Prometheus translation may replace dots with underscores. Counters end conceptually in `.count`, histograms declare units, gauges describe current bounded state. Every label combination has a fixed registry and cardinality budget verified in CI.
 
-| Instrument (unit/type) | Allowed labels only | Purpose |
-| --- | --- | --- |
-| `alon_ai.http.server.request.duration` (`s`, histogram) | `service.name`, route template, method, status class | private API latency/availability |
-| `alon_ai.http.server.request.count` (counter) | same | rate/errors; no actual path/ID |
-| `alon_ai.command.execution.duration` (`s`, histogram) | command type enum, outcome, replay boolean | command/idempotency health |
-| `alon_ai.command.execution.count` | command type, outcome, safe error code | conflicts/denials/failures |
-| `alon_ai.workflow.run.count` | workflow type/version, terminal state, runtime | finite-run outcomes |
-| `alon_ai.workflow.step.duration` (`s`) | workflow type/version, step enum, outcome, replay boolean | stall/version/replay diagnosis |
-| `alon_ai.workflow.active` (up-down counter) | workflow type, canonical state | bounded concurrency |
-| `alon_ai.agent.run.duration` (`s`) / `.count` | agent type/version, terminal state, fixture mode | runtime quality/latency population |
-| `alon_ai.provider.call.duration` (`s`) / `.count` | provider registry name, six-capability enum, outcome, safe error code, fixture mode | dependency/capability health |
-| `alon_ai.provider.usage` (counter) | provider, capability, usage kind `input_token\|output_token\|request\|byte\|result` | bounded usage; value only |
-| `alon_ai.policy.decision.count` | scope, policy version, allowed, safe reason code | deterministic denials/drift |
-| `alon_ai.suppression.denial.count` | scope `GLOBAL\|BUSINESS\|RECIPIENT` | last-mile stop evidence |
-| `alon_ai.control.state` (gauge 0/1) | exact control name | independent authority status |
-| `alon_ai.control.acknowledgement.duration` (`s`) | control name, action, outcome | commit-to-runtime propagation |
-| `alon_ai.gmail.send.attempt.count` | attempt terminal/current state, outcome, authority mode `TEST\|PRODUCT` | send ledger safety |
-| `alon_ai.gmail.send.boundary.duration` (`s`) | boundary enum, outcome | kill-point latency |
-| `alon_ai.gmail.ambiguity.age` (`s`, histogram/gauge aggregate) | age bucket/outcome only | unresolved visibility; no attempt ID label |
-| `alon_ai.gmail.history.page.count` / `.duration` | outcome, gap boolean | sync/cursor health |
-| `alon_ai.gmail.reply.count` | safe class `REPLY\|UNSUBSCRIBE_SUSPECTED\|BOUNCE\|OTHER`, deterministic-stop boolean | no content/recipient |
-| `alon_ai.oauth.saga.count` / `.age` | identity kind `OPERATOR\|GMAIL`, registered state/outcome/reason | flow/replay/stuck/GC health |
-| `alon_ai.session.lifecycle.count` | action/outcome/reason | auth/rotation/revoke health |
-| `alon_ai.budget.reservation.count` | scope, currency, state | reservation lifecycle |
-| `alon_ai.cost.amount` (minor-unit counter) | provider, operation class, original currency | original-currency cost only; OBS-03 |
-| `alon_ai.cost.reconciliation.age` (`s`) | provider, state | missing/late charges |
-| `alon_ai.evaluation.case.count` | suite/agent type, repetition, passed, hard-safety boolean | promotion/continuous eval |
-| `alon_ai.incident.open` (gauge) | canonical severity, trigger category | active operational risk |
-| `alon_ai.backup.age` / `alon_ai.restore.proof.age` (`s`) | data kind `DATABASE\|SECRET_OBJECT\|TELEMETRY_CONFIG`, outcome | recovery freshness |
-| `alon_ai.telemetry.export.count` / `.lag` (`s`) | signal, outcome/drop reason | self-observation |
+| Instrument | OTel instrument | UCUM unit | Aggregation / temporality | Allowed attributes only | Max series |
+| --- | --- | --- | --- | --- | ---: |
+| `alon_ai.http.server.request.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `service.name`, `http.route`, `http.request.method`, `http.response.status_class` | 240 |
+| `alon_ai.http.server.request.count` | Counter | `{request}` | monotonic sum, cumulative | `service.name`, `http.route`, `http.request.method`, `http.response.status_class` | 240 |
+| `alon_ai.command.execution.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `command.type`, `operation.outcome`, `command.replay` | 160 |
+| `alon_ai.command.execution.count` | Counter | `{command}` | monotonic sum, cumulative | `command.type`, `operation.outcome`, `error.code` | 240 |
+| `alon_ai.workflow.run.count` | Counter | `{run}` | monotonic sum, cumulative | `workflow.type`, `workflow.version`, `workflow.terminal_state`, `workflow.runtime` | 160 |
+| `alon_ai.workflow.step.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `workflow.type`, `workflow.version`, `workflow.step`, `operation.outcome`, `workflow.replay` | 320 |
+| `alon_ai.workflow.active` | UpDownCounter | `{run}` | nonmonotonic sum, cumulative | `workflow.type`, `workflow.state` | 80 |
+| `alon_ai.agent.run.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `agent.type`, `agent.version`, `agent.terminal_state`, `execution.mode` | 192 |
+| `alon_ai.agent.run.count` | Counter | `{run}` | monotonic sum, cumulative | `agent.type`, `agent.version`, `agent.terminal_state`, `execution.mode` | 192 |
+| `alon_ai.provider.call.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `provider.name`, `provider.capability`, `operation.outcome`, `provider.error_code`, `execution.mode` | 240 |
+| `alon_ai.provider.request.count` | Counter | `{request}` | monotonic sum, cumulative | `provider.name`, `provider.capability`, `operation.outcome`, `provider.error_code`, `execution.mode` | 240 |
+| `alon_ai.provider.input_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.name`, `provider.capability`, `execution.mode` | 72 |
+| `alon_ai.provider.output_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.name`, `provider.capability`, `execution.mode` | 72 |
+| `alon_ai.provider.request.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.name`, `provider.capability`, `execution.mode` | 72 |
+| `alon_ai.provider.response.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.name`, `provider.capability`, `execution.mode` | 72 |
+| `alon_ai.provider.result.count` | Counter | `{result}` | monotonic sum, cumulative | `provider.name`, `provider.capability`, `operation.outcome`, `provider.error_code`, `execution.mode` | 240 |
+| `alon_ai.policy.decision.count` | Counter | `{decision}` | monotonic sum, cumulative | `policy.scope`, `policy.version`, `policy.allowed`, `policy.reason_code` | 500 |
+| `alon_ai.suppression.denial.count` | Counter | `{denial}` | monotonic sum, cumulative | `suppression.scope`, `suppression.source` | 24 |
+| `alon_ai.control.state` | ObservableGauge | `1` | last value, instantaneous (temporality N/A) | `control.name` | 2 |
+| `alon_ai.control.acknowledgement.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `control.name`, `control.action`, `operation.outcome` | 12 |
+| `alon_ai.gmail.send.attempt.count` | Counter | `{attempt}` | monotonic sum, cumulative | `send.attempt_state`, `operation.outcome`, `send.authority_mode` | 30 |
+| `alon_ai.gmail.send.boundary.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `gmail.boundary`, `operation.outcome` | 64 |
+| `alon_ai.gmail.ambiguity.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `send.authority_mode` | 2 |
+| `alon_ai.gmail.ambiguity.resolution.duration` | Histogram | `s` | `AGE_SECONDS`, cumulative | `operation.outcome`, `send.authority_mode` | 10 |
+| `alon_ai.gmail.history.page.count` | Counter | `{page}` | monotonic sum, cumulative | `operation.outcome`, `gmail.cursor_gap` | 4 |
+| `alon_ai.gmail.history.page.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `operation.outcome`, `gmail.cursor_gap` | 4 |
+| `alon_ai.gmail.recipient_signal.count` | Counter | `{signal}` | monotonic sum, cumulative | `gmail.signal_kind`, `suppression.committed` | 12 |
+| `alon_ai.oauth.saga.count` | Counter | `{saga}` | monotonic sum, cumulative | `oauth.identity_kind`, `oauth.state`, `operation.outcome`, `oauth.reason_code` | 64 |
+| `alon_ai.oauth.saga.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `oauth.identity_kind`, `oauth.state` | 16 |
+| `alon_ai.session.lifecycle.count` | Counter | `{session}` | monotonic sum, cumulative | `session.action`, `operation.outcome`, `session.reason_code` | 48 |
+| `alon_ai.budget.reservation.count` | Counter | `{reservation}` | monotonic sum, cumulative | `budget.scope`, `currency`, `budget.state` | 60 |
+| `alon_ai.cost.amount` | Counter | `{currency_minor}` | monotonic sum, cumulative; group by `currency` before sum | `provider.name`, `provider.operation_class`, `currency` | 120 |
+| `alon_ai.cost.reconciliation.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `provider.name`, `cost.state` | 24 |
+| `alon_ai.evaluation.case.count` | Counter | `{case}` | monotonic sum, cumulative | `evaluation.suite`, `agent.type`, `evaluation.repetition`, `evaluation.passed`, `evaluation.hard_safety` | 256 |
+| `alon_ai.incident.open` | ObservableGauge | `{incident}` | last value, instantaneous (temporality N/A) | `incident.severity`, `incident.trigger_code`, `incident.runbook_id`, `incident.alert_id` | 500 |
+| `alon_ai.backup.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | 6 |
+| `alon_ai.restore.proof.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | 6 |
+| `alon_ai.telemetry.export.count` | Counter | `{export}` | monotonic sum, cumulative | `telemetry.signal`, `operation.outcome`, `telemetry.drop_reason` | 48 |
+| `alon_ai.telemetry.export.lag` | Histogram | `s` | `AGE_SECONDS`, cumulative | `telemetry.signal`, `operation.outcome` | 12 |
+
+The aggregation registry is closed: `FAST_SECONDS=[0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2,5,10]`, `DURABLE_SECONDS=[0.01,0.05,0.1,0.25,0.5,1,2,5,10,30,60,120,300,900,3600]`, `AGE_SECONDS=[1,5,15,30,60,120,300,900,3600,21600,86400,604800,7776000]`, and `BYTE_SIZE=[128,512,1024,4096,16384,65536,262144,1048576,5000000]`. Values use exact base units before recording; milliseconds, token/request/result counts, and bytes never share an instrument. Counters reject negative values; duration/size histograms reject negative/non-finite values; gauges publish one value per allowed attribute set per collection.
+
+Canonical vectors: one provider call with 17 input tokens, 4 output tokens, 1,024 request bytes and 2,048 response bytes records `1` call, `17` and `4` on the two token counters, one `1024`/`2048` size observation and one result—never a value `3094` on a combined usage series. An ambiguity open for 61 seconds records gauge `61`; when resolved at 75 seconds it records resolution histogram `75` and disappears from the next gauge collection. A `USD 123` minor-unit cost and `ILS 456` minor-unit cost remain two currency groups; a query that drops `currency` before summing is invalid. CI golden vectors cover bucket boundaries, cumulative reset handling, missing attributes, unknown enum values and observable-gauge disappearance.
 
 Forbidden metric labels include every UUID/record ID, hashes/digests, idempotency/request/correlation/trace IDs, subject/session/IP/user agent, recipient/business/mailbox/campaign/experiment, actual URL/path/query, prompt/model input/output, exception/error/detail text, provider request ID, source URI/domain, free-form reason, cost-entry/invoice/FX source ID, or timestamps. `model_name`/release commit may appear in logs/traces and dashboards as filters only after bounded registry review, not high-churn metric labels. CI fails when projected series exceed the per-instrument budget (default 500, total 10,000 for the solo deployment).
+
+Unknown instrument/type/unit/aggregation/temporality/attribute/value is rejected at the recording API. The registry's per-instrument maxima sum to 4,656; CI recomputes that exact sum, enumerates every bounded value product, and fails at a row maximum, total 10,000, or any uncontrolled dimension. Dashboards never aggregate different UCUM units, different original currencies, or semantically different event kinds into one number; rate conversion is a query over one counter, not a new instrument type.
 
 ### Span model and durable execution
 
@@ -105,6 +122,31 @@ Alerts are symptoms with an owner/runbook and dedupe key; no per-record page sto
 
 Required alerts: any zero-tolerance violation; control disable ack timeout; ambiguity >60s and >15m; Gmail/provider identity conflict; OAuth replay/stuck/mismatch; session allowlist/fixation/CSRF anomaly; DB unavailable/invariant failure; budget/cost overrun or missing reconciliation; provider hard error/latency/quota; workflow deadline/replay/version mismatch; telemetry lag/drop/canary; disk/cert/clock; backup >24h/failed or restore >90d; evaluation hard/window/max-cost regression; retention/rights/hold failure; supply-chain/release mismatch; complaint/unsubscribe/Google-policy kill.
 
+`AlertRuleV1={catalog_version:"incident.catalog.v1",alert_id,trigger_code,runbook_id,severity,condition_version,for_duration,clear_condition,dedupe_key_template}` is a closed registry. Alert instances may carry safe incident/correlation IDs, but only the catalog fields are labels. Exact v1 routing/thresholds are:
+
+| Alert ID -> trigger -> runbook | Exact opening/escalation condition |
+| --- | --- |
+| `ALERT_AGENT_INJECTION -> AGENT_PROMPT_INJECTION_OR_POISONING -> IR-06` | one hard authority/injection/poisoning evaluation failure in a promoted/candidate path |
+| `ALERT_PROVIDER_EXFILTRATION -> PROVIDER_EXFILTRATION -> IR-06` | one secret/PII canary or unauthorized provider field/egress finding |
+| `ALERT_CREDENTIAL_OR_SESSION -> AUTH_OR_SECRET_COMPROMISE -> IR-03` | confirmed credential exposure, token/session replay, subject mismatch, or five auth anomalies in 5m |
+| `ALERT_WEB_BOUNDARY -> WEB_SESSION_BOUNDARY_ATTACK -> IR-05` | one successful/bypass-indicating CSRF/XSS/session-fixation/open-redirect invariant or 20 blocked probes in 5m |
+| `ALERT_EGRESS_SSRF -> SSRF_OR_DNS_REBINDING -> IR-05` | one private/link-local/metadata connection success or ten blocked target changes in 5m |
+| `ALERT_CALLBACK_ABUSE -> CALLBACK_ABUSE -> IR-05` | one consumed-state/code splice or ten invalid callback arms in 5m |
+| `ALERT_SEND_AUTHORITY_VIOLATION -> SEND_AUTHORITY_VIOLATION -> IR-01` | one unauthorized, duplicate, suppressed, wrong-mailbox or post-disable provider call |
+| `ALERT_SUPPLY_CHAIN -> SUPPLY_CHAIN_COMPROMISE -> IR-09` | one signature/provenance/SBOM/image/lock mismatch in promoted release |
+| `ALERT_WORKFLOW_REPLAY -> WORKFLOW_REPLAY_OR_VERSION_DRIFT -> IR-07` | one snapshot/digest/version/replay side-effect invariant failure or immortal run |
+| `ALERT_BACKUP_RESTORE -> DATASTORE_OR_RESTORE_FAILURE -> IR-08` | backup age >24h, failed signature/backup, restore proof >90d, or one restore invariant failure |
+| `ALERT_OPERATOR_REPAIR -> OPERATOR_OR_RECOVERY_ERROR -> IR-13` | one unknown/mismatched repair kind/hash/catalog or prohibited recovery action |
+| `ALERT_AUTHORIZATION_ENUMERATION -> AUTHORIZATION_OR_ENUMERATION -> IR-05` | 20 uniform authorization misses in 5m from one ephemeral prefix bucket or one protected lookup bypass |
+| `ALERT_COST_QUOTA -> COST_OR_QUOTA_RUNAWAY -> IR-10` | hard budget/max-cost/quota exceeded or reconciliation missing >15m |
+| `ALERT_TELEMETRY_PRIVACY -> TELEMETRY_PRIVACY_LEAK -> IR-04` | one secret/PII/content/hash canary in telemetry/eval/Graphify/export |
+| `ALERT_COMPLIANCE_SUPPRESSION -> COMPLIANCE_OR_SUPPRESSION_BREACH -> IR-12` | complaint/unsubscribe/hard-bounce signal, any post-signal eligibility, or atomic suppression/sync failure |
+| `ALERT_TELEMETRY_BLINDNESS -> TELEMETRY_OR_ALERT_BLINDNESS -> IR-11` | Critical exporter/alert gap >5m or both notification paths fail a canary |
+| `ALERT_GMAIL_AMBIGUITY -> GMAIL_AMBIGUITY_STALE -> IR-02` | oldest ambiguity >60s opens; >15m escalates to HIGH without a second incident |
+| `ALERT_RECIPIENT_HASH_ENUMERATION -> RECIPIENT_HASH_ENUMERATION -> IR-04` | ten denied restricted-hash queries in 60s or 100 total queries/hour outside a registered batch purpose |
+
+Unknown/mismatched alert/trigger/runbook/version is rejected before notification and incident insert, increments only a bounded registry-error counter, forces the affected safety control false, and pages through the local fallback using `ALERT_TELEMETRY_BLINDNESS`. Alert replay uses `(catalog_version,alert_id,dedupe_window)` and cannot change routing. Clear/resolve is evidence-driven and never enables a control.
+
 ## Ordered implementation tasks
 
 - [ ] **Implement exact metric/span registries —** Input: OBS-01 and every application boundary. Operation: define instruments/units/labels/series budgets and spans/links/sampling. Output: versioned telemetry package. Test evidence: registry/schema/cardinality/sampling tests. Failure behavior: reject unregistered signal/release.
@@ -116,6 +158,7 @@ Required alerts: any zero-tolerance violation; control disable ack timeout; ambi
 ## Test strategy
 
 - **Registry `test_metric_names_types_units_labels_and_series_budgets_are_exact`.**
+- **Vectors `test_metric_registry_bucket_unit_temporality_and_recording_vectors_are_exact`:** provider tokens/bytes/results, ambiguity age versus resolution, original currencies, resets and gauge disappearance.
 - **Privacy `test_no_id_hash_path_text_recipient_mailbox_session_prompt_or_provider_payload_is_a_metric_label`.**
 - **Trace `test_durable_replay_links_new_trace_and_critical_sampling_is_one_hundred_percent`.**
 - **Counts `test_metrics_reconcile_to_authoritative_commands_runs_calls_attempts_costs_and_evals_without_replay_double_count`.**

@@ -181,8 +181,11 @@ CREATE INDEX ix_budget_reservations_open ON budget_reservations (budget_account_
 
 CREATE TABLE incidents (
     incident_id uuid NOT NULL,
+    catalog_version text NOT NULL DEFAULT 'incident.catalog.v1',
     severity text NOT NULL,
     trigger_code text NOT NULL,
+    runbook_id text NOT NULL,
+    alert_id text NOT NULL,
     state text NOT NULL DEFAULT 'OPEN',
     experiment_id uuid NULL,
     opened_by_actor_type text NOT NULL,
@@ -196,6 +199,11 @@ CREATE TABLE incidents (
     CONSTRAINT fk_incidents_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
     CONSTRAINT ck_incidents_severity CHECK (severity IN ('INFO','LOW','MEDIUM','HIGH','CRITICAL')),
     CONSTRAINT ck_incidents_state CHECK (state IN ('OPEN','MITIGATING','RESOLVED')),
+    CONSTRAINT ck_incidents_catalog_version CHECK (catalog_version = 'incident.catalog.v1'),
+    CONSTRAINT ck_incidents_trigger CHECK (trigger_code IN ('AGENT_PROMPT_INJECTION_OR_POISONING','PROVIDER_EXFILTRATION','AUTH_OR_SECRET_COMPROMISE','WEB_SESSION_BOUNDARY_ATTACK','SSRF_OR_DNS_REBINDING','CALLBACK_ABUSE','SEND_AUTHORITY_VIOLATION','SUPPLY_CHAIN_COMPROMISE','WORKFLOW_REPLAY_OR_VERSION_DRIFT','DATASTORE_OR_RESTORE_FAILURE','OPERATOR_OR_RECOVERY_ERROR','AUTHORIZATION_OR_ENUMERATION','COST_OR_QUOTA_RUNAWAY','TELEMETRY_PRIVACY_LEAK','COMPLIANCE_OR_SUPPRESSION_BREACH','TELEMETRY_OR_ALERT_BLINDNESS','GMAIL_AMBIGUITY_STALE','RECIPIENT_HASH_ENUMERATION')),
+    CONSTRAINT ck_incidents_runbook CHECK (runbook_id IN ('IR-01','IR-02','IR-03','IR-04','IR-05','IR-06','IR-07','IR-08','IR-09','IR-10','IR-11','IR-12','IR-13')),
+    CONSTRAINT ck_incidents_alert CHECK (alert_id IN ('ALERT_AGENT_INJECTION','ALERT_PROVIDER_EXFILTRATION','ALERT_CREDENTIAL_OR_SESSION','ALERT_WEB_BOUNDARY','ALERT_EGRESS_SSRF','ALERT_CALLBACK_ABUSE','ALERT_SEND_AUTHORITY_VIOLATION','ALERT_SUPPLY_CHAIN','ALERT_WORKFLOW_REPLAY','ALERT_BACKUP_RESTORE','ALERT_OPERATOR_REPAIR','ALERT_AUTHORIZATION_ENUMERATION','ALERT_COST_QUOTA','ALERT_TELEMETRY_PRIVACY','ALERT_COMPLIANCE_SUPPRESSION','ALERT_TELEMETRY_BLINDNESS','ALERT_GMAIL_AMBIGUITY','ALERT_RECIPIENT_HASH_ENUMERATION')),
+    CONSTRAINT ck_incidents_resolution_code CHECK (resolution_code IS NULL OR resolution_code IN ('MITIGATED_NO_LOSS','RECONCILED_SENT','RECONCILED_NOT_SENT','CREDENTIALS_REVOKED_ROTATED','CLEAN_RESTORE_VERIFIED','CODE_CONFIG_ROLLED_BACK','DATA_REMOVED_REMEDIATED','PROVIDER_COUNSEL_CLOSED','FALSE_POSITIVE_VERIFIED','RESIDUAL_RISK_ACCEPTED_WITH_EXPIRY')),
     CONSTRAINT ck_incidents_actor_type CHECK (opened_by_actor_type IN ('OPERATOR','SYSTEM','WORKFLOW','PROVIDER')),
     CONSTRAINT ck_incidents_resolution CHECK ((state = 'RESOLVED') = (resolution_code IS NOT NULL AND evidence_ref IS NOT NULL AND resolved_at IS NOT NULL))
 );
@@ -229,7 +237,7 @@ Migration and fixture acceptance require two independent RFC 8785 implementation
 | `budget_reservations` | `BudgetService` | `SAFETY_LONG` / `RetentionCommandService` |
 | `incidents` | `IncidentCommandService` | `SAFETY_LONG` / `RetentionCommandService` |
 
-The M2 unit of work locks or version-checks one aggregate and atomically writes its row, domain event, audit event, command idempotency result, and outbox record. External calls never occur inside that transaction. `workflow_runs` is an application projection: DBOS or Temporal system tables are runtime-owned and never joined as business truth.
+The M2 unit of work locks or version-checks one aggregate and atomically writes its row, domain event, audit event, command idempotency result, and outbox record. External calls never occur inside that transaction. `workflow_runs` is an application projection: DBOS or Temporal system tables are runtime-owned and never joined as business truth. The incident trigger/runbook/alert/resolution sets are the closed `incident.catalog.v1`: unknown version or value aborts before insert. A catalog change uses an additive migration plus application dual-read/old-write drain, explicit v2 promotion, and retained v1 reader; stored rows are never relabeled in place.
 
 After DB-02 creates `experiment_briefs`, add a deferrable composite foreign key from `experiments(experiment_id,active_brief_version)` to `experiment_briefs(experiment_id,brief_version)`. After DB-05 creates `cost_entries`, add the declared `budget_reservations.cost_entry_id` foreign key. Both are installed in DB-06's deferred cross-domain-FK revision and verified by name.
 
@@ -249,6 +257,7 @@ Every product run uses application UUID `workflow_run_id` and runtime ID `experi
 
 - **Unit `test_experiment_failure_fields_match_state`:** every invalid state/field combination is rejected.
 - **Migration `test_schema_has_all_named_constraints_and_indexes`:** introspect PostgreSQL by exact name.
+- **Incident catalog `test_incident_v1_trigger_runbook_alert_resolution_checks_reject_unknown_or_mismatched_values`:** exact enum snapshots plus T01-T16 routing fixtures.
 - **Digest `test_rfc8785_envelope_vectors_match_two_independent_encoders`:** exact UTF-8 bytes/SHA-256, text schema version, SQL-null versus JSON-null, and invalid I-JSON fixtures.
 - **Integration `test_state_event_audit_idempotency_outbox_are_atomic`:** inject failure after every write.
 - **Concurrency `test_budget_reservation_cannot_exceed_account`:** serialize/lock the account and deny overspend.

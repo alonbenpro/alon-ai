@@ -32,6 +32,35 @@ Use canonical `incidents(severity INFO|LOW|MEDIUM|HIGH|CRITICAL; state OPEN|MITI
 
 Create `incidents/contracts.py`, `application/incidents.py`, `application/recovery.py`, local `alon-ai incident`/`alon-ai recovery` commands, safe runbook registry, evidence bundler, notification adapter, `/recovery` projections/registered commands from the frozen API, and tests. No external sender/provider can call repair endpoints.
 
+### Closed incident, alert, runbook, resolution, and repair catalogs
+
+`IncidentCatalogV1` has literal version `incident.catalog.v1` and byte-matches DB-01/05 checks. `IncidentTriggerCode`, `AlertId`, `RunbookId`, `IncidentResolutionCode`, and `RepairActionKind` are extra-forbid closed enums in application, OpenAPI, audit, OBS-01 attributes and PostgreSQL; no free-form fallback/`OTHER` exists. The Critical threat routing table is exact:
+
+| SEC-01 threat | Trigger code | Alert ID | Runbook |
+| --- | --- | --- | --- |
+| T01 | `AGENT_PROMPT_INJECTION_OR_POISONING` | `ALERT_AGENT_INJECTION` | `IR-06` |
+| T02 | `PROVIDER_EXFILTRATION` | `ALERT_PROVIDER_EXFILTRATION` | `IR-06` |
+| T03 | `AUTH_OR_SECRET_COMPROMISE` | `ALERT_CREDENTIAL_OR_SESSION` | `IR-03` |
+| T04 | `WEB_SESSION_BOUNDARY_ATTACK` | `ALERT_WEB_BOUNDARY` | `IR-05` |
+| T05 | `SSRF_OR_DNS_REBINDING` | `ALERT_EGRESS_SSRF` | `IR-05` |
+| T06 | `CALLBACK_ABUSE` | `ALERT_CALLBACK_ABUSE` | `IR-05` |
+| T07 | `SEND_AUTHORITY_VIOLATION` | `ALERT_SEND_AUTHORITY_VIOLATION` | `IR-01` |
+| T08 | `SUPPLY_CHAIN_COMPROMISE` | `ALERT_SUPPLY_CHAIN` | `IR-09` |
+| T09 | `WORKFLOW_REPLAY_OR_VERSION_DRIFT` | `ALERT_WORKFLOW_REPLAY` | `IR-07` |
+| T10 | `DATASTORE_OR_RESTORE_FAILURE` | `ALERT_BACKUP_RESTORE` | `IR-08` |
+| T11 | `OPERATOR_OR_RECOVERY_ERROR` | `ALERT_OPERATOR_REPAIR` | `IR-13` |
+| T12 | `AUTHORIZATION_OR_ENUMERATION` | `ALERT_AUTHORIZATION_ENUMERATION` | `IR-05` |
+| T13 | `COST_OR_QUOTA_RUNAWAY` | `ALERT_COST_QUOTA` | `IR-10` |
+| T14 | `TELEMETRY_PRIVACY_LEAK` | `ALERT_TELEMETRY_PRIVACY` | `IR-04` |
+| T15 | `COMPLIANCE_OR_SUPPRESSION_BREACH` | `ALERT_COMPLIANCE_SUPPRESSION` | `IR-12` |
+| T16 | `TELEMETRY_OR_ALERT_BLINDNESS` | `ALERT_TELEMETRY_BLINDNESS` | `IR-11` |
+
+Two additional closed operational routes are `GMAIL_AMBIGUITY_STALE -> ALERT_GMAIL_AMBIGUITY -> IR-02` and `RECIPIENT_HASH_ENUMERATION -> ALERT_RECIPIENT_HASH_ENUMERATION -> IR-04`. Every OBS-02 alert rule names exactly one of these 18 alert IDs, trigger codes and runbooks; severity is a separate deterministic mapping and cannot change routing identity.
+
+Resolution codes are exactly `MITIGATED_NO_LOSS|RECONCILED_SENT|RECONCILED_NOT_SENT|CREDENTIALS_REVOKED_ROTATED|CLEAN_RESTORE_VERIFIED|CODE_CONFIG_ROLLED_BACK|DATA_REMOVED_REMEDIATED|PROVIDER_COUNSEL_CLOSED|FALSE_POSITIVE_VERIFIED|RESIDUAL_RISK_ACCEPTED_WITH_EXPIRY`. The last value is forbidden for the non-waivable Critical credential/privacy/suppression/duplicate-send/restore/Google/legal-review gates.
+
+Repair kinds are exactly `RECONCILE_GMAIL_ATTEMPT|ABORT_OAUTH_SAGA|REVOKE_OPERATOR_SESSIONS|DISABLE_MAILBOX|ROTATE_SECRET_GENERATION|REPAIR_WORKFLOW_PROJECTION|REPAIR_EVENT_OUTBOX_LINK|RESTORE_FROM_VERIFIED_BACKUP|REAPPLY_RECIPIENT_SUPPRESSION|REPLAY_RETENTION_TOMBSTONE|RECONCILE_PROVIDER_COST|IMPORT_OFFLINE_INCIDENT_JOURNAL|ROLLBACK_AGENT_PROMOTION`. Each maps one-to-one to a typed handler, prerequisite set, allowed before/after schema, inverse/recovery behavior and compatible runbooks. Unknown catalog/version/code, code/runbook/alert mismatch, caller-supplied label, or replay with changed code is rejected before DB write/notification/repair. A v2 catalog uses additive DB checks, dual readers and a versioned migration fixture; v1 rows never mutate.
+
 ### Severity, paging, ownership, and objectives
 
 Operational pager levels map to canonical DB severity, never replace it:
@@ -103,6 +132,8 @@ Re-enable checklist: incident canonical `RESOLVED`; evidence signed; root cause 
 ## Test strategy
 
 - **Coverage `test_every_sec01_critical_threat_maps_to_alert_incident_runbook_owner_test_evidence_and_recovery`.**
+- **Catalog `test_incident_trigger_resolution_repair_runbook_and_alert_v1_are_closed_db_checked_and_routed`:** exact 18 routes, resolution/repair lists, unknown/mismatch/replay rejection and v1-to-v2 migration fixture.
+- **Cardinality `test_incident_telemetry_uses_only_catalog_version_severity_trigger_runbook_alert_resolution_and_repair_kind`:** no record ID, recipient hash or free text becomes a metric label.
 - **State `test_incident_uses_only_open_mitigating_resolved_and_exact_arch03_events`.**
 - **Containment `test_each_runbook_first_action_stops_new_harm_when_db_worker_provider_or_alert_layer_fails`.**
 - **Gmail `test_incident_never_cancels_or_retries_possibly_called_attempt_before_reconciliation`.**

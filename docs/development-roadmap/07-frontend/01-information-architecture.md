@@ -5,7 +5,7 @@
 **Milestone:** M4 no-send operator UI, M6 owned-inbox controls, M7 evidence and decision control plane
 **Owner:** Solo operator
 **Prerequisites:** [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [BACKEND-02](../06-backend/02-api-contracts.md), [BACKEND-05](../06-backend/05-approval-and-command-handling.md), [BACKEND-06](../06-backend/06-reporting-and-query-services.md), and generated OpenAPI artifacts
-**Outputs:** Smallest route map, exact 64-operation client inventory, frontend ownership boundary, planned source map, and global state/error policy
+**Outputs:** Smallest route map, exact 66-operation client inventory, frontend ownership boundary, planned source map, and global state/error policy
 **Unlocks:** FRONTEND-02 through FRONTEND-09 and the M4-M7 browser acceptance journeys
 **Risk:** Critical
 **Complexity:** XL
@@ -37,6 +37,7 @@ Non-goals: Next.js API routes, route handlers, Server Actions for business mutat
 | URL | App Router surface | Responsibility | Primary generated operations |
 | --- | --- | --- | --- |
 | `/` | `src/app/page.tsx` | Current readiness landing; later authenticated redirect to `/experiments` while health remains visible | `getReadiness`; optional diagnostic `getLiveness` |
+| `/unsubscribe/[token]` | `src/app/unsubscribe/[token]/page.tsx` plus `src/features/unsubscribe/{unsubscribe-confirmation,use-unsubscribe}.tsx` | Public scanner-safe generic confirmation; no operator shell/data, no third-party asset, GET never mutates, explicit button POSTs once | `getUnsubscribeConfirmation`, `confirmUnsubscribe` |
 | `/experiments` | `src/app/(operator)/experiments/page.tsx` | Stable experiment list, filters, terminal/nonterminal distinction | `listExperiments` |
 | `/experiments/new` | `src/app/(operator)/experiments/new/page.tsx` | Create one strict experiment brief | `createExperiment` |
 | `/experiments/[experimentId]` | `src/app/(operator)/experiments/[experimentId]/page.tsx` | Creation continuation, stage/control center, campaign launch, evidence references, reports, immutable decision | experiment/workflow/report operations |
@@ -50,14 +51,18 @@ Primary navigation contains only Experiments, Approvals, and Recovery. `/` healt
 
 ### Exact BACKEND-02 generated-client coverage
 
-This is the complete 64-route/64-`operationId` inventory. The `Wire` column names the only request/response authority available to the UI. `A` is an OIDC flow/session operation; `R` means opaque-cookie authenticated read; `M` means opaque-cookie authenticated JSON mutation with caller `Idempotency-Key`, exact Origin/fetch metadata, and `X-CSRF-Intent: operator-command-v1`; `MV` adds `If-Match` from the latest explicit aggregate ETag; `S` uses locked expected state/status from the generated request; `O` is the signed-state OAuth exception. All calls send/receive `X-Request-ID`/`X-Correlation-ID` as BACKEND-02 defines.
+The anonymous unsubscribe page is isolated from the operator layout. It reveals no recipient/campaign/message/token/hash data, has no third-party asset or analytics, uses `no-referrer`/`no-store`, never persists the path/token, and cannot navigate into operator state. Scanner GET renders confirmation only; a focused explicit button issues the sole POST and then disables itself while exact replay resolves.
+
+This is the complete 66-route/66-`operationId` inventory. The `Wire` column names the only request/response authority available to the UI. `P0` is public read-only unsubscribe confirmation; `P1` is its explicit same-origin confirmed POST with server-derived replay key; `A` is an OIDC flow/session operation; `R` means opaque-cookie authenticated read; `M` means opaque-cookie authenticated JSON mutation with caller `Idempotency-Key`, exact Origin/fetch metadata, and `X-CSRF-Intent: operator-command-v1`; `MV` adds `If-Match` from the latest explicit aggregate ETag; `S` uses locked expected state/status from the generated request; `O` is the signed-state OAuth exception. All calls send/receive `X-Request-ID`/`X-Correlation-ID` as BACKEND-02 defines.
 
 | Method/path | `operationId` | UI route/owner | Wire and cache identity |
 | --- | --- | --- | --- |
 | `GET /health/live` | `getLiveness` | `/`, recovery diagnostics | existing health payload; `R0`; `['health','live']` |
 | `GET /health/ready` | `getReadiness` | `/`, shell banner | existing ready/degraded payload; `R0`; `['health','ready']` |
+| `GET /api/v1/public/unsubscribe/{token}` | `getUnsubscribeConfirmation` | `/unsubscribe/[token]` | `UnsubscribeConfirmationResponseV1`; `P0`; `Cache-Control:no-store`; never Query-persisted |
+| `POST /api/v1/public/unsubscribe/{token}` | `confirmUnsubscribe` | `/unsubscribe/[token]` | `ConfirmUnsubscribeRequestV1 -> UnsubscribeResultResponseV1`; `P1`; one in-memory mutation state; no caller key/cache |
 | `POST /api/v1/auth/authorizations` | `startOperatorAuthorization` | session bootstrap | `StartOperatorAuthorizationRequestV1 -> OperatorAuthorizationResponseV1`; `A`; `["auth","start"]` |
-| `GET /api/v1/auth/callback` | `completeOperatorAuthorization` | FastAPI redirect only | query code/state + opaque flow cookie -> fixed 303; `A`; never Query cache |
+| `GET /api/v1/auth/callback` | `completeOperatorAuthorization` | FastAPI redirect only | exact success `{code,state,iss,scope?}` or error `{error,state,iss,error_description?}` query + opaque flow cookie -> fixed 303; `A`; never Query cache |
 | `GET /api/v1/auth/session` | `getOperatorSession` | operator layout | `OperatorSessionResponseV1`; `A`; `["auth","session"]` |
 | `DELETE /api/v1/auth/session` | `endOperatorSession` | operator layout | `OperatorSessionEndedResponseV1`; `A`; `["auth","end"]` |
 | `POST /api/v1/gmail/oauth/authorizations` | `startGmailAuthorization` | `/recovery` | `StartGmailAuthorizationRequestV1 -> GmailAuthorizationResponseV1`; `M`; `['gmail','oauth','start']` |
@@ -148,20 +153,22 @@ The operator layout bootstraps only with `getOperatorSession`; missing/expired/r
 4. Lose a possible provider result, observe `AMBIGUOUS -> RECONCILING`, use `getRecoveryOverview` and `reconcileSendAttempt`, and reach direct evidence-backed terminal state without resend.
 5. Start Gmail authorization, traverse signed callback success/restart/conflict paths, observe exact ACTIVE-plus-mailbox commit gating, sync, and revoke without browser credential access.
 6. Disable `TEST_INBOX_SENDING` and `PRODUCT_OUTREACH` independently by keyboard, observe committed-versus-drained state, then prove re-enable denials for missing M1/M6 evidence or open incidents.
-7. Read one repeatable overview/funnel/cost/timeline snapshot, preserve denominators/currency/warnings, and record one immutable decision that triggers no scale, spend, control, or send.
+7. Open the public unsubscribe link with a scanner-style GET and prove no write; then explicitly confirm POST, observe recipient-opaque success/replay, canonical suppression and no next send without exposing token/hash/identity in telemetry or operator API.
+8. Read one repeatable overview/funnel/cost/timeline snapshot, preserve denominators/currency/warnings, and record one immutable decision that triggers no scale, spend, control, or send.
 
 Each journey captures generated-client network allowlist, request/idempotency/ETag/correlation evidence, focus/live-region behavior, desktop/mobile rendering, and backend reconciliation.
 
 ## Ordered implementation tasks
 
-- [ ] **Generate and gate the product client —** Input: composed BACKEND-02 OpenAPI. Operation: regenerate both artifacts, assert exactly 64 method/path/`operationId`/schema/status pairs and strict error/status unions, and prohibit handwritten product DTOs. Output: typed product client. Test evidence: `test_openapi_generated_client_has_no_drift` plus TypeScript operation coverage. Failure behavior: product routes remain absent and outreach controls unavailable.
+- [ ] **Generate and gate the product client —** Input: composed BACKEND-02 OpenAPI. Operation: regenerate both artifacts, assert exactly 66 method/path/`operationId`/schema/status pairs and strict error/status unions, and prohibit handwritten product DTOs. Output: typed product client. Test evidence: `test_openapi_generated_client_has_no_drift` plus TypeScript operation coverage. Failure behavior: product routes remain absent and outreach controls unavailable.
 - [ ] **Build the three-destination operator shell —** Input: route map and private operator session boundary. Operation: add server shell, skip link, landmarks, responsive nav, route boundaries, and authenticated client panels. Output: keyboard-operable Experiments/Approvals/Recovery navigation. Test evidence: routing, auth-required, axe, keyboard, 320px/768px/1280px browser tests. Failure behavior: health landing remains; no anonymous product call.
 - [ ] **Implement shared query/mutation primitives —** Input: generated types, ETags, idempotency, Problem Details. Operation: encode exact keys, aborts, polling, replay, invalidation, focus/error recovery, and no optimistic authority. Output: reusable safe hooks/dialogs. Test evidence: replay, double-submit, conflict, 202, snapshot-expiry, stale and partial tests. Failure behavior: command disabled and request retained for exact retry.
 - [ ] **Prove frontend authority boundaries —** Input: built bundle/import graph. Operation: reject `src/app/api`, route handlers, business Server Actions, provider/database imports, handwritten product schemas, local policy/math, and secret-bearing telemetry. Output: generated-client-only UI. Test evidence: static import/AST and bundle scans. Failure behavior: CI blocks M4/M6/M7 UI release.
 
 ## Test strategy
 
-- **Contract `test_frontend_operation_inventory_matches_backend02_exactly`:** 64 unique method/path/operation IDs, no extras.
+- **Contract `test_frontend_operation_inventory_matches_backend02_exactly`:** 66 unique method/path/operation IDs, no extras.
+- **Public unsubscribe `test_scanner_get_is_read_only_and_explicit_post_is_recipient_opaque_exact_replay`:** no third-party request, referrer, cache persistence, token/hash telemetry or operator authority.
 - **Boundary `test_frontend_has_no_business_route_server_action_provider_sdk_or_database_write`:** static import and route scan.
 - **State `test_every_canonical_enum_has_non_color_label_and_unknown_fails_closed`:** ARCH-03 exhaustive fixtures.
 - **Mutation `test_double_submit_reuses_one_key_and_never_renders_202_as_completed`:** pointer/Enter/Space/reload matrix.
@@ -181,8 +188,8 @@ Unknown generated schema, missing operation, auth loss, CORS failure, stale ETag
 
 ## Acceptance and retained evidence
 
-- [ ] All nine URLs have one owner, loading/empty/stale/error/partial/redacted/terminal behavior, and no horizontal page overflow.
-- [ ] All 64 BACKEND-02 operation IDs appear exactly and no undocumented network call exists.
+- [ ] All ten URLs have one owner, loading/empty/stale/error/partial/redacted/terminal behavior, and no horizontal page overflow.
+- [ ] All 66 BACKEND-02 operation IDs appear exactly and no undocumented network call exists.
 - [ ] Every mutation documents request type, result type, idempotency, expected version/state, confirmation, invalidation, and reconciliation.
 - [ ] M1, M6 test-inbox, and product-outreach authority are visibly separate and never collapsed into one switch.
 - [ ] Current readiness-only truth is explicit; planned product UI is never described as implemented.
@@ -191,4 +198,4 @@ Retain generated-contract diff, route/operation coverage output, import/bundle a
 
 ## Dependencies and next deliverable
 
-FRONTEND-01 consumes the exact Task 1-4 authorities plus BACKEND-02/BACKEND-05's frozen 64-operation correction and unlocks [FRONTEND-02 experiment creation](02-experiment-creation-flow.md), [FRONTEND-03 control center](03-experiment-control-center.md), and the remaining feature documents. Artifact/evaluation decisions, suppressions, campaign readiness, workflow starts/cancel, and the FastAPI-owned operator session are now explicit generated-client contracts; generic lead CRUD remains intentionally absent.
+FRONTEND-01 consumes the exact Task 1-4 authorities plus BACKEND-02/BACKEND-05's frozen 66-operation manifest and unlocks [FRONTEND-02 experiment creation](02-experiment-creation-flow.md), [FRONTEND-03 control center](03-experiment-control-center.md), and the remaining feature documents. Artifact/evaluation decisions, suppressions, public scanner-safe unsubscribe confirmation, campaign readiness, workflow starts/cancel, and the FastAPI-owned operator session are explicit generated-client contracts; generic lead CRUD remains intentionally absent.

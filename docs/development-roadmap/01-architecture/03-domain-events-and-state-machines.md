@@ -160,9 +160,11 @@ stateDiagram-v2
     APPROVAL_PENDING --> APPROVED: operator approves exact scope/version
     APPROVAL_PENDING --> CANCELLED: denied or expired
     APPROVED --> SEND_INTENT_RECORDED: immutable intent committed
+    APPROVED --> SUPPRESSED: deterministic recipient stop signal
     SEND_INTENT_RECORDED --> QUEUED: policy and capacity admit
+    SEND_INTENT_RECORDED --> SUPPRESSED: deterministic recipient stop signal
     QUEUED --> SENDING: gateway recheck passes
-    QUEUED --> SUPPRESSED: policy recheck denies
+    QUEUED --> SUPPRESSED: policy recheck or recipient stop signal denies
     QUEUED --> CANCELLED: campaign/experiment/global stop
     SENDING --> SENT: provider IDs committed
     SENDING --> AMBIGUOUS: outcome not durably known
@@ -186,7 +188,7 @@ Deterministic `SendRecoveryService` owns retry transitions. The durable runtime 
 | `FAILED_RETRYABLE` | deterministic retry-budget evaluation | `FAILED_PERMANENT` | `attempt_count >= max_attempts` or current time exceeds `retry_deadline` | `send.retry_exhausted.v1` |
 | `FAILED_RETRYABLE` | operator `AbortSendRetry` | `FAILED_PERMANENT` | authenticated operator; no provider call in flight; reason code supplied | `send.retry_exhausted.v1` |
 
-When retry admission fails only because a mutable control is temporarily closed, the message remains `FAILED_RETRYABLE` until the earlier of the next bounded evaluation or `retry_deadline`; it cannot silently queue. `SENT`, `FAILED_PERMANENT`, `SUPPRESSED`, and `CANCELLED` are terminal.
+When retry admission fails only because a mutable control is temporarily closed, the message remains `FAILED_RETRYABLE` until the earlier of the next bounded evaluation or `retry_deadline`; it cannot silently queue. `SENT`, `FAILED_PERMANENT`, `SUPPRESSED`, and `CANCELLED` are terminal. A deterministic reply, unsubscribe, hard bounce, complaint, or configured soft-bounce-limit signal invokes `RecipientSignalSuppressionService`; `APPROVED`, `SEND_INTENT_RECORDED`, and `QUEUED` transition to `SUPPRESSED` in the same transaction as the canonical suppression and provably-uncalled intent closure. `SENDING`, `AMBIGUOUS`, and `RECONCILING` keep their reconciliation state and gain the active suppression/fresh-policy blocker; the signal never rewrites a possibly called attempt.
 
 ## Approval, workflow-run, and experiment-decision states
 
@@ -250,7 +252,7 @@ Every campaign transition emits its specific event and `campaign.state_changed.v
 | `lead.qualified.v1` | `lead_id`, `assessment_id`, `criteria_version` | deterministic gate passes |
 | `lead.disqualified.v1` | `lead_id`, `reason_codes`, `criteria_version` | gate fails |
 | `lead.suppressed.v1` | `lead_id`, `suppression_entry_id`, `reason_code` | suppression applies |
-| `suppression.created.v1` | `suppression_entry_id`, `scope`, nullable `business_id`, nullable `recipient_hash`, `reason_code`, `version` | active global/business/recipient suppression commits; matching leads transition separately |
+| `suppression.created.v1` | `suppression_entry_id`, `scope`, nullable `business_id`, nullable `recipient_target_ref_id`, `reason_code`, `source`, `source_actor_type`, nullable `source_observation_id`, nullable `source_reply_id`, `version` | active global/business/recipient suppression commits; no recipient hash/digest appears in the event; matching leads/messages/intents transition separately |
 | `suppression.deactivated.v1` | `suppression_entry_id`, `scope`, `reason_code`, `prior_version`, `version` | fail-closed operator removal commits after controls/in-flight guards |
 
 ### Policy, approval, sending, and replies
@@ -271,9 +273,9 @@ Every campaign transition emits its specific event and `campaign.state_changed.v
 | `send.failed.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `retry_class`, `error_code` | conclusive mailbox-bound failure recorded |
 | `send.retry_scheduled.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `previous_attempt_id`, `next_attempt_number`, `retry_at`, `retry_policy_version` | bounded retry eligibility commits and the same mailbox-bound intent returns to `QUEUED` |
 | `send.retry_exhausted.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `final_attempt_id`, `attempt_count`, `max_attempts`, `reason_code` | retry budget/deadline is exhausted or an operator aborts retry |
-| `send.suppressed.v1` | `send_intent_id`, `campaign_member_id`, `mailbox_id`, `send_policy_decision_id`, `scope_hash`, `send_policy_facts_hash`, `reason_codes`, `cancelled_at` | fresh last-mile SEND denies for suppression and atomically commits `QUEUED -> SUPPRESSED`, one-way `open_for_attempt=false` intent cancellation, reservation release, and no attempt/provider call |
+| `send.suppressed.v1` | nullable `send_intent_id`, `campaign_member_id`, `mailbox_id`, `suppression_entry_id`, `signal_source`, nullable `send_policy_decision_id`, nullable `scope_hash`, nullable `send_policy_facts_hash`, `reason_codes`, `cancelled_at` | fresh last-mile SEND denial or observed recipient stop signal atomically commits an eligible pre-call message to `SUPPRESSED`; `send_intent_id` is null only for the signal arm when the message was still `APPROVED`, otherwise the transaction one-way cancels the provably-uncalled intent and releases its reservation; policy fields are non-null only for the last-mile-policy arm; no attempt/provider call |
 | `gmail.history_cursor_advanced.v1` | `mailbox_id`, `from_history_id`, `to_history_id` | observations and cursor commit together |
-| `reply.received.v1` | `reply_id`, `mailbox_id`, `gmail_message_id`, `gmail_thread_id`, `received_at` | unique mailbox-bound inbound message recorded |
+| `reply.received.v1` | `reply_id`, `mailbox_id`, `gmail_message_id`, `gmail_thread_id`, `received_at`, `suppression_entry_id` | unique mailbox-bound inbound message and its mandatory recipient suppression commit in one transaction; classification remains later and cannot delay the stop |
 | `reply.classified.v1` | `reply_id`, `artifact_id`, `classification` | accepted typed classification attaches |
 
 ### Controls, costs, and incidents

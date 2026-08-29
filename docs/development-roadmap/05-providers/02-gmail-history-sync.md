@@ -24,7 +24,7 @@ In scope: message listing/get, Sent candidate verification, incremental history 
 
 ## Exact planned implementation surfaces
 
-Create `providers/gmail/read_contracts.py`, `providers/gmail/history_adapter.py`, `application/gmail_reconciliation.py`, `application/gmail_sync.py`, provider fixtures, and finite workflows `workflows/gmail_reconciliation.py` and `workflows/gmail_history_sync.py`. Exact sole writers remain DB-03: `GmailResultCaptureService` -> `provider_results`; `GmailObservationService` -> `provider_observations`; `GmailReplySyncService` -> `replies`; `GmailHistorySyncService` -> `gmail_history_cursors`; `SendRecoveryService` owns only the documented attempt/message recovery transitions.
+Create `providers/gmail/read_contracts.py`, `providers/gmail/history_adapter.py`, `application/gmail_reconciliation.py`, `application/gmail_sync.py`, provider fixtures, and finite workflows `workflows/gmail_reconciliation.py` and `workflows/gmail_history_sync.py`. Exact row writers remain DB-03: `GmailResultCaptureService` -> `provider_results`; `GmailObservationService` -> `provider_observations`; `GmailReplySyncService` -> `replies`; `GmailHistorySyncService` -> `gmail_history_cursors`; `SuppressionCommandService` -> `suppression_entries`; `SendRecoveryService` owns only documented attempt/message recovery transitions. `RecipientSignalSuppressionService` is the sole transaction coordinator allowed to compose those writers for an observed stop signal; it is not another row owner.
 
 ### Read-only provider protocol
 
@@ -54,7 +54,9 @@ Direct provider success never enters this algorithm and emits `send.provider_acc
 
 Gmail history is chronological but IDs have gaps. `startHistoryId` may expire and typically returns HTTP 404; Google requires a full sync, and a returned page without `nextPageToken` supplies the new history ID: [users.history.list](https://developers.google.com/workspace/gmail/api/reference/rest/v1/users.history/list).
 
-For every incremental page, `GmailHistorySyncService` locks `gmail_history_cursors(mailbox_id)`, verifies expected version/history ID, deduplicates each observation on DB-03 mailbox composites, inserts replies, emits `reply.received.v1` where applicable, inserts the page's `gmail.history_cursor_advanced.v1`, and updates the cursor in one PostgreSQL transaction. A crash rolls back all page writes and the same page is fetched again. Classification runs afterward through AGENT-08 and cannot affect cursor success.
+For every incremental page, `GmailHistorySyncService` locks `gmail_history_cursors(mailbox_id)`, verifies expected version/history ID and classifies only deterministic provider signal envelopes `NONE|REPLY|UNSUBSCRIBE|HARD_BOUNCE|SOFT_BOUNCE|COMPLAINT`. Ordinary `NONE` observations commit with the cursor normally. Each stop signal delegates the same unit of work to `RecipientSignalSuppressionService`, which verifies exact message/mailbox/thread/RFC/campaign-member identity and atomically inserts observation and reply where applicable, creates/idempotently returns the sourced recipient suppression, transitions matching leads/pre-call messages, closes provably uncalled intents/releases reservation, emits existing canonical events/audit/outbox, inserts the page cursor event and advances the cursor. A configured deterministic rolling count turns the threshold-crossing soft bounce into `GMAIL_SOFT_BOUNCE_LIMIT`; below-threshold soft bounce still blocks that message retry and remains a final-SEND fact. A crash rolls back every page, signal, suppression, intent and cursor write so the same page is fetched again. Classification runs afterward through AGENT-08 and cannot affect the stop or cursor success.
+
+If provider signal parsing is unknown, the source tuple cannot bind one recipient, or the atomic transaction/sync fails, the page cursor does not advance and the independent fail-closed control path commits `PRODUCT_OUTREACH=false`, opens `COMPLIANCE_OR_SUPPRESSION_BREACH`/`ALERT_COMPLIANCE_SUPPRESSION`, and pages. Repair must re-fetch/replay the page, prove an active suppression or safe no-target result and prove no next SEND before product re-enable.
 
 On first connect or 404:
 
@@ -68,6 +70,8 @@ On first connect or 404:
 Initial M6 horizon is 30 days and maximum 500 messages per finite recovery run; exceeding either yields operator-visible `HISTORY_FULL_SYNC_LIMIT_EXCEEDED` and another bounded run, never silent truncation.
 
 ### Error, retry, fixtures, telemetry, and replacement
+
+Recorded fixtures include reply, unsubscribe, hard bounce, complaint, below-limit soft bounce and threshold-crossing soft bounce; duplicate/out-of-order redelivery; concurrent gateway admission; and crashes before/after observation, reply, suppression, lead/message/intent, event/audit/outbox, command result and cursor writes.
 
 Read errors reuse PROVIDER-01 `GmailErrorCode` plus exact recovery codes `HISTORY_CURSOR_EXPIRED`, `HISTORY_PAGE_INVALID`, `HISTORY_FULL_SYNC_LIMIT_EXCEEDED`, `SENT_CANDIDATE_CONFLICT`, and `MIME_CAPTURE_INVALID`. Authentication/account mismatch is nonretryable and disables the mailbox. HTTP 429/parsed transient 403 and 5xx or transport failure on these read-only calls may retry at most three total attempts with full jitter and provider retry hints, within the request deadline and workflow budget. HTTP 404 for `history.list` is cursor recovery, not retry. Cancellation is checked before/after every page/capture and before transaction commit.
 
@@ -86,7 +90,8 @@ Telemetry contains mailbox/call/run/request IDs, page/candidate counts, safe his
 ## Test strategy
 
 - **Recovery `test_ambiguous_attempt_has_no_path_to_retry_before_conclusive_absence`:** exhaustive transition proof.
-- **Atomicity `test_observation_reply_events_and_cursor_commit_as_one_page`:** real PostgreSQL crash matrix.
+- **Atomicity `test_observation_reply_suppression_intent_events_and_cursor_commit_as_one_page`:** real PostgreSQL crash/concurrency matrix; any failure keeps cursor and product authority closed.
+- **Signals `test_reply_unsubscribe_hard_bounce_complaint_and_soft_limit_never_wait_for_agent_or_operator`:** exact source/provenance enum, canonical suppression and no-next-SEND rows.
 - **Identity `test_reply_cursor_and_candidate_require_same_mailbox_provider_identity`:** composite splice denial.
 - **Unicode `test_provider_byte_offsets_convert_to_nfc_code_point_half_open_spans`:** accents/Hebrew/emoji.
 - **Security `test_gmail_read_port_cannot_send_modify_labels_or_expose_content_in_telemetry`:** capability/call graph.

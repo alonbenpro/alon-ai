@@ -244,6 +244,8 @@ CREATE INDEX ix_cost_entries_workflow ON cost_entries (workflow_run_id, occurred
 CREATE TABLE repair_actions (
     repair_action_id uuid NOT NULL,
     incident_id uuid NOT NULL,
+    catalog_version text NOT NULL DEFAULT 'incident.catalog.v1',
+    repair_kind text NOT NULL,
     command_type text NOT NULL,
     aggregate_type text NOT NULL,
     aggregate_id uuid NOT NULL,
@@ -258,6 +260,8 @@ CREATE TABLE repair_actions (
     CONSTRAINT fk_repair_actions_incident FOREIGN KEY (incident_id) REFERENCES incidents (incident_id) ON DELETE RESTRICT,
     CONSTRAINT fk_repair_actions_operator FOREIGN KEY (operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
     CONSTRAINT uq_repair_actions_command UNIQUE (operator_id, idempotency_key),
+    CONSTRAINT ck_repair_actions_catalog CHECK (catalog_version = 'incident.catalog.v1'),
+    CONSTRAINT ck_repair_actions_kind CHECK (repair_kind IN ('RECONCILE_GMAIL_ATTEMPT','ABORT_OAUTH_SAGA','REVOKE_OPERATOR_SESSIONS','DISABLE_MAILBOX','ROTATE_SECRET_GENERATION','REPAIR_WORKFLOW_PROJECTION','REPAIR_EVENT_OUTBOX_LINK','RESTORE_FROM_VERIFIED_BACKUP','REAPPLY_RECIPIENT_SUPPRESSION','REPLAY_RETENTION_TOMBSTONE','RECONCILE_PROVIDER_COST','IMPORT_OFFLINE_INCIDENT_JOURNAL','ROLLBACK_AGENT_PROMOTION')),
     CONSTRAINT ck_repair_actions_hashes CHECK (before_hash ~ '^[0-9a-f]{64}$' AND after_hash ~ '^[0-9a-f]{64}$' AND before_hash <> after_hash),
     CONSTRAINT ck_repair_actions_no_sql CHECK (command_type !~* 'sql')
 );
@@ -265,6 +269,8 @@ CREATE INDEX ix_repair_actions_incident ON repair_actions (incident_id, executed
 ```
 
 `command_idempotency.request_hash` and present `result_hash` use DB-01's exact UTF-8 RFC 8785 envelope digest with the stored text schema version and JSON payload. `IN_PROGRESS` and `FAILED` have all result columns SQL `NULL`; `SUCCEEDED` has the complete triplet. Replay verifies bytes and schema version before returning a stored result; version migration never mutates an existing command row.
+
+`repair_kind` is the closed recovery action selector; `command_type` is the exact existing typed command it invokes. API, audit, telemetry and UI carry the registered kind, never a caller string. `RecoveryCommandService` rejects unknown catalog/version/kind before command claim, and exact replay requires the original kind, before/after hashes and evidence. Adding a repair kind requires the same additive catalog-version migration protocol as incidents plus a typed inverse/recovery test; removing or silently remapping a retained kind is forbidden.
 
 | Table | Exclusive write owner | Retention class / retention owner |
 | --- | --- | --- |
@@ -302,6 +308,7 @@ An internal outbox consumer starts one PostgreSQL transaction, rechecks absence 
 - **Contract `test_external_side_effects_cannot_run_in_outbox_consumer_transaction`:** provider effects require intent/result/ambiguity/reconciliation instead of a generic effect-once assertion.
 - **Security `test_event_payload_allowlist_excludes_secrets_pii_and_message_body`:** fixture scan.
 - **Cost `test_reservation_reconciles_original_and_ils_reporting_currency`:** no silent mixing.
+- **Registry `test_repair_action_catalog_version_and_kind_are_closed_and_replay_exact`:** every v1 kind maps to one typed handler; unknown or remapped kinds fail application validation and the DB check.
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 
