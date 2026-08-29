@@ -1,0 +1,118 @@
+# Outreach Compliance and Recipient Authority
+
+**Document ID:** SEC-04
+**Status:** Planned legal/policy gate; there is no product outreach, recipient compliance record, consent/legal review, disclosure template, unsubscribe process, or real-recipient authority today
+**Milestone:** M6 policy implementation for test isolation; retained counsel-approved policy required before any M9 real-recipient experiment
+**Owner:** Solo operator; qualified legal counsel owns legal conclusions
+**Prerequisites:** [product scope](../00-product-strategy/01-product-scope.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [DB-03](../02-database/03-leads-campaigns-and-messages.md), [AGENT-07/08](../04-agents/07-outreach-drafting-agent.md), [reply classifier](../04-agents/08-reply-classification-agent.md), [BACKEND-03](../06-backend/03-policy-engine.md), [BACKEND-04](../06-backend/04-send-gateway.md), and SEC-01/03/05/06
+**Outputs:** Jurisdiction/recipient evidence, prohibited outreach policy, sender/disclosure/unsubscribe rules, bounce/complaint handling, legal-review/versioning protocol, kill conditions, and earned-authority ladder
+**Unlocks:** Eligibility for a separately approved bounded M9 real-recipient experiment; never an automatic send/control enable
+**Risk:** Critical
+**Complexity:** XL
+
+## Outcome and timing
+
+No real recipient can reach final `SEND` unless the exact recipient, jurisdiction, identity, acquisition source, affirmative consent or counsel-approved lawful route, purpose/channel/sender scope, required disclosures, unsubscribe path, mailbox authority, policy version, and review evidence are complete and current. Unknown is denial. Agents may extract or draft evidence but never decide jurisdiction, consent, lawful basis, compliance, disclosure sufficiency, suppression, or send authority.
+
+Passing M1/M6 proves technical safety only. It is never legal authority. `PRODUCT_OUTREACH=true` is necessary but never sufficient. The conservative initial product policy requires recipient-specific affirmative consent to commercial email and prohibits scraped/purchased/cold lists; any proposed exception requires current Israeli counsel, recipient-jurisdiction analysis, versioned policy, Google-policy compatibility, tests, and a new bounded gate.
+
+## Current repository state
+
+The application has only outreach-off configuration and protocol stubs; nothing sends. The roadmap defines deterministic jurisdiction facts and final-SEND policy inputs, but there is no implementation, counsel opinion, recipient evidence, privacy notice, sender identity, unsubscribe mechanism, complaint feed, bounce policy, approved real-recipient list, or legal-review artifact. M1 is disposable owned-test-inbox only; M6 is operator-owned alias only.
+
+## Scope and non-goals
+
+In scope: email outreach classified as promotional/direct marketing; recipient and business identity; source/provenance; Israel-first analysis; EU/EEA/UK/US recipient rules where the facts make them applicable; Google Gmail/API policies; consent/legal review; sender identification/disclosures; unsubscribe/suppression; send/quiet/rate/time windows; prohibited targeting/content; bounces/complaints; policy versions; evidence retention; and kill/escalation.
+
+Non-goals: legal advice by software, automated jurisdiction inference as truth, treating public contact data as permission, relying on a B2B label, bought/harvested lists, evading Gmail limits, deceptive personalization/threading, multiple accounts to distribute load, autonomous compliance agents, or claiming that this file proves compliance.
+
+## Exact planned implementation surfaces
+
+Create strict artifacts `CompliancePolicyV1`, `LegalReviewRecordV1`, `RecipientComplianceEvidenceV1`, `SenderDisclosureTemplateV1`, `ConsentEvidenceV1`, and `UnsubscribeEvidenceV1` under the existing DB-04 artifact/evidence model; validators in `compliance/contracts.py` and `compliance/validators.py`; deterministic fact assembly in `application/compliance.py`; and policy rules through the canonical `PolicyEvaluationService`. Do not add a competing compliance table or event name. Accepted artifacts are evidence inputs only and grant no state transition.
+
+`RecipientComplianceEvidenceV1` binds: recipient-address hash (not raw address in artifacts exposed to the UI); lead/business identity and country evidence; `jurisdiction_status=CONFIRMED|UNKNOWN|CONFLICT`; jurisdiction codes and evidence IDs/retrieved/published times; source URL/provider/collection method and allowed-use review; business-versus-natural-person/subscriber classification with evidence; consent status `AFFIRMATIVE_VALID|WITHDRAWN|NOT_PROVEN|CONFLICT`; consent timestamp/source/capture hash/text/version/purpose/channel/sender identity/expiry; counsel-approved alternative route ID if any; disclosure template ID/version; policy/legal-review IDs/versions/effective/expiry; mailbox/sender identity; suppression check reference; and sensitivity/prohibited-target flags. Any `UNKNOWN`, `CONFLICT`, missing, stale, unaccepted, or superseded field makes final `SEND` deny with existing `JURISDICTION_NOT_CONFIGURED` or another already registered canonical reason; a new reason requires upstream canonical approval, not an alias here.
+
+### Sourced rules, product policy, enforcement, evidence, and counsel
+
+| Layer | Current source/rule signal (accessed 2026-08-29) | Conservative Alon AI policy | Technical enforcement/evidence | Counsel decision still required |
+| --- | --- | --- | --- | --- |
+| Israel electronic advertisements | Knesset [Communications Law Amendment 40 / section 30A](https://fs.knesset.gov.il/17/law/17_lsr_299991.pdf) starts from express prior consent for electronic advertisements and contains narrow fact-dependent provisions including a one-time business approach; later amendments must be read in consolidated law | do not use the one-time B2B or customer exceptions initially; require affirmative recipient-specific commercial-email consent | final-SEND fact must contain accepted consent artifact; missing/withdrawn denies; disclosure and unsubscribe fixtures | exact classification, exception availability, consent wording/evidence, sender/disclosure duties, remedies |
+| Israel privacy/direct mailing | Knesset [Privacy Protection Law national record](https://main.knesset.gov.il/Activity/Legislation/Laws/pages/lawprimary.aspx?lawitemid=2000234), official [Amendment 13](https://www.gov.il/BlobFolder/reports/13_amendment/he/%D7%AA%D7%99%D7%A7%D7%95%D7%9F%2013%20-%20%D7%A4%D7%A8%D7%A1%D7%95%D7%9D%20%D7%91%D7%A1%D7%A4%D7%A8%20%D7%94%D7%97%D7%95%D7%A7%D7%99%D7%9D.pdf), PPA [Amendment 13 Q&A](https://www.gov.il/he/pages/tikun13_qa?chapterIndex=6), [direct-mail guidance](https://www.gov.il/BlobFolder/policy/direct_mail_2/he/direct%20mail.pdf), and current [PPA legal-information catalog](https://www.gov.il/en/collectors/legalinfo?officeId=4aadba43-3d71-4e7c-a4fe-5bf47b723d4e) address personal data/direct mailing/security; English translations are expressly unofficial | treat recipient/profiling/source data as protected personal data; no sensitive-trait segmentation; minimize and retain provenance/removal evidence | SEC-06 inventory/retention; source/recipient artifact; disclosure template; deletion/suppression workflow; access audit | whether Alon AI activity is “direct mailing”/“direct-mailing services,” database registration/notice/DPO/security level, exact disclosure/deletion/transfer obligations after Amendment 13 |
+| Google OAuth/Gmail | Google [Workspace API user-data policy](https://developers.google.com/workspace/workspace-api-user-data-developer-policy), [OAuth policy](https://developers.google.com/identity/protocols/oauth2/policies), [API user-data policy](https://developers.google.com/terms/api-services-user-data-policy), [Gmail scopes](https://developers.google.com/workspace/gmail/api/auth/scopes), and [sender guidelines](https://support.google.com/mail/answer/81126?hl=en) require minimum access/transparency and prohibit spam/unsolicited commercial mail; terms may change | recipient consent evidence is mandatory; no unsolicited campaigns, multi-account circumvention, bulk sender behavior, deceptive subject/from/threading, or scope future-proofing | approved-use/scope review and revocation; sender-policy fixtures; one mailbox authority; Google-policy-change gate | whether the concrete use case/account/scopes require verification/security assessment and remain an approved use under current terms |
+| EU/EEA recipients | [GDPR Regulation 2016/679](https://eur-lex.europa.eu/eli/reg/2016/679/oj) includes direct-marketing objection/data-protection rules; [ePrivacy Directive Article 13](https://eur-lex.europa.eu/eli/dir/2002/58/oj) addresses unsolicited electronic communications; national implementation matters | no EU/EEA recipient without explicit consent and counsel-approved country-specific policy; objection immediately blocks | jurisdiction evidence plus policy version/consent/suppression; no legitimate-interest inference by agent | territorial applicability, controller/processor roles, national ePrivacy implementation, lawful basis, notices/transfers/rights |
+| UK recipients | ICO [electronic-mail marketing guidance updated 28 April 2026](https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/guidance-on-direct-marketing-using-electronic-mail/) and [B2B guidance](https://ico.org.uk/for-organisations/direct-marketing-and-privacy-and-electronic-communications/business-to-business-marketing/) explain PECR distinctions, including corporate versus individual subscribers | no UK recipient without consent plus counsel classification; do not infer “corporate subscriber” from an address/domain | accepted classification/evidence; consent; opt-out/suppression; policy expiry | PECR/UK GDPR applicability, subscriber type, soft opt-in, Data (Use and Access) Act changes |
+| US recipients | FTC [CAN-SPAM compliance guide](https://www.ftc.gov/business-guidance/resources/can-spam-act-compliance-guide-business) covers commercial email including B2B and describes header/subject/ad/address/opt-out duties | consent still required because Google/Alon policy is stricter; exact sender/address/ad/opt-out template mandatory | disclosure-template validator, unsubscribe evidence, suppression, header/subject tests | US/state/recipient applicability, physical address/privacy exposure, content classification, record retention |
+
+If sources conflict, changed law/policy is suspected, or the recipient may trigger another jurisdiction, do not choose the least restrictive rule. Set `jurisdiction_status=CONFLICT|UNKNOWN`, deny final SEND, preserve sources, and escalate to counsel. Product policy may be stricter than law; it cannot be weaker than Google terms or a retained counsel decision.
+
+The frozen BACKEND-03 `PolicyReasonCode` registry has no consent-, disclosure-, or legal-review-specific code. Its current composite compliance denial is `JURISDICTION_NOT_CONFIGURED`; missing recipient identity uses `AUTHORITY_TUPLE_MISMATCH` and stale policy uses `POLICY_VERSION_STALE`. This preserves fail-closed behavior without inventing an alias, but it is an upstream explainability gap: implementation must obtain a canonical BACKEND-03 reason-registry revision before exposing finer reasons. It must not encode them as free text or silently overload another code.
+
+### Sender identity, content, and disclosure contract
+
+Every real-recipient message uses the exact authorized Gmail mailbox/alias and immutable disclosure template version. The template must provide accurate sender/business identity, non-deceptive From/Reply-To/subject, commercial/direct-marketing label where counsel requires it, valid contact and physical/postal address where required, why/source/purpose of contact where required, and a simple free unsubscribe instruction that remains usable for at least the policy period. It cannot mimic a reply/thread, fabricate prior contact, conceal automation, imply endorsement/urgency/relationship, or use a recipient name in the display name deceptively.
+
+The Outreach Drafting Agent may fill allowlisted factual slots from accepted artifacts; deterministic validation rejects unsupported personalization, sensitive traits, prohibited claims, missing disclosure blocks, URL/domain mismatch, tracking pixels/attachments, hidden text, obfuscated unsubscribe, or content/hash divergence. Operator artifact acceptance and approval remain separate. Final `SEND` byte-checks the approved message content hash and template/policy versions.
+
+### Unsubscribe, suppression, replies, bounces, and complaints
+
+- All initial outbound real-recipient messages invite a reply-based unsubscribe to the exact monitored mailbox. No unsubscribe HTTP endpoint/webhook is added outside the frozen 64-operation API.
+- Any inbound reply immediately ends further outreach to that recipient regardless of classifier result. `ReplyClassificationAgent` can produce an artifact but cannot suppress or authorize.
+- Exact deterministic unsubscribe tokens/phrases in supported Hebrew/English fixtures create an operator attention item and block the lead/message path immediately; the operator records canonical `RECIPIENT` suppression through `SuppressionCommandService`. Free-text ambiguity also blocks further sends until reviewed. The system never waits for model confidence before stopping.
+- An explicit opt-out, withdrawn consent, hard bounce, invalid recipient, or counsel-required deletion creates/retains recipient suppression before any later send. Complaint/provider abuse signal, unsubscribe pipeline failure, or any post-opt-out attempt disables `PRODUCT_OUTREACH` and opens an incident.
+- Any bounce ends this outreach path and becomes suppression/attention evidence; no campaign retry or second message is eligible under the initial policy. Gmail ambiguous-send reconciliation remains separate and never becomes a bounce retry.
+- Suppression stores the minimum stable recipient hash/business/global scope needed to prevent recontact. Deletion of raw personal data never deletes active suppression evidence.
+
+### Time, volume, targeting, and earned authority
+
+Real outreach is one initial message per consent scope; no automated follow-up until counsel and a new policy version approve it. Recipient local timezone must be confirmed; unknown denies. Product quiet policy sends only Monday-Friday 09:00-17:00 recipient local time, excludes local public holidays when configured evidence exists, and never sends at a DST-ambiguous instant. Israel-owned test aliases may use a documented test window.
+
+Initial bounded M9 authority is at most 5 recipients/day, 20 total per immutable campaign version, one in-flight send per mailbox, and one message per recipient. Lower provider/account/counsel limits win. Increasing any cap requires successful prior cohort evidence, zero suppression/complaint/duplicate/privacy violations, current Google/legal review, cost/reputation review, and new campaign/policy versions; never an automatic threshold ramp.
+
+Prohibited targeting/content: minors or age unknown where age matters; special-category/sensitive traits (health, disability, religion, ethnicity, politics, sexual life/orientation, biometrics/genetics), financial distress, immigration/legal vulnerability, tragedy/emergency, employment/credit/housing eligibility, personal addresses inferred from patterns, purchased/harvested lists, data-broker segments, sanctioned/illegal/deceptive offers, false testimonials/guarantees, credential/payment collection, malware/attachments/tracking pixels, intimidation, discrimination, or circumvention of suppression/provider limits. A proposed exception is a new counsel/security/product decision; an agent cannot make it.
+
+### Policy versioning, legal escalation, and kill conditions
+
+`CompliancePolicyV1` records hash, jurisdictions, sources/access dates, product constraints, reason mapping, disclosure/unsubscribe templates, consent schema, retention/transfer links, counsel identity/reference, approval/effective/expiry/review-by, superseded version, and supported recipient cohorts. It expires at the earliest source/policy/counsel review deadline and becomes invalid immediately on provider/regulatory change or incident. Policy artifacts are immutable; change means a new version and re-evaluation/re-approval of affected messages.
+
+Kill `PRODUCT_OUTREACH` on any complaint/abuse signal, opt-out/suppression breach, unauthorized/duplicate send, unknown/misclassified jurisdiction, consent evidence mismatch, disclosure/template mismatch, hard-bounce rate above 2% in the tiny cohort, any repeated soft bounce, provider warning/quota/scope/policy change, unsubscribe processing delay over one hour, mailbox/identity concern, legal-policy expiry, or telemetry/recovery blindness. With small cohorts, one serious event matters more than an averaged percentage.
+
+Escalate to Israeli counsel before the first real recipient, every new jurisdiction/recipient class/acquisition source/consent method/content purpose/follow-up behavior, material law/Google-policy change, rights/deletion/breach question, regulator/provider inquiry, or any complaint. Record advice reference and scope, not privileged text in normal telemetry/artifacts.
+
+## Ordered implementation tasks
+
+- [ ] **Commission and record legal/provider review —** Input: exact Israeli solo-business use case, Google account/scopes, recipient cohorts/sources/content, and applicable jurisdictions. Operation: counsel classifies duties/exceptions/disclosures/retention/transfers and operator verifies current Google policies. Output: immutable `LegalReviewRecordV1` and `CompliancePolicyV1`. Test evidence: scope/source/version/expiry completeness. Failure behavior: real-recipient authority remains unavailable.
+- [ ] **Implement recipient evidence contracts —** Input: recipient/business/source/consent/jurisdiction evidence. Operation: validate identity, provenance, dates, scope/purpose/channel/sender, conflicts, and accepted artifact versions. Output: exact final-SEND compliance facts. Test evidence: unknown/conflict/stale/withdrawn/superseded matrix. Failure behavior: deny.
+- [ ] **Implement disclosures and prohibited-content validator —** Input: accepted draft and template/policy versions. Operation: byte-check exact sender/content/hash, mandatory blocks, claims/links and prohibited patterns. Output: reviewable eligible content only. Test evidence: deceptive/missing/hidden/tracking/sensitive-target fixtures. Failure behavior: reject artifact/reapproval required.
+- [ ] **Implement reply/bounce/complaint stop path —** Input: Gmail history observations and provider/operator evidence. Operation: stop recipient path on any reply, surface unsubscribe/bounce, create canonical suppression through owner, and trigger kill/escalation. Output: no further contact. Test evidence: bilingual/ambiguous/free-text/hard/soft/complaint/crash races. Failure behavior: product control false.
+- [ ] **Prove bounded authority ladder —** Input: M1/M6, policy/legal/source/consent/template/suppression/mailbox/cost/recovery evidence. Operation: authorize only an immutable 5/day/20-total cohort and recheck at final SEND. Output: M9 eligibility, not send. Test evidence: each missing/stale/spliced fact and cap escalation denied. Failure behavior: stay at test aliases/off.
+
+## Test strategy
+
+- **Policy `test_unknown_jurisdiction_consent_identity_source_policy_or_disclosure_denies_final_send`.**
+- **Google `test_unsolicited_or_multi_account_limit_circumvention_is_never_eligible`.**
+- **Content `test_sender_subject_disclosure_unsubscribe_and_content_hash_match_accepted_template`.**
+- **Suppression `test_any_reply_optout_hard_bounce_or_complaint_blocks_before_next_attempt`:** agent result cannot delay stop.
+- **Limits `test_quiet_timezone_daily_total_recipient_and_mailbox_bounds_are_locked_at_last_mile`.**
+- **Authority `test_m1_m6_approval_and_product_control_without_legal_recipient_evidence_still_deny`.**
+- **Counsel `test_policy_expiry_new_jurisdiction_or_source_requires_new_review_and_version`.**
+
+## Security, privacy, compliance, idempotency, observability, and cost
+
+This is a compliance-control plan, not a conclusion that sending is lawful. Evidence is minimized/encrypted/access-audited under SEC-03/06. Recipient/domain/address/consent text never enters telemetry or agent evaluation labels; use safe record IDs and bounded reason enums. Suppression/decision/command replay is idempotent. Provider and legal-review costs are budgeted/recorded; cheap acquisition never overrules consent/privacy/provider policy.
+
+## Failure, rollback, and operator recovery
+
+On uncertainty or breach: disable product outreach before investigation, stop dequeue, cancel only provably unsent intents, reconcile possibly called Gmail attempts, create suppression, preserve restricted evidence, revoke mailbox credentials if implicated, and escalate to counsel/provider. Roll back to the prior policy for future evaluation only; never retroactively bless a sent message or mutate consent/approval evidence. Re-enable requires a new current policy, closed incidents, affected-recipient remediation, and a smaller/equal cohort.
+
+## Acceptance and retained evidence
+
+- [ ] Every real recipient has confirmed jurisdiction/identity/source/consent-or-counsel route, disclosure, unsubscribe, mailbox, suppression, policy and legal-review versions.
+- [ ] Sourced rules, conservative product policy, technical enforcement, retained evidence, and counsel decisions are visibly separate.
+- [ ] Prohibited targeting/content, quiet/rate/time/volume, bounce/complaint, unsubscribe/suppression, kill, and earned-authority rules are executable.
+- [ ] Agents, M1, M6, approvals, gates, and controls never independently decide compliance or authorize real SEND.
+
+Retain official source inventory/access dates, counsel engagement/reference and scoped decision, policy/schema/template hashes, recipient/consent/provenance evidence, validator fixtures, suppression/unsubscribe/bounce/complaint traces, provider policy/scope review, cohort manifest, final-SEND denials, and kill/re-enable drill.
+
+## Dependencies and next deliverable
+
+SEC-04 consumes security/privacy and canonical policy/Gmail authority. It supplies jurisdiction/compliance facts to final `SEND` and [SEC-05](05-suppression-budgets-and-kill-switch.md). A passing record unlocks only a separately bounded M9 cohort; no real send occurs until every last-mile gate passes.
