@@ -32,7 +32,8 @@ The table owners below are canonical; no route/workflow/provider/agent writes th
 
 | Service | Exclusive authoritative writes / deterministic responsibility |
 | --- | --- |
-| `AuthenticationCommandService` | `operators`; authenticated-subject lifecycle only |
+| `OperatorSessionService` | FastAPI-owned Google OIDC flow/session issue, rotation, expiry, revocation, logout, configured-subject authentication; no product-table or Gmail authority |
+| `AuthenticationCommandService` | `operators`; configured authenticated-subject lifecycle only |
 | `ExperimentCommandService` | `experiments`, `experiment_decisions`; ARCH-03 transitions/decision bundle |
 | `ExperimentBriefCommandService` | immutable `experiment_briefs`; scope versions |
 | `IdeaMaterializationService`, `OfferMaterializationService` | `ideas`, `offer_hypotheses` after accepted artifact gates |
@@ -44,17 +45,17 @@ The table owners below are canonical; no route/workflow/provider/agent writes th
 | `LeadCommandService`, `LeadQualificationService` | `leads`, `lead_assessments`; exact ARCH-03 lead transitions |
 | `GmailOAuthSagaService`, `OAuthCredentialGarbageCollector` | external versioned flow/credential objects; idempotent STAGE/ACTIVATE/bind leases, safe orphan GC; no product-table writes |
 | `GmailMailboxCommandService`, `GmailCredentialConsistencyService` | `gmail_mailboxes`; exact ACTIVE proof tuple commit, mismatch disable/incident; no secret payload writes |
-| `CampaignCommandService`, `CampaignAdmissionService` | immutable `campaigns` versions and `campaign_members` |
+| `CampaignCommandService`, `CampaignAdmissionService` | immutable `campaigns` versions and `campaign_members`; exact `ReadyCampaign` DRAFT -> READY owner |
 | `MessageCommandService` | `outreach_messages` except SendGateway/Recovery-owned documented send transitions |
 | `ApprovalCommandService` | `approvals`; exact campaign-member approval basis, eligibility-decision binding, lifecycle, and consumption; never final SEND authority |
-| `SuppressionCommandService` | `suppression_entries`; suppression always overrides eligibility/approval |
+| `SuppressionCommandService`, `SuppressionQueryService` | versioned `suppression_entries` create/fail-closed deactivate; uncached safe reads; suppression always overrides eligibility/approval |
 | `PolicyEvaluationService` | append-only `policy_decisions`; separate `APPROVAL_ELIGIBILITY` and fresh final `SEND` compositions with shared basis/independent facts hashes |
 | application `SendGateway` | eligibility-bound `send_intents`; fresh-SEND pre-call `send_attempts`; last-mile `QUEUED -> SUPPRESSED`/intent cancellation; documented transitions under BACKEND-04 |
 | `SendRateReservationService` | `send_rate_reservations`; unique mailbox/window slot and one active lease under gateway/recovery transactions |
 | `SendRecoveryService` | disjoint retry/reconciliation transitions on `send_attempts`/messages; never initial provider call |
 | `GmailResultCaptureService`, `GmailObservationService`, `GmailReplySyncService`, `GmailHistorySyncService` | respectively `provider_results`, `provider_observations`, `replies`, `gmail_history_cursors` |
 | `AgentRunRecordingService`, `ArtifactCommandService`, `EvidenceIngestService` | respectively `agent_runs`, `artifacts(PRODUCED)` plus event, and `evidence_items` |
-| `ArtifactValidationService`, `ArtifactAcceptanceService` | links/validations plus validated/rejected event; acceptances plus accepted event |
+| `ArtifactValidationService`, `ArtifactAcceptanceService`, `ArtifactEvidenceQueryService` | links/validations plus validated/rejected event; exact version/hash accept/reject plus events; allowlisted artifact/evidence/evaluation reads |
 | `EvaluationSuiteCommandService`, `EvaluationExecutionService` | `evaluation_cases`; `evaluation_results` while delegating all `agent_runs` writes |
 | application `UnitOfWork`, `AuditRecorder`, `IdempotentCommandExecutor` | `domain_events`/`outbox_messages`; `audit_events`; `command_idempotency` |
 | each named internal consumer | business writes plus `outbox_deliveries` in one PostgreSQL transaction |
@@ -64,7 +65,7 @@ When two services touch one aggregate, their legal transitions are disjoint and 
 
 ### Command, digest, transaction, and concurrency contract
 
-Every application command is a strict frozen `CommandEnvelopeV1` with `command_type`, `command_scope`, idempotency key, authenticated actor (or operator/flow binding verified from signed OAuth state for `CompleteGmailAuthorization`), expected aggregate version where applicable, correlation/causation UUIDv4, text `request_schema_version`, JSON payload, and DB-01 lowercase SHA-256 of RFC 8785 UTF-8 `{"schema_version":version,"payload":payload}`. IDs and UTC clock are injected; no service reads global time/randomness.
+After `OperatorSessionService` verifies the opaque cookie, configured subject, expiry, Origin, fetch metadata, and CSRF intent, every application command is a strict frozen `CommandEnvelopeV1` with `command_type`, `command_scope`, idempotency key, authenticated actor (or operator/flow binding verified from signed OAuth state for `CompleteGmailAuthorization`), expected aggregate version where applicable, correlation/causation UUIDv4, text `request_schema_version`, JSON payload, and DB-01 lowercase SHA-256 of RFC 8785 UTF-8 `{"schema_version":version,"payload":payload}`. IDs and UTC clock are injected; no service reads global time/randomness.
 
 The exact aggregate transaction is: begin; claim `(command_scope,idempotency_key)`; verify request bytes/schema against prior claim; lock/load or optimistic-version-check; load all named authority rows; call pure transition/policy; update the sole-writer row; insert the specific ARCH-03 event and aggregate `*.state_changed.v1` where defined; insert safe audit; insert outbox; store the complete result envelope/hash; commit. A same-key/same-hash replay returns the stored status/body without another version/event. Same key/different hash is `IDEMPOTENCY_HASH_CONFLICT`. Version loss is `VERSION_CONFLICT`. Denial records safe audit/policy evidence but no aggregate mutation unless the canonical transition itself is denial/suppression.
 

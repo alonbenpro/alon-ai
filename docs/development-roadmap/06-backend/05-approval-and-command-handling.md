@@ -44,9 +44,9 @@ Command type names are canonical API/application vocabulary. Each maps to one ow
 | `ApproveExperimentScope` | `experiment:{id}`; `ExperimentCommandService` | state/version; `experiment.scope_approved.v1`, `experiment.state_changed.v1` |
 | `StartResearch`, `StartLeadQualification`, `StartOutreachAndReply`, `StartExperimentEvaluation` | `experiment:{id}:stage:{stage}`; stage command service | new workflow run; `workflow.run_started.v1`, state-changed |
 | `CompleteWorkflowRun`, `FailWorkflowRun` | `workflow-run:{id}`; `WorkflowRunProjectionService` plus experiment owner transaction | exact result/failure events from WF-02 |
-| `PauseExperiment`, `ResumeExperiment`, `CancelExperiment`, `CancelRun`, `RetryExperimentStage`, `ReviseExperiment` | exact aggregate scope; `ControlCommandService`/`ExperimentCommandService` | WF-06 exact requested/acknowledged experiment/run events; retry creates new run |
+| `PauseExperiment`, `ResumeExperiment`, `CancelExperiment`, `CancelRun` (API `cancelWorkflowRun`), `RetryExperimentStage`, `ReviseExperiment` | exact aggregate scope; `ControlCommandService`/`ExperimentCommandService` | WF-06 exact requested/acknowledged experiment/run events; retry creates new run |
 | `RecordExperimentDecision` | `experiment:{id}:decision`; `ExperimentCommandService` | immutable decision; `experiment.decision_recorded.v1`, state-changed |
-| `CreateCampaignVersion`, `ActivateCampaign`, `PauseCampaign`, `ResumeCampaign`, `CancelCampaign` | `campaign:{id}:version:{version}`; `CampaignCommandService` | exact complete campaign event family plus state-changed |
+| `CreateCampaignVersion`, `ReadyCampaign`, `ActivateCampaign`, `PauseCampaign`, `ResumeCampaign`, `CancelCampaign` | `campaign:{id}:version:{version}`; `CampaignCommandService` | exact complete campaign event family plus state-changed |
 | `RequestApproval`, `ApproveApproval`, `DenyApproval`, `RevokeApproval`, `ExpireApproval`, `ConsumeApproval` | `approval:{approval_id}` or new exact scope; `ApprovalCommandService` | `approval.requested.v1`, `approval.decided.v1`, or `approval.revoked.v1`; consumption has safe audit and message/intent bundle event rather than invented domain alias |
 | `RecordSendIntent` | `message:{id}:send-intent`; BACKEND-04 prerecord path | intent/queue result; `send.intent_recorded.v1`, `send.queued.v1` |
 | `ExecuteSendAttempt` | `send-intent:{id}:attempt:{n}`; `SendGateway` | BACKEND-04 result events |
@@ -55,8 +55,30 @@ Command type names are canonical API/application vocabulary. Each maps to one ow
 | `CompleteGmailAuthorization` | scope family `gmail.oauth.complete`, concrete `gmail.oauth.complete:{oauth_flow_id}`; `GmailMailboxCommandService` through PROVIDER-01 | stored opaque redirect result; audit-only OAuth type, no domain-event alias |
 | `SyncGmailMailbox`, `RevokeGmailAuthorization` | `gmail-mailbox:{id}`; Gmail mailbox/history owners | finite sync/revoke result; cursor event only when cursor advances |
 | `AcceptArtifact`, `RejectArtifact`, `SupersedeArtifact` | `artifact:{id}`; validation/acceptance owners | exact artifact events, never agent-authored |
-| `SuppressRecipient`, `SuppressBusiness`, `EnableGlobalSuppression`, `DeactivateSuppression` | target scope; `SuppressionCommandService` | `lead.suppressed.v1` where a lead transitions plus safe audit |
+| `SuppressRecipient`, `SuppressBusiness`, `EnableGlobalSuppression`, `DeactivateSuppression` | target scope; `SuppressionCommandService` | `suppression.created.v1`/`suppression.deactivated.v1`, `lead.suppressed.v1` for each lead transition, safe audit/outbox |
 | `RepairIncident` | `incident:{id}:repair`; `RecoveryCommandService` | `repair_actions`, correction/audit/existing canonical transition event; never user SQL |
+
+### Campaign readiness, finite stage, and workflow cancellation commands
+
+`ReadyCampaignRequestV1` locks exact `(campaign_id,campaign_version)` in `DRAFT`, verifies its immutable offer/policy references, at least one exact `ELIGIBLE` member, and every draft/approval requirement recorded, then atomically commits `READY`, `campaign.ready.v1`, `campaign.state_changed.v1`, audit/outbox/idempotent `CampaignVersionResponseV1`. It cannot activate, create an intent, or start a run. `ActivateCampaign` remains separate.
+
+`StartOutreachAndReplyRequestV1` requires latest experiment `If-Match`, `READY_FOR_OUTREACH`, exact active campaign ID/version/state, current M1/M6 evidence IDs, correct isolated-test or separately enabled product control, accepted artifacts, no suppression/ambiguity/blocking incident, and workflow budget/caps. It atomically creates one finite `OUTREACH_AND_REPLY` run and transitions the experiment to `OUTREACH_ACTIVE`; receipt carries the new `workflow_run_id`. `StartExperimentEvaluationRequestV1` requires latest experiment ETag and either no-send `READY_FOR_OUTREACH` evidence or closed-outreach `EVALUATING` evidence, exact metric snapshot/evidence bundle/rule versions, and creates one finite `EXPERIMENT_EVALUATION` run; no decision is recorded. Active-run uniqueness rejects duplicates.
+
+`CancelWorkflowRunRequestV1` maps only to internal `CancelRun`: lock nonterminal run in exact expected state, verify its aggregate permits cancellation, commit `CANCEL_REQUESTED`/audit/outbox/idempotent receipt, then signal runtime. It never infers experiment/campaign cancellation. The resulting run remains queryable through `getWorkflowRun`; acknowledgement later commits `CANCELLED` and `workflow.run_cancelled.v1`.
+
+### Suppression command and query contract
+
+`createSuppression` maps the strict target union to exactly one registered command: `GLOBAL -> EnableGlobalSuppression`, `BUSINESS -> SuppressBusiness`, `RECIPIENT -> SuppressRecipient`. Server forces `source=OPERATOR`, inserts active version 1, emits `suppression.created.v1`, transitions every matching nonarchived lead with `lead.suppressed.v1`, writes safe audit/outbox/result, and invalidates final-SEND dequeue facts before commit. Recipient input is an existing server-issued SHA-256 hash, never raw address. Duplicate active target is exact idempotent replay or 409 state conflict.
+
+`DeactivateSuppression` requires `If-Match`, `expected_active=true`, authenticated operator reason, both send controls false, no matching nonterminal message/intent/attempt, no ambiguity/reconciliation, and no blocking incident. It locks target and matching authority rows, increments version, sets inactive/deactivated UTC, emits `suppression.deactivated.v1`, and audits. It never automatically requalifies a lead, reactivates a campaign, or enables a control. `listSuppressions` bypasses caches; the gateway always reads locked PostgreSQL suppression rows after dequeue and never trusts UI/query cache.
+
+### Artifact read, acceptance, and rejection contract
+
+`getArtifact`, `listArtifactEvidence`, and `getEvaluationResult` are read-only query owners over DB-04 allowlisted fields. Restricted content/capture refs, prompts, source excerpts, addresses, and provider payloads never serialize. `AcceptArtifact` requires exact ID/version/content hash, locked `VALIDATED` status, latest deterministic validation with `schema_valid=true`, `provenance_valid=true`, no reason codes, complete evidence links, non-superseded version, authenticated operator reason, and idempotency; it writes acceptance/status, `artifact.accepted.v1`, audit/outbox/result atomically. `RejectArtifact` requires exact version/hash and `PRODUCED` or `VALIDATED`, reason, no acceptance/materialization/dependent authority, then writes `REJECTED`, `artifact.rejected.v1`, audit/outbox/result. Stale/hash/superseded/terminal races fail without mutation.
+
+### FastAPI operator-session boundary
+
+`startOperatorAuthorization`, `completeOperatorAuthorization`, `getOperatorSession`, and `endOperatorSession` belong to BACKEND-02 `OperatorSessionService`, not the business command registry and not Gmail OAuth. They may authenticate/revoke only the configured operator subject; session/flow handles and provider tokens never become command payloads or agent/workflow/provider authority. Every business command actor is resolved from the server-side session before command hashing; Origin/CSRF failure prevents registry entry and audit records only safe denial metadata.
 
 ### OAuth callback command exception
 
@@ -93,7 +115,7 @@ Pause/cancel requested versus acknowledged states follow WF-06 exactly. `RetryEx
 
 ### Errors, telemetry, fixtures, and example
 
-Handlers return only BACKEND-02 `error_code` values with exact safe reasons: `ELIGIBILITY_POLICY_DENIED` and final mutable policy denials map to 403 `POLICY_DENIED`; `APPROVAL_BASIS_MISMATCH` and `CAMPAIGN_MEMBER_MISMATCH` map to 409 `VERSION_CONFLICT`; OAuth replay conflict maps internally to 409 `IDEMPOTENCY_HASH_CONFLICT`, while invalid/uncertain OAuth maps to 400 `OAUTH_CALLBACK_INVALID` or 503 `DEPENDENCY_UNAVAILABLE` and fixed opaque redirects. `COMMAND_IN_PROGRESS`, `APPROVAL_NOT_PENDING`, `APPROVAL_EXPIRED`, `APPROVAL_ALREADY_CONSUMED`, and `RUNTIME_ACK_PENDING` are reason codes under 409 `STATE_TRANSITION_DENIED`; `APPROVAL_SCOPE_MISMATCH` is a reason under 409 `VERSION_CONFLICT`; `ACTOR_NOT_ALLOWED` maps to 403 `AUTHORIZATION_DENIED`; `CONTROL_GATE_MISSING` maps to 403 `POLICY_DENIED`; `REPAIR_KIND_NOT_ALLOWED` maps to 400 `VALIDATION_FAILED`; and an unregistered internal command is 500 `INTERNAL_ERROR` and opens an incident. No command-only alias escapes in API `error_code`; every safe denial is audited.
+Handlers return only BACKEND-02 `error_code` values with exact safe reasons: `ELIGIBILITY_POLICY_DENIED` and final mutable policy denials map to 403 `POLICY_DENIED`; `APPROVAL_BASIS_MISMATCH` and `CAMPAIGN_MEMBER_MISMATCH` map to 409 `VERSION_CONFLICT`; OAuth replay conflict maps internally to 409 `IDEMPOTENCY_HASH_CONFLICT`, while invalid/uncertain OAuth maps to 400 `OAUTH_CALLBACK_INVALID` or 503 `DEPENDENCY_UNAVAILABLE` and fixed opaque redirects. `CAMPAIGN_NOT_DRAFT`, `CAMPAIGN_READINESS_GUARD_FAILED`, `WORKFLOW_RUN_STATE_MISMATCH`, `SUPPRESSION_TARGET_IN_FLIGHT`, `SUPPRESSION_CONTROLS_NOT_DISABLED`, `ARTIFACT_NOT_VALIDATED`, `ARTIFACT_SUPERSEDED`, `COMMAND_IN_PROGRESS`, `APPROVAL_NOT_PENDING`, `APPROVAL_EXPIRED`, `APPROVAL_ALREADY_CONSUMED`, and `RUNTIME_ACK_PENDING` are reason codes under 409 `STATE_TRANSITION_DENIED`; `ARTIFACT_VERSION_MISMATCH`, `ARTIFACT_HASH_MISMATCH`, and `APPROVAL_SCOPE_MISMATCH` are reasons under 409 `VERSION_CONFLICT`; `ACTOR_NOT_ALLOWED` maps to 403 `AUTHORIZATION_DENIED`; `CONTROL_GATE_MISSING` maps to 403 `POLICY_DENIED`; `REPAIR_KIND_NOT_ALLOWED` maps to 400 `VALIDATION_FAILED`; and an unregistered internal command is 500 `INTERNAL_ERROR` and opens an incident. No command-only alias escapes in API `error_code`; every safe denial is audited.
 
 Fixtures contain exact request/result schema versions/payloads/hashes, actor/scope/key, initial rows, expected rows/events/audit/outbox, runtime/provider call count, and replay outcome. Telemetry contains safe command/actor-type/aggregate IDs, versions, replay, status/error/reasons, duration, runtime signal status, and correlation—not approval content, address, credentials, raw facts, or command sensitive payload.
 
@@ -121,6 +143,11 @@ Fixtures contain exact request/result schema versions/payloads/hashes, actor/sco
 - **Control `test_product_outreach_enable_requires_m1_m6_and_grants_no_campaign_recipient_spend`:** exact negative proof.
 - **Runtime `test_signal_failure_leaves_requested_state_visible_and_no_false_ack`:** restart-safe.
 - **Authority `test_agent_provider_and_frontend_cannot_register_or_execute_business_commands`:** graph/runtime object test.
+- **Registry `test_all_64_api_operations_map_to_exact_query_session_or_registered_command_owner`:** no missing/alias command.
+- **Campaign `test_create_ready_activate_start_outreach_are_four_separate_guarded_commits`:** exact state/events/runs.
+- **Suppression `test_deactivation_requires_controls_off_no_inflight_and_fresh_version`:** gateway never trusts cache.
+- **Artifact `test_accept_reject_lock_exact_version_hash_validation_and_terminal_state`:** stale/superseded fail.
+- **Session `test_oidc_session_resolves_only_configured_operator_before_command_claim`:** no browser token/CSRF bypass.
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 

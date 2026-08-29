@@ -26,6 +26,10 @@ In scope: required brief fields, client-side usability validation that mirrors g
 
 Create `src/app/(operator)/experiments/new/page.tsx`, `src/features/experiments/components/experiment-brief-form.tsx`, `brief-review.tsx`, `authority-level-fieldset.tsx`, `caps-fieldset.tsx`, `rule-json-editor.tsx`, `src/features/experiments/hooks/use-create-experiment.ts`, `use-approve-experiment-scope.ts`, `use-revise-experiment.ts`, and matching unit/browser tests. The page shell is a Server Component; the form/review/mutations are Client Components.
 
+`/experiments` is a complete page, not shell-only. Create `src/app/(operator)/experiments/{page,loading,error}.tsx`, `src/features/experiments/components/{experiment-list,experiment-table,experiment-cards,experiment-filters,experiment-list-pagination}.tsx`, and `src/features/experiments/hooks/use-experiments.ts`. It calls only `GET /api/v1/experiments` / `listExperiments` with query key `["experiments",{state,cursor,limit}]`; exact canonical-state filter is server-side, `limit` defaults 50 and remains 1..100, and opaque keyset pages keep `(updated_at DESC,experiment_id)` order. The active FastAPI operator session is required; no anonymous data or bearer token exists.
+
+The list loading state preserves heading/filter/table-card geometry; empty distinguishes no experiments from a state-filter miss and focuses the empty heading after filter submit; stale shows last fetch time, permits navigation but disables no list-level authority because none exists, and refetches on focus/15 seconds for nonterminal pages/60 seconds terminal-only. Error renders `ProblemDetailsV1`, focuses the error summary, and preserves filters. Partial is unsupported for this authoritative resource page and becomes error; redacted safe labels/IDs remain explicit; terminal `DECIDED/CANCELLED` rows are text/icon/pattern-marked and read-only. At 0-767px cards expose identical fields/links; at 768px+ semantic table is used with bounded labeled scroll only if necessary; the page has no horizontal overflow, 44x44 targets, visible focus, keyboard pagination, and focus moves to the first new row heading after a page change.
+
 ### Exact form and server-field ownership
 
 The generated `CreateExperimentRequestV1` is the wire authority. Its brief payload must expose the DB-02/M0 fields below and no UI-only field enters the request. UI step names are presentation only.
@@ -45,7 +49,7 @@ Server-generated/read-only fields—IDs, `brief_version`, `content_hash`, operat
 
 | Action | URL / `operationId` / wire | Key, concurrency, invalidation, reconciliation |
 | --- | --- | --- |
-| load nearby experiments | `GET /api/v1/experiments`, `listExperiments`, state/cursor/limit page | `['experiments',{state,cursor,limit}]`; no form dependency; 15-second list refetch |
+| list experiments | `GET /api/v1/experiments`, `listExperiments`, state/cursor/limit page ordered `(updated_at DESC,experiment_id)` | `['experiments',{state,cursor,limit}]`; server state filter/keyset pagination; active operator session; no optimistic behavior; 15-second nonterminal/60-second terminal refetch |
 | create | `POST /api/v1/experiments`, `createExperiment`, `CreateExperimentRequestV1 -> ResourceResponseV1` | mutation `['experiment','create']`; one `ui:createExperiment:{uuid}` key; no `If-Match`; no optimistic insert; on 201 store `Location`, invalidate experiment list, navigate to canonical returned ID |
 | approve scope | `POST /api/v1/experiments/{experiment_id}/commands/approve-scope`, `approveExperimentScope`, `ApproveExperimentScopeRequestV1 -> CommandReceiptV1` | mutation `['experiment',id,'approve-scope']`; new key plus `If-Match` from latest experiment ETag; invalidate detail/list/overview/timeline; refetch until returned state/version visible |
 | revise failed experiment | `POST /api/v1/experiments/{experiment_id}/commands/revise`, `reviseExperiment`, `ReviseExperimentRequestV1 -> ResourceResponseV1` | mutation `['experiment',id,'revise']`; key plus latest `If-Match`; no optimistic version; on 201 navigate/render returned brief version and invalidate all experiment/report/campaign approval keys |
@@ -69,6 +73,7 @@ Revision from `FAILED` warns that it creates a new immutable brief version and i
 
 ## Test strategy
 
+- **List `test_experiment_list_filters_keyset_pages_states_focus_and_card_table_parity`:** exact generated page, no duplicate/skip/overflow.
 - **Contract `test_create_form_serializes_only_generated_request_fields`:** exact schema and no hidden server fields.
 - **Bounds `test_caps_and_authority_render_exact_server_units_and_enums`:** ILS minor units remain integers.
 - **Idempotency `test_timeout_after_create_replays_same_payload_and_key`:** one experiment.

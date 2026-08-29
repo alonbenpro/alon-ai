@@ -250,6 +250,8 @@ Every campaign transition emits its specific event and `campaign.state_changed.v
 | `lead.qualified.v1` | `lead_id`, `assessment_id`, `criteria_version` | deterministic gate passes |
 | `lead.disqualified.v1` | `lead_id`, `reason_codes`, `criteria_version` | gate fails |
 | `lead.suppressed.v1` | `lead_id`, `suppression_entry_id`, `reason_code` | suppression applies |
+| `suppression.created.v1` | `suppression_entry_id`, `scope`, nullable `business_id`, nullable `recipient_hash`, `reason_code`, `version` | active global/business/recipient suppression commits; matching leads transition separately |
+| `suppression.deactivated.v1` | `suppression_entry_id`, `scope`, `reason_code`, `prior_version`, `version` | fail-closed operator removal commits after controls/in-flight guards |
 
 ### Policy, approval, sending, and replies
 

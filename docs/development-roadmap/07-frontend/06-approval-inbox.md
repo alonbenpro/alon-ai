@@ -55,14 +55,14 @@ The queue report adds current `current_authority_valid` and server invalidation 
 | approve | `POST /api/v1/approvals/{approval_id}/commands/approve`, `approveApproval`, `DecideApprovalRequestV1 -> CommandReceiptV1` | `['approval',id,'approve']`; generated `schema_version`, `expected_state`, mandatory safe reason code; one key; no ETag invented; no optimistic state |
 | deny | `POST /api/v1/approvals/{approval_id}/commands/deny`, `denyApproval`, `DecideApprovalRequestV1 -> CommandReceiptV1` | `['approval',id,'deny']`; destructive consequence for message; same expected-state/key/reconciliation policy |
 | revoke | `POST /api/v1/approvals/{approval_id}/commands/revoke`, `revokeApproval`, `RevokeApprovalRequestV1 -> CommandReceiptV1` | `['approval',id,'revoke']`; exact expected state and generated reason; no optimistic state |
-| request from message | `POST /api/v1/messages/{message_id}/commands/request-approval`, `requestMessageApproval`, `RequestApprovalRequestV1 ->` approval resource | owned by FRONTEND-07; invalidates both approval queries/report, message, campaign, experiment timeline |
+| request from message | `POST /api/v1/messages/{message_id}/commands/request-approval`, `requestMessageApproval`, `RequestApprovalRequestV1 -> ApprovalResponseV1` | owned by FRONTEND-07; invalidates both approval queries/report, message, campaign, experiment timeline |
 | record intent | `POST /api/v1/messages/{message_id}/commands/record-send-intent`, `recordMessageSendIntent`, `RecordSendIntentRequestV1 -> CommandReceiptV1` | owned by FRONTEND-07; consumes an exact approved row atomically; never a hidden side effect of approve |
 
 Successful approve/deny/revoke invalidates `['approval',id]`, all `['approvals',…]`, `['report','approvals',…]`, linked message/campaign/experiment timeline and recovery keys, then refetches. A 200 receipt proves the command committed. It does not prove a send intent or provider call. Same request/key replay renders the stored result; changed reason/expected state uses a new key only after fresh confirmation.
 
 ### Review, confirmation, and screen states
 
-Queue rows/cards use age and expiry text/icon/pattern, never color alone. Filters use exact states. Each row exposes only “Review,” never inline approve. Detail places `ApprovalScope` before actions and includes an expandable “Why this is not SEND authority” deterministic explanation. Artifact refs link only where FRONTEND-04 has a valid generated target; otherwise they remain copyable safe refs.
+Queue rows/cards use age and expiry text/icon/pattern, never color alone. Filters use exact states. Each row exposes only “Review,” never inline approve. Detail places `ApprovalScope` before actions and includes an expandable “Why this is not SEND authority” deterministic explanation. Artifact refs link only where FRONTEND-04 has a valid generated target; otherwise they remain copyable safe refs. Before approve opens, each referenced artifact is refetched with `getArtifact` and the returned ID/version/hash/status is shown beside the immutable basis. Any missing, rejected, superseded, hash/version-mismatched, or stale reference blocks the dialog and defers to server `current_authority_valid`/reason codes; the browser never computes acceptance.
 
 Approve dialog repeats campaign member/mailbox/message/content/policy basis, expiry and cap, `current_authority_valid`, invalidation warnings, and asks the operator to check “I reviewed this exact immutable scope.” It captures the exact generated reason code (example server contract `OPERATOR_REVIEWED_EXACT_SCOPE`), not arbitrary content. Deny requires consequence acknowledgement. Revoke requires typing the last eight approval-ID characters and explains that a consumed approval cannot be revoked and mail cannot be recalled.
 
@@ -71,7 +71,7 @@ Dialog initial focus is the heading; tab is trapped; Escape/close is unavailable
 ## Ordered implementation tasks
 
 - [ ] **Implement queue/detail projections —** Input: generated approval page/detail/report types. Operation: render exact state, age/expiry, scope, eligibility/current validity, reason, and artifact refs with snapshot pagination. Output: reviewable queue. Test evidence: every-state/expiry/redaction/partial/snapshot fixtures. Failure behavior: no decision action when detail or authority projection is unavailable.
-- [ ] **Implement approve and deny —** Input: fresh exact scope, generated expected state/reason, operator confirmation. Operation: create one key, submit once, render receipt, invalidate/refetch linked resources. Output: server-owned state. Test evidence: double-decision race, stale basis, expiry, hash conflict, timeout replay. Failure behavior: remain/refetch and never create intent.
+- [ ] **Implement approve and deny —** Input: fresh exact scope, refetched artifact versions/hashes/statuses, generated expected state/reason, operator confirmation. Operation: create one key, submit once, render receipt, invalidate/refetch linked resources. Output: server-owned state. Test evidence: double-decision race, stale basis, expiry, hash conflict, timeout replay. Failure behavior: remain/refetch and never create intent.
 - [ ] **Implement revoke and consumption visibility —** Input: approved/consumed detail. Operation: destructive revoke confirmation or read-only consumed-intent linkage. Output: accurate lifecycle. Test evidence: revoke race, already consumed, already revoked, and focus-return tests. Failure behavior: preserve original approval/evidence.
 - [ ] **Prove eligibility/final-SEND separation —** Input: UI/network/state graph. Operation: verify approve makes no `recordMessageSendIntent` or provider call and mutable denials remain visible. Output: bounded authority UX. Test evidence: network allowlist, suppression/control change, approval-consumption/final-denial E2E. Failure behavior: M7/M9 approval release blocked.
 
@@ -81,7 +81,7 @@ Dialog initial focus is the heading; tab is trapped; Escape/close is unavailable
 - **Lifecycle `test_only_pending_decides_approved_revokes_and_consumed_is_readonly`:** exhaustive state matrix.
 - **Race `test_two_tabs_deciding_same_approval_have_one_winner_and_loser_refetches`:** expected state/idempotency.
 - **Authority `test_approve_never_records_intent_or_renders_send_complete`:** final SEND remains separate.
-- **Staleness `test_changed_basis_or_current_authority_invalid_disables_and_server_denies`:** exact reasons.
+- **Staleness `test_changed_basis_artifact_version_hash_acceptance_or_current_authority_invalid_disables_and_server_denies`:** exact reasons.
 - **Accessibility `test_queue_cards_table_dialog_error_summary_and_focus_are_keyboard_complete`:** axe/breakpoints.
 
 ## Security, privacy, compliance, idempotency, observability, and cost

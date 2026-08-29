@@ -254,13 +254,16 @@ CREATE TABLE suppression_entries (
     reason_code text NOT NULL,
     source text NOT NULL,
     active boolean NOT NULL DEFAULT true,
+    version bigint NOT NULL DEFAULT 1,
     created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     deactivated_at timestamptz NULL,
     CONSTRAINT pk_suppression_entries PRIMARY KEY (suppression_entry_id),
     CONSTRAINT fk_suppression_entries_business FOREIGN KEY (business_id) REFERENCES businesses (business_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_suppression_entries_id_version UNIQUE (suppression_entry_id, version),
     CONSTRAINT ck_suppression_entries_scope CHECK (scope IN ('GLOBAL','BUSINESS','RECIPIENT')),
     CONSTRAINT ck_suppression_entries_target CHECK ((scope = 'GLOBAL' AND recipient_hash IS NULL AND business_id IS NULL) OR (scope = 'BUSINESS' AND recipient_hash IS NULL AND business_id IS NOT NULL) OR (scope = 'RECIPIENT' AND recipient_hash ~ '^[0-9a-f]{64}$' AND business_id IS NULL)),
-    CONSTRAINT ck_suppression_entries_active CHECK ((active AND deactivated_at IS NULL) OR (NOT active AND deactivated_at IS NOT NULL))
+    CONSTRAINT ck_suppression_entries_active CHECK ((active AND deactivated_at IS NULL) OR (NOT active AND deactivated_at IS NOT NULL)),
+    CONSTRAINT ck_suppression_entries_version CHECK (version > 0)
 );
 CREATE UNIQUE INDEX uq_suppression_entries_active_recipient ON suppression_entries (recipient_hash) WHERE active AND scope = 'RECIPIENT';
 CREATE UNIQUE INDEX uq_suppression_entries_active_business ON suppression_entries (business_id) WHERE active AND scope = 'BUSINESS';
