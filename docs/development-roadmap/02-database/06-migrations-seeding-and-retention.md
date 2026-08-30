@@ -30,24 +30,25 @@ The deferred-FK revision is normative and DDL-equivalent to the following statem
 
 ```sql
 ALTER TABLE experiments ADD CONSTRAINT fk_experiments_active_brief FOREIGN KEY (experiment_id, active_brief_version) REFERENCES experiment_briefs (experiment_id, brief_version) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE budget_reservations ADD CONSTRAINT fk_budget_reservations_cost_entry FOREIGN KEY (cost_entry_id) REFERENCES cost_entries (cost_entry_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE ideas ADD CONSTRAINT fk_ideas_source_artifact FOREIGN KEY (source_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
-ALTER TABLE offer_hypotheses ADD CONSTRAINT fk_offer_hypotheses_source_artifact FOREIGN KEY (source_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
-ALTER TABLE experiment_decisions ADD CONSTRAINT fk_experiment_decisions_evidence_bundle FOREIGN KEY (evidence_bundle_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
+ALTER TABLE budget_reservations ADD CONSTRAINT fk_budget_reservations_cost_entry FOREIGN KEY (cost_entry_id, experiment_id, currency) REFERENCES cost_entries (cost_entry_id, experiment_id, currency) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE ideas ADD CONSTRAINT fk_ideas_source_artifact FOREIGN KEY (source_artifact_id, experiment_id, source_artifact_type, source_artifact_version, source_artifact_hash, source_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE offer_hypotheses ADD CONSTRAINT fk_offer_hypotheses_source_artifact FOREIGN KEY (source_artifact_id, experiment_id, source_artifact_type, source_artifact_version, source_artifact_hash, source_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE experiment_decisions ADD CONSTRAINT fk_experiment_decisions_evidence_bundle FOREIGN KEY (evidence_bundle_artifact_id, experiment_id, evidence_bundle_artifact_type, evidence_bundle_artifact_version, evidence_bundle_artifact_hash, evidence_bundle_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
 ALTER TABLE leads ADD CONSTRAINT fk_leads_suppression FOREIGN KEY (suppression_entry_id) REFERENCES suppression_entries (suppression_entry_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_recipient_identity_artifact FOREIGN KEY (recipient_identity_evidence_artifact_id, recipient_identity_evidence_artifact_version, recipient_identity_evidence_artifact_hash) REFERENCES artifacts (artifact_id, artifact_version, content_hash) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_jurisdiction_artifact FOREIGN KEY (jurisdiction_evidence_artifact_id, jurisdiction_evidence_artifact_version, jurisdiction_evidence_artifact_hash) REFERENCES artifacts (artifact_id, artifact_version, content_hash) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_affirmative_consent_artifact FOREIGN KEY (affirmative_consent_evidence_artifact_id, affirmative_consent_evidence_artifact_version, affirmative_consent_evidence_artifact_hash) REFERENCES artifacts (artifact_id, artifact_version, content_hash) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_counsel_exception_artifact FOREIGN KEY (counsel_exception_evidence_artifact_id, counsel_exception_evidence_artifact_version, counsel_exception_evidence_artifact_hash) REFERENCES artifacts (artifact_id, artifact_version, content_hash) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_legal_review_artifact FOREIGN KEY (legal_review_artifact_id, legal_review_artifact_version, legal_review_artifact_hash) REFERENCES artifacts (artifact_id, artifact_version, content_hash) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_disclosure_sender_artifact FOREIGN KEY (disclosure_sender_template_artifact_id, disclosure_sender_template_artifact_version, disclosure_sender_template_artifact_hash) REFERENCES artifacts (artifact_id, artifact_version, content_hash) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_google_policy_artifact FOREIGN KEY (google_policy_review_artifact_id, google_policy_review_artifact_version, google_policy_review_artifact_hash) REFERENCES artifacts (artifact_id, artifact_version, content_hash) ON DELETE RESTRICT;
-ALTER TABLE lead_assessments ADD CONSTRAINT fk_lead_assessments_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
-ALTER TABLE outreach_messages ADD CONSTRAINT fk_outreach_messages_artifact FOREIGN KEY (artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
-ALTER TABLE approvals ADD CONSTRAINT fk_approvals_eligibility_policy_authority FOREIGN KEY (eligibility_policy_decision_id, eligibility_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, eligibility_policy_version, scope_hash, eligibility_facts_hash, eligibility_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE send_intents ADD CONSTRAINT fk_send_intents_eligibility_policy_authority FOREIGN KEY (eligibility_policy_decision_id, eligibility_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, eligibility_policy_version, scope_hash, eligibility_facts_hash, eligibility_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed) ON DELETE RESTRICT;
-ALTER TABLE send_attempts ADD CONSTRAINT fk_send_attempts_send_policy_authority FOREIGN KEY (send_policy_decision_id, send_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, approval_id, send_policy_version, scope_hash, send_policy_facts_hash, send_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, approval_id, policy_version, scope_hash, facts_hash, allowed) ON DELETE RESTRICT;
-ALTER TABLE replies ADD CONSTRAINT fk_replies_classification_artifact FOREIGN KEY (classification_artifact_id) REFERENCES artifacts (artifact_id) ON DELETE RESTRICT;
+ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_qualification_artifact FOREIGN KEY (qualification_artifact_id, experiment_id, qualification_artifact_type, qualification_artifact_version, qualification_artifact_hash, qualification_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_recipient_identity_artifact FOREIGN KEY (recipient_identity_evidence_artifact_id, experiment_id, recipient_identity_evidence_artifact_type, recipient_identity_evidence_artifact_version, recipient_identity_evidence_artifact_hash, recipient_identity_evidence_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_jurisdiction_artifact FOREIGN KEY (jurisdiction_evidence_artifact_id, experiment_id, jurisdiction_evidence_artifact_type, jurisdiction_evidence_artifact_version, jurisdiction_evidence_artifact_hash, jurisdiction_evidence_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_affirmative_consent_artifact FOREIGN KEY (affirmative_consent_evidence_artifact_id, experiment_id, affirmative_consent_evidence_artifact_type, affirmative_consent_evidence_artifact_version, affirmative_consent_evidence_artifact_hash, affirmative_consent_evidence_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_counsel_exception_artifact FOREIGN KEY (counsel_exception_evidence_artifact_id, experiment_id, counsel_exception_evidence_artifact_type, counsel_exception_evidence_artifact_version, counsel_exception_evidence_artifact_hash, counsel_exception_evidence_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_legal_review_artifact FOREIGN KEY (legal_review_artifact_id, experiment_id, legal_review_artifact_type, legal_review_artifact_version, legal_review_artifact_hash, legal_review_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_disclosure_sender_artifact FOREIGN KEY (disclosure_sender_template_artifact_id, experiment_id, disclosure_sender_template_artifact_type, disclosure_sender_template_artifact_version, disclosure_sender_template_artifact_hash, disclosure_sender_template_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_google_policy_artifact FOREIGN KEY (google_policy_review_artifact_id, experiment_id, google_policy_review_artifact_type, google_policy_review_artifact_version, google_policy_review_artifact_hash, google_policy_review_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE lead_assessments ADD CONSTRAINT fk_lead_assessments_artifact FOREIGN KEY (artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash, artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE outreach_messages ADD CONSTRAINT fk_outreach_messages_artifact FOREIGN KEY (artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash, artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
+ALTER TABLE approvals ADD CONSTRAINT fk_approvals_eligibility_policy_authority FOREIGN KEY (eligibility_policy_decision_id, eligibility_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, eligibility_policy_version, scope_hash, artifact_version_refs_hash, eligibility_facts_hash, eligibility_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
+ALTER TABLE send_intents ADD CONSTRAINT fk_send_intents_eligibility_policy_authority FOREIGN KEY (eligibility_policy_decision_id, eligibility_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, eligibility_policy_version, scope_hash, approval_artifact_version_refs_hash, eligibility_facts_hash, eligibility_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed) ON DELETE RESTRICT;
+ALTER TABLE send_attempts ADD CONSTRAINT fk_send_attempts_send_policy_authority FOREIGN KEY (send_policy_decision_id, send_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, approval_id, approval_preview_materialization_hash, send_policy_version, scope_hash, approval_artifact_version_refs_hash, send_policy_facts_hash, send_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, approval_id, approval_preview_materialization_hash, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed) ON DELETE RESTRICT;
+ALTER TABLE replies ADD CONSTRAINT fk_replies_classification_artifact FOREIGN KEY (classification_artifact_id, experiment_id, classification_artifact_type, classification_artifact_version, classification_artifact_hash, classification_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
 ALTER TABLE suppression_entries ADD CONSTRAINT fk_suppression_entries_source_observation FOREIGN KEY (source_observation_id) REFERENCES provider_observations (provider_observation_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 ALTER TABLE suppression_entries ADD CONSTRAINT fk_suppression_entries_source_reply FOREIGN KEY (source_reply_id) REFERENCES replies (reply_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
 ```
@@ -57,21 +58,151 @@ Immutable identity is enforced in PostgreSQL, not only by application convention
 ```sql
 CREATE FUNCTION reject_immutable_columns() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
-  IF to_jsonb(NEW) - TG_ARGV <> to_jsonb(OLD) - TG_ARGV THEN
+  IF (coalesce(array_length(TG_ARGV, 1), 0) = 0 AND to_jsonb(NEW) <> to_jsonb(OLD)) OR
+     (coalesce(array_length(TG_ARGV, 1), 0) > 0 AND to_jsonb(NEW) - TG_ARGV <> to_jsonb(OLD) - TG_ARGV) THEN
     RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = TG_TABLE_NAME || ' immutable identity cannot change';
   END IF;
   RETURN NEW;
 END $$;
+CREATE FUNCTION enforce_metric_source_event_scope() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  total_count integer;
+  distinct_count integer;
+  valid_count integer;
+BEGIN
+  SELECT count(*), count(DISTINCT source_event_id)
+    INTO total_count, distinct_count
+    FROM unnest(NEW.source_event_ids) AS source(source_event_id);
+  SELECT count(*)
+    INTO valid_count
+    FROM unnest(NEW.source_event_ids) AS source(source_event_id)
+    JOIN domain_events event
+      ON event.event_id = source.source_event_id
+     AND event.experiment_id = NEW.experiment_id;
+  IF total_count = 0 OR total_count <> distinct_count OR total_count <> valid_count THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'metric source_event_ids must be a duplicate-free set from the same experiment';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE CONSTRAINT TRIGGER trg_metric_observations_source_event_scope
+AFTER INSERT OR UPDATE ON metric_observations DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION enforce_metric_source_event_scope();
+CREATE FUNCTION enforce_metric_snapshot_observation_scope() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  total_count integer;
+  distinct_count integer;
+  valid_count integer;
+BEGIN
+  SELECT count(*), count(DISTINCT observation_id)
+    INTO total_count, distinct_count
+    FROM unnest(NEW.observation_ids) AS source(observation_id);
+  SELECT count(*)
+    INTO valid_count
+    FROM unnest(NEW.observation_ids) AS source(observation_id)
+    JOIN metric_observations observation
+      ON observation.metric_observation_id = source.observation_id
+     AND observation.experiment_id = NEW.experiment_id
+     AND observation.computed_at <= NEW.observation_cutoff_at;
+  IF total_count = 0 OR total_count <> distinct_count OR total_count <> valid_count THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'metric observation_ids must be a duplicate-free same-experiment set at or before cutoff';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE CONSTRAINT TRIGGER trg_metric_snapshots_observation_scope
+AFTER INSERT OR UPDATE ON metric_snapshots DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION enforce_metric_snapshot_observation_scope();
+CREATE FUNCTION enforce_exact_artifact_ref_array() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+  refs jsonb;
+  experiment_scope uuid;
+  ref jsonb;
+  total_count integer;
+  distinct_count integer;
+  valid_count integer;
+BEGIN
+  refs := to_jsonb(NEW) -> TG_ARGV[0];
+  experiment_scope := (to_jsonb(NEW) ->> TG_ARGV[1])::uuid;
+  IF refs IS NULL OR jsonb_typeof(refs) <> 'array' THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = TG_ARGV[0] || ' must be an artifact-reference array';
+  END IF;
+  FOR ref IN SELECT value FROM jsonb_array_elements(refs) AS item(value) LOOP
+    IF jsonb_typeof(ref) <> 'object'
+       OR NOT (ref ?& ARRAY['artifact_id','artifact_type','artifact_version','content_hash','status'])
+       OR (ref - ARRAY['artifact_id','artifact_type','artifact_version','content_hash','status']) <> '{}'::jsonb THEN
+      RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = TG_ARGV[0] || ' contains a malformed artifact authority tuple';
+    END IF;
+  END LOOP;
+  SELECT count(*), count(DISTINCT artifact_id)
+    INTO total_count, distinct_count
+    FROM jsonb_to_recordset(refs) AS item(artifact_id uuid, artifact_type text, artifact_version bigint, content_hash text, status text);
+  SELECT count(*)
+    INTO valid_count
+    FROM jsonb_to_recordset(refs) AS item(artifact_id uuid, artifact_type text, artifact_version bigint, content_hash text, status text)
+    JOIN artifacts artifact
+      ON artifact.artifact_id = item.artifact_id
+     AND artifact.experiment_id = experiment_scope
+     AND artifact.artifact_type = item.artifact_type
+     AND artifact.artifact_version = item.artifact_version
+     AND artifact.content_hash = item.content_hash
+     AND artifact.status = item.status
+    WHERE item.status = 'ACCEPTED';
+  IF total_count <> distinct_count OR total_count <> valid_count THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = TG_ARGV[0] || ' contains duplicate, missing, cross-experiment, cross-type, cross-version, cross-hash, or non-accepted provenance';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE CONSTRAINT TRIGGER trg_approvals_artifact_ref_scope
+AFTER INSERT OR UPDATE ON approvals DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION enforce_exact_artifact_ref_array('artifact_version_refs','experiment_id');
+CREATE CONSTRAINT TRIGGER trg_policy_decisions_artifact_ref_scope
+AFTER INSERT OR UPDATE ON policy_decisions DEFERRABLE INITIALLY DEFERRED
+FOR EACH ROW EXECUTE FUNCTION enforce_exact_artifact_ref_array('evidence_artifact_refs','experiment_id');
 CREATE TRIGGER trg_campaigns_immutable_version BEFORE UPDATE ON campaigns
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','updated_at');
 CREATE TRIGGER trg_outreach_messages_immutable_authority BEFORE UPDATE ON outreach_messages
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','version','updated_at');
 CREATE TRIGGER trg_approvals_immutable_authority BEFORE UPDATE ON approvals
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','operator_id','reason_code','decided_at');
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','operator_id','previewed_by_operator_id','preview_materialization_hash','preview_receipt_hash','previewed_at','preview_expires_at','reason_code','decided_at');
+CREATE FUNCTION enforce_approval_preview_once() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF OLD.preview_materialization_hash IS NOT NULL AND
+     (NEW.previewed_by_operator_id, NEW.preview_materialization_hash, NEW.preview_receipt_hash, NEW.previewed_at, NEW.preview_expires_at)
+       IS DISTINCT FROM
+     (OLD.previewed_by_operator_id, OLD.preview_materialization_hash, OLD.preview_receipt_hash, OLD.previewed_at, OLD.preview_expires_at) THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'approval preview authority is immutable once materialized';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_approval_preview_once BEFORE UPDATE ON approvals
+FOR EACH ROW EXECUTE FUNCTION enforce_approval_preview_once();
 CREATE TRIGGER trg_campaign_members_immutable_authority BEFORE UPDATE ON campaign_members
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('status','removed_at');
 CREATE TRIGGER trg_send_intents_immutable_identity BEFORE UPDATE ON send_intents
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('attempt_count','open_for_attempt','cancelled_at','cancellation_reason');
+CREATE FUNCTION enforce_send_intent_manual_approval() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+      FROM approvals approval
+     WHERE approval.approval_id = NEW.approval_id
+       AND approval.experiment_id = NEW.experiment_id
+       AND approval.message_id = NEW.message_id
+       AND approval.message_version = NEW.message_version
+       AND approval.message_content_hash = NEW.message_content_hash
+       AND approval.scope_hash = NEW.scope_hash
+       AND approval.artifact_version_refs_hash = NEW.approval_artifact_version_refs_hash
+       AND approval.preview_materialization_hash = NEW.approval_preview_materialization_hash
+       AND approval.state = 'APPROVED'
+       AND approval.operator_id IS NOT NULL
+       AND approval.previewed_by_operator_id = approval.operator_id
+       AND approval.decided_at BETWEEN approval.previewed_at AND approval.preview_expires_at
+  ) THEN
+    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'send intent requires an exact manually previewed APPROVED authority';
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER trg_send_intent_manual_approval BEFORE INSERT ON send_intents
+FOR EACH ROW EXECUTE FUNCTION enforce_send_intent_manual_approval();
 CREATE FUNCTION enforce_send_intent_cancellation_once() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NOT OLD.open_for_attempt AND (NEW.open_for_attempt, NEW.cancelled_at, NEW.cancellation_reason) IS DISTINCT FROM (OLD.open_for_attempt, OLD.cancelled_at, OLD.cancellation_reason) THEN
@@ -93,6 +224,10 @@ FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
 CREATE TRIGGER trg_provider_observations_append_only BEFORE UPDATE ON provider_observations
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
 CREATE TRIGGER trg_policy_decisions_append_only BEFORE UPDATE ON policy_decisions
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
+CREATE TRIGGER trg_incidents_immutable_route BEFORE UPDATE ON incidents
+FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','resolution_code','evidence_ref','resolved_at','updated_at');
+CREATE TRIGGER trg_repair_actions_append_only BEFORE UPDATE ON repair_actions
 FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
 ```
 
@@ -180,7 +315,7 @@ Additive nullable/backfilled columns and new tables deploy before writers. Backf
 
 - [ ] **Author the M2 revision chain —** Input: DB-01 through DB-05 exact tables/constraints. Operation: build ordered transactional revisions with deterministic constraint names and deferred FK stage. Output: fresh schema. Test evidence: upgrade from base and downgrade where declared safe. Failure behavior: rollback current revision; do not stamp head manually.
 - [ ] **Implement deterministic seeding —** Input: seed manifest/environment. Operation: upsert by stable keys with content hashes and prohibit secrets/real recipients/provider identities. Output: repeatable local/test foundation plus outreach-off production control. Test evidence: two-run no-diff and secret/PII scan. Failure behavior: abort seed transaction.
-- [ ] **Implement retention classifier and hold-aware purge —** Input: approved policy version, table class, cutoff, holds. Operation: dry-run counts/IDs, require operator confirmation, redact/delete bounded batches, append audit/outbox evidence, and retain the independent suppression target ref when permitted member/source rows are removed. Output: minimized data. Test evidence: fixture matrix for holds, unresolved ambiguity, suppression target-ref/list/replay stability after source purge, FK closure, and replay. Failure behavior: stop batch; retain safety record; open incident on partial external deletion.
+- [ ] **Implement retention classifier and hold-aware purge —** Input: signed `retention.policy.v1`, table class, cutoff, holds. Operation: dry-run counts/IDs, require operator confirmation, redact/delete bounded batches, append audit/outbox evidence, and retain the independent suppression target ref when permitted member/source rows are removed. A dependency/receipt/policy mismatch enters exact `DEFERRED_REVIEW`, assigns owner review within 24 hours and resolution-or-escalation within 72 hours, retains data without partial mutation, and closes affected controls on missed SLA. Output: minimized data or explicitly owned deferral. Test evidence: fixture matrix for holds, unresolved ambiguity, 24/72 clocks/escalation, suppression target-ref/list/replay stability after source purge, FK closure, and replay. Failure behavior: stop batch; retain safety record; open incident on partial external deletion.
 - [ ] **Prove backup and fresh restore —** Input: representative M2 database and encrypted backup procedure. Operation: restore to a clean PostgreSQL instance, migrate if required, verify counts/hashes/constraints, force outreach off, then run read/reconciliation checks. Output: signed restore report. Test evidence: automated `test_m2_backup_restores_to_fresh_postgres`. Failure behavior: M2/M8 blocked; no worker start.
 - [ ] **Gate every later migration —** Input: compatibility declaration, active run/ambiguity query, rollback/restore plan. Operation: run old/new app compatibility and schema-diff review. Output: release evidence. Test evidence: mixed-version and rollback drill. Failure behavior: hold release and keep prior version.
 
@@ -191,6 +326,7 @@ Additive nullable/backfilled columns and new tables deploy before writers. Backf
 - **Migration `test_upgrade_from_each_supported_revision`:** no skipped compatibility edge.
 - **Seed `test_seed_is_idempotent_and_contains_no_secret_or_real_recipient`:** deterministic hash.
 - **Retention `test_purge_refuses_unresolved_ambiguous_send_and_active_hold`:** safety first.
+- **Retention SLA `test_deferred_review_has_24_hour_owner_and_72_hour_resolution_or_escalation_deadlines`:** timeout closes controls and cannot count as deletion.
 - **Restore `test_backup_restore_preserves_event_and_attempt_chain`:** counts plus hashes/foreign keys.
 - **Recovery `test_worker_start_requires_restored_control_off_and_schema_head`:** fail closed.
 
@@ -200,7 +336,7 @@ Backups are encrypted, access-limited, off-host at M8, and tested rather than as
 
 ## Failure, rollback, and operator recovery
 
-Never force a migration stamp, drop a column/table, or delete a backup to silence a failure. Stop API writes/workers, keep outreach disabled, preserve logs, restore the last proven backup into a separate database, compare constraints/events/unresolved attempts, and choose forward repair or code rollback. A failed purge retries by command idempotency key and batch cursor. Legal/incident holds override automated deletion; approval to lift a hold is audited.
+Never force a migration stamp, drop a column/table, or delete a backup to silence a failure. Stop API writes/workers, keep outreach disabled, preserve logs, restore the last proven backup into a separate database, compare constraints/events/unresolved attempts, and choose forward repair or code rollback. A failed purge retries by command idempotency key and batch cursor under the 24/72-hour deferral SLA. Legal/incident holds override automated product-row deletion and lifting them is audited; they never extend SEC-06's 30-day operational session-detail maximum or INFRA-04's 35-day personal-data backup ceiling.
 
 ## Acceptance and retained evidence
 

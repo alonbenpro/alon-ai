@@ -31,6 +31,7 @@ Create `domain/events.py`, `application/idempotency.py`, `application/policies.p
 ```sql
 CREATE TABLE domain_events (
     event_id uuid NOT NULL,
+    experiment_id uuid NULL,
     event_type text NOT NULL,
     schema_version integer NOT NULL,
     aggregate_type text NOT NULL,
@@ -49,7 +50,9 @@ CREATE TABLE domain_events (
     metadata_hash char(64) NOT NULL,
     supersedes_event_id uuid NULL,
     CONSTRAINT pk_domain_events PRIMARY KEY (event_id),
-    CONSTRAINT fk_domain_events_supersedes FOREIGN KEY (supersedes_event_id) REFERENCES domain_events (event_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_domain_events_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_domain_events_supersedes FOREIGN KEY (supersedes_event_id, experiment_id) REFERENCES domain_events (event_id, experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_domain_events_scope UNIQUE NULLS NOT DISTINCT (event_id, experiment_id),
     CONSTRAINT uq_domain_events_aggregate_version_type UNIQUE (aggregate_type, aggregate_id, aggregate_version, event_type),
     CONSTRAINT ck_domain_events_schema CHECK (schema_version > 0 AND aggregate_version > 0),
     CONSTRAINT ck_domain_events_type CHECK (event_type ~ '^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+\.v[1-9][0-9]*$'),
@@ -172,8 +175,13 @@ CREATE TABLE policy_decisions (
     campaign_member_id uuid NULL,
     lead_id uuid NULL,
     message_id uuid NULL,
+    message_version bigint NULL,
+    message_content_hash char(64) NULL,
     mailbox_id uuid NULL,
     approval_id uuid NULL,
+    approval_preview_materialization_hash char(64) NULL,
+    artifact_version_refs_hash char(64) NULL,
+    evidence_artifact_refs jsonb NOT NULL DEFAULT '[]'::jsonb,
     policy_version text NOT NULL,
     allowed boolean NOT NULL,
     reason_codes text[] NOT NULL,
@@ -187,21 +195,21 @@ CREATE TABLE policy_decisions (
     CONSTRAINT pk_policy_decisions PRIMARY KEY (policy_decision_id),
     CONSTRAINT fk_policy_decisions_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
     CONSTRAINT fk_policy_decisions_campaign_authority FOREIGN KEY (campaign_id, campaign_version, experiment_id) REFERENCES campaigns (campaign_id, campaign_version, experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_policy_decisions_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_policy_decisions_send_approval FOREIGN KEY (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, scope_hash) REFERENCES approvals (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, scope_hash) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED,
+    CONSTRAINT fk_policy_decisions_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id, message_version, message_content_hash) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id, version, content_hash) ON DELETE RESTRICT,
+    CONSTRAINT fk_policy_decisions_send_approval FOREIGN KEY (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, message_version, message_content_hash, scope_hash, artifact_version_refs_hash, approval_preview_materialization_hash) REFERENCES approvals (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, message_version, message_content_hash, scope_hash, artifact_version_refs_hash, preview_materialization_hash) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED,
     CONSTRAINT uq_policy_decisions_command UNIQUE (scope, idempotency_key),
     CONSTRAINT uq_policy_decisions_mailbox_identity UNIQUE (policy_decision_id, mailbox_id),
-    CONSTRAINT uq_policy_decisions_approval_basis UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, policy_version, scope_hash, facts_hash, allowed),
-    CONSTRAINT uq_policy_decisions_send_authority UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, approval_id, policy_version, scope_hash, facts_hash, allowed),
+    CONSTRAINT uq_policy_decisions_approval_basis UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed),
+    CONSTRAINT uq_policy_decisions_send_authority UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, approval_id, approval_preview_materialization_hash, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed),
     CONSTRAINT ck_policy_decisions_scope CHECK (scope IN ('EXPERIMENT','CAMPAIGN','APPROVAL_ELIGIBILITY','SEND','PROVIDER','CONTROL')),
     CONSTRAINT ck_policy_decisions_campaign_pair CHECK ((campaign_id IS NULL) = (campaign_version IS NULL)),
     CONSTRAINT ck_policy_decisions_approval_send_binding CHECK (
-        (scope = 'APPROVAL_ELIGIBILITY' AND experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND campaign_member_id IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND mailbox_id IS NOT NULL AND approval_id IS NULL) OR
-        (scope = 'SEND' AND experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND campaign_member_id IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND mailbox_id IS NOT NULL AND approval_id IS NOT NULL) OR
+        (scope = 'APPROVAL_ELIGIBILITY' AND experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND campaign_member_id IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND message_version > 0 AND message_content_hash ~ '^[0-9a-f]{64}$' AND mailbox_id IS NOT NULL AND approval_id IS NULL AND approval_preview_materialization_hash IS NULL AND artifact_version_refs_hash ~ '^[0-9a-f]{64}$') OR
+        (scope = 'SEND' AND experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND campaign_member_id IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND message_version > 0 AND message_content_hash ~ '^[0-9a-f]{64}$' AND mailbox_id IS NOT NULL AND approval_id IS NOT NULL AND approval_preview_materialization_hash ~ '^[0-9a-f]{64}$' AND artifact_version_refs_hash ~ '^[0-9a-f]{64}$') OR
         scope NOT IN ('APPROVAL_ELIGIBILITY','SEND')
     ),
     CONSTRAINT ck_policy_decisions_reasons CHECK ((allowed AND cardinality(reason_codes) >= 0) OR (NOT allowed AND cardinality(reason_codes) > 0)),
-    CONSTRAINT ck_policy_decisions_facts CHECK (facts_schema_version > 0 AND jsonb_typeof(facts_json) = 'object' AND facts_hash ~ '^[0-9a-f]{64}$' AND scope_hash ~ '^[0-9a-f]{64}$')
+    CONSTRAINT ck_policy_decisions_facts CHECK (facts_schema_version > 0 AND jsonb_typeof(facts_json) = 'object' AND jsonb_typeof(evidence_artifact_refs) = 'array' AND facts_hash ~ '^[0-9a-f]{64}$' AND scope_hash ~ '^[0-9a-f]{64}$')
 );
 CREATE INDEX ix_policy_decisions_reproducibility ON policy_decisions (policy_version, scope_hash, facts_hash);
 CREATE INDEX ix_policy_decisions_mailbox ON policy_decisions (mailbox_id, evaluated_at DESC) WHERE mailbox_id IS NOT NULL;
@@ -211,7 +219,7 @@ CREATE TABLE cost_entries (
     cost_entry_id uuid NOT NULL,
     provider text NOT NULL,
     operation text NOT NULL,
-    experiment_id uuid NULL,
+    experiment_id uuid NOT NULL,
     workflow_run_id uuid NULL,
     agent_run_id uuid NULL,
     send_attempt_id uuid NULL,
@@ -230,10 +238,11 @@ CREATE TABLE cost_entries (
     idempotency_key text NOT NULL,
     CONSTRAINT pk_cost_entries PRIMARY KEY (cost_entry_id),
     CONSTRAINT fk_cost_entries_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_cost_entries_workflow FOREIGN KEY (workflow_run_id) REFERENCES workflow_runs (workflow_run_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_cost_entries_agent_run FOREIGN KEY (agent_run_id) REFERENCES agent_runs (agent_run_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_cost_entries_send_attempt FOREIGN KEY (send_attempt_id) REFERENCES send_attempts (send_attempt_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_cost_entries_workflow FOREIGN KEY (workflow_run_id, experiment_id) REFERENCES workflow_runs (workflow_run_id, experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_cost_entries_agent_run FOREIGN KEY (agent_run_id, experiment_id) REFERENCES agent_runs (agent_run_id, experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_cost_entries_send_attempt FOREIGN KEY (send_attempt_id, experiment_id) REFERENCES send_attempts (send_attempt_id, experiment_id) ON DELETE RESTRICT,
     CONSTRAINT uq_cost_entries_provider_key UNIQUE (provider, idempotency_key),
+    CONSTRAINT uq_cost_entries_authority UNIQUE (cost_entry_id, experiment_id, currency),
     CONSTRAINT ck_cost_entries_usage CHECK (usage_schema_version > 0 AND jsonb_typeof(usage_json) = 'object' AND usage_hash ~ '^[0-9a-f]{64}$'),
     CONSTRAINT ck_cost_entries_amount CHECK (amount_minor >= 0 AND currency ~ '^[A-Z]{3}$'),
     CONSTRAINT ck_cost_entries_fx CHECK ((currency = 'ILS' AND reporting_amount_minor_ils = amount_minor AND fx_rate IS NULL AND fx_rate_source IS NULL AND fx_rate_date IS NULL) OR (currency <> 'ILS' AND reporting_amount_minor_ils IS NOT NULL AND fx_rate > 0 AND fx_rate_source IS NOT NULL AND fx_rate_date IS NOT NULL))
@@ -245,6 +254,10 @@ CREATE TABLE repair_actions (
     repair_action_id uuid NOT NULL,
     incident_id uuid NOT NULL,
     catalog_version text NOT NULL DEFAULT 'incident.catalog.v1',
+    incident_severity text NOT NULL,
+    incident_trigger_code text NOT NULL,
+    incident_alert_id text NOT NULL,
+    incident_runbook_id text NOT NULL,
     repair_kind text NOT NULL,
     command_type text NOT NULL,
     aggregate_type text NOT NULL,
@@ -257,11 +270,12 @@ CREATE TABLE repair_actions (
     idempotency_key text NOT NULL,
     executed_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     CONSTRAINT pk_repair_actions PRIMARY KEY (repair_action_id),
-    CONSTRAINT fk_repair_actions_incident FOREIGN KEY (incident_id) REFERENCES incidents (incident_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_repair_actions_incident FOREIGN KEY (incident_id, catalog_version, incident_severity, incident_trigger_code, incident_alert_id, incident_runbook_id) REFERENCES incidents (incident_id, catalog_version, severity, trigger_code, alert_id, runbook_id) ON DELETE RESTRICT,
     CONSTRAINT fk_repair_actions_operator FOREIGN KEY (operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
     CONSTRAINT uq_repair_actions_command UNIQUE (operator_id, idempotency_key),
     CONSTRAINT ck_repair_actions_catalog CHECK (catalog_version = 'incident.catalog.v1'),
     CONSTRAINT ck_repair_actions_kind CHECK (repair_kind IN ('RECONCILE_GMAIL_ATTEMPT','ABORT_OAUTH_SAGA','REVOKE_OPERATOR_SESSIONS','DISABLE_MAILBOX','ROTATE_SECRET_GENERATION','REPAIR_WORKFLOW_PROJECTION','REPAIR_EVENT_OUTBOX_LINK','RESTORE_FROM_VERIFIED_BACKUP','REAPPLY_RECIPIENT_SUPPRESSION','REPLAY_RETENTION_TOMBSTONE','RECONCILE_PROVIDER_COST','IMPORT_OFFLINE_INCIDENT_JOURNAL','ROLLBACK_AGENT_PROMOTION')),
+    CONSTRAINT ck_repair_actions_applicability CHECK ((repair_kind = 'RECONCILE_GMAIL_ATTEMPT' AND incident_trigger_code IN ('GMAIL_AMBIGUITY_STALE','SEND_AUTHORITY_VIOLATION')) OR (repair_kind = 'ABORT_OAUTH_SAGA' AND incident_trigger_code IN ('AUTH_OR_SECRET_COMPROMISE','CALLBACK_ABUSE','OPERATOR_OR_RECOVERY_ERROR')) OR (repair_kind = 'REVOKE_OPERATOR_SESSIONS' AND incident_trigger_code IN ('AUTH_OR_SECRET_COMPROMISE','WEB_SESSION_BOUNDARY_ATTACK','AUTHORIZATION_OR_ENUMERATION')) OR (repair_kind = 'DISABLE_MAILBOX' AND incident_trigger_code IN ('PROVIDER_EXFILTRATION','AUTH_OR_SECRET_COMPROMISE','SEND_AUTHORITY_VIOLATION','COMPLIANCE_OR_SUPPRESSION_BREACH','GMAIL_AMBIGUITY_STALE')) OR (repair_kind = 'ROTATE_SECRET_GENERATION' AND incident_trigger_code IN ('PROVIDER_EXFILTRATION','AUTH_OR_SECRET_COMPROMISE','SUPPLY_CHAIN_COMPROMISE')) OR (repair_kind = 'REPAIR_WORKFLOW_PROJECTION' AND incident_trigger_code IN ('WORKFLOW_REPLAY_OR_VERSION_DRIFT','OPERATOR_OR_RECOVERY_ERROR')) OR (repair_kind = 'REPAIR_EVENT_OUTBOX_LINK' AND incident_trigger_code IN ('WORKFLOW_REPLAY_OR_VERSION_DRIFT','DATASTORE_OR_RESTORE_FAILURE','OPERATOR_OR_RECOVERY_ERROR')) OR (repair_kind = 'RESTORE_FROM_VERIFIED_BACKUP' AND incident_trigger_code = 'DATASTORE_OR_RESTORE_FAILURE') OR (repair_kind = 'REAPPLY_RECIPIENT_SUPPRESSION' AND incident_trigger_code = 'COMPLIANCE_OR_SUPPRESSION_BREACH') OR (repair_kind = 'REPLAY_RETENTION_TOMBSTONE' AND incident_trigger_code IN ('DATASTORE_OR_RESTORE_FAILURE','OPERATOR_OR_RECOVERY_ERROR','TELEMETRY_PRIVACY_LEAK','COMPLIANCE_OR_SUPPRESSION_BREACH')) OR (repair_kind = 'RECONCILE_PROVIDER_COST' AND incident_trigger_code = 'COST_OR_QUOTA_RUNAWAY') OR (repair_kind = 'IMPORT_OFFLINE_INCIDENT_JOURNAL' AND incident_trigger_code IN ('DATASTORE_OR_RESTORE_FAILURE','OPERATOR_OR_RECOVERY_ERROR','TELEMETRY_OR_ALERT_BLINDNESS')) OR (repair_kind = 'ROLLBACK_AGENT_PROMOTION' AND incident_trigger_code IN ('AGENT_PROMPT_INJECTION_OR_POISONING','SUPPLY_CHAIN_COMPROMISE','WORKFLOW_REPLAY_OR_VERSION_DRIFT'))),
     CONSTRAINT ck_repair_actions_hashes CHECK (before_hash ~ '^[0-9a-f]{64}$' AND after_hash ~ '^[0-9a-f]{64}$' AND before_hash <> after_hash),
     CONSTRAINT ck_repair_actions_no_sql CHECK (command_type !~* 'sql')
 );

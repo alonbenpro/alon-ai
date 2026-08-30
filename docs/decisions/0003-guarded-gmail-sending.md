@@ -8,7 +8,7 @@ Alon AI's product direction includes automatic Gmail outreach. A language model 
 
 ## Decision
 
-Automatic sending is a supported product capability, but agents cannot call Gmail directly. A deterministic `SendGateway` is the only intended path to a `GmailProvider`. It must require an idempotency key and recheck deterministic policy decisions before it invokes the provider. The eventual path records send intents, Gmail message and thread identifiers, and reconciles ambiguous sends against Gmail's Sent mailbox before retrying.
+Automatic sending is a supported product capability, but agents cannot call Gmail directly. A deterministic `SendGateway` is the only intended path to a `GmailProvider`. It must require an idempotency key and recheck deterministic policy decisions before it invokes the provider. The eventual path records send intents and Gmail message/thread identifiers, and permanently quarantines an ambiguous write until positive Gmail Sent evidence resolves it. Zero search/history results never prove non-send or authorize retry; only explicit provider rejection or local pre-write proof can do so.
 
 The current repository implements only the contracts and a default-off feature gate. It does not yet send real Gmail outreach.
 
@@ -16,7 +16,7 @@ The current repository implements only the contracts and a default-off feature g
 
 - The design preserves automatic sending without granting a model unrestricted external authority.
 - Policy checks can cover suppression, jurisdiction, campaign state, budget, rate limits, and a global kill switch in deterministic code.
-- Each send can be audited and reconciled; blind retries after an ambiguous provider outcome are forbidden.
+- Each send can be audited and reconciled; an ambiguous provider outcome can never be retried or replaced on negative-search evidence.
 - This adds implementation work before product sending can begin, including OAuth, queueing, persistence, policies, and recovery tests.
 - `ALON_AI_OUTREACH_ENABLED=false` is a safety default, not a substitute for the required controls.
 

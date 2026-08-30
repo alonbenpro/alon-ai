@@ -156,7 +156,6 @@ Canonical `MessageState`:
 stateDiagram-v2
     [*] --> DRAFT
     DRAFT --> APPROVAL_PENDING: approval required
-    DRAFT --> APPROVED: bounded automatic authority applies
     APPROVAL_PENDING --> APPROVED: operator approves exact scope/version
     APPROVAL_PENDING --> CANCELLED: denied or expired
     APPROVED --> SEND_INTENT_RECORDED: immutable intent committed
@@ -168,23 +167,21 @@ stateDiagram-v2
     QUEUED --> CANCELLED: campaign/experiment/global stop
     SENDING --> SENT: provider IDs committed
     SENDING --> AMBIGUOUS: outcome not durably known
-    SENDING --> FAILED_RETRYABLE: conclusive no-send retryable failure
+    SENDING --> FAILED_RETRYABLE: explicit rejection or local pre-write proof
     SENDING --> FAILED_PERMANENT: conclusive permanent failure
     AMBIGUOUS --> RECONCILING
     RECONCILING --> SENT: one matching Sent message
-    RECONCILING --> FAILED_RETRYABLE: conclusive absence after defined window
-    RECONCILING --> FAILED_PERMANENT: conflicting evidence/operator stop
     FAILED_RETRYABLE --> QUEUED: bounded retry policy admits
     FAILED_RETRYABLE --> FAILED_PERMANENT: retry exhausted or operator aborts
 ```
 
-The transition from `SENDING` to `FAILED_RETRYABLE` is legal only when evidence proves Gmail did not accept the message. Timeout, connection loss, worker termination, or missing local commit produces `AMBIGUOUS`. `AMBIGUOUS` can never transition directly to `QUEUED`.
+The transition from `SENDING` to `FAILED_RETRYABLE` is legal only for an explicit provider rejection or local pre-write proof that request bytes never left the process. Timeout, connection loss, worker termination, malformed success, missing local commit, zero Gmail search/history results, or conflicting read evidence produces or retains `AMBIGUOUS`/`RECONCILING`. Those states have no transition to `QUEUED`, `FAILED_RETRYABLE`, or a replacement intent: the exact mailbox/RFC write stays quarantined without a time limit until one positive authorized Sent match resolves it. The 300-second mark is an investigation/escalation threshold only.
 
 Deterministic `SendRecoveryService` owns retry transitions. The durable runtime may wake the retry timer but cannot decide eligibility. `max_attempts`, `retry_deadline`, and `retry_policy_version` are immutable on `SendIntent`; `attempt_count` increments only when `send.attempt_started.v1` commits.
 
 | From | Command / trigger | To | Guard | Event |
 | --- | --- | --- | --- | --- |
-| `FAILED_RETRYABLE` | `RetrySend` after durable timer | `QUEUED` | prior failure conclusively proves Gmail did not accept; `attempt_count < max_attempts`; current time is within `retry_deadline`; retry time has arrived; outreach/campaign/policy/budget/rate controls pass; no unresolved ambiguity | `send.retry_scheduled.v1` |
+| `FAILED_RETRYABLE` | `RetrySend` after durable timer | `QUEUED` | prior evidence is an explicit provider rejection or signed local pre-write proof; `attempt_count < max_attempts`; current time is within `retry_deadline`; retry time has arrived; outreach/campaign/policy/budget/rate controls pass; no unresolved ambiguity | `send.retry_scheduled.v1` |
 | `FAILED_RETRYABLE` | deterministic retry-budget evaluation | `FAILED_PERMANENT` | `attempt_count >= max_attempts` or current time exceeds `retry_deadline` | `send.retry_exhausted.v1` |
 | `FAILED_RETRYABLE` | operator `AbortSendRetry` | `FAILED_PERMANENT` | authenticated operator; no provider call in flight; reason code supplied | `send.retry_exhausted.v1` |
 
@@ -192,7 +189,7 @@ When retry admission fails only because a mutable control is temporarily closed,
 
 ## Approval, workflow-run, and experiment-decision states
 
-Canonical `ApprovalState`: `PENDING`, `APPROVED`, `DENIED`, `EXPIRED`, `REVOKED`, `CONSUMED`. `RequestApproval` first records an allowed `APPROVAL_ELIGIBILITY` decision over an immutable approval basis containing exact experiment/campaign/version/`campaign_member_id`/lead/message/mailbox/content/artifact references, cap, and expiry; this scope excludes ApprovalRule and can authorize only creation of `PENDING`. The approval binds that eligibility decision, basis `scope_hash`, and eligibility `facts_hash`. Operator approval does not create SEND authority. `RecordSendIntent` consumes it exactly once; final ApprovalRule requires `CONSUMED` plus the unique current intent bearing that approval ID, not an impossible still-`APPROVED` row. A changed immutable basis revokes/expires the row; mutable suppression/control/budget/rate/jurisdiction facts are evaluated later in a new `SEND` decision and never need to equal the eligibility facts hash. Suppression/global stop always overrides an approved row.
+Canonical `ApprovalState`: `PENDING`, `APPROVED`, `DENIED`, `EXPIRED`, `REVOKED`, `CONSUMED`. `RequestApproval` first records an allowed `APPROVAL_ELIGIBILITY` decision over an immutable approval basis containing exact experiment/campaign/version/`campaign_member_id`/lead/message/version/content/mailbox/artifact references, cap, and expiry; this scope excludes ApprovalRule and can authorize only creation of `PENDING`. The approval binds that eligibility decision, basis `scope_hash`, and eligibility `facts_hash`. The sole `PENDING -> APPROVED` edge is a step-up-authenticated operator command carrying a fresh preview receipt whose materialization hash covers the displayed recipient address, subject, body, rendered RFC bytes, and exact immutable basis; the server re-materializes it before commit. No automatic/system/workflow/agent edge exists. Manual approval does not create SEND authority. `RecordSendIntent` rechecks and copies the preview hash, then consumes the approval exactly once; final ApprovalRule requires `CONSUMED` plus the unique current preview-bound intent bearing that approval ID, not an impossible still-`APPROVED` row. A changed immutable basis revokes/expires the row; mutable suppression/control/budget/rate/jurisdiction facts are evaluated later in a new `SEND` decision and never need to equal the eligibility facts hash. Suppression/global stop always overrides an approved row.
 
 Canonical `WorkflowRunState`: `PENDING`, `RUNNING`, `PAUSE_REQUESTED`, `PAUSED`, `CANCEL_REQUESTED`, `CANCELLED`, `SUCCEEDED`, `FAILED`. Engine-native states map into these application states. A run is finite, has a max attempts/time/cost policy, and never owns aggregate truth. `CANCELLED`, `SUCCEEDED`, and `FAILED` are terminal for that run; an allowed experiment retry always creates a new `workflow_run_id`.
 
@@ -261,7 +258,7 @@ Every campaign transition emits its specific event and `campaign.state_changed.v
 | --- | --- | --- |
 | `policy.evaluated.v1` | `policy_decision_id`, `scope`, `experiment_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `lead_id`, `message_id`, `mailbox_id`, nullable `approval_id`, `policy_version`, `scope_hash`, `facts_hash`, `allowed`, `reason_codes` | deterministic `APPROVAL_ELIGIBILITY` or fresh final `SEND` evaluation recorded; the scopes may share the immutable basis hash but never a required facts hash |
 | `approval.requested.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `eligibility_policy_decision_id`, `scope_hash`, `eligibility_facts_hash`, `expires_at` | allowed eligibility and exact immutable basis create a pending review; no send authority |
-| `approval.decided.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `scope_hash`, `decision`, `operator_id`, `reason_code` | operator approves/denies the immutable basis; SEND still needs a new policy decision |
+| `approval.decided.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `message_version`, `message_content_hash`, `scope_hash`, `decision`, `operator_id`, nullable `preview_materialization_hash`, `reason_code` | only the manually previewing operator may approve; denial has no preview hash; SEND still needs a new policy decision |
 | `approval.revoked.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `scope_hash`, `reason_code` | prior immutable-basis approval is withdrawn before final SEND authority |
 | `send.intent_recorded.v1` | `send_intent_id`, `experiment_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `lead_id`, `message_id`, `mailbox_id`, `approval_id`, `eligibility_policy_decision_id`, `eligibility_policy_version`, `idempotency_key`, `scope_hash`, `eligibility_facts_hash` | immutable approved-basis intent commits without claiming final SEND authority |
 | `send.queued.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `queue_name`, `budget_reservation_id` | mailbox-bound admission commits |
@@ -282,8 +279,8 @@ Every campaign transition emits its specific event and `campaign.state_changed.v
 
 | Event type | Required payload identifiers | Emitted when |
 | --- | --- | --- |
-| `system.outreach_disabled.v1` | `control_version`, `reason_code`, `operator_id` | global fail-closed control commits |
-| `system.outreach_enabled.v1` | `control_version`, `incident_ids`, `operator_id` | explicit re-enable after gates |
+| `system.outreach_disabled.v1` | `control_version`, `reason_code`, `actor_type`, exactly one `operator_id` or closed `system_actor_id`, `evidence_ref` | operator or registered fail-closed system actor commits disable; no synthetic operator |
+| `system.outreach_enabled.v1` | `control_version`, `incident_ids`, `actor_type:"OPERATOR"`, `operator_id`, `evidence_ref` | explicit operator-only re-enable after gates |
 | `budget.reserved.v1` | `reservation_id`, `scope`, `amount`, `currency` | paid call capacity reserved |
 | `budget.reconciled.v1` | `reservation_id`, `cost_entry_id`, `variance` | authoritative cost attaches |
 | `incident.opened.v1` | `incident_id`, `severity`, `trigger_code` | incident begins |
@@ -299,7 +296,7 @@ Operational logs may mirror safe identifiers, but a log line does not replace th
 - Last-mile rate admission uses one active `send_rate_reservations` lease per mailbox and unique `(mailbox_id,rate_policy_version,window_start,slot_number)`; a consumed lease and attempt commit together before any provider call.
 - Provider observations deduplicate on mailbox plus provider message/history identity.
 - Internal outbox delivery is at least once, but each consumer's business writes and successful `outbox_deliveries` receipt commit in one PostgreSQL transaction. A crash rolls back both.
-- External side effects never claim generic effect-once delivery: they use immutable mailbox-bound intent, captured provider result or `AMBIGUOUS`, and reconciliation before retry.
+- External side effects never claim generic effect-once delivery: they use immutable mailbox-bound intent, captured provider result or permanent `AMBIGUOUS`/`RECONCILING` quarantine, and positive-evidence reconciliation; negative search never authorizes retry.
 - Cross-aggregate global ordering is neither promised nor required. Consumers use aggregate version, correlation/causation, and provider sequence evidence.
 - Timestamps never decide whether a duplicate side effect is safe.
 

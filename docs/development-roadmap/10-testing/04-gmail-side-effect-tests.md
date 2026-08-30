@@ -20,7 +20,7 @@ No Google project configuration, Gmail OAuth flow, versioned secret object, mail
 
 ## Scope and non-goals
 
-In scope: least-scope OAuth, exact six-point secret saga, mailbox/account binding, send request/result unions, 14-step last-mile order, K-style provider boundaries, cancellation, rate/budget/approval/final-SEND/suppression, stable RFC identity, direct acceptance vs rejection vs unknown, zero/one/many/cross-mailbox Sent reconciliation, bounded absence, history cursor/full sync, reply/unsubscribe/bounce/complaint suppression, atomicity, redaction, revoke/rotation and cleanup. Non-goals: prospect recipients before M9, Gmail sandbox as an exactly-once claim, API-level automatic retry, provider-console repair, broad mail scope, or raw MIME/token evidence in ordinary artifacts.
+In scope: least-scope OAuth, exact six-point secret saga, mailbox/account binding, send request/result unions, 14-step last-mile order, K-style provider boundaries, cancellation, rate/budget/approval/final-SEND/suppression, stable RFC identity, direct acceptance vs rejection vs unknown, zero/one/many/cross-mailbox Sent reconciliation, permanent ambiguity quarantine, history cursor/full sync, reply/unsubscribe/bounce/complaint suppression, atomicity, redaction, revoke/rotation and cleanup. Non-goals: prospect recipients before M9, Gmail sandbox as an exactly-once claim, API-level automatic retry, provider-console repair, broad mail scope, or raw MIME/token evidence in ordinary artifacts.
 
 ## Exact planned implementation surfaces
 
@@ -31,7 +31,7 @@ Create `backend/tests/gmail/{contract,oauth,recovery,reconciliation,history,sign
 | OAuth saga | before exchange; exchange/pre-STAGE; STAGE/pre-ACTIVATE; ACTIVE/pre-DB; DB/pre-HTTP; handler/bind vs GC CAS | one exchange, resumable STAGED/ACTIVE, exact ACTIVE proof+mailbox tuple, replayed stored 303, one cleanup winner | mailbox/both controls off; restart or typed `ABORT_OAUTH_SAGA`; never patch secret/DB |
 | send authority | deny at every BACKEND-04 step 1..10 and all 14 dedicated compliance/signal denials | zero credential access/call before committed consumed rate reservation+attempt; one call maximum afterward | disable controls, incident on ordering/call breach |
 | provider result | parsed 2xx IDs; conclusive 4xx/rate/quota; timeout/reset/5xx/malformed 2xx; crash before/after call/result commit | exact `ACCEPTED|CONCLUSIVE_REJECTION|UNKNOWN`, correct event, row/cost/lease state and call count | possible call -> `AMBIGUOUS`; no adapter retry |
-| Sent reconciliation | delayed zero polls at 0/5/15/30/60/120/300; one; many; cross-mailbox; incomplete query; credential change | one match -> reconciled sent; successful bounded absence only after required polls; conflicts visible | retain ambiguity/lease, mailbox dequeue off, incident |
+| Sent reconciliation | delayed zero polls at 0/5/15/30/60/120/300 and far beyond; one; many; cross-mailbox; incomplete query; credential change | one match -> reconciled sent; every zero/many/conflict case retains quarantine; 300 seconds only raises incident | retain ambiguity/lease, mailbox dequeue off, no retry/replacement, incident |
 | history/signals | duplicate/out-of-order page; cursor 404/full-sync race; reply, unsubscribe, hard/soft bounce, complaint; crash after every row | observation/reply/suppression/intent/events/cursor atomic, no next SEND after committed stop | cursor unchanged, product control false, typed replay/repair |
 | controls/rate | concurrent workers, window boundary, pause/cancel/global stop, worker replacement | one mailbox lease/slot/call; zero starts after confirmed bound | both controls false and M6 fails |
 
@@ -66,7 +66,7 @@ Offline OAuth/provider/result/reconciliation/suppression requirements map exactl
 - **Authority `test_only_sendgateway_reaches_users_messages_send_and_calls_once_after_committed_authority`.**
 - **OAuth `test_six_oauth_kill_points_have_one_exchange_safe_replay_and_one_gc_winner`.**
 - **Policy `test_all_fourteen_compliance_signal_denials_have_zero_credential_and_gmail_calls`.**
-- **Ambiguity `test_timeout_reset_5xx_malformed_success_and_post_accept_crash_reconcile_before_retry`.**
+- **Ambiguity `test_timeout_reset_5xx_malformed_success_and_post_accept_crash_never_escape_quarantine_on_negative_reads`.**
 - **Mailbox `test_zero_one_many_cross_mailbox_and_delayed_sent_candidates_follow_exact_outcomes`.**
 - **Signals `test_reply_unsubscribe_bounce_complaint_suppression_and_cursor_commit_atomically`.**
 - **Control `test_pause_cancel_global_stop_and_concurrency_prevent_new_mailbox_calls`.**

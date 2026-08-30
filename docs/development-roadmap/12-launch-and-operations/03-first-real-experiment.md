@@ -32,7 +32,7 @@ This phase adds no endpoint, table, event, artifact, provider capability, servic
 
 ### Immutable entry manifest and gate closure
 
-The signed entry record binds literal phase `FIRST_REAL_EXPERIMENT`, clean source/release/config/runtime/schema/OpenAPI/catalog hashes, M0-M8 gate IDs/hashes/freshness, `ReleaseManifestV1`, active `PromotionManifestV1` references, exact model/prompt/tool/provider versions, one `ExperimentBrief` and pre-registered decision-rule version, one offer ID/version/hash, one campaign ID/version/hash, one mailbox/account/credential generation, one jurisdiction/policy/legal-review/disclosure/Google-review tuple, one-to-ten opaque campaign-member IDs with exact accepted affirmative-consent artifact references, individual approval requirement, 5/day and 10-total caps, budgets/reply window, expected control/route versions, public DNS/TLS/WAF/64+2 evidence, latest backup/restore/AWS witness/telemetry/incident evidence, operator signature, start and expiry UTC. It contains no address, recipient hash, token, content, legal text or credential.
+The signed entry record binds literal phase `FIRST_REAL_EXPERIMENT`, clean source/release/config/runtime/schema/OpenAPI/catalog hashes, M0-M8 gate IDs/hashes/freshness, `ReleaseManifestV1`, active `PromotionManifestV1` references, exact model/prompt/tool/provider versions, one `ExperimentBrief` and pre-registered decision-rule version, one offer ID/version/hash, one campaign ID/version/hash, one mailbox/account/credential generation, one jurisdiction/policy/legal-review/disclosure/Google-review tuple, one-to-ten opaque campaign-member IDs with exact accepted affirmative-consent artifact references, individual sensitive-preview/manual-approval requirement, 5/day and 10-total caps, budgets/reply window, expected control/route versions, public DNS/TLS/WAF/64+2 evidence, signed `retention.policy.v1` hash proving token `<=90 days`, verification/decryption overlap `>=97 days`, and backup sets `14 daily + 4 weekly` with no personal-data recovery point `>35 days`, latest restore/AWS witness/telemetry/incident evidence, operator signature, start and expiry UTC. It contains no address, recipient hash, token, content, legal text or credential.
 
 | Necessary gate | Exact evidence | Why it is not sufficient alone |
 | --- | --- | --- |
@@ -53,9 +53,9 @@ Each last-mile transaction must lock and freshly verify recipient identity, conf
 | Recipient cohort | one to ten recipients, each with recipient-specific accepted affirmative-consent evidence; no exception route |
 | Send cap | at most 5 in any rolling 24 hours, 10 total, one initial message per recipient and one in-flight send per mailbox |
 | Follow-up | zero automated or manual campaign follow-up under this version |
-| Approval | one fresh persisted operator approval per recipient-specific immutable message version; no batch approval |
+| Approval | one step-up sensitive preview and fresh receipt-bound manual operator approval per recipient-specific immutable message version; no auto/batch approval |
 | Reply window | 14 days after the last reconciled delivery; new sends stop when the 10-total cap or any abort fires |
-| Public surface | exact scanner-safe GET/POST pair only, published for this policy/release and independently disableable |
+| Public surface | exact FastAPI-owned scanner-safe HTML GET/explicit POST pair only, token lifetime <=90 days and key overlap >=97 days, published for this policy/release and independently disableable |
 
 ### Public unsubscribe route-mode truth table
 
@@ -76,7 +76,7 @@ The operator signs entry, confirms all recipients/consents without exporting add
 | Decision point | Exact rule |
 | --- | --- |
 | Success | envelope never breached; every send has consent/approval/final-SEND/provider/audit/cost evidence; every reply/signal suppresses before any next send; all attempts terminal; reply window complete; signed decision uses retained raw counts |
-| Immediate abort | any authority ambiguity, policy denial, suppression uncertainty, possible wrong recipient/mailbox/content, duplicate or blind retry, provider ambiguity beyond reconciliation bounds, budget/cap breach, control/telemetry/backup/AWS witness blindness, complaint, hard bounce, legal/Google/policy/evidence drift, public dependency failure, credential/privacy incident or untrusted audit truth |
+| Immediate abort | any authority ambiguity, policy denial, suppression uncertainty, possible wrong recipient/mailbox/content, duplicate or blind retry, any unresolved provider ambiguity (which remains permanently quarantined), budget/cap breach, control/telemetry/backup/AWS witness blindness, complaint, hard bounce, legal/Google/policy/evidence drift, public dependency failure, credential/privacy incident or untrusted audit truth |
 | Rollback/demotion | immediately commit product control false, close provably unsent work, stop agents/workers/dequeues/provider construction, preserve evidence/leases, reconcile every possible call, revoke affected credentials/approvals and open the exact incident; retain the exact pair in `SUPPRESSION_ONLY` when its complete dependency chain is healthy, otherwise execute `DISABLED_UNSAFE`; return to the failed gate |
 | Re-entry | never resume the old immutable campaign after an abort; close incident/root cause/counsel obligations, issue new policy/message/campaign/release versions as applicable, rerun affected M1/M6/M8/M9 evidence and obtain a new entry/individual approvals with equal-or-lower caps |
 | Downstream unlock | signed `SCALE` candidate triggers delivery-feasibility review only; `REVISE` creates one changed hypothesis/version; `KILL` closes; `INCONCLUSIVE` authorizes no claim or cap increase |

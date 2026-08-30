@@ -65,7 +65,7 @@ DBOS is selected because it fits the existing Python/Pydantic/PostgreSQL stack a
 
 LangGraph and LangChain are excluded from the initial stack because Alon AI does not currently need a second agent orchestration abstraction. Restate and Prefect are also excluded from the initial stack because they add a separate runtime or a pipeline-oriented model without improving the current product-risk gate. The roadmap retains a concise comparison record so future maintainers understand the layer distinction and the evidence that would justify reconsideration.
 
-Gmail ambiguity must be reconciled independently of DBOS because an API call may succeed before its local completion is durably recorded. The design therefore requires a stable send idempotency key, outbound-attempt ledger, provider-result capture, Sent-folder reconciliation, bounded retry policy, and operator-visible ambiguous state.
+Gmail ambiguity must be reconciled independently of DBOS because an API call may succeed before its local completion is durably recorded. The design therefore requires a stable send idempotency key, outbound-attempt ledger, provider-result capture, Sent-folder reconciliation, and operator-visible permanent quarantine. Zero Gmail search/history results never prove non-send and cannot authorize retry or replacement; retry requires explicit provider rejection or local pre-write proof that bytes never left the process.
 
 ## Graphify-first repository navigation
 

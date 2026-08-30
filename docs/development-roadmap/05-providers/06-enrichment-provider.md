@@ -91,7 +91,7 @@ Fixtures cover zero/duplicate/contradictory candidates, identity normalization, 
 }
 ```
 
-#{marker}
+`UnresolvedInterpolationValidatorV1` scans the UTF-8 source bytes before parsing and then every JSON property name and string value after strict schema validation. Its closed pattern registry rejects a hash, dollar sign, or doubled opening brace followed by a template identifier and closing brace, as well as angle-bracket placeholder tokens and whole-value generator sentinels such as `MARKER`, `PLACEHOLDER`, `TBD`, or `TODO`. A match fails fixture loading before signature/hash comparison; the matched source text is never copied into the error. The validator runs over every checked-in provider fixture and this document's fenced examples so deleting a stray token without retaining the guard cannot pass `T7-DOC-CONTRACT`.
 
 ## Ordered implementation tasks
 
@@ -109,6 +109,7 @@ Fixtures cover zero/duplicate/contradictory candidates, identity normalization, 
 - **Details `test_details_requires_one_frozen_matching_locator_and_requested_fact_keys`:** no mutable session.
 - **Cost `test_field_mask_quota_and_cost_reconcile_before_another_call`:** no hidden retry.
 - **Fixture `test_business_fixtures_are_signed_zero_network_and_replaceable`:** exact parity.
+- **Interpolation `test_provider06_source_and_fixtures_reject_unresolved_interpolation_artifacts`:** each closed sentinel family fails before fixture hashing and reports only file/field location plus reason code.
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 

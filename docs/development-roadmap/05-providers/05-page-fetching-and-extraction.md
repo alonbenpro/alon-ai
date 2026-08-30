@@ -31,7 +31,7 @@ Create `providers/evidence/contracts.py`, `providers/evidence/reader.py`, `provi
 | `EvidenceReadPort.read` | `evidence.read` | `EvidenceReadRequestV1` (`provider.evidence_read.request.v1`) / `EvidenceReadResponseV1` (`provider.evidence_read.response.v1`) / `EvidenceReadFailureV1` (`provider.evidence_read.failure.v1`) / `EvidenceReadFixtureV1` (`provider.capability_fixture.v1`) | `EvidenceReadPayloadV1`, `provider.evidence_read.payload.v1` | 5,000/10,000ms |
 | `PageExtractionPort.extract` | `page.extract` | `PageExtractRequestV1` (`provider.page_extract.request.v1`) / `PageExtractResponseV1` (`provider.page_extract.response.v1`) / `PageExtractFailureV1` (`provider.page_extract.failure.v1`) / `PageExtractFixtureV1` (`provider.capability_fixture.v1`) | `PageExtractPayloadV1`, `provider.page_extract.payload.v1` | 12,000/30,000ms |
 
-All AGENT-01 fields/bounds are exact: evidence ID/hash, `max_bytes=1..1_000_000`, restricted flag; or source URI, nonempty allowed domains, `max_response_bytes=1..5_000_000`, allowed MIME types; both include context and `timeout_ms=1..max`. Success `payload_schema_version` and `payload_hash` are mandatory and use the literal table identities; failure has no payload/hash. Complete request/result/fixture hashes use the DB-01 RFC 8785 envelopes, and each capability reconciles one exact `ProviderUseLedgerEntryV1`.
+All AGENT-01 fields/bounds are exact: evidence ID/hash, `max_bytes=1..1_000_000`, restricted flag; or restricted `source_locator` up to 8,192 bytes, nonempty allowed domains, `max_response_bytes=1..5_000_000`, allowed MIME types; both include context and `timeout_ms=1..max`. Success returns only DB-04's sanitized `citation_uri`. Success `payload_schema_version` and `payload_hash` are mandatory and use the literal table identities; failure has no payload/hash. Complete request/result/fixture hashes use the DB-01 RFC 8785 envelopes, and each capability reconciles one exact `ProviderUseLedgerEntryV1`.
 
 ### `evidence.read` operation
 
@@ -47,7 +47,7 @@ Allowed errors are exactly `DEPENDENCY_UNAVAILABLE`, `TOOL_TIMEOUT`, `TOOL_RESUL
 4. Do not auto-follow redirects. At most three 301/302/303/307/308 hops may be followed only after repeating full URI/domain/DNS/TLS validation; redirect loops/cross-policy targets fail.
 5. Require 2xx and an allowed exact MIME essence; do not content-sniff an absent/unsafe type. Enforce raw and decoded size, charset validation, nesting/node/text limits, and reject binary/polyglot/active payload.
 6. Preserve restricted raw capture bytes by hash/reference, extract only visible semantic text with a versioned deterministic extractor, normalize text to NFC, sanitize control characters, identify language, and scan prompt-injection indicators. Detection returns `PROMPT_INJECTION_DETECTED`; it never asks a model whether content is safe.
-7. `EvidenceIngestService` writes DB-04 evidence and the capability builds `PageExtractPayloadV1` with exact evidence/source/content/capture/MIME/language/extracted-text hashes. It does not return the text body in the capability response.
+7. `EvidenceIngestService` encrypts the raw locator, applies `citation.uri.v1`, writes DB-04 evidence, and the capability builds `PageExtractPayloadV1` with exact evidence/sanitized-citation/content/capture/MIME/language/extracted-text hashes. It does not return the raw locator or text body in the capability response.
 
 OWASP recommends allowlisting, validating redirects/DNS destinations, and disabling unsafe automatic redirects for SSRF: [SSRF prevention](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html). HTTP URI, media type, and redirect semantics follow [RFC 9110](https://www.rfc-editor.org/rfc/rfc9110.html).
 
@@ -83,7 +83,7 @@ Fixtures cover DNS rebinding, IPv4/IPv6 encodings, metadata endpoints, userinfo,
 {
   "schema_version":"provider.page_extract.request.v1","capability":"page.extract",
   "context":{"provider_call_id":"9b85bc7c-cf60-45a9-9925-6c8b82b88e0d","operation_version":"safe-http-extract.v1","deadline_at":"2026-08-28T00:00:30Z"},
-  "timeout_ms":12000,"source_uri":"https://www.gov.il/en/pages/example","allowed_domains":["gov.il"],"max_response_bytes":1000000,"allowed_mime_types":["text/html"]
+  "timeout_ms":12000,"source_locator":"https://www.gov.il/en/pages/example","allowed_domains":["gov.il"],"max_response_bytes":1000000,"allowed_mime_types":["text/html"]
 }
 ```
 

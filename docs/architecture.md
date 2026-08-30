@@ -33,7 +33,7 @@ flowchart LR
     Gmail --> Reconcile["Sent-mail reconciliation + history sync"]
 ```
 
-Pydantic AI agents must never call Gmail directly or hold unrestricted Gmail authority. DBOS workflows may coordinate finite work but cannot bypass the deterministic gateway. `SendGateway` must recheck suppression, jurisdictional rules, campaign state, budget, rate limits, and the global kill switch before a provider call. Each external send must have a stable idempotency key, outbound-attempt ledger, provider-result capture, audit record, operator-visible ambiguous state, Sent-folder reconciliation, and bounded retry path.
+Pydantic AI agents must never call Gmail directly or hold unrestricted Gmail authority. DBOS workflows may coordinate finite work but cannot bypass the deterministic gateway. `SendGateway` must recheck suppression, jurisdictional rules, campaign state, budget, rate limits, and the global kill switch before a provider call. Each external send must have a stable idempotency key, outbound-attempt ledger, provider-result capture, audit record, operator-visible ambiguous state, and Sent-folder reconciliation. A possibly accepted write remains permanently quarantined until positive Sent evidence resolves it; retry is reserved for explicit rejection or local proof that no bytes left the process.
 
 ## Selected agent and workflow stack
 

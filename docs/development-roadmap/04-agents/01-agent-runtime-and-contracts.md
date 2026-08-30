@@ -445,7 +445,7 @@ type EvidenceReadResultV1 = Annotated[
 ]
 
 class SearchResultItemV1(StrictAgentModel):
-    source_uri: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
+    citation_uri: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
     title: Annotated[TrimmedStr, Field(min_length=1, max_length=500)]
     snippet: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
     evidence_item_id: Uuid4
@@ -492,14 +492,14 @@ class PageExtractRequestV1(StrictAgentModel):
     capability: Literal["page.extract"]
     context: ProviderCallContextV1
     timeout_ms: int = Field(ge=1, le=30_000)
-    source_uri: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
+    source_locator: Annotated[TrimmedStr, Field(min_length=1, max_length=8_192)]
     allowed_domains: tuple[TrimmedStr, ...] = Field(min_length=1, max_length=50)
     max_response_bytes: int = Field(ge=1, le=5_000_000)
     allowed_mime_types: tuple[TrimmedStr, ...] = Field(min_length=1, max_length=20)
 
 class PageExtractPayloadV1(StrictAgentModel):
     evidence_item_id: Uuid4
-    source_uri: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
+    citation_uri: Annotated[TrimmedStr, Field(min_length=1, max_length=2_000)]
     content_hash: Sha256Hex
     capture_ref: Annotated[TrimmedStr, Field(min_length=1, max_length=500)]
     mime_type: Annotated[TrimmedStr, Field(min_length=1, max_length=200)]

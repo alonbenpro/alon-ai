@@ -99,7 +99,7 @@ CI has four jobs: `security` checks tracked filenames and high-signal credential
 
 Automatic Gmail sending is a planned product capability, but agents cannot call Gmail directly. Agents will produce typed artifacts. Deterministic code will create a send intent with an idempotency key, enforce suppression/jurisdiction/campaign/budget/rate-limit/kill-switch policies, and then route eligible work through a `SendGateway` to a `GmailProvider`.
 
-The eventual implementation must commit a stable idempotency key and outbound-attempt ledger before the provider call, capture Gmail message/thread identifiers and provider evidence, and expose an ambiguous state. An ambiguous outcome must reconcile Gmail's Sent mailbox before any bounded retry; blind retries are prohibited. Today this repository supplies only the guarded contracts and an `ALON_AI_OUTREACH_ENABLED=false` default. It does not send real email.
+The eventual implementation must commit a stable idempotency key and outbound-attempt ledger before the provider call, capture Gmail message/thread identifiers and provider evidence, and expose an ambiguous state. A possibly accepted Gmail write is permanently quarantined as `AMBIGUOUS`/`RECONCILING` until exactly one authorized Sent observation proves it sent; zero search/history results never prove non-send and never permit a retry or replacement intent. Retry is possible only after an explicit provider rejection or local pre-write proof that bytes never left the process. Today this repository supplies only the guarded contracts and an `ALON_AI_OUTREACH_ENABLED=false` default. It does not send real email.
 
 ## Safety boundaries
 
@@ -117,7 +117,7 @@ DBOS is the selected runtime, but selection and M1 acceptance do not authorize p
 2. Five synthetic leads passing through a DBOS queue whose rate limits remain enforced under restart and concurrency, to operator-owned test recipients only.
 3. A stable send idempotency key, outbound-attempt ledger, and provider-result capture surrounding every Gmail call.
 4. Worker termination before, during, and after the Gmail call with zero uncontrolled duplicate messages after restart.
-5. Ambiguous outcomes enter an operator-visible state and reconcile Gmail Sent evidence before any bounded retry.
+5. Ambiguous outcomes stay operator-visible and permanently quarantined until positive Gmail Sent evidence resolves them; zero results never authorize retry.
 6. Pause, cancellation, and resume have deterministic behavior with zero provider calls after confirmed cancellation.
 7. An in-flight workflow survives the tested workflow-version upgrade path.
 8. Correlated observability exposes the workflow run, policy decision, send attempt, provider evidence, and recovery action to the operator.

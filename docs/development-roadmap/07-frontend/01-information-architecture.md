@@ -37,7 +37,6 @@ Non-goals: Next.js API routes, route handlers, Server Actions for business mutat
 | URL | App Router surface | Responsibility | Primary generated operations |
 | --- | --- | --- | --- |
 | `/` | `src/app/page.tsx` | Current readiness landing; later authenticated redirect to `/experiments` while health remains visible | `getReadiness`; optional diagnostic `getLiveness` |
-| `/unsubscribe/[token]` | `src/app/unsubscribe/[token]/page.tsx` plus `src/features/unsubscribe/{unsubscribe-confirmation,use-unsubscribe}.tsx` | Public scanner-safe generic confirmation; no operator shell/data, no third-party asset, GET never mutates, explicit button POSTs once | `getUnsubscribeConfirmation`, `confirmUnsubscribe` |
 | `/experiments` | `src/app/(operator)/experiments/page.tsx` | Stable experiment list, filters, terminal/nonterminal distinction | `listExperiments` |
 | `/experiments/new` | `src/app/(operator)/experiments/new/page.tsx` | Create one strict experiment brief | `createExperiment` |
 | `/experiments/[experimentId]` | `src/app/(operator)/experiments/[experimentId]/page.tsx` | Creation continuation, stage/control center, campaign launch, evidence references, reports, immutable decision | experiment/workflow/report operations |
@@ -51,7 +50,7 @@ Primary navigation contains only Experiments, Approvals, and Recovery. `/` healt
 
 ### Exact BACKEND-02 generated-client coverage
 
-The anonymous unsubscribe page is isolated from the operator layout and is not built/published/enabled before the M9 real-recipient authority and signed Task 7 route/WAF evidence gate. Once enabled, it reveals no recipient/campaign/message/token/hash data, has no third-party asset or analytics, uses `no-referrer`/`no-store`, never persists the path/token, and cannot navigate into operator state. Scanner GET renders confirmation only; a focused explicit button issues the sole POST and then disables itself while exact replay resolves. Any dependency/unknown response is recipient-opaque and leaves product outreach disabled until backend repair.
+There is no Next.js unsubscribe route, page, component, hook, client bundle, or generated-client consumer. BACKEND-02's FastAPI-owned `UnsubscribeConfirmationHtmlV1` is the entire M9-gated public page and issues the existing POST directly on focused button activation. It is isolated by the two-operation public ingress, reveals no recipient/campaign/message/token/hash data, has no third-party asset or analytics, uses the exact backend headers, never persists the path/token, and cannot navigate into operator state. Any dependency/unknown POST response is recipient-opaque and leaves product outreach disabled until backend repair.
 
 This is the complete 66-route/66-`operationId` inventory: exactly the two `P0`/`P1` unsubscribe operations are `PUBLIC_UNSUBSCRIBE`; the other 64 operations are the `PRIVATE_DEPLOYMENT` partition, including its explicit health/OIDC/Gmail-callback boundary routes. The `Wire` column names the only request/response authority available to the UI. `P0` is public read-only unsubscribe confirmation; `P1` is its explicit same-origin confirmed POST with server-derived replay key; both are absent/unavailable until the M9 real-recipient release gate and signed ingress evidence. `A` is an OIDC flow/session operation; `R` means opaque-cookie authenticated read; `M` means opaque-cookie authenticated JSON mutation with caller `Idempotency-Key`, exact Origin/fetch metadata, and `X-CSRF-Intent: operator-command-v1`; `MV` adds `If-Match` from the latest explicit aggregate ETag; `S` uses locked expected state/status from the generated request; `O` is the signed-state OAuth exception. All calls send/receive `X-Request-ID`/`X-Correlation-ID` as BACKEND-02 defines.
 
@@ -59,8 +58,8 @@ This is the complete 66-route/66-`operationId` inventory: exactly the two `P0`/`
 | --- | --- | --- | --- |
 | `GET /health/live` | `getLiveness` | `/`, recovery diagnostics | existing health payload; `R0`; `['health','live']` |
 | `GET /health/ready` | `getReadiness` | `/`, shell banner | existing ready/degraded payload; `R0`; `['health','ready']` |
-| `GET /api/v1/public/unsubscribe/{token}` | `getUnsubscribeConfirmation` | `/unsubscribe/[token]` | `UnsubscribeConfirmationResponseV1`; `P0`; `Cache-Control:no-store`; never Query-persisted |
-| `POST /api/v1/public/unsubscribe/{token}` | `confirmUnsubscribe` | `/unsubscribe/[token]` | `ConfirmUnsubscribeRequestV1 -> UnsubscribeResultResponseV1`; `P1`; one in-memory mutation state; no caller key/cache |
+| `GET /api/v1/public/unsubscribe/{token}` | `getUnsubscribeConfirmation` | FastAPI HTML owner; no Next.js consumer | exact `UnsubscribeConfirmationHtmlV1`; `P0`; no generated client/cache |
+| `POST /api/v1/public/unsubscribe/{token}` | `confirmUnsubscribe` | inline FastAPI HTML button; no Next.js consumer | literal JSON request -> recipient-opaque result; `P1`; no caller key/cache |
 | `POST /api/v1/auth/authorizations` | `startOperatorAuthorization` | session bootstrap | `StartOperatorAuthorizationRequestV1 -> OperatorAuthorizationResponseV1`; `A`; `["auth","start"]` |
 | `GET /api/v1/auth/callback` | `completeOperatorAuthorization` | FastAPI redirect only | exact success `{code,state,iss,scope?}` or error `{error,state,iss,error_description?}` query + opaque flow cookie -> fixed 303; `A`; never Query cache |
 | `GET /api/v1/auth/session` | `getOperatorSession` | operator layout | `OperatorSessionResponseV1`; `A`; `["auth","session"]` |

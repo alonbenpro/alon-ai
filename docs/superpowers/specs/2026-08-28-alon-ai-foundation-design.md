@@ -174,7 +174,7 @@ The sending path is:
 4. The DBOS queue releases eligible work at the configured rate.
 5. `SendGateway` calls a `GmailProvider` implementation.
 6. Gmail message and thread identifiers are recorded.
-7. If the call has an ambiguous outcome, reconciliation searches Gmail's Sent mailbox before any retry.
+7. If the call has an ambiguous outcome, reconciliation searches Gmail's Sent mailbox, but zero, multiple, or conflicting matches retain permanent quarantine; another intent is admissible only after explicit provider rejection or local pre-write proof that no bytes left the process.
 8. A scheduled Gmail `history.list` synchronization records replies and resumes the appropriate finite workflow.
 
 The foundation creates the provider and gateway contracts, safe configuration shape, and module placement. The next milestone implements and verifies the real Gmail adapter against the operator's own test inboxes.
@@ -239,7 +239,7 @@ DBOS is selected, but M1 is necessary rather than sufficient for product outreac
 3. Five synthetic leads enter a DBOS queue whose rate limits remain enforced under restart and concurrency, and Gmail sends only to operator-owned test accounts.
 4. Every send has a stable idempotency key, committed outbound-attempt ledger entry, and provider-result capture.
 5. The worker is killed before, during, and after the Gmail call; restart creates zero uncontrolled duplicate messages.
-6. An ambiguous outcome becomes operator-visible and reconciles Gmail Sent evidence before any bounded retry.
+6. An ambiguous outcome becomes operator-visible and remains permanently quarantined until positive Gmail Sent evidence resolves it; zero-result searches never authorize retry.
 7. Pause, cancellation, and resume are deterministic, with zero provider calls after confirmed cancellation.
 8. In-flight work survives the tested workflow-version upgrade path.
 9. Correlated observability exposes workflow, policy, attempt, provider, and recovery evidence for operator control.

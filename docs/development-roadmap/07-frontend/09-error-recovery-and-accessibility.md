@@ -45,7 +45,7 @@ Repair dialog lists only generated `incident.catalog.v1` repair kinds and the se
 
 ### System kill controls and authority ladder
 
-`listSystemControls` query key is `['controls']`, polled every 3 seconds while changing/incident-open and 10 seconds otherwise, always refetched on focus. Render `TEST_INBOX_SENDING` and `PRODUCT_OUTREACH` as separate versioned cards, never one master switch. Each shows returned boolean/state/version, changed UTC/by/reason/evidence, M1/M6 gate refs, blocking incidents/ambiguities, and correlation fields present in generated resources.
+`listSystemControls` query key is `['controls']`, polled every 3 seconds while changing/incident-open and 10 seconds otherwise, always refetched on focus. Render `TEST_INBOX_SENDING` and `PRODUCT_OUTREACH` as separate versioned cards, never one master switch. Each shows returned boolean/state/version, changed UTC, exact `OPERATOR` or registered `SYSTEM` actor type/ID, reason/evidence, M1/M6 gate refs, blocking incidents/ambiguities, and correlation fields present in generated resources; a system disable is never labeled as operator action.
 
 `enableSystemControl` and `disableSystemControl` use exact `POST /api/v1/controls/{control_name}/commands/enable` and `POST /api/v1/controls/{control_name}/commands/disable`, each with `ChangeControlRequestV1 -> CommandReceiptV1` and key `["control",name,"enable"]` or `["control",name,"disable"]`, one idempotency key, and `If-Match` from the specific control ETag/version. The request contains only generated `schema_version`, reason/evidence/gate fields. Invalidations cover controls, recovery, experiment/campaign overview, approvals/messages, provider/timeline reports.
 

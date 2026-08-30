@@ -72,7 +72,7 @@ Each evidence-stream core is exactly: `evidence_schema_version` literal
 64-hex; strings `scenario_name`, `workflow_version`, `kill_point`,
 `record_type`, `occurred_at`, `idempotency_key`, `mailbox_alias`,
 `rfc_message_id`; spike `attempt_state`; `provider_outcome` in
-`NOT_CALLED/ACCEPTED/CONCLUSIVE_FAILURE/AMBIGUOUS/RECONCILED_SENT/RECONCILED_ABSENT/CONFLICT`;
+`NOT_CALLED/ACCEPTED/CONCLUSIVE_FAILURE/AMBIGUOUS/RECONCILED_SENT/SEARCH_ABSENT_INCONCLUSIVE/CONFLICT`;
 nullable `error_code`, 64-hex `error_fingerprint`, `gmail_message_id`,
 `gmail_thread_id`, and 64-hex `response_hash`; required 64-hex `request_hash`;
 `candidate_matches`; literal `signature_algorithm="Ed25519"`; and
@@ -188,7 +188,7 @@ Each scenario runs the approved repetition count with zero uncontrolled duplicat
 
 ### Ambiguous resolution algorithm
 
-On unknown provider outcome, persist/retain `AMBIGUOUS`; schedule bounded reconciliation; transition to `RECONCILING`; search the Sent mailbox using the stable RFC ID and expected safe envelope/time bounds; capture every candidate's Gmail IDs/fingerprint; resolve `SENT` only for one conclusive match. Zero candidates before the full provider-consistency window remains ambiguous; conclusive absence after the window may become `FAILED_CONCLUSIVE` and only then can a bounded retry scenario be tested with the same key policy. Multiple/conflicting candidates stop sending, preserve evidence, and require operator-visible failure. No timeout alone proves no send.
+On unknown provider outcome, persist/retain `AMBIGUOUS`; schedule bounded reconciliation; transition to `RECONCILING`; search the Sent mailbox using the stable RFC ID and expected safe envelope/time bounds; capture every candidate's Gmail IDs/fingerprint; resolve `SENT` only for one conclusive match. Zero candidates at every poll records `SEARCH_ABSENT_INCONCLUSIVE` and retains permanent quarantine; the 300-second poll is only the threshold for an incident and operator investigation. Multiple/conflicting candidates also retain quarantine, stop dequeue, preserve evidence, and require operator-visible incident handling. No timeout, negative search, or operator action proves no send or permits retry/replacement. Retry tests use only explicit rejection or a signed local pre-write barrier proving no request bytes left the process.
 
 ## Ordered implementation tasks
 

@@ -12,7 +12,7 @@
 
 ## Outcome and timing
 
-Every possibly accepted Gmail send becomes either proven sent, conclusively absent after a bounded window, or an operator-visible conflict. Separately, every Gmail history page records its observations/replies/events before advancing the mailbox cursor. Read recovery never gains send authority: `GmailMailboxReadProvider` is a separate port from PROVIDER-01 `GmailProvider`, and only `SendGateway` can receive the latter.
+Every possibly accepted Gmail send becomes either positively proven sent or remains in operator-visible permanent quarantine. Zero search/history results, regardless of elapsed time or poll count, are never proof of non-send. Separately, every Gmail history page records its observations/replies/events before advancing the mailbox cursor. Read recovery never gains send authority: `GmailMailboxReadProvider` is a separate port from PROVIDER-01 `GmailProvider`, and only `SendGateway` can receive the latter.
 
 ## Current repository state
 
@@ -45,10 +45,10 @@ Provider text is untrusted. Decode MIME with a size/depth/part-count allowlist; 
 2. It commits `AMBIGUOUS -> RECONCILING`, attempt `RECONCILING`, strategy literal `gmail.sent-rfc822.v1`, and `send.reconciliation_started.v1` with attempt/mailbox/RFC identity.
 3. The read adapter searches only credentials bound to `send_intents.mailbox_id`. It records every candidate as restricted provider evidence; evidence from another mailbox is rejected even if headers match.
 4. Exactly one candidate whose `Message-ID` byte-equals the stable RFC ID and whose safe envelope hashes match permits `provider_results(outcome='RECONCILED_SENT')`, attempt/message `SENT`, and only `send.reconciled_as_sent.v1`.
-5. Zero candidates is not immediately conclusive. Initial M6 schedule is elapsed seconds `0, 5, 15, 30, 60, 120, 300`; each poll is a successful complete mailbox query. Only the successful 300-second poll with at least two prior successful zero-result polls after the uncertainty began may capture `RECONCILED_ABSENT` and allow `FAILED_RETRYABLE` evaluation.
-6. More than one match, malformed identity, query incompleteness, credential/account change, or candidate disagreement captures `CONFLICT`, moves to `FAILED_PERMANENT` only through deterministic recovery, disables dequeue for that mailbox, opens an incident, and requires an audited operator command. Absence-window expiry with unsuccessful polls remains unresolved; it is not absence.
+5. Zero candidates is always inconclusive. Initial M6 investigation polls are elapsed seconds `0, 5, 15, 30, 60, 120, 300`; each successful complete mailbox query may append `SEARCH_ABSENT_INCONCLUSIVE` evidence but must retain the same consumed rate lease and `AMBIGUOUS`/`RECONCILING` state. The successful 300-second poll only opens/escalates an incident and operator investigation; reconciliation may continue indefinitely and cannot authorize a retry, replacement intent, or terminal non-send state.
+6. More than one match, malformed identity, query incompleteness, credential/account change, or candidate disagreement captures `CONFLICT`, retains `RECONCILING`, disables dequeue for that mailbox, opens an incident, and requires audited investigation. Neither an operator command nor incident closure may assert non-send without positive provider rejection/pre-write evidence; the only ambiguity resolution transition is one exact authorized Sent match to `SENT`.
 
-Direct provider success never enters this algorithm and emits `send.provider_accepted.v1`, not the reconciliation event. `AMBIGUOUS` never transitions directly to `QUEUED`.
+Direct provider success never enters this algorithm and emits `send.provider_accepted.v1`, not the reconciliation event. `AMBIGUOUS`/`RECONCILING` never transitions to `QUEUED`, either failure state, or a replacement intent.
 
 ### Atomic incremental history and stale-cursor recovery
 
@@ -82,14 +82,14 @@ Telemetry contains mailbox/call/run/request IDs, page/candidate counts, safe his
 ## Ordered implementation tasks
 
 - [ ] **Implement strict read adapter —** Input: mailbox-bound credentials and requests above. Operation: implement list/get/profile/history calls, bounds, MIME sanitizer, NFC and byte-to-code-point conversion, typed errors, cancellation, and read-only retries. Output: strict provider results. Test evidence: `test_gmail_read_contract_error_timeout_nfc_and_size_matrix`. Failure behavior: no product mutation; disable on account mismatch.
-- [ ] **Implement Sent reconciliation —** Input: exact DB-03 authority tuple and ambiguity. Operation: execute strategy/schedule, persist candidates/results, and delegate exact state/events. Output: sent, conclusively absent, or conflict. Test evidence: `test_sent_reconciliation_zero_one_many_cross_mailbox_and_delayed_index_matrix`. Failure behavior: never requeue unresolved ambiguity.
+- [ ] **Implement Sent reconciliation —** Input: exact DB-03 authority tuple and ambiguity. Operation: execute strategy/schedule, persist candidates/results, and delegate exact state/events. Output: positively reconciled `SENT` or permanently quarantined inconclusive-absence/conflict evidence; never terminal non-send. Test evidence: `test_sent_reconciliation_zero_one_many_cross_mailbox_and_delayed_index_matrix`. Failure behavior: never requeue, replace, or failure-classify unresolved ambiguity.
 - [ ] **Implement atomic incremental pages —** Input: locked cursor and strict history page. Operation: dedupe observations/replies/events and advance cursor in one transaction. Output: replay-safe cursor. Test evidence: crash injection before/after every row/event/cursor write. Failure behavior: rollback entire page.
 - [ ] **Implement 404 full-sync recovery —** Input: expired cursor, profile baseline, bounded horizon. Operation: enumerate, replay race history, and install new cursor only after completeness proof. Output: recovered cursor or visible degraded state. Test evidence: concurrent incoming message, pagination, cancellation, cap, and restart fixtures. Failure behavior: preserve prior cursor; no skipped message.
 - [ ] **Gate M6 fixtures and operations —** Input: recorded/live owned-mailbox scenarios. Operation: prove zero-network fixture mode, source/secret scan, schedule bounds, and operator timeline. Output: retained M6 read/recovery evidence. Test evidence: fixture hashes and end-to-end reply/reconciliation traces. Failure behavior: M6 fails and both send controls remain false.
 
 ## Test strategy
 
-- **Recovery `test_ambiguous_attempt_has_no_path_to_retry_before_conclusive_absence`:** exhaustive transition proof.
+- **Recovery `test_ambiguous_attempt_never_retries_from_negative_or_conflicting_reads`:** exhaustive transition proof.
 - **Atomicity `test_observation_reply_suppression_intent_events_and_cursor_commit_as_one_page`:** real PostgreSQL crash/concurrency matrix; any failure keeps cursor and product authority closed.
 - **Signals `test_reply_unsubscribe_hard_bounce_complaint_and_soft_limit_never_wait_for_agent_or_operator`:** exact source/provenance enum, canonical suppression and no-next-SEND rows.
 - **Identity `test_reply_cursor_and_candidate_require_same_mailbox_provider_identity`:** composite splice denial.
@@ -108,7 +108,7 @@ On cross-account evidence, cursor regression, hidden gap, multiple Sent matches,
 ## Acceptance and retained evidence
 
 - [ ] Read-only services cannot reach Gmail send or leak credentials/content.
-- [ ] Zero/one/many Sent outcomes and bounded absence are explicit and mailbox-bound.
+- [ ] Zero/one/many Sent outcomes are explicit and mailbox-bound; zero/many never escape permanent quarantine or authorize retry.
 - [ ] Direct and reconciled acceptance events remain semantically distinct.
 - [ ] Every history page and full-sync recovery is atomic, replay-safe, and gap-aware.
 - [ ] Provider offsets are NFC-normalized code-point spans before typed construction.

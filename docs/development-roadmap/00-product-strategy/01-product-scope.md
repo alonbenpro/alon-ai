@@ -26,8 +26,8 @@ The headline copy on the current page describes intended value. It is not proof 
 
 Given a clearly bounded customer and problem hypothesis, Alon AI helps the operator:
 
-1. turn the hypothesis into an explicit `ExperimentBrief`;
-2. produce a cited `IdeaBrief`, `OfferHypothesis`, and `MarketEvidenceBundle`;
+1. turn the hypothesis into an explicit product `ExperimentBrief` record;
+2. produce cited `IdeaCandidate`, `OfferHypothesis`, and `MarketEvidence` artifacts;
 3. find and deduplicate prospective businesses into `LeadEvidence` records;
 4. qualify each lead with an explainable `QualificationAssessment`;
 5. create a typed `OutreachDraft` without granting the model send authority;
@@ -37,26 +37,32 @@ Given a clearly bounded customer and problem hypothesis, Alon AI helps the opera
 
 The promise is control and better evidence, not guaranteed revenue. If an experiment cannot state what would disprove it, the system must reject it as not ready.
 
-## Canonical product artifacts
+## Canonical vocabulary and ownership
 
-These names are stable inputs for database, workflow, agent, API, and frontend roadmap files:
+These names are frozen downstream inputs for database, workflow, agent, API, and frontend roadmap files; M0 consumes those catalogs and may not invent aliases.
 
-| Artifact | Minimum meaning | Created by | Authority |
+| Record or artifact | Minimum meaning | Created by | Authority |
 | --- | --- | --- | --- |
-| `ExperimentBrief` | customer segment, problem, jurisdiction, budget, sample cap, success/kill rules | operator command | Defines bounds; does not send |
-| `IdeaBrief` | problem hypothesis and evidence questions | typed agent, operator-reviewed | Advisory |
+| `ExperimentBrief` product record | customer segment, problem, jurisdiction, budget, sample cap, success/kill rules | operator command | Defines bounds; does not send and is not an agent artifact |
+| `IdeaCandidate` | problem hypothesis and evidence questions | typed agent, operator-reviewed | Advisory |
 | `OfferHypothesis` | outcome, scope, price hypothesis, exclusions, proof needed | typed agent, operator-reviewed | Advisory |
-| `MarketEvidenceBundle` | claims tied to retrievable sources and capture times | typed agent plus provider fixtures | Advisory |
+| `MarketEvidence` | claims tied to retrievable sources and capture times | typed agent plus provider fixtures | Advisory |
 | `LeadEvidence` | business identity, fit facts, provenance, dedupe keys | deterministic discovery plus typed research | Advisory |
 | `QualificationAssessment` | criterion-level labels, confidence, evidence, exclusion reason | typed agent | Advisory; deterministic gate decides eligibility |
-| `OutreachDraft` | recipient, subject, body, claims, source artifact versions | typed agent | No Gmail authority |
-| `PolicyDecision` | allowed/denied, rule codes, policy version, facts used | deterministic policy code | Can deny; cannot itself send |
-| `ApprovalDecision` | operator identity, scope, expiration, decision, reason | operator command | Bounded grant or denial |
-| `SendIntent` | immutable draft reference, recipient, idempotency key, campaign and budget context | deterministic application service | Eligible for queueing only |
+| `OutreachDraft` | subject, body, claims, and source artifact versions; never recipient identity/address | typed agent | No Gmail authority; application code binds a recipient later |
 | `ReplyClassification` | intent, sentiment, requested action, confidence, quoted evidence span | typed agent, operator-correctable | Advisory |
-| `ExperimentDecision` | `SCALE`, `REVISE`, `KILL`, or `INCONCLUSIVE`, metric snapshot, reasoning, operator decision | deterministic metrics plus advisory agent artifact | Operator owns final decision |
+| `ExperimentDecision` | advisory `SCALE`, `REVISE`, `KILL`, or `INCONCLUSIVE` recommendation with cited inputs | typed agent | Advisory; operator/application service owns the authoritative product decision |
+| `MetricSnapshot` product record | immutable calculated metric observations and cutoff | deterministic metric service | Decision input; not an agent artifact |
+| `EvidenceBundle` deterministic artifact | exact accepted artifact/evidence membership and hashes | application service | Provenance only |
+| `PolicyDecision`, `Approval`, `SendIntent` product records | deterministic rule result, manual grant/denial, and immutable side-effect intent | deterministic services/operator command | Can deny or bound later work; none is an agent artifact or provider call |
 
-Every agent artifact is typed, versioned, immutable after creation, attributable to prompt/model/tool versions, and superseded rather than edited in place.
+The Task 3 agent-artifact set is exactly `{IdeaCandidate, OfferHypothesis, MarketEvidence, LeadEvidence, QualificationAssessment, OutreachDraft, ReplyClassification, ExperimentDecision}`. Every agent artifact is typed, versioned, immutable after creation, attributable to prompt/model/tool versions, and superseded rather than edited in place. The deterministic compliance-artifact registry is exactly `{CompliancePolicyV1, RecipientIdentityEvidenceV1, RecipientJurisdictionEvidenceV1, AffirmativeConsentEvidenceV1, CounselExceptionRecordV1, LegalReviewRecordV1, DisclosureSenderTemplateV1, GooglePolicyReviewV1}`; agents never create or accept those records.
+
+### Signed operator-time evidence without another product table
+
+`OperatorTimeEvidenceV1` is release/experiment evidence, not a product record and not a 47th table or new API resource. Its exact RFC 8785 JSON object is `{schema_version:"operator_time_evidence.v1", evidence_id, experiment_id, interval_start, interval_end, duration_seconds, activity_code, source_kind, source_ref, recorded_at, operator_id, key_id}` where UUIDs are lowercase canonical text, instants are UTC RFC 3339 with exactly six fractional digits and `Z`, `duration_seconds` is a positive integer equal to the half-open interval length and at most `86400`, `activity_code` is one of `DISCOVERY|BUILD|RESEARCH|OUTREACH_REVIEW|DELIVERY|OPERATIONS`, and `source_kind` is `MANUAL_TIMER|SIGNED_IMPORT`. JSON null, unknown keys, overlapping intervals for one operator, future intervals, and mutable/free-text activity are invalid.
+
+Canonical bytes are UTF-8 RFC 8785 JSON. `payload_sha256` is lowercase SHA-256 of those bytes. The operator signs `UTF8("alon-ai:operator-time-evidence:v1\n") || hex_decode(payload_sha256)` with Ed25519; the retained envelope is `{payload,payload_sha256,signature_algorithm:"Ed25519",signature_base64url,key_id}`. The solo operator owns the signing key; the release/evidence verifier owns key-status lookup and signature validation. Valid envelopes enter only the existing content-addressed audit/evidence paths referenced by the experiment/release bundle; they never create a product row or raw-time API. Aggregation deduplicates by `evidence_id` plus payload hash, sorts by `(interval_start,evidence_id)`, rejects any overlap/hash reuse/signature/key/clock mismatch, sums exact `duration_seconds`, and converts to hours only for presentation using decimal division by `3600`. Missing intervals or an invalid envelope make operator-time cost `UNAVAILABLE` and block any economics success claim; they are never imputed.
 
 ## Scope by vertical milestone
 
@@ -121,7 +127,7 @@ Store no actual Gmail secret, prospect personal data, or unverified legal conclu
 
 ## Exact implementation surfaces this scope drives
 
-Planned backend modules: `alon_ai/domain/experiments.py`, `alon_ai/domain/artifacts.py`, `alon_ai/domain/leads.py`, `alon_ai/domain/messaging.py`, `alon_ai/application/commands/`, `alon_ai/application/queries/`, and `alon_ai/application/sending.py`. Planned API scope is `/api/v1/experiments` plus nested artifact, lead, approval, message, event, metric, and decision resources. Planned frontend scope is `/experiments`, `/experiments/new`, and `/experiments/{experiment_id}` control, evidence, leads, approvals, messages, costs, and decision views.
+Planned implementation surfaces are only the frozen downstream catalogs: DB-01..05's 46 product tables, BACKEND-02's exact 66 operations, BACKEND-05's command catalog, BACKEND-06's three experiment reports, and FRONTEND-01's route/consumer map. There are no generic nested artifact/lead/metric/cost/decision endpoints beyond BACKEND-02 and no standalone `/metrics`, `/costs`, or `/decisions` pages. The Next.js product routes are exactly those owned by FRONTEND-01; the public unsubscribe confirmation is FastAPI-owned HTML, not a Next.js route.
 
 Those paths do not exist today. Their detailed contracts belong to later roadmap files and may not contradict the artifacts and authority rules above.
 
@@ -129,14 +135,15 @@ Those paths do not exist today. Their detailed contracts belong to later roadmap
 
 - [ ] **Capture the M0 bet —** Input: operator interview notes and any prior manual evidence. Operation: create the versioned `ExperimentBrief` with every required field, marking absence as `zero-history baseline` rather than inventing data. Output: reviewable brief. Test evidence: schema validation plus operator signature. Failure behavior: block M1 when any scope, budget, jurisdiction, success, or kill field is missing.
 - [ ] **Run the narrowness test —** Input: the brief. Operation: ask whether one person can name the customer, problem, offer, evidence channel, and cap without “and/or” branches. Output: pass or a smaller brief. Test evidence: completed M0 scope checklist. Failure behavior: split the hypothesis; never build one workflow for multiple untested markets.
-- [ ] **Register artifact and authority vocabulary —** Input: artifact table above. Operation: map each planned producer, consumer, authority, and immutable version key. Output: vocabulary crosswalk consumed by M2-M7. Test evidence: exact-name scan across roadmap files. Failure behavior: reject aliases that obscure ownership.
+- [ ] **Register artifact and authority vocabulary —** Input: the frozen catalogs and tables above. Operation: map each planned producer, consumer, authority, and immutable version key without creating aliases. Output: vocabulary crosswalk consumed by M2-M7. Test evidence: exact-name/set-equality scan across M0, DB-04, AGENT-02..09, BACKEND-02/05/06, and FRONTEND-01; reject `IdeaBrief`, `MarketEvidenceBundle`, recipient-bearing `OutreachDraft`, phantom table/route/command names, and any ninth agent artifact. Failure behavior: M0 remains open and M1 is blocked.
 - [ ] **Freeze non-goals for the first experiment —** Input: operator wishlist. Operation: classify each item as required by the next gate or deferred. Output: signed non-goal list. Test evidence: every planned feature points to a milestone gate. Failure behavior: remove work that has no next-gate evidence purpose.
 
 ## Test strategy
 
 - **Contract test `test_experiment_brief_rejects_unbounded_scope`:** broad customer segments, absent budget, absent jurisdiction, or absent stop rules fail validation.
 - **Contract test `test_agent_artifacts_have_no_side_effect_authority`:** every artifact schema lacks provider credentials and send methods.
-- **Traceability test `test_scope_artifacts_have_single_canonical_name`:** roadmap and later schema/API documents use the artifact names in this file.
+- **Traceability test `test_scope_vocabulary_equals_frozen_downstream_catalogs`:** the exact agent/compliance/product-record sets and 46-table/66-operation/route/command/report names equal the frozen downstream catalogs; phantom aliases and surfaces fail.
+- **Evidence test `test_operator_time_evidence_signature_interval_dedupe_and_failure_are_closed`:** independent golden bytes/signature/hash pass; null/unknown keys, overlap, gap, replay with changed bytes, invalid/revoked key, bad clock/duration and imputation fail closed without a product row.
 - **Review test `test_m0_brief_is_operator_signed`:** retained evidence contains version, timestamp, hash, and explicit approval.
 
 ## Safety, privacy, compliance, observability, and cost

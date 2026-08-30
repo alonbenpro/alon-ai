@@ -32,49 +32,51 @@ Create `observability/metrics.py`, `observability/spans.py`, `observability/slo.
 
 ### Exact metric registry and label budget
 
-All names below use OpenTelemetry dotted form; Prometheus translation may replace dots with underscores. Counters end conceptually in `.count`, histograms declare units, gauges describe current bounded state. Every label combination has a fixed registry and cardinality budget verified in CI.
+All names below use OpenTelemetry dotted form; Prometheus translation may replace dots with underscores. Counters end conceptually in `.count`, histograms declare units, gauges describe current bounded state. Every label combination comes from signed `MetricAttributeRegistryV1` version `metrics.attributes.v1`; unknown values are rejected before recording. Software/release/model/prompt/tool/workflow/agent/policy/config versions are categorically absent from metric attributes and remain only in bounded logs, traces, evidence and dashboard joins.
+
+The registry mechanically imports these exact finite domains: 66 valid `(http.route,http.request.method)` tuples from BACKEND-02; 46 `command.type` values from BACKEND-05; four WF-02 workflow types; 12 valid `(workflow.type,workflow.step)` tuples (`IDEA_VALIDATION:{IDEA,OFFER,MARKET_RESEARCH,BUNDLE}`, `LEAD_QUALIFICATION:{LEAD_RESEARCH,LEAD_QUALIFY}`, `OUTREACH_AND_REPLY:{PREPARE_AUTHORITY,SEND,RECONCILE,HISTORY_SYNC,RECIPIENT_SIGNAL}`, `EXPERIMENT_EVALUATION:{EVALUATE}`); eight AGENT-01 agent types; six provider capabilities; 58 BACKEND-03 policy reasons plus literal `NONE`; 18 complete OBS-05 incident route tuples (already including severity/trigger/runbook/alert); and eight suite-agent mappings. Other closed sets are `operation.outcome={SUCCEEDED,DENIED,FAILED,UNAVAILABLE,CANCELLED}`, `command.replay={false,true}`, `execution.mode={LIVE,RECORDED,SYNTHETIC}`, workflow terminal states 3/runtime 2/states 8, agent terminal states 3, HTTP status classes `{2xx,3xx,4xx,5xx}`, controls 2/actions 2, send-attempt states 5/authority modes 2/Gmail boundaries 14/cursor-gap booleans 2/recipient signals 6, budget scopes 4/currencies `{ILS,USD}`/reservation states 4, provider operation classes 7/cost states 4, evaluation repetitions 3/booleans 2, backup data kinds `{PRIMARY,DR}`, and telemetry signals `{LOG,METRIC,TRACE}`. OAuth uses exactly 12 valid identity/state tuples: OIDC `{PENDING,CLAIMED,CONSUMED,EXPIRED}` plus Gmail `{ISSUED,CLAIMED,EXCHANGE_STARTED,CREDENTIAL_STAGED,CREDENTIAL_ACTIVE,DB_COMMITTED,CONSUMED_SUCCESS,CONSUMED_FAILURE}`. Telemetry export uses six valid `(operation.outcome,telemetry.drop_reason)` tuples rather than a Cartesian free-form reason.
 
 | Instrument | OTel instrument | UCUM unit | Aggregation / temporality | Allowed attributes only | Max series |
 | --- | --- | --- | --- | --- | ---: |
-| `alon_ai.http.server.request.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `service.name`, `http.route`, `http.request.method`, `http.response.status_class` | 240 |
-| `alon_ai.http.server.request.count` | Counter | `{request}` | monotonic sum, cumulative | `service.name`, `http.route`, `http.request.method`, `http.response.status_class` | 240 |
-| `alon_ai.command.execution.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `command.type`, `operation.outcome`, `command.replay` | 160 |
-| `alon_ai.command.execution.count` | Counter | `{command}` | monotonic sum, cumulative | `command.type`, `operation.outcome`, `error.code` | 240 |
-| `alon_ai.workflow.run.count` | Counter | `{run}` | monotonic sum, cumulative | `workflow.type`, `workflow.version`, `workflow.terminal_state`, `workflow.runtime` | 160 |
-| `alon_ai.workflow.step.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `workflow.type`, `workflow.version`, `workflow.step`, `operation.outcome`, `workflow.replay` | 320 |
-| `alon_ai.workflow.active` | UpDownCounter | `{run}` | nonmonotonic sum, cumulative | `workflow.type`, `workflow.state` | 80 |
-| `alon_ai.agent.run.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `agent.type`, `agent.version`, `agent.terminal_state`, `execution.mode` | 192 |
-| `alon_ai.agent.run.count` | Counter | `{run}` | monotonic sum, cumulative | `agent.type`, `agent.version`, `agent.terminal_state`, `execution.mode` | 192 |
-| `alon_ai.provider.call.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `provider.name`, `provider.capability`, `operation.outcome`, `provider.error_code`, `execution.mode` | 240 |
-| `alon_ai.provider.request.count` | Counter | `{request}` | monotonic sum, cumulative | `provider.name`, `provider.capability`, `operation.outcome`, `provider.error_code`, `execution.mode` | 240 |
-| `alon_ai.provider.input_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.name`, `provider.capability`, `execution.mode` | 72 |
-| `alon_ai.provider.output_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.name`, `provider.capability`, `execution.mode` | 72 |
-| `alon_ai.provider.request.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.name`, `provider.capability`, `execution.mode` | 72 |
-| `alon_ai.provider.response.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.name`, `provider.capability`, `execution.mode` | 72 |
-| `alon_ai.provider.result.count` | Counter | `{result}` | monotonic sum, cumulative | `provider.name`, `provider.capability`, `operation.outcome`, `provider.error_code`, `execution.mode` | 240 |
-| `alon_ai.policy.decision.count` | Counter | `{decision}` | monotonic sum, cumulative | `policy.scope`, `policy.version`, `policy.allowed`, `policy.reason_code` | 500 |
-| `alon_ai.suppression.denial.count` | Counter | `{denial}` | monotonic sum, cumulative | `suppression.scope`, `suppression.source` | 24 |
-| `alon_ai.control.state` | ObservableGauge | `1` | last value, instantaneous (temporality N/A) | `control.name` | 2 |
-| `alon_ai.control.acknowledgement.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `control.name`, `control.action`, `operation.outcome` | 12 |
-| `alon_ai.gmail.send.attempt.count` | Counter | `{attempt}` | monotonic sum, cumulative | `send.attempt_state`, `operation.outcome`, `send.authority_mode` | 30 |
-| `alon_ai.gmail.send.boundary.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `gmail.boundary`, `operation.outcome` | 64 |
-| `alon_ai.gmail.ambiguity.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `send.authority_mode` | 2 |
-| `alon_ai.gmail.ambiguity.resolution.duration` | Histogram | `s` | `AGE_SECONDS`, cumulative | `operation.outcome`, `send.authority_mode` | 10 |
-| `alon_ai.gmail.history.page.count` | Counter | `{page}` | monotonic sum, cumulative | `operation.outcome`, `gmail.cursor_gap` | 4 |
-| `alon_ai.gmail.history.page.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `operation.outcome`, `gmail.cursor_gap` | 4 |
-| `alon_ai.gmail.recipient_signal.count` | Counter | `{signal}` | monotonic sum, cumulative | `gmail.signal_kind`, `suppression.committed` | 12 |
-| `alon_ai.oauth.saga.count` | Counter | `{saga}` | monotonic sum, cumulative | `oauth.identity_kind`, `oauth.state`, `operation.outcome`, `oauth.reason_code` | 64 |
-| `alon_ai.oauth.saga.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `oauth.identity_kind`, `oauth.state` | 16 |
-| `alon_ai.session.lifecycle.count` | Counter | `{session}` | monotonic sum, cumulative | `session.action`, `operation.outcome`, `session.reason_code` | 48 |
-| `alon_ai.budget.reservation.count` | Counter | `{reservation}` | monotonic sum, cumulative | `budget.scope`, `currency`, `budget.state` | 60 |
-| `alon_ai.cost.amount` | Counter | `{currency_minor}` | monotonic sum, cumulative; group by `currency` before sum | `provider.name`, `provider.operation_class`, `currency` | 120 |
-| `alon_ai.cost.reconciliation.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `provider.name`, `cost.state` | 24 |
-| `alon_ai.evaluation.case.count` | Counter | `{case}` | monotonic sum, cumulative | `evaluation.suite`, `agent.type`, `evaluation.repetition`, `evaluation.passed`, `evaluation.hard_safety` | 256 |
-| `alon_ai.incident.open` | ObservableGauge | `{incident}` | last value, instantaneous (temporality N/A) | `incident.severity`, `incident.trigger_code`, `incident.runbook_id`, `incident.alert_id` | 500 |
-| `alon_ai.backup.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | 6 |
-| `alon_ai.restore.proof.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | 6 |
-| `alon_ai.telemetry.export.count` | Counter | `{export}` | monotonic sum, cumulative | `telemetry.signal`, `operation.outcome`, `telemetry.drop_reason` | 48 |
-| `alon_ai.telemetry.export.lag` | Histogram | `s` | `AGE_SECONDS`, cumulative | `telemetry.signal`, `operation.outcome` | 12 |
+| `alon_ai.http.server.request.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `service.name`, `http.route`, `http.request.method`, `http.response.status_class` | `66*4=264` |
+| `alon_ai.http.server.request.count` | Counter | `{request}` | monotonic sum, cumulative | `service.name`, `http.route`, `http.request.method`, `http.response.status_class` | `66*4=264` |
+| `alon_ai.command.execution.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `command.type`, `operation.outcome`, `command.replay` | `46*5*2=460` |
+| `alon_ai.command.execution.count` | Counter | `{command}` | monotonic sum, cumulative | `command.type`, `operation.outcome`, `command.replay` | `46*5*2=460` |
+| `alon_ai.workflow.run.count` | Counter | `{run}` | monotonic sum, cumulative | `workflow.type`, `workflow.terminal_state`, `workflow.runtime` | `4*3*2=24` |
+| `alon_ai.workflow.step.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | valid `(workflow.type,workflow.step)`, `operation.outcome`, `workflow.replay` | `12*5*2=120` |
+| `alon_ai.workflow.active` | UpDownCounter | `{run}` | nonmonotonic sum, cumulative | `workflow.type`, `workflow.state` | `4*8=32` |
+| `alon_ai.agent.run.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `agent.type`, `agent.terminal_state`, `execution.mode` | `8*3*3=72` |
+| `alon_ai.agent.run.count` | Counter | `{run}` | monotonic sum, cumulative | `agent.type`, `agent.terminal_state`, `execution.mode` | `8*3*3=72` |
+| `alon_ai.provider.call.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `provider.capability`, `operation.outcome`, `execution.mode` | `6*5*3=90` |
+| `alon_ai.provider.request.count` | Counter | `{request}` | monotonic sum, cumulative | `provider.capability`, `operation.outcome`, `execution.mode` | `6*5*3=90` |
+| `alon_ai.provider.input_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.capability`, `execution.mode` | `6*3=18` |
+| `alon_ai.provider.output_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.capability`, `execution.mode` | `6*3=18` |
+| `alon_ai.provider.request.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.capability`, `execution.mode` | `6*3=18` |
+| `alon_ai.provider.response.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.capability`, `execution.mode` | `6*3=18` |
+| `alon_ai.provider.result.count` | Counter | `{result}` | monotonic sum, cumulative | `provider.capability`, `operation.outcome`, `execution.mode` | `6*5*3=90` |
+| `alon_ai.policy.decision.count` | Counter | `{decision}` | monotonic sum, cumulative | `policy.scope`, `policy.allowed`, `policy.reason_code` | `2*2*59=236` |
+| `alon_ai.suppression.denial.count` | Counter | `{denial}` | monotonic sum, cumulative | `suppression.scope`, `suppression.source` | `3*7=21` |
+| `alon_ai.control.state` | ObservableGauge | `1` | last value, instantaneous (temporality N/A) | `control.name` | `2` |
+| `alon_ai.control.acknowledgement.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `control.name`, `control.action`, `operation.outcome` | `2*2*5=20` |
+| `alon_ai.gmail.send.attempt.count` | Counter | `{attempt}` | monotonic sum, cumulative | `send.attempt_state`, `operation.outcome`, `send.authority_mode` | `5*5*2=50` |
+| `alon_ai.gmail.send.boundary.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `gmail.boundary`, `operation.outcome` | `14*5=70` |
+| `alon_ai.gmail.ambiguity.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `send.authority_mode` | `2` |
+| `alon_ai.gmail.ambiguity.resolution.duration` | Histogram | `s` | `AGE_SECONDS`, cumulative | `operation.outcome`, `send.authority_mode` | `5*2=10` |
+| `alon_ai.gmail.history.page.count` | Counter | `{page}` | monotonic sum, cumulative | `operation.outcome`, `gmail.cursor_gap` | `5*2=10` |
+| `alon_ai.gmail.history.page.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `operation.outcome`, `gmail.cursor_gap` | `5*2=10` |
+| `alon_ai.gmail.recipient_signal.count` | Counter | `{signal}` | monotonic sum, cumulative | `gmail.signal_kind`, `suppression.committed` | `6*2=12` |
+| `alon_ai.oauth.saga.count` | Counter | `{saga}` | monotonic sum, cumulative | valid `(oauth.identity_kind,oauth.state)`, `operation.outcome` | `12*5=60` |
+| `alon_ai.oauth.saga.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | valid `(oauth.identity_kind,oauth.state)` | `12` |
+| `alon_ai.session.lifecycle.count` | Counter | `{session}` | monotonic sum, cumulative | `session.action`, `operation.outcome` | `8*5=40` |
+| `alon_ai.budget.reservation.count` | Counter | `{reservation}` | monotonic sum, cumulative | `budget.scope`, `currency`, `budget.state` | `4*2*4=32` |
+| `alon_ai.cost.amount` | Counter | `{currency_minor}` | monotonic sum, cumulative; group by `currency` before sum | `provider.operation_class`, `currency` | `7*2=14` |
+| `alon_ai.cost.reconciliation.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `provider.operation_class`, `cost.state` | `7*4=28` |
+| `alon_ai.evaluation.case.count` | Counter | `{case}` | monotonic sum, cumulative | valid `(evaluation.suite,agent.type)`, `evaluation.repetition`, `evaluation.passed`, `evaluation.hard_safety` | `8*3*2*2=96` |
+| `alon_ai.incident.open` | ObservableGauge | `{incident}` | last value, instantaneous (temporality N/A) | valid `(incident.severity,incident.trigger_code,incident.runbook_id,incident.alert_id)` | `18` |
+| `alon_ai.backup.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | `2*5=10` |
+| `alon_ai.restore.proof.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | `2*5=10` |
+| `alon_ai.telemetry.export.count` | Counter | `{export}` | monotonic sum, cumulative | `telemetry.signal`, valid `(operation.outcome,telemetry.drop_reason)` | `3*6=18` |
+| `alon_ai.telemetry.export.lag` | Histogram | `s` | `AGE_SECONDS`, cumulative | `telemetry.signal`, `operation.outcome` | `3*5=15` |
 
 The aggregation registry is closed: `FAST_SECONDS=[0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2,5,10]`, `DURABLE_SECONDS=[0.01,0.05,0.1,0.25,0.5,1,2,5,10,30,60,120,300,900,3600]`, `AGE_SECONDS=[1,5,15,30,60,120,300,900,3600,21600,86400,604800,7776000]`, and `BYTE_SIZE=[128,512,1024,4096,16384,65536,262144,1048576,5000000]`. Values use exact base units before recording; milliseconds, token/request/result counts, and bytes never share an instrument. Counters reject negative values; duration/size histograms reject negative/non-finite values; gauges publish one value per allowed attribute set per collection.
 
@@ -82,7 +84,7 @@ Canonical vectors: one provider call with 17 input tokens, 4 output tokens, 1,02
 
 Forbidden metric labels include every UUID/record ID, hashes/digests, idempotency/request/correlation/trace IDs, subject/session/IP/user agent, recipient/business/mailbox/campaign/experiment, actual URL/path/query, prompt/model input/output, exception/error/detail text, provider request ID, source URI/domain, free-form reason, cost-entry/invoice/FX source ID, or timestamps. `model_name`/release commit may appear in logs/traces and dashboards as filters only after bounded registry review, not high-churn metric labels. CI fails when projected series exceed the per-instrument budget (default 500, total 10,000 for the solo deployment).
 
-Unknown instrument/type/unit/aggregation/temporality/attribute/value is rejected at the recording API. The registry's per-instrument maxima sum to 4,656; CI recomputes that exact sum, enumerates every bounded value product, and fails at a row maximum, total 10,000, or any uncontrolled dimension. Dashboards never aggregate different UCUM units, different original currencies, or semantically different event kinds into one number; rate conversion is a query over one counter, not a new instrument type.
+Unknown instrument/type/unit/aggregation/temporality/attribute/value is rejected at the recording API. CI parses all 39 rows, evaluates only integer multiplication in the `Max series` cells, proves imported catalog counts and valid-tuple sets by set equality, and requires the exact ordered vector `[264,264,460,460,24,120,32,72,72,90,90,18,18,18,18,90,236,21,2,20,50,70,2,10,10,10,12,60,12,40,32,14,28,96,18,10,10,18,15]`, whose sum is exactly `2,906`. It fails on a 40th/missing/duplicate instrument, arithmetic mismatch, row above 500, total above 10,000, catalog drift, version attribute, or uncontrolled dimension. Dashboards never aggregate different UCUM units, different original currencies, or semantically different event kinds into one number; rate conversion is a query over one counter, not a new instrument type.
 
 ### Span model and durable execution
 

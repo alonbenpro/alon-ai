@@ -109,6 +109,8 @@ CREATE TABLE workflow_runs (
     CONSTRAINT uq_workflow_runs_runtime_identity UNIQUE (runtime, runtime_workflow_id),
     CONSTRAINT uq_workflow_runs_experiment_type_attempt UNIQUE (experiment_id, workflow_type, attempt_no),
     CONSTRAINT uq_workflow_runs_input_digest UNIQUE (workflow_run_id, input_hash),
+    CONSTRAINT uq_workflow_runs_scope UNIQUE (workflow_run_id, experiment_id),
+    CONSTRAINT uq_workflow_runs_input_authority UNIQUE (workflow_run_id, experiment_id, input_hash),
     CONSTRAINT ck_workflow_runs_state CHECK (state IN ('PENDING','RUNNING','PAUSE_REQUESTED','PAUSED','CANCEL_REQUESTED','CANCELLED','SUCCEEDED','FAILED')),
     CONSTRAINT ck_workflow_runs_runtime CHECK (runtime IN ('DBOS','TEMPORAL')),
     CONSTRAINT ck_workflow_runs_bounds CHECK (attempt_no > 0 AND max_attempts > 0 AND attempt_no <= max_attempts AND max_runtime_seconds > 0 AND max_cost_minor >= 0),
@@ -129,7 +131,9 @@ CREATE TABLE system_controls (
     enabled boolean NOT NULL DEFAULT false,
     version bigint NOT NULL DEFAULT 1,
     reason_code text NOT NULL,
-    changed_by_operator_id uuid NOT NULL,
+    actor_type text NOT NULL,
+    changed_by_operator_id uuid NULL,
+    changed_by_system_actor_id text NULL,
     changed_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     evidence_ref text NOT NULL,
     CONSTRAINT pk_system_controls PRIMARY KEY (control_name),
@@ -137,7 +141,10 @@ CREATE TABLE system_controls (
     CONSTRAINT uq_system_controls_name_version UNIQUE (control_name, version),
     CONSTRAINT ck_system_controls_name CHECK (control_name IN ('PRODUCT_OUTREACH','TEST_INBOX_SENDING')),
     CONSTRAINT ck_system_controls_version CHECK (version > 0),
-    CONSTRAINT ck_system_controls_reason_nonempty CHECK (length(btrim(reason_code)) > 0)
+    CONSTRAINT ck_system_controls_actor_type CHECK (actor_type IN ('OPERATOR','SYSTEM')),
+    CONSTRAINT ck_system_controls_actor_ref CHECK ((actor_type = 'OPERATOR' AND changed_by_operator_id IS NOT NULL AND changed_by_system_actor_id IS NULL) OR (actor_type = 'SYSTEM' AND changed_by_operator_id IS NULL AND changed_by_system_actor_id IN ('SUPPRESSION_FAIL_CLOSED','GMAIL_AMBIGUITY_FAIL_CLOSED','TELEMETRY_BLINDNESS_FAIL_CLOSED','BACKUP_WITNESS_FAIL_CLOSED','CREDENTIAL_CONSISTENCY_FAIL_CLOSED','SEND_AUTHORITY_FAIL_CLOSED'))),
+    CONSTRAINT ck_system_controls_enable_actor CHECK (NOT enabled OR actor_type = 'OPERATOR'),
+    CONSTRAINT ck_system_controls_evidence CHECK (length(btrim(reason_code)) > 0 AND reason_code ~ '^[A-Z0-9][A-Z0-9_]{0,63}$' AND length(btrim(evidence_ref)) > 0 AND evidence_ref ~ '^[a-z0-9][a-z0-9:._/-]{0,199}$')
 );
 CREATE INDEX ix_system_controls_changed ON system_controls (changed_at DESC);
 
@@ -153,6 +160,7 @@ CREATE TABLE budget_accounts (
     CONSTRAINT pk_budget_accounts PRIMARY KEY (budget_account_id),
     CONSTRAINT fk_budget_accounts_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
     CONSTRAINT uq_budget_accounts_scope UNIQUE NULLS NOT DISTINCT (experiment_id, scope, currency),
+    CONSTRAINT uq_budget_accounts_authority UNIQUE NULLS NOT DISTINCT (budget_account_id, experiment_id, currency),
     CONSTRAINT ck_budget_accounts_limit CHECK (limit_minor >= 0),
     CONSTRAINT ck_budget_accounts_currency CHECK (currency ~ '^[A-Z]{3}$'),
     CONSTRAINT ck_budget_accounts_version CHECK (version > 0)
@@ -162,6 +170,8 @@ CREATE INDEX ix_budget_accounts_experiment ON budget_accounts (experiment_id, sc
 CREATE TABLE budget_reservations (
     reservation_id uuid NOT NULL,
     budget_account_id uuid NOT NULL,
+    experiment_id uuid NOT NULL,
+    currency char(3) NOT NULL,
     idempotency_key text NOT NULL,
     amount_minor bigint NOT NULL,
     state text NOT NULL DEFAULT 'RESERVED',
@@ -170,9 +180,11 @@ CREATE TABLE budget_reservations (
     created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     CONSTRAINT pk_budget_reservations PRIMARY KEY (reservation_id),
-    CONSTRAINT fk_budget_reservations_account FOREIGN KEY (budget_account_id) REFERENCES budget_accounts (budget_account_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_budget_reservations_account FOREIGN KEY (budget_account_id, experiment_id, currency) REFERENCES budget_accounts (budget_account_id, experiment_id, currency) ON DELETE RESTRICT,
     CONSTRAINT uq_budget_reservations_idempotency UNIQUE (budget_account_id, idempotency_key),
+    CONSTRAINT uq_budget_reservations_authority UNIQUE (reservation_id, experiment_id, budget_account_id, currency),
     CONSTRAINT ck_budget_reservations_amount CHECK (amount_minor > 0),
+    CONSTRAINT ck_budget_reservations_currency CHECK (currency ~ '^[A-Z]{3}$'),
     CONSTRAINT ck_budget_reservations_state CHECK (state IN ('RESERVED','RELEASED','RECONCILED','EXPIRED')),
     CONSTRAINT ck_budget_reservations_cost CHECK ((state = 'RECONCILED') = (cost_entry_id IS NOT NULL)),
     CONSTRAINT ck_budget_reservations_expiry CHECK (expires_at > created_at)
@@ -197,6 +209,7 @@ CREATE TABLE incidents (
     updated_at timestamptz NOT NULL DEFAULT statement_timestamp(),
     CONSTRAINT pk_incidents PRIMARY KEY (incident_id),
     CONSTRAINT fk_incidents_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_incidents_route_authority UNIQUE (incident_id, catalog_version, severity, trigger_code, alert_id, runbook_id),
     CONSTRAINT ck_incidents_severity CHECK (severity IN ('INFO','LOW','MEDIUM','HIGH','CRITICAL')),
     CONSTRAINT ck_incidents_state CHECK (state IN ('OPEN','MITIGATING','RESOLVED')),
     CONSTRAINT ck_incidents_catalog_version CHECK (catalog_version = 'incident.catalog.v1'),

@@ -33,18 +33,20 @@ flowchart TB
     WF --> APP
     APP --> DOMAIN["Domain models and deterministic transitions"]
     APP --> POLICY["Deterministic policies"]
-    APP --> PORTS["Persistence and provider ports"]
+    APP --> PERSIST["Persistence repositories and unit of work"]
+    PERSIST --> PG[("PostgreSQL system of record")]
+    APP --> PROVIDERPORTS["Typed provider/tool ports"]
     POLICY --> DOMAIN
     APP --> AGENTS["Pydantic AI typed agents: advisory artifacts only"]
-    AGENTS --> PORTS
-    PORTS --> PG[("PostgreSQL system of record")]
-    PORTS --> MODEL["Model/search/extraction/enrichment adapters"]
+    AGENTS --> READTOOLS["Injected bounded read-only tools"]
+    READTOOLS --> PROVIDERPORTS
+    PROVIDERPORTS --> MODEL["Model/search/extraction/enrichment adapters"]
     APP --> SEND["SendGateway"]
     SEND --> POLICY
     SEND --> GMAILPORT["GmailProvider port"]
     GMAILPORT --> GMAIL["Gmail API"]
     GMAIL --> RECON["Sent reconciliation and history sync"]
-    RECON --> PG
+    RECON --> APP
     API --> OBS["Logs, metrics, traces, alerts"]
     WORKER --> OBS
 ```
@@ -85,7 +87,7 @@ flowchart TB
 4. Immediately before Gmail, `SendGateway` rechecks outreach mode, suppression, approval, jurisdiction configuration, campaign/experiment state, budget, rate limit, and intent status.
 5. The Gmail adapter sends a stable RFC message identifier and returns Gmail message/thread identifiers when known.
 6. The attempt commits `SENT`; a timeout/crash instead leaves or marks `AMBIGUOUS`.
-7. Reconciliation searches Gmail Sent evidence before any retry. Multiple or absent candidates require the defined recovery path; blind retry is forbidden.
+7. Reconciliation resolves ambiguity only from one positive authorized Gmail Sent match. Zero/multiple/conflicting candidates retain permanent quarantine; retry/replacement is forbidden unless explicit rejection or local pre-write proof establishes that Gmail could not have received bytes.
 8. Gmail history sync advances its cursor only in the same transaction as recorded provider observations and emits reply/bounce events.
 
 Every external model/search/extraction/enrichment call follows the same general intent, timeout, cost, provenance, and audit discipline, but only Gmail has reputation-bearing send authority.

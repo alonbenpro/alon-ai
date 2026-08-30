@@ -69,7 +69,7 @@ Dialogs follow heading-first focus, trap, pending no-close, focus return, Enter/
 
 ## Test strategy
 
-- **States `test_message_page_exhaustively_renders_all_fourteen_states`:** unknown blocks.
+- **States `test_message_page_exhaustively_renders_all_thirteen_states`:** unknown blocks.
 - **Authority `test_record_intent_confirmation_displays_full_scope_and_does_not_claim_final_send`:** gateway remains sole authority.
 - **Compliance `test_all_fourteen_final_send_denials_render_distinct_safe_facts_reasons_and_evidence_refs`:** missing/unknown/generic mappings block actions.
 - **Ambiguity `test_ambiguous_and_reconciling_have_no_send_or_retry_action`:** only recovery deep link.

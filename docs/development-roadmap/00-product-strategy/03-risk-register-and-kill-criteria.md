@@ -28,8 +28,8 @@ The existing guard is useful but insufficient: a Boolean environment flag cannot
 
 | ID | Risk | Level | Prevention | Detection / trigger | Mandatory response |
 | --- | --- | --- | --- | --- | --- |
-| R01 | duplicate or unintended Gmail send | Critical | durable idempotency, deterministic policy, test-recipient allowlist, `SendGateway`, reconciliation before retry | any recipient receives duplicate content for one intent; any send lacks intent/audit record | engage global kill switch, revoke queue authority, reconcile all in-flight intents, preserve evidence, return to M1/M6 |
-| R02 | Gmail call succeeds but local completion is absent | Critical | stable RFC message identifier, idempotency key, `AMBIGUOUS` state, Sent-mail search before retry | timeout/crash between provider acceptance and durable completion | prohibit retry, reconcile, require operator review if more than one candidate or no conclusive result |
+| R01 | duplicate or unintended Gmail send | Critical | durable idempotency, deterministic policy, test-recipient allowlist, `SendGateway`, permanent ambiguity quarantine | any recipient receives duplicate content for one intent; any send lacks intent/audit record | engage global kill switch, revoke queue authority, reconcile all in-flight intents, preserve evidence, return to M1/M6 |
+| R02 | Gmail call succeeds but local completion is absent | Critical | stable RFC message identifier, idempotency key, `AMBIGUOUS` state, positive-evidence Sent reconciliation; negative search never authorizes retry | timeout/crash between provider acceptance and durable completion | prohibit retry/replacement indefinitely, reconcile, require operator investigation for zero/multiple/conflicting candidates |
 | R03 | selected DBOS runtime fails production acceptance | Critical | DBOS kill-point spike and acceptance scorecard | failed restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency | migrate to Temporal before product workflows |
 | R04 | suppression, jurisdiction, campaign, budget, rate, or kill policy bypass | Critical | versioned deterministic policy composition rechecked immediately before provider call | any mismatch between policy facts and actual send | stop all sends, classify incident, correct data/policy, replay policy against intents before re-enable |
 | R05 | Gmail OAuth or provider credential compromise | Critical | encryption at rest, least scopes, private access, rotation and revocation runbook | secret scan, unauthorized access, provider alert, unexplained token use | revoke tokens, disable provider, rotate secrets, assess affected data and legal obligations |
@@ -66,7 +66,7 @@ DBOS is selected, but production use remains blocked. M1 disqualifies DBOS and m
 
 1. restart recovery at every defined worker-termination kill point;
 2. cancellation with unambiguous pause/resume behavior and no post-cancel provider call;
-3. ambiguous Gmail outcome reconciliation through the outbound-attempt ledger and provider-result capture before any bounded retry;
+3. permanent quarantine and positive-evidence reconciliation of every ambiguous Gmail outcome through the outbound-attempt ledger and provider-result capture, with zero-result searches forbidden as retry evidence;
 4. duplicate-send prevention with zero uncontrolled duplicate messages;
 5. workflow versioning with safe rollout and recovery of in-flight executions;
 6. observability of workflow, queue, policy, attempt, provider, and recovery evidence;
@@ -96,7 +96,7 @@ In scope: product, engine, side-effect, credential, privacy, compliance, cost, r
 
 ## Exact implementation surfaces
 
-Planned records: `risk_acceptances`, `system_controls`, `campaign_controls`, `suppression_entries`, `incident_records`, `budget_reservations`, and immutable `audit_events`. Planned commands: `DisableOutreach`, `PauseCampaign`, `CancelExperiment`, `RevokeApproval`, and `ResolveAmbiguousSend`. Planned deterministic symbols: `evaluate_send_policy`, `assert_budget_available`, `engage_kill_switch`, and `reconcile_send_intent`. Planned endpoints: `POST /api/v1/system/outreach:disable`, experiment pause/cancel commands, and ambiguous-send resolution commands.
+Planned records are only the frozen tables `system_controls`, `campaigns`, `suppression_entries`, `incidents`, `budget_reservations`, and immutable `audit_events`. Planned commands use BACKEND-05's exact catalog names, including `DisableSystemControl`, `PauseCampaign`, `CancelExperiment`, `RevokeApproval`, and `ReconcileSendAttempt`; the exact private routes and operation IDs are BACKEND-02's rows and may not be shortened or aliased here. Deterministic application services own policy, budget, fail-closed control mutation, and positive-evidence send reconciliation. No command may resolve an ambiguous Gmail write as non-send.
 
 None of these implementations exists today. ADR 0003's current `SendGateway` is a minimal contract and will be expanded only after persistence and policy gates.
 
@@ -111,7 +111,7 @@ None of these implementations exists today. ADR 0003's current `SendGateway` is 
 
 - **Unit `test_kill_switch_denies_before_policy_and_provider`:** global stop short-circuits all downstream work.
 - **Integration `test_cancelled_campaign_cannot_create_or_execute_send_intent`:** both creation and execution gates deny.
-- **Recovery `test_ambiguous_send_never_blind_retries`:** timeout/crash transitions to reconciliation and cannot call provider again without conclusive resolution.
+- **Recovery `test_ambiguous_send_is_permanently_quarantined_without_positive_sent_evidence`:** timeout/crash transitions to reconciliation; zero/multiple/conflicting searches at and beyond 300 seconds cannot retry, create a replacement intent, or enter either failure state.
 - **Security `test_credential_incident_revokes_provider_authority`:** provider construction fails after token revocation state.
 - **Cost `test_missing_authoritative_cost_feed_fails_closed`:** new paid calls pause when caps cannot be verified.
 - **Audit `test_reenable_requires_resolved_incident_and_operator_command`:** configuration restart alone cannot re-enable sending.

@@ -16,7 +16,7 @@ One operator is alerted through channels independent of Alon AI Gmail, can deter
 
 ## Current repository state
 
-The API has liveness/readiness and sanitized structured logs; the worker emits `worker_ready`. The complete OBS-01 event schema, OBS-02 39-instrument/4,656-series registry and alerts, cost/evaluation telemetry, incident tables/catalog/IR-01..13, notification adapters, external heartbeats, backup metrics, recovery commands and drills remain planned. No on-call or disaster-recovery claim is currently supported.
+The API has liveness/readiness and sanitized structured logs; the worker emits `worker_ready`. The complete OBS-01 event schema, OBS-02 exact 39-instrument/mechanically derived 2,906-series registry and alerts, cost/evaluation telemetry, incident tables/catalog/IR-01..13, notification adapters, external heartbeats, backup metrics, recovery commands and drills remain planned. No on-call or disaster-recovery claim is currently supported.
 
 ## Scope and non-goals
 

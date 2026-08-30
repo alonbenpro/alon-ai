@@ -29,7 +29,7 @@ As of 2026-08-29, the repository implements a small foundation:
 - a Next.js readiness page using generated OpenAPI types; and
 - Docker Compose and CI foundation checks.
 
-The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail history sync, product data, agents, provider adapters, operator authentication, experiment controls, public unsubscribe routes/ingress, backups, private deployment, production monitoring, real users, or real sends. Every reference below to those capabilities describes planned work until its milestone retains passing evidence. The roadmap now contains the full 77-file M0-M9 documentation manifest, but documentation completeness is not implementation readiness; the audited blockers below remain explicit final-review work.
+The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail history sync, product data, agents, provider adapters, operator authentication, experiment controls, public unsubscribe routes/ingress, backups, private deployment, production monitoring, real users, or real sends. Every reference below to those capabilities describes planned work until its milestone retains passing evidence. The roadmap now contains the full 77-file M0-M9 documentation manifest. The final-review documentation contradictions are closed by the register below, but every named implementation evidence gate remains explicitly open; documentation completeness is not implementation readiness.
 
 ## How to execute this roadmap
 
@@ -107,7 +107,7 @@ Alon AI selects Pydantic AI plus DBOS on PostgreSQL. This is an architecture dec
 
 M1 accepts DBOS as a runtime; it does not authorize product outreach. Only the isolated disposable M1 harness may send, and only to operator-owned test inboxes. Product outreach remains disabled until both M1 and M6 evidence gates pass; passing both only makes a later bounded real experiment eligible for separate authority. Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconciliation, duplicate-send prevention, workflow versioning, observability, operator control, or rate-limit enforcement under restart and concurrency is disqualifying and forces migration to Temporal before workflow product work continues.
 
-Gmail ambiguity is reconciled independently of DBOS because the API call may succeed before local completion is durably recorded. The design requires a stable send idempotency key, outbound-attempt ledger, provider-result capture, Sent-folder reconciliation, bounded retry policy, and operator-visible ambiguous state.
+Gmail ambiguity is reconciled independently of DBOS because the API call may succeed before local completion is durably recorded. The design requires a stable send idempotency key, outbound-attempt ledger, provider-result capture, Sent-folder reconciliation, and operator-visible permanent quarantine. Zero Gmail search/history results never prove non-send and never authorize retry or a replacement intent; retry is limited to explicit provider rejection or local pre-write proof that bytes never left the process.
 
 ## Complete file manifest mapped to vertical gates
 
@@ -274,19 +274,32 @@ Files may link to repeated global constraints here, but task-specific requiremen
 - [ ] **When a planned name changes —** Input: approved architecture decision. Operation: change the canonical name across all roadmap files and contracts. Output: one consistent vocabulary. Test evidence: repository-wide exact-name scan. Failure behavior: reject the rename until all consumers are identified.
 - [ ] **Before any production-readiness claim —** Input: M8/M9 evidence. Operation: compare the claim to retained restore, incident, send, and experiment artifacts. Output: scoped claim with evidence links. Test evidence: independent evidence-manifest review. Failure behavior: use planned or unproven language.
 
-## Audited blockers for final review
+## Final-review contract closure and remaining evidence gates
 
-The Task 8 audit found the following pre-existing issues outside its seven-file edit authorization. None may be silently treated as passed; LAUNCH-02/03/04 entry rejects while an applicable contract remains unresolved.
+The consolidated final correction wave closes the review's documentation contradictions without claiming that the planned product exists. The canonical contract now has exact, machine-checkable rulings for all 18 findings:
 
-1. `02-database/06-migrations-seeding-and-retention.md` requires operator confirmation for purge but does not freeze the deferred fail-closed manual-review SLA; retention implementation must not invent the timeout/escalation rule.
-2. `04-agents/04-market-research-agent.md` defines `MarketEvidenceArtifactV1.evidence_gaps` with `min_length=1`, conflicting with the deferred empty-tuple case; the artifact contract and fixtures need one canonical ruling before promotion.
-3. `05-providers/06-enrichment-provider.md` still contains the literal interpolation marker `#{marker}`; `T7-DOC-CONTRACT` must reject it until removed by an authorized upstream fix.
-4. `07-frontend/07-message-and-reply-timeline.md` names `test_message_page_exhaustively_renders_all_fourteen_states`, while the canonical `MessageState` set contains 13 values; the test name must match the set without changing the set.
-5. `08-security-and-compliance/02-authentication-and-private-access.md` classifies minimized terminated session storage as `SAFETY_LONG`, while `08-security-and-compliance/06-data-privacy-and-retention.md` specifies terminated session detail for 30 days. Session prune/backup/restore acceptance fails closed until one authoritative duration is chosen.
-6. The ignored historical Task 6 report retains obsolete overstatements from superseded review rounds, including old API/count/closure claims; it is not canonical evidence and requires report-history correction or an explicit superseded-results ledger in final review.
-7. Task 7 did not produce a fresh local PostgreSQL 18/Docker run. [GitHub Actions run 33179438858](https://github.com/alonbenpro/alon-ai/actions/runs/33179438858) at `8081008d13adfc7e8a09ee104e2bf54c37187e0b` is immutable green evidence only for the unchanged foundation product at that 2026-08-28 commit. It did not test this documentation branch, the 46-table product schema, DBOS/Gmail, Task 7 runner, AWS S3, VPS, backup/restore or M8/M9 systems.
+1. M0 consumes the frozen 46-product-table, 66-operation, command, event, service, route, report, agent-artifact, and compliance-artifact catalogs; `OperatorTimeEvidenceV1` is signed non-product evidence and adds no table or operation.
+2. The first M9 experiment is immutable at 5 sends per rolling 24 hours and 10 total; final SEND applies the minimum of every applicable signed ceiling.
+3. A possibly accepted Gmail write remains quarantined without a time limit until positive authorized Sent evidence resolves it; absence never proves non-send, and only explicit rejection or local pre-write proof can admit another attempt.
+4. Public unsubscribe is exactly BACKEND-02's FastAPI-owned scanner-safe GET HTML plus explicit-action POST, not a public Next.js route; the operation total remains 64 private plus 2 public.
+5. The product catalog remains 46 tables, with composite and set-based provenance enforcement across experiment, artifact type/version, workflow/run, campaign/member/lead, evidence/decision, and cost boundaries.
+6. Task 7 has exactly 24 distinct nonrecursive handlers, an absolute arbitrary-cwd-safe runner, content digests, `${10}`-style positional parameters, one final child exec, and closed target/exit semantics.
+7. `system_controls` has the exact `OPERATOR|SYSTEM` actor union: only an operator can enable; a system actor may only disable with the exact actor ID, reason, and evidence.
+8. Approval is manual-only and requires the existing `getApproval` operation's step-up, `no-store`, nontelemetry sensitive preview plus a fresh materialization-bound receipt; no automatic approval edge exists.
+9. Campaign creation uses an immutable experiment-scoped `ALL_CURRENTLY_ELIGIBLE` snapshot, exact query/count/hash, cap, and all-or-nothing drift/overflow checks; there is no pre-campaign lead-selection route.
+10. Signed `retention.policy.v1` fixes 30-day operational session detail, separately minimized `SAFETY_LONG` auth audit, 24-hour purge review, 72-hour resolution/escalation, 14 daily plus 4 weekly backup chains, a 35-day absolute personal-data recoverability ceiling, 90-day unsubscribe tokens, and at least 97 days of key overlap.
+11. OBS-02 retains exactly 39 metric names, imports finite versioned value domains, forbids version/high-cardinality labels, and mechanically derives a maximum of 2,906 series.
+12. `security_runtime` is a separate exact two-table operational schema with DDL, CAS/lease lifecycle, roles/ACLs, migrations, retention, restore, and negative fixtures; it is not part of the 46-table product set.
+13. Incident trigger/alert/severity/runbook identity is immutable, and PostgreSQL enforces exact route and repair/resolution applicability, including non-waivable residual risks.
+14. Raw source locators are restricted and encrypted; public citations strip fragments, userinfo, and query strings by default and admit only closed safe query keys after secret/PII-pattern rejection.
+15. The architecture diagram separates agent tool/provider ports from deterministic application-service persistence ownership.
+16. `MarketEvidenceArtifactV1.evidence_gaps` accepts the canonical empty tuple and rejects empty members, duplicates, and more than ten entries.
+17. The enrichment interpolation defect is removed while the validator still rejects unresolved placeholders.
+18. FRONTEND-07's exhaustive test names the exact thirteen-state `MessageState` set without changing that set.
 
-Graphify post-commit/post-checkout hooks are installed locally, but merge-driver registration is partial because the tracked `.gitattributes` rule is absent. This is repository-navigation hygiene for final review, not product evidence and not authorization to change an eighth tracked file in Task 8.
+Each item remains an implementation evidence gate: passing documentation scans or compiling planned DDL grants no deployment, provider, legal, recipient, campaign, control, or send authority. The ignored historical Task 6 report contains superseded counts and is not canonical evidence. Fresh local PostgreSQL compilation validates the documented schemas only; it does not implement migrations or replace the unchanged-foundation CI record. The 2026-08-29 maintenance advisory baseline remains explicitly `INCOMPLETE`, and real DBOS/Gmail/AWS/VPS/backup/restore/M8/M9 evidence remains absent until its owning milestone command exits successfully with signed artifacts.
+
+Graphify post-commit/post-checkout hooks are installed locally, but merge-driver registration remains partial because the tracked `.gitattributes` rule is absent. This repository-navigation limitation is not product evidence and does not relax any gate.
 
 ## Verification and acceptance
 

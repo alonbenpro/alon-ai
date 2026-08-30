@@ -101,9 +101,9 @@ In scope: milestone exit evidence, offline quality/cost promotion, raw funnel co
 
 ## Exact implementation surfaces
 
-Planned records: `metric_definitions`, `metric_observations`, `cost_ledger_entries`, `operator_time_entries`, `experiment_metric_snapshots`, and `experiment_decisions`. Planned deterministic query symbols: `compute_funnel_snapshot(experiment_id)`, `compute_cost_snapshot(experiment_id)`, `evaluate_decision_rule(experiment_id)`, and `verify_experiment_caps(experiment_id)`. Planned API endpoints: `GET /api/v1/experiments/{experiment_id}/metrics`, `GET /costs`, and `POST /decisions`. Planned UI route: `/experiments/{experiment_id}/decision`.
+Planned records are the frozen DB catalog names `metric_definitions`, `metric_observations`, `metric_snapshots`, `cost_entries`, and `experiment_decisions`; signed `OperatorTimeEvidenceV1` remains non-product release/experiment evidence through PRODUCT-01's existing evidence path. Planned deterministic reporting is BACKEND-06's `getExperimentOverviewReport`, `getExperimentFunnelReport`, and `getExperimentCostReport`; the authoritative decision command is BACKEND-02/05 `recordExperimentDecision`. Their exact paths are the frozen BACKEND-02 rows. The consumer is FRONTEND-01's existing experiment detail route and its overview/funnel/cost/decision modules—there are no standalone metric, cost, or decision pages or generic nested endpoints.
 
-These records, functions, endpoints, and route are planned and absent from the current repository.
+These records, operations, and consumers are planned and absent from the current repository. Any alias not present in the frozen catalogs fails the M0 vocabulary gate.
 
 ## Ordered implementation tasks
 

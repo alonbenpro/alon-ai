@@ -58,7 +58,7 @@ class MarketEvidenceArtifactV1(StrictAgentModel):
     research_questions: tuple[str, ...] = Field(min_length=2, max_length=6)
     claims: tuple[MarketClaimV1, ...] = Field(min_length=2, max_length=20)
     contradictions: tuple[str, ...] = Field(max_length=10)
-    evidence_gaps: tuple[str, ...] = Field(min_length=1, max_length=10)
+    evidence_gaps: tuple[str, ...] = Field(max_length=10)
     market_signals: tuple[str, ...] = Field(min_length=1, max_length=10)
     disconfirming_signals: tuple[str, ...] = Field(min_length=1, max_length=10)
     overall_confidence: Decimal = Field(ge=Decimal("0"), le=Decimal("1"), decimal_places=3)
@@ -94,6 +94,8 @@ Ceilings: `timeout_seconds=120`, `max_input_tokens=12000`, `max_output_tokens=25
 
 `MarketEvidenceValidatorV1` verifies allow/block-domain rules, HTTPS/capture existence/hash/redaction, claim/source cardinality and independence, confidence rule, publication/retrieval timestamps, numeric-claim dimensions, contradictions/gaps, prompt-injection markers, no contact/authority fields, and ledger totals. Ownership handoff follows DB-04: `AgentRunRecordingService` alone stores/closes `agent_runs`; `EvidenceIngestService` alone stores any new `evidence_items`; `ArtifactCommandService` writes only the `PRODUCED` artifact row plus `artifact.produced.v1`; `ProviderCostReconciliationService` owns `cost_entries`; and only the later `ArtifactValidationService` transaction writes `artifact_evidence_links`, `artifact_validations`, validation status, and `artifact.validated.v1`/`artifact.rejected.v1`. Validators/acceptance services alone emit later artifact events; no lead/experiment/provider event is agent-authored.
 
+`evidence_gaps=()` is the canonical valid representation when the bounded research found no identified gap; it is not padded with invented text. One through ten nonempty normalized gap strings are also valid. More than ten, empty-string members, duplicates, or a claimed complete result whose validator detects a missing required evidence dimension fails validation.
+
 ## Offline evaluation and operator review
 
 Suite `market_research.v1` has exactly 60 cases: 24 normal recorded search/extraction sets, 8 stale-source cases, 8 contradictory sets, 8 numeric-unit/geography traps, and 12 injection/blocked-domain/contact/authority cases. All non-model responses are frozen immutable fixtures; only isolated candidate-model capture is network enabled. Scores: hard schema/authority/domain/injection safety, citation precision/recall, source-quality labeling, contradiction recall, temporal/numeric correctness, gap/abstention calibration.
@@ -114,6 +116,7 @@ Operator review is mandatory for material contradictions, any `OTHER_SECONDARY` 
 ## Test strategy
 
 - **Schema `test_market_models_reject_bad_bounds_dates_quality_and_confidence`.**
+- **Gap `test_market_evidence_gaps_accepts_empty_tuple_without_fabrication_and_rejects_empty_members_or_eleven_items`.**
 - **Provenance `test_market_claims_require_eligible_capture_and_exact_hash`.**
 - **Adversarial `test_extracted_page_cannot_add_tools_contacts_send_or_commands`.**
 - **Numeric `test_market_size_requires_unit_geography_period_and_method`.**
