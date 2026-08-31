@@ -64,6 +64,10 @@ tokens.json
 # Local web-research scratch data
 .firecrawl/
 
+# Local architecture analysis and isolated implementation worktrees
+graphify-out/
+.worktrees/
+
 # OS and editors
 .DS_Store
 Thumbs.db

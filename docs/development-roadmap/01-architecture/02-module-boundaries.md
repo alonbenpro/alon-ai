@@ -1,0 +1,125 @@
+# Module Boundaries and Dependency Rules
+
+**Document ID:** ARCH-02
+**Status:** Planned target with current exceptions declared
+**Milestone:** M0 definition, enforced from M2
+**Owner:** Solo operator
+**Prerequisites:** [ARCH-01 target architecture](01-target-system-architecture.md) and ADR 0001
+**Outputs:** Package responsibilities, allowed imports, ports, transaction ownership, and boundary tests
+**Unlocks:** M2 schema/repositories, M3 agents/providers, M4 application services
+**Risk:** High
+**Complexity:** L
+
+## Outcome and timing
+
+The modular monolith stays cheap only if dependencies point toward stable business contracts and framework/provider details remain replaceable. M0 names the target; M2 enforces it when product modules first exist. Directory shape is not an implementation sequence.
+
+## Current repository state and debt
+
+Current boundaries are intentionally thin. `api/` owns health routes and composition, `db/` owns engine/readiness, and `worker/` owns safe startup. `agents/` and `workflows/` contain only package markers. `policies/sending.py` defines an async protocol. `providers/gmail.py` defines Gmail-flavored value types and a protocol but no adapter. `domain/sending.py` contains `SendGateway` and imports both provider and policy modules.
+
+That last direction is a known foundation shortcut, not the target: a domain module currently depends on outward integration/policy namespaces. M2 moves neutral value contracts inward; M6 places the orchestrating gateway under `application/`. No refactor is justified before the relevant vertical milestone.
+
+## Target package map
+
+| Package | Responsibility | Allowed first-party dependencies | Forbidden dependencies |
+| --- | --- | --- | --- |
+| `alon_ai.domain` | IDs, immutable values, aggregates, invariants, transition decisions, domain event intents | other `domain` modules | FastAPI, SQLAlchemy, DBOS/engine SDK, provider SDKs, `api`, `worker`, `persistence`, `agents` |
+| `alon_ai.application` | command/query handlers, units of work, ports, orchestration, `SendGateway` | `domain`, narrow `policies`, abstract ports | FastAPI request/response types, concrete adapters, engine SDK in business handlers |
+| `alon_ai.policies` | pure/versioned rule composition and `PolicyDecision` | `domain`, read-only policy fact types | provider calls, sessions, workflow SDK, agent output as authority |
+| `alon_ai.workflows` | DBOS finite durable coordination, queues, schedules, timers, retries, and runtime adapter | `application` commands/ports, `domain` IDs/artifact refs | concrete provider adapter, FastAPI, SQLAlchemy model mutation, direct Gmail |
+| `alon_ai.agents` | Pydantic AI typed artifact schemas/runners, model/tool ports, provenance, cost, and evaluation hooks | artifact contracts, abstract evidence-provider ports | application commands that mutate state, Gmail/provider send ports, sessions, workflow control |
+| `alon_ai.providers` | concrete external adapters and provider error mapping | `domain`/application port DTOs, provider libraries | cross-provider business orchestration, state transitions, policy decisions |
+| `alon_ai.persistence` | SQLAlchemy mappings, repositories, unit of work, outbox/audit/idempotency implementation | `domain`, application persistence ports | FastAPI, frontend, agents, provider business calls |
+| `alon_ai.api` | auth/context, validation, OpenAPI routes, error/status mapping, composition | `application`, query DTOs, config/composition | direct SQLAlchemy queries in routes, providers, agents, workflow SDK business logic |
+| `alon_ai.worker` | process lifecycle and composition root | `workflows`, `application`, config/composition | duplicate business logic, HTTP route concerns |
+| `alon_ai.observability` | safe log/metric/trace adapters and correlation | neutral telemetry contracts | product state ownership, secrets/full message copies |
+| `alon_ai.config` | validated environment configuration | Pydantic settings | product state or mutable runtime controls |
+
+External package imports are additionally constrained: FastAPI only in `api/`; DBOS SDK only in workflow adapter/composition; Temporal SDK only after a disqualifying M1 decision and only in its replacement adapter/composition; Pydantic AI only in agent runtime/composition; SQLAlchemy only in `persistence/`, migration code, and existing `db/` health bootstrap; Gmail SDK only in the Gmail adapter; model/search/extraction SDKs only in corresponding adapters. LangChain, LangGraph, Restate, and Prefect are not initial dependencies.
+
+## Canonical ports and ownership
+
+These are planned interfaces; their detailed fields arrive in the named milestones.
+
+| Port | Consumer | Implementer | Rule |
+| --- | --- | --- | --- |
+| `UnitOfWork` | application handlers, workflow command handlers | PostgreSQL persistence | one command transaction owns aggregate change, event/audit append, idempotency result, and outbox enqueue |
+| `ExperimentRepository` | application | PostgreSQL persistence | aggregate-version optimistic concurrency required |
+| `ArtifactRepository` | application/agents via handler | PostgreSQL persistence | agents return artifacts; handler persists them |
+| `EvidenceSearchProvider` | agent runner | search adapter/fixture | returns captured provenance, never business authority |
+| `PageExtractionProvider` | agent runner | extraction adapter/fixture | bounded content/type/size/time and safe fetch policy |
+| `ModelProvider` | agent runner | model adapter/fixture | typed response, usage, model/version, timeout/error taxonomy |
+| `GmailProvider` | `application.sending.SendGateway` and Gmail sync service only | Gmail adapter/fixture | send/reconcile/history primitives; no policy |
+| `WorkflowRuntime` | application composition and operator commands | DBOS adapter; Temporal adapter is mandatory only after a disqualifying M1 failure | finite start/pause/resume/cancel/status; no business rules |
+| `Clock` / `IdGenerator` | domain/application | production and deterministic test adapters | removes hidden time/randomness from tests |
+| `Telemetry` | application/workflows/adapters | observability adapter | safe structured fields only |
+
+`GmailProvider` is never injected into an agent. `SendGateway` is the only application object allowed to invoke its send operation. Gmail history/reconciliation services may invoke read-only provider primitives but may not originate a send.
+
+## Transaction and concurrency rules
+
+1. API and workflow handlers call one application command with one command idempotency key.
+2. The application unit of work locks or checks the aggregate version, applies a valid transition, appends domain and audit events, records the command result, and enqueues durable follow-up in one PostgreSQL transaction.
+3. External network calls never run while holding a long database transaction.
+4. Side-effect intent is committed before a provider call. Provider outcome is committed in a second transaction under the same idempotency/correlation identity.
+5. A crash between those transactions creates an ambiguous/reconcilable state, not permission to retry.
+6. Projection lag never authorizes an action; command handlers read authoritative state.
+7. Retry classification belongs to adapter/application error taxonomy, while the durable engine schedules allowed retries.
+
+## API and frontend boundary
+
+FastAPI request models map into application commands. Routes contain no SQL text, provider client, agent prompt, policy expression, or workflow state mutation. HTTP errors are stable mappings from typed application failures. Mutations accept `Idempotency-Key` or an equivalent typed command key and return authoritative command/state identifiers.
+
+Next.js uses `frontend/openapi.json` and `frontend/src/lib/api/schema.d.ts`, generated from FastAPI. Server or client components may shape display data but do not reimplement eligibility, pricing, suppression, state transitions, or decision rules. A dashboard action is pending until the authoritative response/event confirms it.
+
+## Workflow and agent boundary
+
+Workflows coordinate finite application commands and wait on durable timers/events. They store stable IDs and artifact references, not live SDK clients or opaque model objects. Every run has an explicit terminal outcome and bounded retry/cost policy.
+
+Agents consume typed input snapshots and injected read-only tools. They return one `AgentArtifactEnvelope[T]` containing artifact schema/version, provenance, confidence/abstention, usage/cost, and prompt/model/tool versions. Deterministic application code validates, stores, and decides whether the artifact permits a transition. Agent exception text is not a domain decision.
+
+## Scope and non-goals
+
+In scope: dependency direction, ports, composition, transaction ownership, concurrency, generated contract, and test enforcement. Non-goals: splitting deployable services, generic dependency-injection frameworks, repository-per-table patterns, event sourcing every read, a shared enterprise message bus, or abstraction without a current/tested second implementation or critical safety seam.
+
+## Exact file migration plan
+
+At M2, introduce `backend/src/alon_ai/application/`, `domain/experiments.py`, `domain/events.py`, `persistence/`, and import-rule tests. Neutral send DTOs move from `providers/gmail.py` to `domain/messaging.py` or an application port module. At M6, move `SendGateway` orchestration from `domain/sending.py` to `application/sending.py`; `providers/gmail.py` becomes the adapter/port implementation boundary. Compatibility re-exports may exist for one milestone only and must emit no alternate authority path.
+
+Existing `db/engine.py` may remain the low-level engine bootstrap until persistence composition absorbs it. Generated frontend contracts remain at their current paths.
+
+## Ordered implementation tasks
+
+- [ ] **Create inward contracts at M2 —** Input: ARCH-03 names and M2 schema. Operation: define domain values/events and application persistence/workflow/provider ports without framework imports. Output: stable interfaces. Test evidence: type checks and forbidden-import scan. Failure behavior: block concrete adapters.
+- [ ] **Implement PostgreSQL unit of work —** Input: domain aggregates, events, idempotent command envelope. Operation: atomically persist state, version, audit/domain events, command result, and outbox item. Output: M2 transaction boundary. Test evidence: real-PostgreSQL rollback/concurrency/replay tests. Failure behavior: reject command with typed conflict/unavailable error.
+- [ ] **Wrap each provider —** Input: one port and recorded fixture. Operation: implement translation, timeout, error taxonomy, cost/provenance capture, and replaceable composition. Output: M3/M6 adapter. Test evidence: contract suite runs against fixture and adapter sandbox. Failure behavior: no provider-specific object crosses the port.
+- [ ] **Move send orchestration outward at M6 —** Input: current contract, persistence, policies, Gmail port. Operation: make `application.sending.SendGateway` the sole send caller and remove the foundation dependency inversion debt. Output: enforceable guarded path. Test evidence: import graph plus mock/real test-inbox call-path proof. Failure behavior: keep outreach disabled.
+- [ ] **Enforce frontend/API boundary at M7 —** Input: OpenAPI and route needs. Operation: add FastAPI contracts first, regenerate clients, and implement UI against them. Output: no invented endpoint or business rule. Test evidence: generation drift, contract, and E2E tests. Failure behavior: remove UI action until backend contract exists.
+
+## Test strategy
+
+- **Static `test_domain_has_no_outward_imports`:** inspect import graph for the table above.
+- **Static `test_agents_cannot_import_send_or_gmail`:** direct and transitive forbidden imports fail CI.
+- **Static `test_fastapi_and_sqlalchemy_are_confined`:** framework imports stay in allowed modules.
+- **Integration `test_command_commit_is_atomic`:** injected failure at each write rolls back all command effects.
+- **Concurrency `test_aggregate_version_rejects_lost_update`:** simultaneous commands cannot silently overwrite.
+- **Contract `test_all_gmail_sends_pass_through_gateway`:** adapter send has one production caller.
+- **Contract `test_frontend_schema_is_generated_from_openapi`:** generated artifacts match committed output.
+
+## Security, privacy, compliance, idempotency, observability, and cost
+
+Ports expose least authority: read tools cannot mutate, Gmail credentials cannot cross composition, and query DTOs minimize personal data. Idempotency is enforced inside the transaction boundary, not left to HTTP/workflow retries. Telemetry records correlation, type, version, status, duration, and safe IDs. Provider results include usage/cost and provenance. Compliance facts are deterministic inputs, not agent prose.
+
+## Failure, rollback, and recovery
+
+If a boundary rule blocks legitimate work, amend this document and the import test with a narrow justification; do not add broad ignore lists. Adapter rollback selects the prior implementation at composition. Command conflicts are retried only after reloading authoritative state. A partial refactor keeps a temporary compatibility export but only one production implementation/call path.
+
+## Acceptance and retained evidence
+
+- [ ] Every package has one responsibility and explicit allowed dependencies.
+- [ ] Domain, agents, workflows, API, and frontend cannot bypass deterministic application authority.
+- [ ] Transactions and external calls cannot leave an unreconcilable silent gap.
+- [ ] Current dependency debt and its vertical repair point are explicit.
+
+Retain import graph reports, interface/type checks, real-PostgreSQL transaction tests, provider contract results, OpenAPI drift checks, and the call-path proof. This boundary contract unlocks [ARCH-03](03-domain-events-and-state-machines.md) and the M2 implementation documents.

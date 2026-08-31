@@ -1,0 +1,350 @@
+# Domain Events and State Machines
+
+**Document ID:** ARCH-03
+**Status:** Canonical planned vocabulary
+**Milestone:** M0 definition; persisted from M2
+**Owner:** Solo operator
+**Prerequisites:** [ARCH-01 target architecture](01-target-system-architecture.md) and [ARCH-02 module boundaries](02-module-boundaries.md)
+**Outputs:** Event envelope, aggregate states, transition ownership, event catalog, idempotency and recovery semantics
+**Unlocks:** M2 schema/workflows and every later API/frontend state contract
+**Risk:** Critical
+**Complexity:** L
+
+## Outcome and timing
+
+This file gives later roadmap segments one vocabulary for business state and observable change. Deterministic application code owns every transition. Durable workflows request transitions; agents return artifacts; providers report observations; neither can silently mutate business state.
+
+M0 defines names. M1 may reuse only the send-attempt subset inside the disposable spike schema. M2 first persists product states/events and enforces transitions.
+
+## Current repository state
+
+The repository has no product aggregate, event table, state machine, workflow run, outbox, idempotency record, audit history, or domain-event dispatcher. Current string events are operational logs such as `worker_ready`, `http_request_completed`, and `database_readiness_failed`; they are not persisted domain events. The existing `PolicyDecision` and send result contracts do not retain transition history.
+
+## Event and audit model
+
+A domain event records a business fact after a valid transition. An audit event records a security/operational action or decision, including denied commands that do not change an aggregate. They may share storage/envelope fields but remain distinguishable by `record_kind`.
+
+Every persisted `EventEnvelope` contains:
+
+| Field | Rule |
+| --- | --- |
+| `event_id` | UUID, globally unique |
+| `record_kind` | `DOMAIN` or `AUDIT` |
+| `event_type` | lower snake-case namespace with `.v1`, from the catalog below |
+| `schema_version` | positive integer matching the event suffix contract |
+| `aggregate_type` / `aggregate_id` | canonical aggregate and UUID |
+| `aggregate_version` | monotonically increasing for domain changes; observed version for audit-only records |
+| `occurred_at` / `recorded_at` | UTC instants; provider time is additional payload evidence, never substituted |
+| `actor_type` / `actor_id` | `OPERATOR`, `SYSTEM`, `WORKFLOW`, `PROVIDER`; agents are artifact producers, not command actors |
+| `correlation_id` | stable across the experiment command/workflow/provider chain |
+| `causation_id` | command/event/provider observation that directly caused this record |
+| `idempotency_key` | command or side-effect identity where applicable |
+| `payload` | versioned typed JSON with data-minimization rules |
+| `metadata` | safe process/version/source identifiers; no secrets or full sensitive payload copy |
+
+Events are append-only. Corrections create a new event/artifact and link `supersedes_event_id`; they never rewrite history. Event names are past-tense facts. Commands use imperative PascalCase and are not stored as if they succeeded.
+
+## Experiment state machine
+
+Canonical `ExperimentState`:
+
+`DRAFT`, `READY_FOR_RESEARCH`, `RESEARCHING`, `READY_FOR_LEADS`, `QUALIFYING_LEADS`, `READY_FOR_OUTREACH`, `OUTREACH_ACTIVE`, `PAUSED`, `EVALUATING`, `DECIDED`, `CANCELLED`, `FAILED`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT
+    DRAFT --> READY_FOR_RESEARCH: scope approved
+    READY_FOR_RESEARCH --> RESEARCHING: workflow started
+    RESEARCHING --> READY_FOR_LEADS: required artifacts accepted
+    READY_FOR_LEADS --> QUALIFYING_LEADS: lead workflow started
+    QUALIFYING_LEADS --> READY_FOR_OUTREACH: lead gate passed
+    READY_FOR_OUTREACH --> OUTREACH_ACTIVE: M6+ authority and campaign activation
+    OUTREACH_ACTIVE --> EVALUATING: sample closed or window reached
+    READY_FOR_OUTREACH --> EVALUATING: no-send decision requested
+    EVALUATING --> DECIDED: operator records decision
+    DRAFT --> CANCELLED
+    READY_FOR_RESEARCH --> CANCELLED
+    RESEARCHING --> CANCELLED
+    READY_FOR_LEADS --> CANCELLED
+    QUALIFYING_LEADS --> CANCELLED
+    READY_FOR_OUTREACH --> CANCELLED
+    OUTREACH_ACTIVE --> CANCELLED
+    PAUSED --> CANCELLED
+    RESEARCHING --> PAUSED
+    QUALIFYING_LEADS --> PAUSED
+    OUTREACH_ACTIVE --> PAUSED
+    EVALUATING --> PAUSED
+    PAUSED --> RESEARCHING: resume target retained
+    PAUSED --> QUALIFYING_LEADS: resume target retained
+    PAUSED --> OUTREACH_ACTIVE: authority rechecked
+    PAUSED --> EVALUATING: resume target retained
+    RESEARCHING --> FAILED
+    QUALIFYING_LEADS --> FAILED
+    OUTREACH_ACTIVE --> FAILED
+    FAILED --> RESEARCHING: operator retries saved research stage
+    FAILED --> QUALIFYING_LEADS: operator retries saved qualification stage
+    FAILED --> READY_FOR_OUTREACH: operator retries failed outreach stage
+    FAILED --> DRAFT: operator revises brief
+    FAILED --> CANCELLED: operator cancels
+```
+
+`DECIDED` and `CANCELLED` are terminal for that experiment version. `FAILED` is non-terminal but has only the five exits below. The authenticated operator issues the command; deterministic `ExperimentCommandService` owns the transition and atomically appends the named specific event plus `experiment.state_changed.v1`. A workflow may report failure but cannot choose a recovery exit.
+
+| From | Command | To | Guard | Specific event |
+| --- | --- | --- | --- | --- |
+| `FAILED` | `RetryExperimentStage` | `RESEARCHING` | `failed_from_state = RESEARCHING`; failure is retryable; `retry_count < retry_limit`; source inputs/artifacts remain valid; no in-flight run | `experiment.retry_started.v1` |
+| `FAILED` | `RetryExperimentStage` | `QUALIFYING_LEADS` | `failed_from_state = QUALIFYING_LEADS`; failure is retryable; `retry_count < retry_limit`; criteria/artifact versions remain valid; no in-flight run | `experiment.retry_started.v1` |
+| `FAILED` | `RetryExperimentStage` | `READY_FOR_OUTREACH` | `failed_from_state = OUTREACH_ACTIVE`; failure is retryable; `retry_count < retry_limit`; every send is terminal or reconciled; no `AMBIGUOUS`/`RECONCILING` message remains; M1 and M6 evidence gates still pass | `experiment.retry_started.v1` |
+| `FAILED` | `ReviseExperiment` | `DRAFT` | no in-flight run; every external side effect is terminal/reconciled; a new `ExperimentBrief` version is supplied; prior approvals are invalidated | `experiment.revision_started.v1` |
+| `FAILED` | `CancelExperiment` | `CANCELLED` | no provider call is in flight; all queued intents are cancelled and ambiguous outcomes are reconciled/quarantined | `experiment.cancelled.v1` |
+
+Entering `FAILED` records `failed_from_state`, `retryable`, `retry_count`, and `retry_limit` in `experiment.failed.v1`. A retry increments `retry_count`, creates a new finite `workflow_run_id`, and never resumes the failed run. Exhausted or non-retryable failure denies `RetryExperimentStage`; the operator must revise or cancel. The outreach retry returns to `READY_FOR_OUTREACH`, never directly to `OUTREACH_ACTIVE`, so policy, approval, budget, suppression, and milestone authority are rechecked.
+
+`PAUSED` stores `paused_from_state` and no workflow may infer it.
+
+`READY_FOR_OUTREACH` means product/evidence preparation passed; it does not mean sending is enabled. Activation additionally requires milestone authority, global/campaign controls, compliance facts, approval, budget, rate, and provider readiness.
+
+## Lead state machine
+
+Canonical `LeadState`:
+
+`DISCOVERED`, `RESEARCH_PENDING`, `RESEARCHED`, `QUALIFICATION_PENDING`, `QUALIFIED`, `DISQUALIFIED`, `SUPPRESSED`, `ARCHIVED`.
+
+| From | Command / evidence | To | Guard |
+| --- | --- | --- | --- |
+| `DISCOVERED` | `QueueLeadResearch` | `RESEARCH_PENDING` | canonical business identity and discovery provenance exist |
+| `RESEARCH_PENDING` | accepted `LeadEvidence` | `RESEARCHED` | required sources captured; identity conflict absent |
+| `RESEARCHED` | `QueueQualification` | `QUALIFICATION_PENDING` | criterion version frozen |
+| `QUALIFICATION_PENDING` | accepted assessment | `QUALIFIED` | deterministic completeness and score gate passes |
+| `QUALIFICATION_PENDING` | assessment/gate rejection | `DISQUALIFIED` | reason code retained |
+| any non-archived state | suppression match/command | `SUPPRESSED` | suppression wins over qualification and approval |
+| `DISQUALIFIED` or `SUPPRESSED` | retention/archive command | `ARCHIVED` | no active send intent |
+
+An identity conflict quarantines the record without auto-merging. A corrected evidence/criterion version may re-enter `RESEARCHED` or `QUALIFICATION_PENDING` through an audited command. `QUALIFIED` never directly creates a send.
+
+## Artifact lifecycle
+
+Canonical `ArtifactStatus`: `PRODUCED`, `VALIDATED`, `REJECTED`, `ACCEPTED`, `SUPERSEDED`.
+
+An agent run can only create `PRODUCED`. Deterministic schema/provenance checks create `VALIDATED` or `REJECTED`. Operator or explicit deterministic gate creates `ACCEPTED`. A replacement creates a new artifact and moves the old accepted version to `SUPERSEDED`. There is no in-place edit. Rejected artifacts cannot drive transitions or sends.
+
+## Campaign and message state machines
+
+Canonical `CampaignState`: `DRAFT`, `READY`, `ACTIVE`, `PAUSED`, `COMPLETED`, `CANCELLED`, `FAILED`.
+
+Only `ACTIVE` can admit send intents, and global/experiment/approval/policy state must also permit them. Pause stops new admissions/dequeues; cancel permanently blocks unsent intents. `COMPLETED`, `CANCELLED`, and `FAILED` are terminal for that campaign version; recovery creates a revised campaign with a new ID/version.
+
+Deterministic `CampaignCommandService` owns every campaign transition and atomically appends the named specific event plus `campaign.state_changed.v1`. The complete transition table is:
+
+| From | Command / trigger | To | Guard | Specific event |
+| --- | --- | --- | --- | --- |
+| `DRAFT` | `ReadyCampaign` | `READY` | immutable campaign version, exact offer/policy version, at least one eligible member, and every draft/approval requirement is recorded | `campaign.ready.v1` |
+| `READY` | `ActivateCampaign` | `ACTIVE` | experiment is `READY_FOR_OUTREACH`; M1 and current authority gate pass; exact mailbox/campaign/approval scope is valid; suppression, budget, rate, compliance, provider, and send controls pass | `campaign.activated.v1` |
+| `ACTIVE` | `PauseCampaign` | `PAUSED` | authenticated operator or global/experiment stop; new admission and dequeue are closed before acknowledgement | `campaign.paused.v1` |
+| `PAUSED` | `ResumeCampaign` | `ACTIVE` | every activation guard is re-evaluated against current versions; no unresolved control incident | `campaign.resumed.v1` |
+| `ACTIVE` | sample/window close | `COMPLETED` | admission is closed; every message is terminal; every provider outcome is terminal or reconciled; no `AMBIGUOUS`/`RECONCILING` message remains | `campaign.completed.v1` |
+| `DRAFT`, `READY`, `ACTIVE`, or `PAUSED` | `CancelCampaign` | `CANCELLED` | admission/dequeue are closed; every unsent intent is cancelled; every possibly-started provider call is terminal or reconciled | `campaign.cancelled.v1` |
+| `DRAFT`, `READY`, `ACTIVE`, or `PAUSED` | unrecoverable campaign failure | `FAILED` | admission/dequeue are closed; every possibly-started provider call is terminal or reconciled; sanitized error and evidence reference exist | `campaign.failed.v1` |
+
+An active cancel request first closes admission/dequeue and drains/reconciles provider work; the campaign remains `ACTIVE` or moves to `PAUSED` until the `CANCELLED` guard is true. No workflow/runtime may report terminal campaign cancellation while a provider outcome is unknown.
+
+Canonical `MessageState`:
+
+`DRAFT`, `APPROVAL_PENDING`, `APPROVED`, `SEND_INTENT_RECORDED`, `QUEUED`, `SENDING`, `AMBIGUOUS`, `RECONCILING`, `SENT`, `FAILED_RETRYABLE`, `FAILED_PERMANENT`, `SUPPRESSED`, `CANCELLED`.
+
+```mermaid
+stateDiagram-v2
+    [*] --> DRAFT
+    DRAFT --> APPROVAL_PENDING: approval required
+    APPROVAL_PENDING --> APPROVED: operator approves exact scope/version
+    APPROVAL_PENDING --> CANCELLED: denied or expired
+    APPROVED --> SEND_INTENT_RECORDED: immutable intent committed
+    APPROVED --> SUPPRESSED: deterministic recipient stop signal
+    SEND_INTENT_RECORDED --> QUEUED: policy and capacity admit
+    SEND_INTENT_RECORDED --> SUPPRESSED: deterministic recipient stop signal
+    QUEUED --> SENDING: gateway recheck passes
+    QUEUED --> SUPPRESSED: policy recheck or recipient stop signal denies
+    QUEUED --> CANCELLED: campaign/experiment/global stop
+    SENDING --> SENT: provider IDs committed
+    SENDING --> AMBIGUOUS: outcome not durably known
+    SENDING --> FAILED_RETRYABLE: explicit rejection or local pre-write proof
+    SENDING --> FAILED_PERMANENT: conclusive permanent failure
+    AMBIGUOUS --> RECONCILING
+    RECONCILING --> SENT: one matching Sent message
+    FAILED_RETRYABLE --> QUEUED: bounded retry policy admits
+    FAILED_RETRYABLE --> FAILED_PERMANENT: retry exhausted or operator aborts
+```
+
+The transition from `SENDING` to `FAILED_RETRYABLE` is legal only for an explicit provider rejection or local pre-write proof that request bytes never left the process. Timeout, connection loss, worker termination, malformed success, missing local commit, zero Gmail search/history results, or conflicting read evidence produces or retains `AMBIGUOUS`/`RECONCILING`. Those states have no transition to `QUEUED`, `FAILED_RETRYABLE`, or a replacement intent: the exact mailbox/RFC write stays quarantined without a time limit until one positive authorized Sent match resolves it. The 300-second mark is an investigation/escalation threshold only.
+
+Deterministic `SendRecoveryService` owns retry transitions. The durable runtime may wake the retry timer but cannot decide eligibility. `max_attempts`, `retry_deadline`, and `retry_policy_version` are immutable on `SendIntent`; `attempt_count` increments only when `send.attempt_started.v1` commits.
+
+| From | Command / trigger | To | Guard | Event |
+| --- | --- | --- | --- | --- |
+| `FAILED_RETRYABLE` | `RetrySend` after durable timer | `QUEUED` | prior evidence is an explicit provider rejection or signed local pre-write proof; `attempt_count < max_attempts`; current time is within `retry_deadline`; retry time has arrived; outreach/campaign/policy/budget/rate controls pass; no unresolved ambiguity | `send.retry_scheduled.v1` |
+| `FAILED_RETRYABLE` | deterministic retry-budget evaluation | `FAILED_PERMANENT` | `attempt_count >= max_attempts` or current time exceeds `retry_deadline` | `send.retry_exhausted.v1` |
+| `FAILED_RETRYABLE` | operator `AbortSendRetry` | `FAILED_PERMANENT` | authenticated operator; no provider call in flight; reason code supplied | `send.retry_exhausted.v1` |
+
+When retry admission fails only because a mutable control is temporarily closed, the message remains `FAILED_RETRYABLE` until the earlier of the next bounded evaluation or `retry_deadline`; it cannot silently queue. `SENT`, `FAILED_PERMANENT`, `SUPPRESSED`, and `CANCELLED` are terminal. A deterministic reply, unsubscribe, hard bounce, complaint, or configured soft-bounce-limit signal invokes `RecipientSignalSuppressionService`; `APPROVED`, `SEND_INTENT_RECORDED`, and `QUEUED` transition to `SUPPRESSED` in the same transaction as the canonical suppression and provably-uncalled intent closure. `SENDING`, `AMBIGUOUS`, and `RECONCILING` keep their reconciliation state and gain the active suppression/fresh-policy blocker; the signal never rewrites a possibly called attempt.
+
+## Approval, workflow-run, and experiment-decision states
+
+Canonical `ApprovalState`: `PENDING`, `APPROVED`, `DENIED`, `EXPIRED`, `REVOKED`, `CONSUMED`. `RequestApproval` first records an allowed `APPROVAL_ELIGIBILITY` decision over an immutable approval basis containing exact experiment/campaign/version/`campaign_member_id`/lead/message/version/content/mailbox/artifact references, cap, and expiry; this scope excludes ApprovalRule and can authorize only creation of `PENDING`. The approval binds that eligibility decision, basis `scope_hash`, and eligibility `facts_hash`. The sole `PENDING -> APPROVED` edge is a step-up-authenticated operator command carrying a fresh preview receipt whose materialization hash covers the displayed recipient address, subject, body, rendered RFC bytes, and exact immutable basis; the server re-materializes it before commit. No automatic/system/workflow/agent edge exists. Manual approval does not create SEND authority. `RecordSendIntent` rechecks and copies the preview hash, then consumes the approval exactly once; final ApprovalRule requires `CONSUMED` plus the unique current preview-bound intent bearing that approval ID, not an impossible still-`APPROVED` row. A changed immutable basis revokes/expires the row; mutable suppression/control/budget/rate/jurisdiction facts are evaluated later in a new `SEND` decision and never need to equal the eligibility facts hash. Suppression/global stop always overrides an approved row.
+
+Canonical `WorkflowRunState`: `PENDING`, `RUNNING`, `PAUSE_REQUESTED`, `PAUSED`, `CANCEL_REQUESTED`, `CANCELLED`, `SUCCEEDED`, `FAILED`. Engine-native states map into these application states. A run is finite, has a max attempts/time/cost policy, and never owns aggregate truth. `CANCELLED`, `SUCCEEDED`, and `FAILED` are terminal for that run; an allowed experiment retry always creates a new `workflow_run_id`.
+
+Canonical `ExperimentDecisionKind`: `SCALE`, `REVISE`, `KILL`, `INCONCLUSIVE`. The decision is immutable and links to the metric snapshot, evidence bundle, rule version, and operator command. `SCALE` authorizes no new experiment or spend by itself.
+
+## Domain-event catalog
+
+Event type suffix `.v1` is part of the canonical name. Later incompatible payloads add a new version and an upcaster/read strategy.
+
+### Experiment and workflow
+
+| Event type | Required payload identifiers | Emitted when |
+| --- | --- | --- |
+| `experiment.created.v1` | `experiment_id`, `brief_version` | draft created |
+| `experiment.scope_approved.v1` | `experiment_id`, `brief_version`, `operator_id` | M0-valid brief approved |
+| `experiment.state_changed.v1` | `from_state`, `to_state`, `reason_code` | deterministic transition commits |
+| `experiment.failed.v1` | `failed_from_state`, `workflow_run_id`, `error_code`, `retryable`, `retry_count`, `retry_limit` | an active experiment stage enters `FAILED` |
+| `experiment.retry_started.v1` | `retry_to_state`, `workflow_run_id`, `retry_count`, `retry_limit` | an allowed `FAILED` retry creates a new finite run |
+| `experiment.revision_started.v1` | `prior_brief_version`, `new_brief_version`, `reason_code` | an operator revises `FAILED` back to `DRAFT` |
+| `experiment.paused.v1` | `paused_from_state`, `reason_code` | pause commits |
+| `experiment.resumed.v1` | `resume_to_state`, `reason_code` | resume commits after guard recheck |
+| `experiment.cancelled.v1` | `reason_code` | terminal cancellation commits |
+| `experiment.decision_recorded.v1` | `decision_kind`, `metric_snapshot_id`, `rule_version` | operator decision commits |
+| `workflow.run_started.v1` | `workflow_run_id`, `workflow_type`, `workflow_version` | finite run starts |
+| `workflow.run_paused.v1` | `workflow_run_id`, `reason_code` | engine/application confirms pause |
+| `workflow.run_cancelled.v1` | `workflow_run_id`, `reason_code` | cancellation reaches terminal state |
+| `workflow.run_completed.v1` | `workflow_run_id`, `result_schema_version`, `result_hash` | run succeeds after the bounded result snapshot commits |
+| `workflow.run_failed.v1` | `workflow_run_id`, `error_code`, `retry_class` | run fails with sanitized taxonomy |
+
+### Campaigns
+
+Every campaign transition emits its specific event and `campaign.state_changed.v1` in the same aggregate transaction. All payloads include `campaign_id`, `campaign_version`, `from_state`, `to_state`, and `reason_code`; actor-driven events additionally include `operator_id`.
+
+| Event type | Required payload identifiers | Emitted when |
+| --- | --- | --- |
+| `campaign.ready.v1` | common campaign transition payload | `DRAFT -> READY` |
+| `campaign.activated.v1` | common payload, `operator_id` | `READY -> ACTIVE` |
+| `campaign.paused.v1` | common payload, `operator_id` | `ACTIVE -> PAUSED` |
+| `campaign.resumed.v1` | common payload, `operator_id` | `PAUSED -> ACTIVE` |
+| `campaign.completed.v1` | common campaign transition payload | `ACTIVE -> COMPLETED` |
+| `campaign.cancelled.v1` | common payload, `operator_id` | a cancellable state enters `CANCELLED` |
+| `campaign.failed.v1` | common payload, `error_code` | a nonterminal state enters `FAILED` |
+| `campaign.state_changed.v1` | common campaign transition payload | every valid campaign transition commits |
+
+### Artifacts, evidence, and leads
+
+| Event type | Required payload identifiers | Emitted when |
+| --- | --- | --- |
+| `artifact.produced.v1` | `artifact_id`, `artifact_type`, `schema_version`, `agent_run_id` | typed output is stored |
+| `artifact.validated.v1` | `artifact_id`, `validator_version` | schema/provenance gates pass |
+| `artifact.rejected.v1` | `artifact_id`, `reason_codes` | gate fails |
+| `artifact.accepted.v1` | `artifact_id`, `acceptance_mode`, `operator_id` | artifact becomes workflow-eligible |
+| `artifact.superseded.v1` | `artifact_id`, `replacement_artifact_id` | new immutable version replaces it |
+| `lead.discovered.v1` | `lead_id`, `business_identity_key`, `source_refs` | unique candidate recorded |
+| `lead.identity_conflict_detected.v1` | `lead_id`, `conflict_refs` | deterministic identity cannot resolve |
+| `lead.evidence_recorded.v1` | `lead_id`, `artifact_id` | accepted evidence attaches |
+| `lead.qualified.v1` | `lead_id`, `assessment_id`, `criteria_version` | deterministic gate passes |
+| `lead.disqualified.v1` | `lead_id`, `reason_codes`, `criteria_version` | gate fails |
+| `lead.suppressed.v1` | `lead_id`, `suppression_entry_id`, `reason_code` | suppression applies |
+| `suppression.created.v1` | `suppression_entry_id`, `scope`, nullable `business_id`, nullable `recipient_target_ref_id`, `reason_code`, `source`, `source_actor_type`, nullable `source_observation_id`, nullable `source_reply_id`, `version` | active global/business/recipient suppression commits; `recipient_target_ref_id` is non-null iff RECIPIENT, byte-copied from the durable row and stable after source-member cleanup; no recipient hash/address ciphertext/digest appears in the event; matching leads/messages/intents transition separately |
+| `suppression.deactivated.v1` | `suppression_entry_id`, `scope`, `reason_code`, `prior_version`, `version` | fail-closed operator removal commits after controls/in-flight guards |
+
+### Policy, approval, sending, and replies
+
+| Event type | Required payload identifiers | Emitted when |
+| --- | --- | --- |
+| `policy.evaluated.v1` | `policy_decision_id`, `scope`, `experiment_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `lead_id`, `message_id`, `mailbox_id`, nullable `approval_id`, `policy_version`, `scope_hash`, `facts_hash`, `allowed`, `reason_codes` | deterministic `APPROVAL_ELIGIBILITY` or fresh final `SEND` evaluation recorded; the scopes may share the immutable basis hash but never a required facts hash |
+| `approval.requested.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `eligibility_policy_decision_id`, `scope_hash`, `eligibility_facts_hash`, `expires_at` | allowed eligibility and exact immutable basis create a pending review; no send authority |
+| `approval.decided.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `message_version`, `message_content_hash`, `scope_hash`, `decision`, `operator_id`, nullable `preview_materialization_hash`, `reason_code` | only the manually previewing operator may approve; denial has no preview hash; SEND still needs a new policy decision |
+| `approval.revoked.v1` | `approval_id`, `mailbox_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `message_id`, `scope_hash`, `reason_code` | prior immutable-basis approval is withdrawn before final SEND authority |
+| `send.intent_recorded.v1` | `send_intent_id`, `experiment_id`, `campaign_id`, `campaign_version`, `campaign_member_id`, `lead_id`, `message_id`, `mailbox_id`, `approval_id`, `eligibility_policy_decision_id`, `eligibility_policy_version`, `idempotency_key`, `scope_hash`, `eligibility_facts_hash` | immutable approved-basis intent commits without claiming final SEND authority |
+| `send.queued.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `queue_name`, `budget_reservation_id` | mailbox-bound admission commits |
+| `send.attempt_started.v1` | `send_attempt_id`, `send_intent_id`, `campaign_member_id`, `mailbox_id`, `rfc_message_id`, `send_policy_decision_id`, `send_policy_facts_hash`, `rate_reservation_id`, `rate_window_start`, `rate_slot_number` | fresh final SEND policy allows and the exact rate lease is consumed atomically before provider call |
+| `send.provider_accepted.v1` | `send_attempt_id`, `send_intent_id`, `mailbox_id`, `rfc_message_id`, `gmail_message_id`, `gmail_thread_id` | Gmail directly returns an accepted result and the captured provider result commits `SENDING -> SENT` |
+| `send.outcome_ambiguous.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `error_code` | acceptance cannot be known |
+| `send.reconciliation_started.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `strategy_version` | the authorized mailbox's Gmail Sent search begins |
+| `send.reconciled_as_sent.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `gmail_message_id`, `gmail_thread_id` | an ambiguous attempt is resolved as sent by exactly one conclusive Sent-folder match |
+| `send.failed.v1` | `send_attempt_id`, `mailbox_id`, `rfc_message_id`, `retry_class`, `error_code` | conclusive mailbox-bound failure recorded |
+| `send.retry_scheduled.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `previous_attempt_id`, `next_attempt_number`, `retry_at`, `retry_policy_version` | bounded retry eligibility commits and the same mailbox-bound intent returns to `QUEUED` |
+| `send.retry_exhausted.v1` | `send_intent_id`, `mailbox_id`, `rfc_message_id`, `final_attempt_id`, `attempt_count`, `max_attempts`, `reason_code` | retry budget/deadline is exhausted or an operator aborts retry |
+| `send.suppressed.v1` | nullable `send_intent_id`, `campaign_member_id`, `mailbox_id`, `suppression_entry_id`, `signal_source`, nullable `send_policy_decision_id`, nullable `scope_hash`, nullable `send_policy_facts_hash`, `reason_codes`, `cancelled_at` | fresh last-mile SEND denial or observed recipient stop signal atomically commits an eligible pre-call message to `SUPPRESSED`; `send_intent_id` is null only for the signal arm when the message was still `APPROVED`, otherwise the transaction one-way cancels the provably-uncalled intent and releases its reservation; policy fields are non-null only for the last-mile-policy arm; no attempt/provider call |
+| `gmail.history_cursor_advanced.v1` | `mailbox_id`, `from_history_id`, `to_history_id` | observations and cursor commit together |
+| `reply.received.v1` | `reply_id`, `mailbox_id`, `gmail_message_id`, `gmail_thread_id`, `received_at`, `suppression_entry_id` | unique mailbox-bound inbound message and its mandatory recipient suppression commit in one transaction; classification remains later and cannot delay the stop |
+| `reply.classified.v1` | `reply_id`, `artifact_id`, `classification` | accepted typed classification attaches |
+
+### Controls, costs, and incidents
+
+| Event type | Required payload identifiers | Emitted when |
+| --- | --- | --- |
+| `system.outreach_disabled.v1` | `control_version`, `reason_code`, `actor_type`, exactly one `operator_id` or closed `system_actor_id`, `evidence_ref` | operator or registered fail-closed system actor commits disable; no synthetic operator |
+| `system.outreach_enabled.v1` | `control_version`, `incident_ids`, `actor_type:"OPERATOR"`, `operator_id`, `evidence_ref` | explicit operator-only re-enable after gates |
+| `budget.reserved.v1` | `reservation_id`, `scope`, `amount`, `currency` | paid call capacity reserved |
+| `budget.reconciled.v1` | `reservation_id`, `cost_entry_id`, `variance` | authoritative cost attaches |
+| `incident.opened.v1` | `incident_id`, `severity`, `trigger_code` | incident begins |
+| `incident.resolved.v1` | `incident_id`, `resolution_code`, `evidence_ref` | recovery evidence accepted |
+
+Operational logs may mirror safe identifiers, but a log line does not replace these persisted records.
+
+## Idempotency, ordering, and delivery
+
+- Aggregate updates use unique `(aggregate_type, aggregate_id, aggregate_version)` and optimistic concurrency.
+- Commands use unique `(command_scope, idempotency_key)` and persist the prior result for exact replay.
+- Send intents use unique `(mailbox_id, idempotency_key)` and `(mailbox_id, rfc_message_id)`; immutable mailbox plus `campaign_member_id` binding is part of eligibility, approval basis, intent, fresh SEND decision, attempt, result, and reconciliation. Eligibility and final SEND share `scope_hash` but have independent `facts_hash` values.
+- Last-mile rate admission uses one active `send_rate_reservations` lease per mailbox and unique `(mailbox_id,rate_policy_version,window_start,slot_number)`; a consumed lease and attempt commit together before any provider call.
+- Provider observations deduplicate on mailbox plus provider message/history identity.
+- Internal outbox delivery is at least once, but each consumer's business writes and successful `outbox_deliveries` receipt commit in one PostgreSQL transaction. A crash rolls back both.
+- External side effects never claim generic effect-once delivery: they use immutable mailbox-bound intent, captured provider result or permanent `AMBIGUOUS`/`RECONCILING` quarantine, and positive-evidence reconciliation; negative search never authorizes retry.
+- Cross-aggregate global ordering is neither promised nor required. Consumers use aggregate version, correlation/causation, and provider sequence evidence.
+- Timestamps never decide whether a duplicate side effect is safe.
+
+## Scope and non-goals
+
+In scope: canonical states, guards, immutable events, audit facts, idempotency, ordering, and recovery. Non-goals: full event sourcing, a public event API, Kafka, cross-service distributed transactions, storing raw secrets/full bodies in events, or treating workflow-engine history as the product audit record.
+
+## Exact planned implementation surfaces
+
+Planned domain files: `domain/events.py`, `domain/experiments.py`, `domain/leads.py`, `domain/artifacts.py`, `domain/messaging.py`, `domain/approvals.py`, and `domain/controls.py`. Planned M2 tables: `domain_events`, `audit_events`, `command_idempotency`, `outbox_messages`, plus aggregate tables defined by the database roadmap. Planned indexes include unique aggregate version, event ID, command idempotency scope/key, send-intent idempotency, and provider observation identity. Planned API/frontend enums use the canonical names above without display-label strings as stored state.
+
+These surfaces do not exist today. M1 uses only `m1_spike.spike_runs` and `m1_spike.spike_send_attempts` from ARCH-01 and exports evidence before dropping the schema.
+
+## Ordered implementation tasks
+
+- [ ] **Encode enums and transition tables at M2 —** Input: canonical states/guards above. Operation: implement pure transition functions that require explicit actor, current version, reason, and evidence IDs; close every non-terminal failure state and force bounded retry exhaustion to a terminal state. Output: typed decision plus event intent. Test evidence: table-driven legal/illegal transition matrix. Failure behavior: typed rejection with no mutation.
+- [ ] **Persist events and idempotency atomically —** Input: command and transition result. Operation: commit aggregate version, domain/audit events, command result, and outbox entry in one unit of work. Output: replayable audit chain. Test evidence: rollback injection and concurrency tests on real PostgreSQL. Failure behavior: whole transaction rolls back.
+- [ ] **Map runtime states explicitly —** Input: selected DBOS runtime, or mandatory Temporal fallback after a disqualifying M1 result. Operation: translate runtime-native execution state to `WorkflowRunState` without making it aggregate truth. Output: inspectable run projection. Test evidence: restart/pause/cancel/failure contract suite. Failure behavior: unknown runtime state reports degraded and blocks unsafe commands.
+- [ ] **Implement message ambiguity path before Gmail activation —** Input: send intent/attempt states and Gmail reconciliation evidence. Operation: make every error/kill point choose a legal transition; forbid `AMBIGUOUS` retry. Output: M6-safe message history. Test evidence: exhaustive crash matrix and provider-observation dedupe tests. Failure behavior: global disable on impossible/unknown transition.
+- [ ] **Generate API/UI state mappings —** Input: canonical enums. Operation: expose typed OpenAPI enums and exhaustive frontend rendering/actions. Output: no hidden or invented state. Test evidence: backend enum schema tests, generated drift test, frontend exhaustive-state and E2E recovery tests. Failure behavior: UI displays unknown/degraded and disables mutations.
+
+## Test strategy
+
+- **Unit `test_experiment_transition_matrix_is_exhaustive`:** every state/command pair has pass or typed denial.
+- **Unit `test_failed_experiment_exit_matrix_is_closed`:** `FAILED` has exactly the five documented exits, and every guard/event/owner is enforced.
+- **Unit `test_message_ambiguous_cannot_requeue`:** no direct or indirect transition permits blind retry.
+- **Unit `test_retryable_message_exhaustion_is_terminal`:** attempt/deadline exhaustion and operator abort reach `FAILED_PERMANENT`; no exhausted intent remains retryable.
+- **Property `test_aggregate_versions_are_monotonic_under_command_replay`:** idempotent replay never adds a second event/version.
+- **Integration `test_state_event_audit_outbox_commit_together`:** injected failures leave no partial record.
+- **Concurrency `test_two_approvals_cannot_consume_same_scope_twice`:** optimistic/unique constraints preserve one result.
+- **Recovery `test_history_cursor_and_observations_commit_together`:** cursor never advances past lost replies.
+- **Contract `test_api_and_frontend_cover_every_canonical_state`:** schema and renderer are exhaustive.
+
+## Security, privacy, compliance, observability, and cost
+
+Event payloads store safe references and policy fact hashes where full facts contain sensitive data. Actor/authority is explicit, and agents never appear as state-changing actors. Denials, kills, approvals, credential rotations, and ambiguous resolutions are audited. Correlation links side effects to experiments without putting message bodies in logs. Cost reservation/reconciliation events support hard caps.
+
+## Failure, rollback, and operator recovery
+
+Unknown or impossible state blocks mutation and raises an incident. Recovery uses an explicit audited repair command after comparing aggregate, domain events, provider evidence, and workflow state; direct database edits are forbidden outside a documented disaster-recovery procedure. Event schema changes add a version and compatibility reader. A bad transition release rolls back code, then replays/repairs only through approved commands.
+
+## Acceptance and retained evidence
+
+- [ ] Every product transition has a deterministic owner, guard, event, and denial behavior.
+- [ ] Every non-terminal failure state has a complete, finite exit set; exhausted retry budgets reach an explicit terminal state.
+- [ ] Agents/providers/workflow runtime cannot author business truth directly.
+- [ ] Ambiguous Gmail outcomes cannot blind retry.
+- [ ] Event, idempotency, ordering, and correction semantics are explicit.
+- [ ] M1 disposable states cannot be confused with the M2 product model.
+
+Retain transition matrices, property/concurrency outputs, event-schema snapshots, crash/reconciliation traces, OpenAPI state schemas, and UI exhaustive-state results. This vocabulary unlocks the M2 database and workflow documents.
