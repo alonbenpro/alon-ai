@@ -36,26 +36,28 @@ Create `incidents/contracts.py`, `application/incidents.py`, `application/recove
 
 `IncidentCatalogV1` has literal version `incident.catalog.v1` and byte-matches DB-01/05 checks. `IncidentTriggerCode`, `AlertId`, `RunbookId`, `IncidentResolutionCode`, and `RepairActionKind` are extra-forbid closed enums in application, OpenAPI, audit, OBS-01 attributes and PostgreSQL; no free-form fallback/`OTHER` exists. The Critical threat routing table is exact:
 
-| SEC-01 threat | Trigger code | Alert ID | Runbook |
-| --- | --- | --- | --- |
-| T01 | `AGENT_PROMPT_INJECTION_OR_POISONING` | `ALERT_AGENT_INJECTION` | `IR-06` |
-| T02 | `PROVIDER_EXFILTRATION` | `ALERT_PROVIDER_EXFILTRATION` | `IR-06` |
-| T03 | `AUTH_OR_SECRET_COMPROMISE` | `ALERT_CREDENTIAL_OR_SESSION` | `IR-03` |
-| T04 | `WEB_SESSION_BOUNDARY_ATTACK` | `ALERT_WEB_BOUNDARY` | `IR-05` |
-| T05 | `SSRF_OR_DNS_REBINDING` | `ALERT_EGRESS_SSRF` | `IR-05` |
-| T06 | `CALLBACK_ABUSE` | `ALERT_CALLBACK_ABUSE` | `IR-05` |
-| T07 | `SEND_AUTHORITY_VIOLATION` | `ALERT_SEND_AUTHORITY_VIOLATION` | `IR-01` |
-| T08 | `SUPPLY_CHAIN_COMPROMISE` | `ALERT_SUPPLY_CHAIN` | `IR-09` |
-| T09 | `WORKFLOW_REPLAY_OR_VERSION_DRIFT` | `ALERT_WORKFLOW_REPLAY` | `IR-07` |
-| T10 | `DATASTORE_OR_RESTORE_FAILURE` | `ALERT_BACKUP_RESTORE` | `IR-08` |
-| T11 | `OPERATOR_OR_RECOVERY_ERROR` | `ALERT_OPERATOR_REPAIR` | `IR-13` |
-| T12 | `AUTHORIZATION_OR_ENUMERATION` | `ALERT_AUTHORIZATION_ENUMERATION` | `IR-05` |
-| T13 | `COST_OR_QUOTA_RUNAWAY` | `ALERT_COST_QUOTA` | `IR-10` |
-| T14 | `TELEMETRY_PRIVACY_LEAK` | `ALERT_TELEMETRY_PRIVACY` | `IR-04` |
-| T15 | `COMPLIANCE_OR_SUPPRESSION_BREACH` | `ALERT_COMPLIANCE_SUPPRESSION` | `IR-12` |
-| T16 | `TELEMETRY_OR_ALERT_BLINDNESS` | `ALERT_TELEMETRY_BLINDNESS` | `IR-11` |
+| SEC-01 threat | Incident severity | Trigger code | Alert ID | Runbook |
+| --- | --- | --- | --- | --- |
+| T01 | `CRITICAL` | `AGENT_PROMPT_INJECTION_OR_POISONING` | `ALERT_AGENT_INJECTION` | `IR-06` |
+| T02 | `CRITICAL` | `PROVIDER_EXFILTRATION` | `ALERT_PROVIDER_EXFILTRATION` | `IR-06` |
+| T03 | `CRITICAL` | `AUTH_OR_SECRET_COMPROMISE` | `ALERT_CREDENTIAL_OR_SESSION` | `IR-03` |
+| T04 | `CRITICAL` | `WEB_SESSION_BOUNDARY_ATTACK` | `ALERT_WEB_BOUNDARY` | `IR-05` |
+| T05 | `CRITICAL` | `SSRF_OR_DNS_REBINDING` | `ALERT_EGRESS_SSRF` | `IR-05` |
+| T06 | `CRITICAL` | `CALLBACK_ABUSE` | `ALERT_CALLBACK_ABUSE` | `IR-05` |
+| T07 | `CRITICAL` | `SEND_AUTHORITY_VIOLATION` | `ALERT_SEND_AUTHORITY_VIOLATION` | `IR-01` |
+| T08 | `CRITICAL` | `SUPPLY_CHAIN_COMPROMISE` | `ALERT_SUPPLY_CHAIN` | `IR-09` |
+| T09 | `CRITICAL` | `WORKFLOW_REPLAY_OR_VERSION_DRIFT` | `ALERT_WORKFLOW_REPLAY` | `IR-07` |
+| T10 | `CRITICAL` | `DATASTORE_OR_RESTORE_FAILURE` | `ALERT_BACKUP_RESTORE` | `IR-08` |
+| T11 | `CRITICAL` | `OPERATOR_OR_RECOVERY_ERROR` | `ALERT_OPERATOR_REPAIR` | `IR-13` |
+| T12 | `CRITICAL` | `AUTHORIZATION_OR_ENUMERATION` | `ALERT_AUTHORIZATION_ENUMERATION` | `IR-05` |
+| T13 | `CRITICAL` | `COST_OR_QUOTA_RUNAWAY` | `ALERT_COST_QUOTA` | `IR-10` |
+| T14 | `CRITICAL` | `TELEMETRY_PRIVACY_LEAK` | `ALERT_TELEMETRY_PRIVACY` | `IR-04` |
+| T15 | `CRITICAL` | `COMPLIANCE_OR_SUPPRESSION_BREACH` | `ALERT_COMPLIANCE_SUPPRESSION` | `IR-12` |
+| T16 | `CRITICAL` | `TELEMETRY_OR_ALERT_BLINDNESS` | `ALERT_TELEMETRY_BLINDNESS` | `IR-11` |
+| operational | `HIGH` | `GMAIL_AMBIGUITY_STALE` | `ALERT_GMAIL_AMBIGUITY` | `IR-02` |
+| T12 restricted-hash branch | `CRITICAL` | `RECIPIENT_HASH_ENUMERATION` | `ALERT_RECIPIENT_HASH_ENUMERATION` | `IR-04` |
 
-Two additional closed operational routes are `GMAIL_AMBIGUITY_STALE -> ALERT_GMAIL_AMBIGUITY -> IR-02` and `RECIPIENT_HASH_ENUMERATION -> ALERT_RECIPIENT_HASH_ENUMERATION -> IR-04`. Every OBS-02 alert rule names exactly one of these 18 alert IDs, trigger codes and runbooks; severity is a separate deterministic mapping and cannot change routing identity.
+Those 18 rows are the complete four-field `IncidentRouteV1` registry and byte-match DB-01. Severity is part of immutable route identity: it is never selected by a caller, patched after insert, or inferred independently from another valid label. `NotificationEscalationV1={incident_route,pager_level,condition_version,for_duration}` is the separate operational projection; for example the immutable `HIGH` Gmail-ambiguity incident may notify at `SEV2` after 60 seconds and escalate paging to `SEV1` after 15 minutes without changing the incident row. Every OBS-02 alert rule names exactly one full route.
 
 Resolution codes are exactly `MITIGATED_NO_LOSS|RECONCILED_SENT|RECONCILED_NOT_SENT|CREDENTIALS_REVOKED_ROTATED|CLEAN_RESTORE_VERIFIED|CODE_CONFIG_ROLLED_BACK|DATA_REMOVED_REMEDIATED|PROVIDER_COUNSEL_CLOSED|FALSE_POSITIVE_VERIFIED|RESIDUAL_RISK_ACCEPTED_WITH_EXPIRY`. Applicability is closed, not merely enum membership:
 

@@ -34,12 +34,83 @@ Create `observability/metrics.py`, `observability/spans.py`, `observability/slo.
 
 All names below use OpenTelemetry dotted form; Prometheus translation may replace dots with underscores. Counters end conceptually in `.count`, histograms declare units, gauges describe current bounded state. Every label combination comes from signed `MetricAttributeRegistryV1` version `metrics.attributes.v1`; unknown values are rejected before recording. Software/release/model/prompt/tool/workflow/agent/policy/config versions are categorically absent from metric attributes and remain only in bounded logs, traces, evidence and dashboard joins.
 
-The registry mechanically imports these exact finite domains: 66 valid `(http.route,http.request.method)` tuples from BACKEND-02; 46 `command.type` values from BACKEND-05; four WF-02 workflow types; 12 valid `(workflow.type,workflow.step)` tuples (`IDEA_VALIDATION:{IDEA,OFFER,MARKET_RESEARCH,BUNDLE}`, `LEAD_QUALIFICATION:{LEAD_RESEARCH,LEAD_QUALIFY}`, `OUTREACH_AND_REPLY:{PREPARE_AUTHORITY,SEND,RECONCILE,HISTORY_SYNC,RECIPIENT_SIGNAL}`, `EXPERIMENT_EVALUATION:{EVALUATE}`); eight AGENT-01 agent types; six provider capabilities; 58 BACKEND-03 policy reasons plus literal `NONE`; 18 complete OBS-05 incident route tuples (already including severity/trigger/runbook/alert); and eight suite-agent mappings. Other closed sets are `operation.outcome={SUCCEEDED,DENIED,FAILED,UNAVAILABLE,CANCELLED}`, `command.replay={false,true}`, `execution.mode={LIVE,RECORDED,SYNTHETIC}`, workflow terminal states 3/runtime 2/states 8, agent terminal states 3, HTTP status classes `{2xx,3xx,4xx,5xx}`, controls 2/actions 2, send-attempt states 5/authority modes 2/Gmail boundaries 14/cursor-gap booleans 2/recipient signals 6, budget scopes 4/currencies `{ILS,USD}`/reservation states 4, provider operation classes 7/cost states 4, evaluation repetitions 3/booleans 2, backup data kinds `{PRIMARY,DR}`, and telemetry signals `{LOG,METRIC,TRACE}`. OAuth uses exactly 12 valid identity/state tuples: OIDC `{PENDING,CLAIMED,CONSUMED,EXPIRED}` plus Gmail `{ISSUED,CLAIMED,EXCHANGE_STARTED,CREDENTIAL_STAGED,CREDENTIAL_ACTIVE,DB_COMMITTED,CONSUMED_SUCCESS,CONSUMED_FAILURE}`. Telemetry export uses six valid `(operation.outcome,telemetry.drop_reason)` tuples rather than a Cartesian free-form reason.
+The following JSON is the normative, signed input to code generation. A literal domain is exactly the listed values. A tuple domain admits only the listed complete rows, never its Cartesian product. An import is legal only because the named source section enumerates every value/tuple and CI derives that exact set—not merely its stated count—before accepting the cardinality. No other source or runtime-discovered value is admitted.
+
+<!-- METRIC_ATTRIBUTE_REGISTRY_V1_BEGIN -->
+```json
+{
+  "schema_version": "metrics.attributes.v1",
+  "unknown_value_action": "REJECT_BEFORE_RECORD",
+  "literal_domains": {
+    "service.name": ["alon-ai-api"],
+    "http.response.status_class": ["2xx", "3xx", "4xx", "5xx"],
+    "operation.outcome": ["SUCCEEDED", "DENIED", "FAILED", "UNAVAILABLE", "CANCELLED"],
+    "command.replay": [false, true],
+    "workflow.type": ["IDEA_VALIDATION", "LEAD_QUALIFICATION", "OUTREACH_AND_REPLY", "EXPERIMENT_EVALUATION"],
+    "workflow.terminal_state": ["SUCCEEDED", "FAILED", "CANCELLED"],
+    "workflow.runtime": ["DBOS", "TEMPORAL"],
+    "workflow.replay": [false, true],
+    "workflow.state": ["PENDING", "RUNNING", "PAUSE_REQUESTED", "PAUSED", "CANCEL_REQUESTED", "CANCELLED", "SUCCEEDED", "FAILED"],
+    "agent.type": ["IDEA_DISCOVERY", "OFFER_DESIGN", "MARKET_RESEARCH", "LEAD_RESEARCH", "LEAD_QUALIFICATION", "OUTREACH_DRAFTING", "REPLY_CLASSIFICATION", "EXPERIMENT_EVALUATION"],
+    "agent.terminal_state": ["SUCCESS", "ABSTAIN", "FAILED"],
+    "execution.mode": ["LIVE", "RECORDED", "SYNTHETIC"],
+    "provider.capability": ["model.complete_structured", "evidence.read", "search.query", "page.extract", "business.search", "business.details"],
+    "policy.scope": ["APPROVAL_ELIGIBILITY", "SEND"],
+    "policy.allowed": [false, true],
+    "suppression.scope": ["GLOBAL", "BUSINESS", "RECIPIENT"],
+    "suppression.source": ["OPERATOR", "GMAIL_REPLY", "GMAIL_UNSUBSCRIBE", "GMAIL_HARD_BOUNCE", "GMAIL_COMPLAINT", "GMAIL_SOFT_BOUNCE_LIMIT", "PUBLIC_UNSUBSCRIBE"],
+    "control.name": ["PRODUCT_OUTREACH", "TEST_INBOX_SENDING"],
+    "control.action": ["DISABLE", "ENABLE"],
+    "send.attempt_state": ["STARTED", "AMBIGUOUS", "RECONCILING", "SENT", "FAILED"],
+    "send.authority_mode": ["TEST_INBOX_ONLY", "PRODUCT_ELIGIBLE"],
+    "gmail.boundary": ["CANCEL_PRE_UOW", "LOCK_AUTHORITY", "VERIFY_IMMUTABLE", "VERIFY_MODE", "VERIFY_ELIGIBILITY", "VERIFY_APPROVAL", "BUILD_CURRENT_FACTS", "EVALUATE_SEND_POLICY", "COMMIT_ATTEMPT", "CANCEL_PRE_CALL", "GMAIL_CALL", "LOCK_RESULT", "COMMIT_RESULT", "SCHEDULE_FOLLOWUP"],
+    "gmail.cursor_gap": [false, true],
+    "gmail.signal_kind": ["NONE", "REPLY", "UNSUBSCRIBE", "HARD_BOUNCE", "SOFT_BOUNCE", "COMPLAINT"],
+    "suppression.committed": [false, true],
+    "session.action": ["CREATED", "TOUCHED", "ROTATED", "REAUTHENTICATED", "LOGGED_OUT", "REVOKED", "EXPIRED", "EVICTED"],
+    "budget.scope": ["PROVIDER_CALL", "WORKFLOW_RUN", "EXPERIMENT", "CAMPAIGN_SEND"],
+    "currency": ["ILS", "USD"],
+    "budget.state": ["RESERVED", "RELEASED", "RECONCILED", "EXPIRED"],
+    "provider.operation_class": ["MODEL", "SEARCH", "PAGE", "BUSINESS_DATA", "GMAIL", "IDENTITY_SECRET", "INFRASTRUCTURE"],
+    "cost.state": ["PENDING_USAGE", "PENDING_FX", "PENDING_INVOICE", "DISCREPANCY"],
+    "evaluation.repetition": [1, 2, 3],
+    "evaluation.passed": [false, true],
+    "evaluation.hard_safety": [false, true],
+    "backup.data_kind": ["PRIMARY", "DR"],
+    "telemetry.signal": ["LOG", "METRIC", "TRACE"]
+  },
+  "tuple_domains": {
+    "workflow.type|workflow.step": [
+      ["IDEA_VALIDATION", "IDEA"], ["IDEA_VALIDATION", "OFFER"], ["IDEA_VALIDATION", "MARKET_RESEARCH"], ["IDEA_VALIDATION", "BUNDLE"],
+      ["LEAD_QUALIFICATION", "LEAD_RESEARCH"], ["LEAD_QUALIFICATION", "LEAD_QUALIFY"],
+      ["OUTREACH_AND_REPLY", "PREPARE_AUTHORITY"], ["OUTREACH_AND_REPLY", "SEND"], ["OUTREACH_AND_REPLY", "RECONCILE"], ["OUTREACH_AND_REPLY", "HISTORY_SYNC"], ["OUTREACH_AND_REPLY", "RECIPIENT_SIGNAL"],
+      ["EXPERIMENT_EVALUATION", "EVALUATE"]
+    ],
+    "oauth.identity_kind|oauth.state": [
+      ["OIDC", "PENDING"], ["OIDC", "CLAIMED"], ["OIDC", "CONSUMED"], ["OIDC", "EXPIRED"],
+      ["GMAIL", "ISSUED"], ["GMAIL", "CLAIMED"], ["GMAIL", "EXCHANGE_STARTED"], ["GMAIL", "CREDENTIAL_STAGED"], ["GMAIL", "CREDENTIAL_ACTIVE"], ["GMAIL", "DB_COMMITTED"], ["GMAIL", "CONSUMED_SUCCESS"], ["GMAIL", "CONSUMED_FAILURE"]
+    ],
+    "operation.outcome|telemetry.drop_reason": [
+      ["SUCCEEDED", "NONE"], ["DENIED", "POLICY"], ["DENIED", "PRIVACY_FILTER"], ["FAILED", "EXPORT_ERROR"], ["UNAVAILABLE", "SINK_UNAVAILABLE"], ["CANCELLED", "SHUTDOWN"]
+    ]
+  },
+  "imports": {
+    "http.route|http.request.method": {"catalog": "BackendOperationCatalogV1", "source": "BACKEND-02#exact-route-and-openapi-operation-manifest", "cardinality": 66},
+    "command.type": {"catalog": "CommandCatalogV1", "source": "BACKEND-05#exact-command-registry", "cardinality": 46},
+    "policy.reason_code": {"catalog": "PolicyReasonCodeV1PlusNone", "source": "BACKEND-03#scope-specific-rule-composition-and-reason-codes", "cardinality": 59},
+    "evaluation.suite|agent.type": {"catalog": "AgentEvaluationSuiteMapV1", "source": "AGENT-10#exact-suite-manifests-and-promotion-thresholds", "cardinality": 8},
+    "incident.severity|incident.trigger_code|incident.alert_id|incident.runbook_id": {"catalog": "IncidentRouteV1", "source": "OBS-05#closed-incident-alert-runbook-resolution-and-repair-catalogs", "cardinality": 18}
+  }
+}
+```
+<!-- METRIC_ATTRIBUTE_REGISTRY_V1_END -->
+
+CI requires every attribute named by the 39 instruments to be owned exactly once by a literal, tuple, or imported domain; duplicated ownership, missing keys, empty sets, repeated values/tuples, source-anchor drift, import count without set equality, or an imported source that does not enumerate its members fails closed. The provider operation classes are the seven cost/allocation classes above, not provider-native operation strings. The four cost states are unresolved reconciliation projections only; terminal cost truth stays in DB-05 and report evidence. The 14 Gmail boundaries map positionally and exactly to BACKEND-04 steps 1 through 14. `service.name` has one honest value because this modular monolith exposes one API service; invented future services are forbidden until a versioned registry change.
 
 | Instrument | OTel instrument | UCUM unit | Aggregation / temporality | Allowed attributes only | Max series |
 | --- | --- | --- | --- | --- | ---: |
-| `alon_ai.http.server.request.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `service.name`, `http.route`, `http.request.method`, `http.response.status_class` | `66*4=264` |
-| `alon_ai.http.server.request.count` | Counter | `{request}` | monotonic sum, cumulative | `service.name`, `http.route`, `http.request.method`, `http.response.status_class` | `66*4=264` |
+| `alon_ai.http.server.request.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `service.name`, valid `(http.route,http.request.method)`, `http.response.status_class` | `1*66*4=264` |
+| `alon_ai.http.server.request.count` | Counter | `{request}` | monotonic sum, cumulative | `service.name`, valid `(http.route,http.request.method)`, `http.response.status_class` | `1*66*4=264` |
 | `alon_ai.command.execution.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `command.type`, `operation.outcome`, `command.replay` | `46*5*2=460` |
 | `alon_ai.command.execution.count` | Counter | `{command}` | monotonic sum, cumulative | `command.type`, `operation.outcome`, `command.replay` | `46*5*2=460` |
 | `alon_ai.workflow.run.count` | Counter | `{run}` | monotonic sum, cumulative | `workflow.type`, `workflow.terminal_state`, `workflow.runtime` | `4*3*2=24` |
@@ -72,7 +143,7 @@ The registry mechanically imports these exact finite domains: 66 valid `(http.ro
 | `alon_ai.cost.amount` | Counter | `{currency_minor}` | monotonic sum, cumulative; group by `currency` before sum | `provider.operation_class`, `currency` | `7*2=14` |
 | `alon_ai.cost.reconciliation.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `provider.operation_class`, `cost.state` | `7*4=28` |
 | `alon_ai.evaluation.case.count` | Counter | `{case}` | monotonic sum, cumulative | valid `(evaluation.suite,agent.type)`, `evaluation.repetition`, `evaluation.passed`, `evaluation.hard_safety` | `8*3*2*2=96` |
-| `alon_ai.incident.open` | ObservableGauge | `{incident}` | last value, instantaneous (temporality N/A) | valid `(incident.severity,incident.trigger_code,incident.runbook_id,incident.alert_id)` | `18` |
+| `alon_ai.incident.open` | ObservableGauge | `{incident}` | last value, instantaneous (temporality N/A) | valid `(incident.severity,incident.trigger_code,incident.alert_id,incident.runbook_id)` | `18` |
 | `alon_ai.backup.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | `2*5=10` |
 | `alon_ai.restore.proof.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | `2*5=10` |
 | `alon_ai.telemetry.export.count` | Counter | `{export}` | monotonic sum, cumulative | `telemetry.signal`, valid `(operation.outcome,telemetry.drop_reason)` | `3*6=18` |
@@ -126,28 +197,28 @@ Required alerts: any zero-tolerance violation; control disable ack timeout; ambi
 
 `AlertRuleV1={catalog_version:"incident.catalog.v1",alert_id,trigger_code,runbook_id,severity,condition_version,for_duration,clear_condition,dedupe_key_template}` is a closed registry. Alert instances may carry safe incident/correlation IDs, but only the catalog fields are labels. Exact v1 routing/thresholds are:
 
-| Alert ID -> trigger -> runbook | Exact opening/escalation condition |
+| Alert ID -> severity -> trigger -> runbook | Exact opening/escalation condition |
 | --- | --- |
-| `ALERT_AGENT_INJECTION -> AGENT_PROMPT_INJECTION_OR_POISONING -> IR-06` | one hard authority/injection/poisoning evaluation failure in a promoted/candidate path |
-| `ALERT_PROVIDER_EXFILTRATION -> PROVIDER_EXFILTRATION -> IR-06` | one secret/PII canary or unauthorized provider field/egress finding |
-| `ALERT_CREDENTIAL_OR_SESSION -> AUTH_OR_SECRET_COMPROMISE -> IR-03` | confirmed credential exposure, token/session replay, subject mismatch, or five auth anomalies in 5m |
-| `ALERT_WEB_BOUNDARY -> WEB_SESSION_BOUNDARY_ATTACK -> IR-05` | one successful/bypass-indicating CSRF/XSS/session-fixation/open-redirect invariant or 20 blocked probes in 5m |
-| `ALERT_EGRESS_SSRF -> SSRF_OR_DNS_REBINDING -> IR-05` | one private/link-local/metadata connection success or ten blocked target changes in 5m |
-| `ALERT_CALLBACK_ABUSE -> CALLBACK_ABUSE -> IR-05` | one consumed-state/code splice or public unsubscribe WAF/CSRF/token-boundary bypass; or ten invalid callback arms/public token-method-CSRF probes in 5m, counted only by bounded route partition/reason |
-| `ALERT_SEND_AUTHORITY_VIOLATION -> SEND_AUTHORITY_VIOLATION -> IR-01` | one unauthorized, duplicate, suppressed, wrong-mailbox or post-disable provider call |
-| `ALERT_SUPPLY_CHAIN -> SUPPLY_CHAIN_COMPROMISE -> IR-09` | one signature/provenance/SBOM/image/lock mismatch in promoted release |
-| `ALERT_WORKFLOW_REPLAY -> WORKFLOW_REPLAY_OR_VERSION_DRIFT -> IR-07` | one snapshot/digest/version/replay side-effect invariant failure or immortal run |
-| `ALERT_BACKUP_RESTORE -> DATASTORE_OR_RESTORE_FAILURE -> IR-08` | backup age >24h, failed signature/backup, restore proof >90d, or one restore invariant failure |
-| `ALERT_OPERATOR_REPAIR -> OPERATOR_OR_RECOVERY_ERROR -> IR-13` | one unknown/mismatched repair kind/hash/catalog or prohibited recovery action |
-| `ALERT_AUTHORIZATION_ENUMERATION -> AUTHORIZATION_OR_ENUMERATION -> IR-05` | 20 uniform authorization misses in 5m from one ephemeral prefix bucket or one protected lookup bypass |
-| `ALERT_COST_QUOTA -> COST_OR_QUOTA_RUNAWAY -> IR-10` | hard budget/max-cost/quota exceeded or reconciliation missing >15m |
-| `ALERT_TELEMETRY_PRIVACY -> TELEMETRY_PRIVACY_LEAK -> IR-04` | one secret/PII/content/hash canary in telemetry/eval/Graphify/export |
-| `ALERT_COMPLIANCE_SUPPRESSION -> COMPLIANCE_OR_SUPPRESSION_BREACH -> IR-12` | complaint/unsubscribe/hard-bounce signal, any post-signal eligibility, public unsubscribe dependency failure, or atomic suppression/sync failure |
-| `ALERT_TELEMETRY_BLINDNESS -> TELEMETRY_OR_ALERT_BLINDNESS -> IR-11` | Critical exporter/alert gap >5m or both notification paths fail a canary |
-| `ALERT_GMAIL_AMBIGUITY -> GMAIL_AMBIGUITY_STALE -> IR-02` | oldest ambiguity >60s opens; >15m escalates to HIGH without a second incident |
-| `ALERT_RECIPIENT_HASH_ENUMERATION -> RECIPIENT_HASH_ENUMERATION -> IR-04` | ten denied restricted-hash queries in 60s or 100 total queries/hour outside a registered batch purpose |
+| `ALERT_AGENT_INJECTION -> CRITICAL -> AGENT_PROMPT_INJECTION_OR_POISONING -> IR-06` | one hard authority/injection/poisoning evaluation failure in a promoted/candidate path |
+| `ALERT_PROVIDER_EXFILTRATION -> CRITICAL -> PROVIDER_EXFILTRATION -> IR-06` | one secret/PII canary or unauthorized provider field/egress finding |
+| `ALERT_CREDENTIAL_OR_SESSION -> CRITICAL -> AUTH_OR_SECRET_COMPROMISE -> IR-03` | confirmed credential exposure, token/session replay, subject mismatch, or five auth anomalies in 5m |
+| `ALERT_WEB_BOUNDARY -> CRITICAL -> WEB_SESSION_BOUNDARY_ATTACK -> IR-05` | one successful/bypass-indicating CSRF/XSS/session-fixation/open-redirect invariant or 20 blocked probes in 5m |
+| `ALERT_EGRESS_SSRF -> CRITICAL -> SSRF_OR_DNS_REBINDING -> IR-05` | one private/link-local/metadata connection success or ten blocked target changes in 5m |
+| `ALERT_CALLBACK_ABUSE -> CRITICAL -> CALLBACK_ABUSE -> IR-05` | one consumed-state/code splice or public unsubscribe WAF/CSRF/token-boundary bypass; or ten invalid callback arms/public token-method-CSRF probes in 5m, counted only by bounded route partition/reason |
+| `ALERT_SEND_AUTHORITY_VIOLATION -> CRITICAL -> SEND_AUTHORITY_VIOLATION -> IR-01` | one unauthorized, duplicate, suppressed, wrong-mailbox or post-disable provider call |
+| `ALERT_SUPPLY_CHAIN -> CRITICAL -> SUPPLY_CHAIN_COMPROMISE -> IR-09` | one signature/provenance/SBOM/image/lock mismatch in promoted release |
+| `ALERT_WORKFLOW_REPLAY -> CRITICAL -> WORKFLOW_REPLAY_OR_VERSION_DRIFT -> IR-07` | one snapshot/digest/version/replay side-effect invariant failure or immortal run |
+| `ALERT_BACKUP_RESTORE -> CRITICAL -> DATASTORE_OR_RESTORE_FAILURE -> IR-08` | backup age >24h, failed signature/backup, restore proof >90d, or one restore invariant failure |
+| `ALERT_OPERATOR_REPAIR -> CRITICAL -> OPERATOR_OR_RECOVERY_ERROR -> IR-13` | one unknown/mismatched repair kind/hash/catalog or prohibited recovery action |
+| `ALERT_AUTHORIZATION_ENUMERATION -> CRITICAL -> AUTHORIZATION_OR_ENUMERATION -> IR-05` | 20 uniform authorization misses in 5m from one ephemeral prefix bucket or one protected lookup bypass |
+| `ALERT_COST_QUOTA -> CRITICAL -> COST_OR_QUOTA_RUNAWAY -> IR-10` | hard budget/max-cost/quota exceeded or reconciliation missing >15m |
+| `ALERT_TELEMETRY_PRIVACY -> CRITICAL -> TELEMETRY_PRIVACY_LEAK -> IR-04` | one secret/PII/content/hash canary in telemetry/eval/Graphify/export |
+| `ALERT_COMPLIANCE_SUPPRESSION -> CRITICAL -> COMPLIANCE_OR_SUPPRESSION_BREACH -> IR-12` | complaint/unsubscribe/hard-bounce signal, any post-signal eligibility, public unsubscribe dependency failure, or atomic suppression/sync failure |
+| `ALERT_TELEMETRY_BLINDNESS -> CRITICAL -> TELEMETRY_OR_ALERT_BLINDNESS -> IR-11` | Critical exporter/alert gap >5m or both notification paths fail a canary |
+| `ALERT_GMAIL_AMBIGUITY -> HIGH -> GMAIL_AMBIGUITY_STALE -> IR-02` | oldest ambiguity >60s opens immutable `HIGH`; notification projection escalates to `SEV1` after 15m without a second incident or row mutation |
+| `ALERT_RECIPIENT_HASH_ENUMERATION -> CRITICAL -> RECIPIENT_HASH_ENUMERATION -> IR-04` | ten denied restricted-hash queries in 60s or 100 total queries/hour outside a registered batch purpose |
 
-Unknown/mismatched alert/trigger/runbook/version is rejected before notification and incident insert, increments only a bounded registry-error counter, forces the affected safety control false, and pages through the local fallback using `ALERT_TELEMETRY_BLINDNESS`. Alert replay uses `(catalog_version,alert_id,dedupe_window)` and cannot change routing. Clear/resolve is evidence-driven and never enables a control.
+Unknown/mismatched severity/alert/trigger/runbook/version is rejected before notification and incident insert, increments only a bounded registry-error counter, forces the affected safety control false, and pages through the local fallback using the full `CRITICAL -> ALERT_TELEMETRY_BLINDNESS -> TELEMETRY_OR_ALERT_BLINDNESS -> IR-11` route. Alert replay uses `(catalog_version,alert_id,dedupe_window)` and cannot change routing. Clear/resolve is evidence-driven and never enables a control.
 
 ## Ordered implementation tasks
 

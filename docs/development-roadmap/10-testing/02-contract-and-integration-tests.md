@@ -38,9 +38,320 @@ The canonical 46-table set is exactly: `operators`, `experiments`, `workflow_run
 | agent evaluations | exact eight suites/552 cases/three fresh captures per case (1,656), signed capture sets, two offline scorers and exact AGENT-10 golden/threshold/regression/cost gates | missing/replayed capture, live non-model network, scorer disagreement, hard failure, privacy/authority edge, threshold one unit below | dataset/capture/signature/scorer/promotion hashes |
 | API | exact 66 method/path/operationId triples, exact 64 `PRIVATE_DEPLOYMENT` + 2 `PUBLIC_UNSUBSCRIBE`, strict responses/errors/ETags/cursors | duplicate/unclassified route, webhook/general public route, auth/CSRF/idempotency/version bypass, recipient hash in any schema | OpenAPI diff and route registry hash |
 | policy | approval eligibility plus final SEND fixed rule order and exact reason registry; all 14 dedicated compliance/signal denials reach zero credential/call | stale/cross-recipient evidence, generic reason substitution, reused queued facts, equalized facts hashes, unknown fact/version | decision/facts/scope hashes and call spies |
-| incident | all 18 positive trigger/alert/runbook tuples and exact resolution/repair applicability | every cross-pair, unknown catalog/code, inapplicable resolution/repair, forbidden residual-risk acceptance | DB/application/OpenAPI set equality |
+| incident | all 18 positive severity/trigger/alert/runbook tuples and exact resolution/repair applicability | every cross-pair, all 72 wrong-severity permutations, unknown catalog/code, inapplicable resolution/repair, forbidden residual-risk acceptance | DB/application/OpenAPI set equality |
 
 The 14 dedicated denial fixtures are exactly `RECIPIENT_IDENTITY_UNVERIFIED`, `RECIPIENT_JURISDICTION_UNKNOWN`, `RECIPIENT_CONSENT_MISSING`, `RECIPIENT_CONSENT_EXPIRED`, `COUNSEL_EXCEPTION_MISSING`, `LEGAL_REVIEW_MISSING`, `LEGAL_REVIEW_STALE`, `DISCLOSURE_TEMPLATE_INVALID`, `GOOGLE_POLICY_DENIED`, `RECIPIENT_REPLIED`, `RECIPIENT_OPTED_OUT`, `RECIPIENT_HARD_BOUNCED`, `RECIPIENT_COMPLAINT`, and `RECIPIENT_SOFT_BOUNCE_LIMIT`.
+
+### Permanent rollback-only residual authority fixtures
+
+The following two scripts are normative TEST-02 fixtures, not illustrative pseudocode. The first compiles only after DB-01..06, creates synthetic parents inside its transaction, switches back to normal trigger enforcement before every target row, verifies exact SQLSTATE plus constraint name, proves the valid adjacent campaign/agent/Gmail cost shapes, and rolls everything back. Seed-only `session_replication_role=replica` is permitted solely in the disposable superuser fixture to avoid duplicating unrelated artifact/send chains; every asserted target INSERT executes as `origin`. Any unexpected earlier constraint, escaped row, changed count, or COMMIT is a test failure.
+
+```sql
+\set ON_ERROR_STOP on
+\pset pager off
+
+BEGIN;
+
+CREATE FUNCTION pg_temp.expect_constraint(
+    p_label text, p_statement text, p_sqlstate text,
+    p_constraint text, p_force_campaign_fk boolean DEFAULT false
+) RETURNS void LANGUAGE plpgsql AS $$
+DECLARE
+    actual_state text;
+    actual_constraint text;
+    escaped boolean := true;
+BEGIN
+    BEGIN
+        EXECUTE p_statement;
+        IF p_force_campaign_fk THEN
+            SET CONSTRAINTS fk_campaigns_supersedes IMMEDIATE;
+        END IF;
+    EXCEPTION WHEN OTHERS THEN
+        GET STACKED DIAGNOSTICS
+            actual_state = RETURNED_SQLSTATE,
+            actual_constraint = CONSTRAINT_NAME;
+        escaped := false;
+    END;
+    SET CONSTRAINTS fk_campaigns_supersedes DEFERRED;
+    IF escaped THEN
+        RAISE EXCEPTION '% escaped its expected rejection', p_label;
+    END IF;
+    IF actual_state <> p_sqlstate OR actual_constraint <> p_constraint THEN
+        RAISE EXCEPTION '% failed via %/% rather than %/%',
+            p_label, actual_state, actual_constraint, p_sqlstate, p_constraint;
+    END IF;
+    RAISE NOTICE 'GREEN_REJECTED label=% sqlstate=% constraint=%',
+        p_label, actual_state, actual_constraint;
+END $$;
+
+INSERT INTO operators (operator_id, subject, display_name)
+VALUES ('10000000-0000-4000-8000-000000000001', 'exceptional-green-operator', 'Exceptional GREEN');
+INSERT INTO experiments (experiment_id, owner_operator_id, state, retry_limit, correlation_id)
+VALUES
+ ('10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000001','DRAFT',0,'10000000-0000-4000-8000-000000000021'),
+ ('10000000-0000-4000-8000-000000000012','10000000-0000-4000-8000-000000000001','DRAFT',0,'10000000-0000-4000-8000-000000000022');
+INSERT INTO workflow_runs (
+ workflow_run_id,experiment_id,workflow_type,workflow_version,runtime,runtime_workflow_id,
+ state,attempt_no,max_attempts,max_runtime_seconds,max_cost_minor,currency,
+ input_schema_version,input_snapshot,input_hash,correlation_id
+) VALUES
+ ('10000000-0000-4000-8000-000000000101','10000000-0000-4000-8000-000000000011','RED_W1','v1','DBOS','exceptional-green-w1','PENDING',1,1,60,100,'ILS','workflow.input.v1','{}',repeat('1',64),'10000000-0000-4000-8000-000000000201'),
+ ('10000000-0000-4000-8000-000000000102','10000000-0000-4000-8000-000000000011','RED_W2','v1','DBOS','exceptional-green-w2','PENDING',1,1,60,100,'ILS','workflow.input.v1','{}',repeat('2',64),'10000000-0000-4000-8000-000000000202');
+INSERT INTO agent_runs (
+ agent_run_id,experiment_id,workflow_run_id,agent_type,agent_version,produced_artifact_type,
+ prompt_version,model_provider,model_name,model_version,toolset_version,input_snapshot_hash,
+ state,currency,correlation_id
+) VALUES (
+ '10000000-0000-4000-8000-000000000111','10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000101',
+ 'IDEA_DISCOVERY','agent.v1','IdeaCandidate','prompt.v1','fixture','fixture','fixture.v1','tools.v1',repeat('1',64),'PENDING','ILS','10000000-0000-4000-8000-000000000211'
+);
+
+SELECT pg_temp.expect_constraint(
+ 'cost_w2_agent_w1_splice',
+ $sql$INSERT INTO cost_entries (
+  cost_entry_id,provider,operation,provider_call_id,experiment_id,workflow_run_id,agent_run_id,
+  usage_schema_version,usage_json,usage_hash,amount_minor,currency,reporting_amount_minor_ils,
+  occurred_at,idempotency_key
+ ) VALUES (
+  '10000000-0000-4000-8000-000000000121','FIXTURE','COST_SPLICE','10000000-0000-4000-8000-000000000121',
+  '10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000102','10000000-0000-4000-8000-000000000111',
+  1,jsonb_build_object('provider_call_id','10000000-0000-4000-8000-000000000121'),repeat('3',64),1,'ILS',1,
+  statement_timestamp(),'10000000-0000-4000-8000-000000000121'
+ )$sql$, '23503', 'fk_cost_entries_agent_run');
+
+SELECT pg_temp.expect_constraint(
+ 'cost_agent_without_workflow',
+ $sql$INSERT INTO cost_entries (
+  cost_entry_id,provider,operation,provider_call_id,experiment_id,agent_run_id,
+  usage_schema_version,usage_json,usage_hash,amount_minor,currency,reporting_amount_minor_ils,
+  occurred_at,idempotency_key
+ ) VALUES (
+  '10000000-0000-4000-8000-000000000122','FIXTURE','MISSING_WORKFLOW','10000000-0000-4000-8000-000000000122',
+  '10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000111',
+  1,jsonb_build_object('provider_call_id','10000000-0000-4000-8000-000000000122'),repeat('4',64),1,'ILS',1,
+  statement_timestamp(),'10000000-0000-4000-8000-000000000122'
+ )$sql$, '23514', 'ck_cost_entries_provenance_shape');
+
+-- Canonical positive agent allocation.
+INSERT INTO cost_entries (
+ cost_entry_id,provider,operation,provider_call_id,experiment_id,workflow_run_id,agent_run_id,
+ usage_schema_version,usage_json,usage_hash,amount_minor,currency,reporting_amount_minor_ils,
+ occurred_at,idempotency_key
+) VALUES (
+ '10000000-0000-4000-8000-000000000123','FIXTURE','AGENT_POSITIVE','10000000-0000-4000-8000-000000000123',
+ '10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000101','10000000-0000-4000-8000-000000000111',
+ 1,jsonb_build_object('provider_call_id','10000000-0000-4000-8000-000000000123'),repeat('5',64),1,'ILS',1,
+ statement_timestamp(),'10000000-0000-4000-8000-000000000123'
+);
+
+SET LOCAL session_replication_role = replica;
+INSERT INTO offer_hypotheses (
+ offer_id,experiment_id,idea_id,idea_version,idea_content_hash,offer_version,name,promise,
+ deliverables_schema_version,deliverables,price_minor,currency,assumptions_schema_version,
+ assumptions,risk_reversals_schema_version,risk_reversals,source_artifact_id,
+ source_artifact_version,source_artifact_hash,content_hash
+) VALUES
+ ('10000000-0000-4000-8000-000000000301','10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000311',1,repeat('4',64),1,'offer-a','promise-a',1,'[]',1,'ILS',1,'[]',1,'[]','10000000-0000-4000-8000-000000000321',1,repeat('5',64),repeat('6',64)),
+ ('10000000-0000-4000-8000-000000000302','10000000-0000-4000-8000-000000000012','10000000-0000-4000-8000-000000000312',1,repeat('7',64),1,'offer-b','promise-b',1,'[]',1,'ILS',1,'[]',1,'[]','10000000-0000-4000-8000-000000000322',1,repeat('8',64),repeat('9',64));
+INSERT INTO campaigns (
+ campaign_version_id,campaign_id,campaign_version,experiment_id,supersedes_campaign_version_id,
+ offer_id,offer_version,offer_content_hash,policy_version,eligibility_snapshot_version,
+ eligibility_snapshot_at,eligibility_query_version,eligible_set_hash,eligible_member_count,
+ member_cap,send_window_start,send_window_end,reply_window_end,daily_cap,total_cap
+) VALUES
+ ('10000000-0000-4000-8000-000000000401','10000000-0000-4000-8000-000000000411',1,'10000000-0000-4000-8000-000000000011',NULL,'10000000-0000-4000-8000-000000000301',1,repeat('6',64),'policy.v1',1,statement_timestamp(),'eligibility.v1',repeat('a',64),1,1,statement_timestamp(),statement_timestamp()+interval '1 hour',statement_timestamp()+interval '2 hours',1,1),
+ ('10000000-0000-4000-8000-000000000402','10000000-0000-4000-8000-000000000412',1,'10000000-0000-4000-8000-000000000011',NULL,'10000000-0000-4000-8000-000000000301',1,repeat('6',64),'policy.v1',1,statement_timestamp(),'eligibility.v1',repeat('b',64),1,1,statement_timestamp(),statement_timestamp()+interval '1 hour',statement_timestamp()+interval '2 hours',1,1),
+ ('10000000-0000-4000-8000-000000000403','10000000-0000-4000-8000-000000000413',3,'10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000401','10000000-0000-4000-8000-000000000301',1,repeat('6',64),'policy.v1',1,statement_timestamp(),'eligibility.v1',repeat('c',64),1,1,statement_timestamp(),statement_timestamp()+interval '1 hour',statement_timestamp()+interval '2 hours',1,1);
+
+INSERT INTO send_attempts (
+ send_attempt_id,send_intent_id,experiment_id,campaign_id,campaign_version,campaign_member_id,
+ lead_id,message_id,message_version,message_content_hash,mailbox_id,approval_id,
+ approval_preview_materialization_hash,approval_artifact_version_refs_hash,
+ eligibility_policy_decision_id,eligibility_policy_scope,eligibility_policy_version,
+ eligibility_facts_hash,eligibility_policy_allowed,send_policy_decision_id,send_policy_scope,
+ send_policy_version,scope_hash,send_policy_facts_hash,send_policy_allowed,rate_reservation_id,
+ rate_policy_version,rate_window_start,rate_slot_number,rate_concurrency_lease_token,
+ rate_consumed_at,rfc_message_id,intent_open_for_attempt,attempt_number,state,started_at
+) VALUES
+ ('10000000-0000-4000-8000-000000000601','10000000-0000-4000-8000-000000000611','10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000411',1,'10000000-0000-4000-8000-000000000621','10000000-0000-4000-8000-000000000631','10000000-0000-4000-8000-000000000641',1,repeat('1',64),'10000000-0000-4000-8000-000000000651','10000000-0000-4000-8000-000000000661',repeat('2',64),repeat('3',64),'10000000-0000-4000-8000-000000000671','APPROVAL_ELIGIBILITY','policy.v1',repeat('4',64),true,'10000000-0000-4000-8000-000000000681','SEND','policy.v1',repeat('5',64),repeat('6',64),true,'10000000-0000-4000-8000-000000000691','rate.v1',statement_timestamp()-interval '1 minute',1,repeat('7',64),statement_timestamp()-interval '1 second','<fixture-1@example.invalid>',true,1,'STARTED',statement_timestamp()),
+ ('10000000-0000-4000-8000-000000000602','10000000-0000-4000-8000-000000000612','10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000411',1,'10000000-0000-4000-8000-000000000622','10000000-0000-4000-8000-000000000632','10000000-0000-4000-8000-000000000642',1,repeat('8',64),'10000000-0000-4000-8000-000000000652','10000000-0000-4000-8000-000000000662',repeat('9',64),repeat('a',64),'10000000-0000-4000-8000-000000000672','APPROVAL_ELIGIBILITY','policy.v1',repeat('b',64),true,'10000000-0000-4000-8000-000000000682','SEND','policy.v1',repeat('c',64),repeat('d',64),true,'10000000-0000-4000-8000-000000000692','rate.v1',statement_timestamp()-interval '1 minute',2,repeat('e',64),statement_timestamp()-interval '1 second','<fixture-2@example.invalid>',true,1,'STARTED',statement_timestamp());
+INSERT INTO provider_results (
+ provider_result_id,send_attempt_id,provider_call_id,mailbox_id,provider,outcome,rfc_message_id,response_fingerprint
+) VALUES (
+ '10000000-0000-4000-8000-000000000701','10000000-0000-4000-8000-000000000601','10000000-0000-4000-8000-000000000751','10000000-0000-4000-8000-000000000651','GMAIL','UNKNOWN','<fixture-1@example.invalid>',repeat('f',64)
+);
+SET LOCAL session_replication_role = origin;
+
+SELECT pg_temp.expect_constraint(
+ 'cost_send_with_workflow',
+ $sql$INSERT INTO cost_entries (
+  cost_entry_id,provider,operation,provider_call_id,experiment_id,workflow_run_id,
+  send_attempt_id,provider_result_id,usage_schema_version,usage_json,usage_hash,
+  amount_minor,currency,reporting_amount_minor_ils,occurred_at,idempotency_key
+ ) VALUES (
+  '10000000-0000-4000-8000-000000000711','GMAIL','SEND','10000000-0000-4000-8000-000000000751',
+  '10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000101',
+  '10000000-0000-4000-8000-000000000601','10000000-0000-4000-8000-000000000701',1,
+  jsonb_build_object('provider_call_id','10000000-0000-4000-8000-000000000751'),repeat('1',64),1,'ILS',1,statement_timestamp(),'10000000-0000-4000-8000-000000000751'
+ )$sql$, '23514', 'ck_cost_entries_provenance_shape');
+
+SELECT pg_temp.expect_constraint(
+ 'cost_cross_attempt_provider_result',
+ $sql$INSERT INTO cost_entries (
+  cost_entry_id,provider,operation,provider_call_id,experiment_id,send_attempt_id,
+  provider_result_id,usage_schema_version,usage_json,usage_hash,amount_minor,currency,
+  reporting_amount_minor_ils,occurred_at,idempotency_key
+ ) VALUES (
+  '10000000-0000-4000-8000-000000000712','GMAIL','SEND','10000000-0000-4000-8000-000000000751',
+  '10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000602',
+  '10000000-0000-4000-8000-000000000701',1,
+  jsonb_build_object('provider_call_id','10000000-0000-4000-8000-000000000751'),repeat('2',64),1,'ILS',1,statement_timestamp(),'10000000-0000-4000-8000-000000000751'
+ )$sql$, '23503', 'fk_cost_entries_provider_result');
+
+SELECT pg_temp.expect_constraint(
+ 'cost_provider_result_call_splice',
+ $sql$INSERT INTO cost_entries (
+  cost_entry_id,provider,operation,provider_call_id,experiment_id,send_attempt_id,
+  provider_result_id,usage_schema_version,usage_json,usage_hash,amount_minor,currency,
+  reporting_amount_minor_ils,occurred_at,idempotency_key
+ ) VALUES (
+  '10000000-0000-4000-8000-000000000713','GMAIL','SEND','10000000-0000-4000-8000-000000000799',
+  '10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000601',
+  '10000000-0000-4000-8000-000000000701',1,
+  jsonb_build_object('provider_call_id','10000000-0000-4000-8000-000000000799'),repeat('3',64),1,'ILS',1,statement_timestamp(),'10000000-0000-4000-8000-000000000799'
+ )$sql$, '23503', 'fk_cost_entries_provider_result');
+
+INSERT INTO cost_entries (
+ cost_entry_id,provider,operation,provider_call_id,experiment_id,send_attempt_id,
+ provider_result_id,usage_schema_version,usage_json,usage_hash,amount_minor,currency,
+ reporting_amount_minor_ils,occurred_at,idempotency_key
+) VALUES (
+ '10000000-0000-4000-8000-000000000714','GMAIL','SEND','10000000-0000-4000-8000-000000000751',
+ '10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000601',
+ '10000000-0000-4000-8000-000000000701',1,
+ jsonb_build_object('provider_call_id','10000000-0000-4000-8000-000000000751'),repeat('4',64),1,'ILS',1,statement_timestamp(),'10000000-0000-4000-8000-000000000751'
+);
+
+CREATE FUNCTION pg_temp.add_campaign(
+ p_version_id uuid,p_campaign_id uuid,p_version integer,p_experiment_id uuid,
+ p_supersedes uuid,p_offer_id uuid,p_offer_hash char(64),p_set_hash char(64)
+) RETURNS void LANGUAGE sql AS $$
+ INSERT INTO campaigns (
+  campaign_version_id,campaign_id,campaign_version,experiment_id,supersedes_campaign_version_id,
+  offer_id,offer_version,offer_content_hash,policy_version,eligibility_snapshot_version,
+  eligibility_snapshot_at,eligibility_query_version,eligible_set_hash,eligible_member_count,
+  member_cap,send_window_start,send_window_end,reply_window_end,daily_cap,total_cap
+ ) VALUES (
+  p_version_id,p_campaign_id,p_version,p_experiment_id,p_supersedes,p_offer_id,1,p_offer_hash,
+  'policy.v1',p_version,statement_timestamp(),'eligibility.v1',p_set_hash,1,1,
+  statement_timestamp(),statement_timestamp()+interval '1 hour',statement_timestamp()+interval '2 hours',1,1
+ )
+$$;
+
+SELECT pg_temp.expect_constraint('campaign_cross_campaign',
+ $$SELECT pg_temp.add_campaign('10000000-0000-4000-8000-000000000421','10000000-0000-4000-8000-000000000412',2,'10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000401','10000000-0000-4000-8000-000000000301',repeat('6',64),repeat('d',64))$$,
+ '23503','fk_campaigns_supersedes',true);
+SELECT pg_temp.expect_constraint('campaign_skipped_previous',
+ $$SELECT pg_temp.add_campaign('10000000-0000-4000-8000-000000000422','10000000-0000-4000-8000-000000000411',3,'10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000401','10000000-0000-4000-8000-000000000301',repeat('6',64),repeat('e',64))$$,
+ '23503','fk_campaigns_supersedes',true);
+SELECT pg_temp.expect_constraint('campaign_self',
+ $$SELECT pg_temp.add_campaign('10000000-0000-4000-8000-000000000423','10000000-0000-4000-8000-000000000414',2,'10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000423','10000000-0000-4000-8000-000000000301',repeat('6',64),repeat('f',64))$$,
+ '23503','fk_campaigns_supersedes',true);
+SELECT pg_temp.expect_constraint('campaign_future',
+ $$SELECT pg_temp.add_campaign('10000000-0000-4000-8000-000000000424','10000000-0000-4000-8000-000000000413',2,'10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000403','10000000-0000-4000-8000-000000000301',repeat('6',64),repeat('0',64))$$,
+ '23503','fk_campaigns_supersedes',true);
+SELECT pg_temp.expect_constraint('campaign_cross_experiment',
+ $$SELECT pg_temp.add_campaign('10000000-0000-4000-8000-000000000425','10000000-0000-4000-8000-000000000415',2,'10000000-0000-4000-8000-000000000012','10000000-0000-4000-8000-000000000401','10000000-0000-4000-8000-000000000302',repeat('9',64),repeat('1',64))$$,
+ '23503','fk_campaigns_supersedes',true);
+
+-- Canonical immediate predecessor positive.
+SELECT pg_temp.add_campaign('10000000-0000-4000-8000-000000000426','10000000-0000-4000-8000-000000000412',2,'10000000-0000-4000-8000-000000000011','10000000-0000-4000-8000-000000000402','10000000-0000-4000-8000-000000000301',repeat('6',64),repeat('2',64));
+SET CONSTRAINTS fk_campaigns_supersedes IMMEDIATE;
+SET CONSTRAINTS fk_campaigns_supersedes DEFERRED;
+
+SELECT pg_temp.expect_constraint(
+ 'incident_info_send_route',
+ $$INSERT INTO incidents (incident_id,severity,trigger_code,runbook_id,alert_id,opened_by_actor_type,opened_by_actor_id)
+   VALUES ('10000000-0000-4000-8000-000000000501','INFO','SEND_AUTHORITY_VIOLATION','IR-01','ALERT_SEND_AUTHORITY_VIOLATION','SYSTEM','fixture')$$,
+ '23514','ck_incidents_route_tuple');
+
+DO $$ BEGIN RAISE NOTICE 'GREEN_PRODUCT_SUMMARY negatives=11 positives=3'; END $$;
+ROLLBACK;
+```
+
+The second script is the exhaustive four-field incident-route fixture. It inserts all 18 canonical positives, tries the other four severities for every route, requires exactly 72 `23514/ck_incidents_route_tuple` rejections, and rolls back:
+
+```sql
+\set ON_ERROR_STOP on
+BEGIN;
+DO $$
+DECLARE
+    routes jsonb := '[
+      ["CRITICAL","AGENT_PROMPT_INJECTION_OR_POISONING","ALERT_AGENT_INJECTION","IR-06"],
+      ["CRITICAL","PROVIDER_EXFILTRATION","ALERT_PROVIDER_EXFILTRATION","IR-06"],
+      ["CRITICAL","AUTH_OR_SECRET_COMPROMISE","ALERT_CREDENTIAL_OR_SESSION","IR-03"],
+      ["CRITICAL","WEB_SESSION_BOUNDARY_ATTACK","ALERT_WEB_BOUNDARY","IR-05"],
+      ["CRITICAL","SSRF_OR_DNS_REBINDING","ALERT_EGRESS_SSRF","IR-05"],
+      ["CRITICAL","CALLBACK_ABUSE","ALERT_CALLBACK_ABUSE","IR-05"],
+      ["CRITICAL","SEND_AUTHORITY_VIOLATION","ALERT_SEND_AUTHORITY_VIOLATION","IR-01"],
+      ["CRITICAL","SUPPLY_CHAIN_COMPROMISE","ALERT_SUPPLY_CHAIN","IR-09"],
+      ["CRITICAL","WORKFLOW_REPLAY_OR_VERSION_DRIFT","ALERT_WORKFLOW_REPLAY","IR-07"],
+      ["CRITICAL","DATASTORE_OR_RESTORE_FAILURE","ALERT_BACKUP_RESTORE","IR-08"],
+      ["CRITICAL","OPERATOR_OR_RECOVERY_ERROR","ALERT_OPERATOR_REPAIR","IR-13"],
+      ["CRITICAL","AUTHORIZATION_OR_ENUMERATION","ALERT_AUTHORIZATION_ENUMERATION","IR-05"],
+      ["CRITICAL","COST_OR_QUOTA_RUNAWAY","ALERT_COST_QUOTA","IR-10"],
+      ["CRITICAL","TELEMETRY_PRIVACY_LEAK","ALERT_TELEMETRY_PRIVACY","IR-04"],
+      ["CRITICAL","COMPLIANCE_OR_SUPPRESSION_BREACH","ALERT_COMPLIANCE_SUPPRESSION","IR-12"],
+      ["CRITICAL","TELEMETRY_OR_ALERT_BLINDNESS","ALERT_TELEMETRY_BLINDNESS","IR-11"],
+      ["HIGH","GMAIL_AMBIGUITY_STALE","ALERT_GMAIL_AMBIGUITY","IR-02"],
+      ["CRITICAL","RECIPIENT_HASH_ENUMERATION","ALERT_RECIPIENT_HASH_ENUMERATION","IR-04"]
+    ]'::jsonb;
+    severities text[] := ARRAY['INFO','LOW','MEDIUM','HIGH','CRITICAL'];
+    route jsonb;
+    severity text;
+    actual_state text;
+    actual_constraint text;
+    positives integer := 0;
+    negatives integer := 0;
+BEGIN
+    FOR route IN SELECT value FROM jsonb_array_elements(routes) LOOP
+        INSERT INTO incidents (
+            incident_id,severity,trigger_code,alert_id,runbook_id,
+            opened_by_actor_type,opened_by_actor_id
+        ) VALUES (
+            md5('positive:' || route::text)::uuid,
+            route->>0,route->>1,route->>2,route->>3,'SYSTEM','incident-matrix'
+        );
+        positives := positives + 1;
+        FOREACH severity IN ARRAY severities LOOP
+            CONTINUE WHEN severity = route->>0;
+            BEGIN
+                INSERT INTO incidents (
+                    incident_id,severity,trigger_code,alert_id,runbook_id,
+                    opened_by_actor_type,opened_by_actor_id
+                ) VALUES (
+                    md5('negative:' || severity || route::text)::uuid,
+                    severity,route->>1,route->>2,route->>3,'SYSTEM','incident-matrix'
+                );
+                RAISE EXCEPTION 'wrong severity escaped: % %', severity, route;
+            EXCEPTION WHEN check_violation THEN
+                GET STACKED DIAGNOSTICS
+                    actual_state = RETURNED_SQLSTATE,
+                    actual_constraint = CONSTRAINT_NAME;
+                IF actual_state <> '23514' OR actual_constraint <> 'ck_incidents_route_tuple' THEN
+                    RAISE EXCEPTION 'wrong target for % %: %/%', severity, route, actual_state, actual_constraint;
+                END IF;
+                negatives := negatives + 1;
+            END;
+        END LOOP;
+    END LOOP;
+    IF positives <> 18 OR negatives <> 72 THEN
+        RAISE EXCEPTION 'incident matrix count mismatch positives=% negatives=%', positives, negatives;
+    END IF;
+    RAISE NOTICE 'INCIDENT_FOUR_FIELD_GREEN positives=% wrong_severity_rejections=% sqlstate=23514 constraint=ck_incidents_route_tuple', positives, negatives;
+END $$;
+ROLLBACK;
+```
 
 The complete TEST-02 requirement set maps only to `T7-CONTRACT-INTEGRATION` in the [TEST-01 closed command manifest](01-testing-strategy.md#closed-command-manifest). `scripts/task7/run` performs the one nonrecursive dispatch defined there; the exact planned handler `scripts/task7/handlers/contract-integration` independently derives trust from its own file location, never caller cwd or a root environment variable:
 
@@ -119,7 +430,7 @@ The signed command manifest materializes `entry_argv[0]` as the absolute canonic
 - **Evaluation `test_eight_suites_552_cases_1656_fresh_captures_and_two_offline_scorers_match_agent10`.**
 - **API `test_openapi_router_client_and_edge_manifests_equal_exact_66_and_64_plus_2_partition`.**
 - **Policy `test_fourteen_dedicated_final_send_denials_have_zero_credential_and_provider_calls`.**
-- **Incident `test_incident_catalog_tuple_resolution_and_repair_applicability_match_database`.**
+- **Incident `test_incident_four_field_routes_all_wrong_severities_resolution_and_repair_applicability_match_database`.**
 - **Privileges `test_only_canonical_service_roles_can_write_each_product_or_security_runtime_record`.**
 - **Entrypoint `test_absolute_runner_execs_distinct_hashed_contract_handler_once_from_tmp_and_refuses_recursion_symlink_wrong_root_env_commit_profile_or_database_before_access`.**
 

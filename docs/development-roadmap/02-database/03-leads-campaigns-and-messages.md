@@ -133,6 +133,7 @@ CREATE TABLE campaigns (
     campaign_version integer NOT NULL,
     experiment_id uuid NOT NULL,
     supersedes_campaign_version_id uuid NULL,
+    supersedes_campaign_version integer GENERATED ALWAYS AS (campaign_version - 1) STORED,
     state text NOT NULL DEFAULT 'DRAFT',
     offer_id uuid NOT NULL,
     offer_version integer NOT NULL,
@@ -155,12 +156,14 @@ CREATE TABLE campaigns (
     CONSTRAINT pk_campaigns PRIMARY KEY (campaign_version_id),
     CONSTRAINT fk_campaigns_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
     CONSTRAINT fk_campaigns_offer FOREIGN KEY (offer_id, experiment_id, offer_version, offer_content_hash) REFERENCES offer_hypotheses (offer_id, experiment_id, offer_version, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT fk_campaigns_supersedes FOREIGN KEY (supersedes_campaign_version_id) REFERENCES campaigns (campaign_version_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_campaigns_supersedes FOREIGN KEY (supersedes_campaign_version_id, campaign_id, experiment_id, supersedes_campaign_version) REFERENCES campaigns (campaign_version_id, campaign_id, experiment_id, campaign_version) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED,
     CONSTRAINT uq_campaigns_logical_version UNIQUE (campaign_id, campaign_version),
     CONSTRAINT uq_campaigns_experiment_version UNIQUE (campaign_id, campaign_version, experiment_id),
     CONSTRAINT uq_campaigns_version_scope UNIQUE (campaign_version_id, campaign_id, campaign_version),
+    CONSTRAINT uq_campaigns_supersession_authority UNIQUE (campaign_version_id, campaign_id, experiment_id, campaign_version),
     CONSTRAINT uq_campaigns_membership_snapshot UNIQUE (campaign_id, campaign_version, experiment_id, eligibility_snapshot_version, eligible_set_hash, eligible_member_count),
     CONSTRAINT ck_campaigns_version CHECK (campaign_version > 0),
+    CONSTRAINT ck_campaigns_supersession CHECK ((campaign_version = 1 AND supersedes_campaign_version_id IS NULL) OR (campaign_version > 1 AND supersedes_campaign_version_id IS NOT NULL)),
     CONSTRAINT ck_campaigns_state CHECK (state IN ('DRAFT','READY','ACTIVE','PAUSED','COMPLETED','CANCELLED','FAILED')),
     CONSTRAINT ck_campaigns_membership CHECK (offer_content_hash ~ '^[0-9a-f]{64}$' AND membership_mode = 'ALL_CURRENTLY_ELIGIBLE' AND eligibility_snapshot_version > 0 AND eligibility_query_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$' AND eligible_set_hash ~ '^[0-9a-f]{64}$' AND member_cap BETWEEN 1 AND 100 AND eligible_member_count BETWEEN 1 AND member_cap),
     CONSTRAINT ck_campaigns_windows CHECK (send_window_start < send_window_end AND send_window_end <= reply_window_end),
@@ -514,6 +517,7 @@ CREATE INDEX ix_send_attempts_unresolved ON send_attempts (mailbox_id, started_a
 CREATE TABLE provider_results (
     provider_result_id uuid NOT NULL,
     send_attempt_id uuid NOT NULL,
+    provider_call_id uuid NOT NULL,
     mailbox_id uuid NOT NULL,
     provider text NOT NULL,
     outcome text NOT NULL,
@@ -526,6 +530,8 @@ CREATE TABLE provider_results (
     raw_payload_ref text NULL,
     CONSTRAINT pk_provider_results PRIMARY KEY (provider_result_id),
     CONSTRAINT fk_provider_results_attempt_identity FOREIGN KEY (send_attempt_id, mailbox_id, rfc_message_id) REFERENCES send_attempts (send_attempt_id, mailbox_id, rfc_message_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_provider_results_cost_authority UNIQUE (provider_result_id, send_attempt_id, provider_call_id, provider),
+    CONSTRAINT uq_provider_results_provider_call UNIQUE (provider, provider_call_id),
     CONSTRAINT uq_provider_results_fingerprint UNIQUE (send_attempt_id, response_fingerprint),
     CONSTRAINT uq_provider_results_mailbox_message UNIQUE (mailbox_id, gmail_message_id),
     CONSTRAINT ck_provider_results_provider CHECK (provider = 'GMAIL'),
@@ -607,7 +613,9 @@ CREATE INDEX ix_gmail_history_cursors_advanced ON gmail_history_cursors (advance
 
 `GmailMailboxCommandService` may insert `status=ACTIVE` only inside `CompleteGmailAuthorization` after validating signed `ActiveCredentialProofV1`. The row copies exact `(oauth_flow_id,mailbox_id,provider_account_hash,granted_scope_hash,credential_handle_hash,credential_version,credential_key_version,credential_activation_generation)` from the ACTIVE secret object. Product credential resolution hashes the opaque handle and requires every value plus ACTIVE mailbox status to match; no row or mismatch means no token access. The binding tuple is immutable while mailbox status is ACTIVE. Authenticated reconnect may replace the entire tuple atomically only from DISABLED, with the same provider account, exact next credential version, no unresolved attempts, and a new ACTIVE proof; partial field patch is forbidden.
 
-Deferred M2 foreign keys `fk_leads_suppression`, the seven exact `fk_campaign_members_*_artifact` identity/jurisdiction/consent-or-exception/legal/disclosure/Google-policy references, `fk_lead_assessments_artifact`, `fk_outreach_messages_artifact`, `fk_suppression_entries_source_observation`, `fk_suppression_entries_source_reply`, `fk_approvals_eligibility_policy_authority`, `fk_send_intents_eligibility_policy_authority`, `fk_send_attempts_send_policy_authority`, and `fk_replies_classification_artifact` are added after DB-04/DB-05 exists. Exact definitions appear in DB-06. `trg_send_intents_immutable_identity` protects every experiment/campaign/member/lead/message/mailbox/approval/eligibility/scope/idempotency/RFC/retry/budget field while allowing only `attempt_count`, `open_for_attempt`, `cancelled_at`, and `cancellation_reason`; `trg_send_intent_cancellation_once` makes the true-to-false cancellation a one-way transition. `fk_send_attempts_intent_authority` copies the non-null `open_for_attempt=true` token: PostgreSQL rejects an attempt for a cancelled intent and blocks flipping the parent token after an attempt exists.
+Campaign version 1 requires a null predecessor. Every later version has generated `supersedes_campaign_version=campaign_version-1`; the deferrable `fk_campaigns_supersedes` resolves the supplied predecessor ID only against the same `campaign_id`, same `experiment_id`, and that exact prior version. Because the referenced tuple and every campaign identity field are unique/immutable, self, future, skipped, cross-campaign and cross-experiment predecessor rows all fail without an application lookup. Deferral permits a transaction to insert dependency order safely but commit cannot leave a gap.
+
+Deferred M2 foreign keys `fk_leads_suppression`, the seven exact `fk_campaign_members_*_artifact` identity/jurisdiction/consent-or-exception/legal/disclosure/Google-policy references, `fk_lead_assessments_artifact`, `fk_outreach_messages_artifact`, `fk_suppression_entries_source_observation`, `fk_suppression_entries_source_reply`, `fk_approvals_eligibility_policy_authority`, `fk_send_intents_eligibility_policy_authority`, `fk_send_attempts_send_policy_authority`, and `fk_replies_classification_artifact` are added after DB-04/DB-05 exists. Exact definitions appear in DB-06. `trg_send_intents_immutable_identity` protects every experiment/campaign/member/lead/message/mailbox/approval/eligibility/scope/idempotency/RFC/retry/budget field while allowing only `attempt_count`, `open_for_attempt`, `cancelled_at`, and `cancellation_reason`; `trg_send_intent_cancellation_once` makes the true-to-false cancellation a one-way transition. `fk_send_attempts_intent_authority` copies the non-null `open_for_attempt=true` token: PostgreSQL rejects an attempt for a cancelled intent and blocks flipping the parent token after an attempt exists. Every immutable result persists the distinct `provider_call_id` already present in `GmailSendResultV1`; `uq_provider_results_provider_call` gives that call one provider result, and `uq_provider_results_cost_authority` gives DB-05 one exact `(provider_result_id,send_attempt_id,provider_call_id,provider)` target. A cost row therefore cannot splice either a result or call from another Gmail operation, and the call UUID is never falsely equated with `send_attempt_id`.
 
 `RecipientLookupKeyService` is the only constructor/reader of recipient lookup material. It normalizes the address and computes the existing deterministic lowercase SHA-256 digest for v1 equality/deduplication/suppression compatibility. `recipient_address_hash` and `recipient_hash` are pseudonymous personal-risk data: equality leaks and the small, guessable email-address space permits offline dictionary enumeration. Keeping this construction in v1 is an explicit residual-risk decision, never anonymization or a claim of non-reversibility. PostgreSQL column privileges allow only the lookup service and the single suppression/final-SEND transaction; API/report/log/event/export paths never serialize the digest, recipient domain, or a derived fingerprint. Reads require registered purpose, are rate-limited and audited by bounded outcome/reason without target material, and enumeration alarms map to OBS-05. Database volumes, WAL, snapshots and backups are encrypted and separately access-controlled; the delivery address remains separately field-encrypted.
 

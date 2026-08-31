@@ -150,25 +150,73 @@ CREATE TABLE security_runtime.operator_sessions (
     CONSTRAINT ck_security_runtime_operator_session_state CHECK (state IN ('ACTIVE','REVOKED','EXPIRED')),
     CONSTRAINT ck_security_runtime_operator_session_agent CHECK (user_agent_family IN ('CHROME','FIREFOX','SAFARI','EDGE','OTHER')),
     CONSTRAINT ck_security_runtime_operator_session_window CHECK (absolute_expires_at = issued_at + interval '8 hours' AND reauthenticated_at BETWEEN issued_at AND last_seen_at AND last_seen_at >= issued_at AND idle_expires_at > last_seen_at AND idle_expires_at <= absolute_expires_at AND rotate_after > issued_at AND rotate_after <= absolute_expires_at),
-    CONSTRAINT ck_security_runtime_operator_session_previous CHECK ((previous_handle_digest IS NULL AND previous_handle_expires_at IS NULL) OR (previous_handle_digest IS NOT NULL AND previous_handle_expires_at > last_seen_at AND previous_handle_expires_at <= LEAST(absolute_expires_at, last_seen_at + interval '30 seconds'))),
+    CONSTRAINT ck_security_runtime_operator_session_previous CHECK ((previous_handle_digest IS NULL AND previous_handle_expires_at IS NULL) OR (previous_handle_digest IS NOT NULL AND previous_handle_expires_at > issued_at AND previous_handle_expires_at <= LEAST(absolute_expires_at, last_seen_at + interval '30 seconds'))),
     CONSTRAINT ck_security_runtime_operator_session_end CHECK ((state = 'ACTIVE' AND end_reason IS NULL AND ended_at IS NULL) OR (state IN ('REVOKED','EXPIRED') AND end_reason ~ '^[A-Z0-9][A-Z0-9_]{0,63}$' AND ended_at IS NOT NULL AND ended_at >= issued_at))
 );
 
 CREATE INDEX ix_security_runtime_operator_sessions_active ON security_runtime.operator_sessions (operator_id, issued_at, session_id) WHERE state = 'ACTIVE';
 CREATE INDEX ix_security_runtime_operator_sessions_expiry ON security_runtime.operator_sessions (LEAST(idle_expires_at, absolute_expires_at), session_id) WHERE state = 'ACTIVE';
 
+CREATE FUNCTION security_runtime.enforce_oidc_flow_initial() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = pg_catalog, security_runtime
+AS $function$
+BEGIN
+    IF NEW.state <> 'PENDING' OR NEW.version <> 1 OR
+       (NEW.claimed_by, NEW.claim_token_hash, NEW.claimed_at, NEW.claim_lease_expires_at,
+        NEW.result_schema_version, NEW.result_kind, NEW.result_hash,
+        NEW.result_http_status, NEW.terminal_at) IS DISTINCT FROM
+       (NULL::uuid, NULL::char(64), NULL::timestamptz, NULL::timestamptz,
+        NULL::text, NULL::text, NULL::char(64), NULL::smallint, NULL::timestamptz) THEN
+        RAISE EXCEPTION 'OIDC flow must be inserted in exact PENDING version 1 state' USING ERRCODE = '23514';
+    END IF;
+    RETURN NEW;
+END
+$function$;
+
+CREATE TRIGGER trg_security_runtime_oidc_flow_initial
+BEFORE INSERT ON security_runtime.oidc_flows
+FOR EACH ROW EXECUTE FUNCTION security_runtime.enforce_oidc_flow_initial();
+
 CREATE FUNCTION security_runtime.enforce_oidc_flow_lifecycle() RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = pg_catalog, security_runtime
 AS $function$
 BEGIN
-    IF NEW.flow_id <> OLD.flow_id OR NEW.flow_handle_digest <> OLD.flow_handle_digest OR NEW.state_digest <> OLD.state_digest OR NEW.nonce_digest <> OLD.nonce_digest OR NEW.request_hash <> OLD.request_hash OR NEW.created_at <> OLD.created_at OR NEW.expires_at <> OLD.expires_at THEN
-        RAISE EXCEPTION 'immutable OIDC flow identity changed' USING ERRCODE = '23514';
+    IF (NEW.flow_id, NEW.flow_handle_digest, NEW.state_digest, NEW.nonce_digest,
+        NEW.pkce_verifier_ciphertext, NEW.flow_payload_ciphertext,
+        NEW.encryption_key_generation, NEW.operator_origin_hash,
+        NEW.callback_issuer, NEW.client_id_hash, NEW.redirect_uri_hash,
+        NEW.return_path, NEW.idempotency_key_hash, NEW.request_schema_version,
+        NEW.request_hash, NEW.created_at, NEW.expires_at) IS DISTINCT FROM
+       (OLD.flow_id, OLD.flow_handle_digest, OLD.state_digest, OLD.nonce_digest,
+        OLD.pkce_verifier_ciphertext, OLD.flow_payload_ciphertext,
+        OLD.encryption_key_generation, OLD.operator_origin_hash,
+        OLD.callback_issuer, OLD.client_id_hash, OLD.redirect_uri_hash,
+        OLD.return_path, OLD.idempotency_key_hash, OLD.request_schema_version,
+        OLD.request_hash, OLD.created_at, OLD.expires_at) THEN
+        RAISE EXCEPTION 'immutable complete OIDC request binding changed' USING ERRCODE = '23514';
     END IF;
     IF NEW.version <> OLD.version + 1 THEN
         RAISE EXCEPTION 'OIDC flow CAS version must increment by one' USING ERRCODE = '23514';
     END IF;
-    IF NOT ((OLD.state = 'PENDING' AND NEW.state IN ('CLAIMED','EXPIRED')) OR (OLD.state = 'CLAIMED' AND NEW.state IN ('CONSUMED','EXPIRED'))) THEN
+    IF OLD.state = 'PENDING' AND NEW.state = 'CLAIMED' THEN
+        IF to_jsonb(NEW) - ARRAY['state','claimed_by','claim_token_hash','claimed_at','claim_lease_expires_at','version'] <> to_jsonb(OLD) - ARRAY['state','claimed_by','claim_token_hash','claimed_at','claim_lease_expires_at','version'] THEN
+            RAISE EXCEPTION 'PENDING to CLAIMED changed a non-claim column' USING ERRCODE = '23514';
+        END IF;
+    ELSIF OLD.state = 'PENDING' AND NEW.state = 'EXPIRED' THEN
+        IF to_jsonb(NEW) - ARRAY['state','terminal_at','version'] <> to_jsonb(OLD) - ARRAY['state','terminal_at','version'] THEN
+            RAISE EXCEPTION 'PENDING to EXPIRED changed a non-expiry column' USING ERRCODE = '23514';
+        END IF;
+    ELSIF OLD.state = 'CLAIMED' AND NEW.state = 'CONSUMED' THEN
+        IF to_jsonb(NEW) - ARRAY['state','result_schema_version','result_kind','result_hash','result_http_status','terminal_at','version'] <> to_jsonb(OLD) - ARRAY['state','result_schema_version','result_kind','result_hash','result_http_status','terminal_at','version'] THEN
+            RAISE EXCEPTION 'CLAIMED to CONSUMED changed a non-result column' USING ERRCODE = '23514';
+        END IF;
+    ELSIF OLD.state = 'CLAIMED' AND NEW.state = 'EXPIRED' THEN
+        IF to_jsonb(NEW) - ARRAY['state','terminal_at','version'] <> to_jsonb(OLD) - ARRAY['state','terminal_at','version'] THEN
+            RAISE EXCEPTION 'CLAIMED to EXPIRED changed a non-expiry column' USING ERRCODE = '23514';
+        END IF;
+    ELSE
         RAISE EXCEPTION 'illegal OIDC flow transition' USING ERRCODE = '23514';
     END IF;
     RETURN NEW;
@@ -183,21 +231,51 @@ CREATE FUNCTION security_runtime.enforce_operator_session_lifecycle() RETURNS tr
 LANGUAGE plpgsql
 SET search_path = pg_catalog, security_runtime
 AS $function$
+DECLARE
+    transition_at timestamptz := statement_timestamp();
 BEGIN
-    IF NEW.session_id <> OLD.session_id OR NEW.operator_id <> OLD.operator_id OR NEW.authentication_epoch <> OLD.authentication_epoch OR NEW.subject_hash <> OLD.subject_hash OR NEW.issued_at <> OLD.issued_at OR NEW.absolute_expires_at <> OLD.absolute_expires_at THEN
-        RAISE EXCEPTION 'immutable operator session identity changed' USING ERRCODE = '23514';
+    IF (NEW.session_id, NEW.operator_id, NEW.authentication_epoch, NEW.subject_hash,
+        NEW.lookup_key_generation, NEW.issued_at, NEW.reauthenticated_at,
+        NEW.absolute_expires_at, NEW.created_ip_prefix_hash, NEW.user_agent_family) IS DISTINCT FROM
+       (OLD.session_id, OLD.operator_id, OLD.authentication_epoch, OLD.subject_hash,
+        OLD.lookup_key_generation, OLD.issued_at, OLD.reauthenticated_at,
+        OLD.absolute_expires_at, OLD.created_ip_prefix_hash, OLD.user_agent_family) THEN
+        RAISE EXCEPTION 'immutable complete operator session binding changed' USING ERRCODE = '23514';
     END IF;
     IF NEW.version <> OLD.version + 1 THEN
         RAISE EXCEPTION 'operator session CAS version must increment by one' USING ERRCODE = '23514';
     END IF;
-    IF OLD.state IN ('REVOKED','EXPIRED') AND NEW.state <> OLD.state THEN
-        RAISE EXCEPTION 'terminal operator session reopened' USING ERRCODE = '23514';
-    END IF;
-    IF OLD.state = 'ACTIVE' AND NEW.state NOT IN ('ACTIVE','REVOKED','EXPIRED') THEN
+    IF OLD.state IN ('REVOKED','EXPIRED') THEN
+        RAISE EXCEPTION 'terminal operator session is immutable' USING ERRCODE = '23514';
+    ELSIF OLD.state = 'ACTIVE' AND NEW.state = 'ACTIVE' AND NEW.current_handle_digest IS DISTINCT FROM OLD.current_handle_digest THEN
+        IF OLD.previous_handle_digest IS NOT NULL AND OLD.previous_handle_expires_at > transition_at THEN
+            RAISE EXCEPTION 'operator session cannot rotate while a previous-handle overlap is active' USING ERRCODE = '23514';
+        END IF;
+        IF NEW.previous_handle_digest IS DISTINCT FROM OLD.current_handle_digest OR
+           NEW.previous_handle_expires_at IS DISTINCT FROM LEAST(NEW.absolute_expires_at, transition_at + interval '30 seconds') OR
+           NEW.last_seen_at IS DISTINCT FROM transition_at OR
+           NEW.idle_expires_at IS DISTINCT FROM LEAST(NEW.absolute_expires_at, transition_at + interval '30 minutes') OR
+           NEW.rotate_after IS DISTINCT FROM LEAST(NEW.absolute_expires_at, transition_at + interval '15 minutes') OR
+           to_jsonb(NEW) - ARRAY['current_handle_digest','previous_handle_digest','previous_handle_expires_at','last_seen_at','idle_expires_at','rotate_after','version'] <>
+           to_jsonb(OLD) - ARRAY['current_handle_digest','previous_handle_digest','previous_handle_expires_at','last_seen_at','idle_expires_at','rotate_after','version'] THEN
+            RAISE EXCEPTION 'invalid operator session handle rotation' USING ERRCODE = '23514';
+        END IF;
+    ELSIF OLD.state = 'ACTIVE' AND NEW.state = 'ACTIVE' THEN
+        IF (NEW.previous_handle_digest, NEW.previous_handle_expires_at, NEW.rotate_after) IS DISTINCT FROM
+           (OLD.previous_handle_digest, OLD.previous_handle_expires_at, OLD.rotate_after) OR
+           NEW.last_seen_at < OLD.last_seen_at OR
+           NEW.idle_expires_at IS DISTINCT FROM LEAST(NEW.absolute_expires_at, NEW.last_seen_at + interval '30 minutes') OR
+           to_jsonb(NEW) - ARRAY['last_seen_at','idle_expires_at','version'] <>
+           to_jsonb(OLD) - ARRAY['last_seen_at','idle_expires_at','version'] THEN
+            RAISE EXCEPTION 'ACTIVE session touch changed non-touch authority' USING ERRCODE = '23514';
+        END IF;
+    ELSIF OLD.state = 'ACTIVE' AND NEW.state IN ('REVOKED','EXPIRED') THEN
+        IF to_jsonb(NEW) - ARRAY['state','end_reason','ended_at','version'] <>
+           to_jsonb(OLD) - ARRAY['state','end_reason','ended_at','version'] THEN
+            RAISE EXCEPTION 'operator session termination changed non-terminal authority' USING ERRCODE = '23514';
+        END IF;
+    ELSE
         RAISE EXCEPTION 'illegal operator session transition' USING ERRCODE = '23514';
-    END IF;
-    IF NEW.current_handle_digest <> OLD.current_handle_digest AND (OLD.state <> 'ACTIVE' OR NEW.state <> 'ACTIVE' OR NEW.previous_handle_digest IS DISTINCT FROM OLD.current_handle_digest OR NEW.previous_handle_expires_at IS NULL OR NEW.previous_handle_expires_at <= statement_timestamp() OR NEW.previous_handle_expires_at > LEAST(NEW.absolute_expires_at, statement_timestamp() + interval '30 seconds')) THEN
-        RAISE EXCEPTION 'invalid operator session handle rotation' USING ERRCODE = '23514';
     END IF;
     RETURN NEW;
 END
@@ -211,6 +289,17 @@ DECLARE
     active_others integer;
 BEGIN
     PERFORM pg_advisory_xact_lock(hashtextextended(NEW.operator_id::text, 20260829));
+    IF TG_OP = 'INSERT' AND (
+        NEW.state <> 'ACTIVE' OR NEW.version <> 1 OR
+        NEW.previous_handle_digest IS NOT NULL OR NEW.previous_handle_expires_at IS NOT NULL OR
+        NEW.end_reason IS NOT NULL OR NEW.ended_at IS NOT NULL OR
+        NEW.reauthenticated_at IS DISTINCT FROM NEW.issued_at OR
+        NEW.last_seen_at IS DISTINCT FROM NEW.issued_at OR
+        NEW.idle_expires_at IS DISTINCT FROM LEAST(NEW.absolute_expires_at, NEW.issued_at + interval '30 minutes') OR
+        NEW.rotate_after IS DISTINCT FROM LEAST(NEW.absolute_expires_at, NEW.issued_at + interval '15 minutes')
+    ) THEN
+        RAISE EXCEPTION 'operator session must be inserted in exact ACTIVE version 1 state' USING ERRCODE = '23514';
+    END IF;
     IF EXISTS (
         SELECT 1
         FROM security_runtime.operator_sessions AS existing
@@ -242,6 +331,302 @@ CREATE TRIGGER trg_20_security_runtime_operator_session_scope
 BEFORE INSERT OR UPDATE ON security_runtime.operator_sessions
 FOR EACH ROW EXECUTE FUNCTION security_runtime.enforce_operator_session_scope();
 
+CREATE FUNCTION security_runtime.create_oidc_flow(
+    p_flow_id uuid, p_flow_handle_digest char(64), p_state_digest char(64),
+    p_nonce_digest char(64), p_pkce_verifier_ciphertext bytea,
+    p_flow_payload_ciphertext bytea, p_encryption_key_generation text,
+    p_operator_origin_hash char(64), p_callback_issuer text,
+    p_client_id_hash char(64), p_redirect_uri_hash char(64), p_return_path text,
+    p_idempotency_key_hash char(64), p_request_schema_version text,
+    p_request_hash char(64)
+) RETURNS security_runtime.oidc_flows
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, security_runtime
+AS $function$
+DECLARE
+    existing security_runtime.oidc_flows%ROWTYPE;
+    match_count integer;
+BEGIN
+    INSERT INTO security_runtime.oidc_flows (
+        flow_id, flow_handle_digest, state_digest, nonce_digest,
+        pkce_verifier_ciphertext, flow_payload_ciphertext,
+        encryption_key_generation, operator_origin_hash, callback_issuer,
+        client_id_hash, redirect_uri_hash, return_path, idempotency_key_hash,
+        request_schema_version, request_hash, expires_at
+    ) VALUES (
+        p_flow_id, p_flow_handle_digest, p_state_digest, p_nonce_digest,
+        p_pkce_verifier_ciphertext, p_flow_payload_ciphertext,
+        p_encryption_key_generation, p_operator_origin_hash, p_callback_issuer,
+        p_client_id_hash, p_redirect_uri_hash, p_return_path,
+        p_idempotency_key_hash, p_request_schema_version, p_request_hash,
+        statement_timestamp() + interval '10 minutes'
+    ) ON CONFLICT DO NOTHING;
+
+    SELECT count(*) INTO match_count
+    FROM security_runtime.oidc_flows
+    WHERE flow_id = p_flow_id OR
+          (operator_origin_hash, idempotency_key_hash) =
+          (p_operator_origin_hash, p_idempotency_key_hash);
+    IF match_count <> 1 THEN
+        RAISE EXCEPTION 'OIDC flow idempotency identities do not resolve to one row' USING ERRCODE = '23505';
+    END IF;
+    SELECT * INTO existing
+    FROM security_runtime.oidc_flows
+    WHERE flow_id = p_flow_id OR
+          (operator_origin_hash, idempotency_key_hash) =
+          (p_operator_origin_hash, p_idempotency_key_hash)
+    FOR UPDATE;
+    IF
+       (existing.flow_id, existing.flow_handle_digest, existing.state_digest,
+        existing.nonce_digest, existing.pkce_verifier_ciphertext,
+        existing.flow_payload_ciphertext, existing.encryption_key_generation,
+        existing.operator_origin_hash, existing.callback_issuer,
+        existing.client_id_hash, existing.redirect_uri_hash, existing.return_path,
+        existing.idempotency_key_hash, existing.request_schema_version,
+        existing.request_hash) IS DISTINCT FROM
+       (p_flow_id, p_flow_handle_digest, p_state_digest, p_nonce_digest,
+        p_pkce_verifier_ciphertext, p_flow_payload_ciphertext,
+        p_encryption_key_generation, p_operator_origin_hash, p_callback_issuer,
+        p_client_id_hash, p_redirect_uri_hash, p_return_path,
+        p_idempotency_key_hash, p_request_schema_version, p_request_hash) THEN
+        RAISE EXCEPTION 'OIDC flow idempotency or binding conflict' USING ERRCODE = '23505';
+    END IF;
+    RETURN existing;
+END
+$function$;
+
+CREATE FUNCTION security_runtime.claim_oidc_flow(
+    p_flow_id uuid, p_expected_version bigint, p_claimed_by uuid,
+    p_claim_token_hash char(64)
+) RETURNS security_runtime.oidc_flows
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, security_runtime
+AS $function$
+DECLARE
+    claimed security_runtime.oidc_flows%ROWTYPE;
+BEGIN
+    UPDATE security_runtime.oidc_flows
+    SET state = 'CLAIMED', claimed_by = p_claimed_by,
+        claim_token_hash = p_claim_token_hash, claimed_at = statement_timestamp(),
+        claim_lease_expires_at = LEAST(expires_at, statement_timestamp() + interval '2 minutes'),
+        version = version + 1
+    WHERE flow_id = p_flow_id AND version = p_expected_version
+      AND state = 'PENDING' AND expires_at > statement_timestamp()
+    RETURNING * INTO claimed;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'OIDC claim lost CAS, state, or expiry race' USING ERRCODE = '40001';
+    END IF;
+    RETURN claimed;
+END
+$function$;
+
+CREATE FUNCTION security_runtime.consume_oidc_flow(
+    p_flow_id uuid, p_expected_version bigint, p_claim_token_hash char(64),
+    p_result_schema_version text, p_result_kind text,
+    p_result_hash char(64), p_result_http_status smallint
+) RETURNS security_runtime.oidc_flows
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, security_runtime
+AS $function$
+DECLARE
+    consumed security_runtime.oidc_flows%ROWTYPE;
+BEGIN
+    UPDATE security_runtime.oidc_flows
+    SET state = 'CONSUMED', result_schema_version = p_result_schema_version,
+        result_kind = p_result_kind, result_hash = p_result_hash,
+        result_http_status = p_result_http_status,
+        terminal_at = statement_timestamp(), version = version + 1
+    WHERE flow_id = p_flow_id AND version = p_expected_version
+      AND state = 'CLAIMED' AND claim_token_hash = p_claim_token_hash
+      AND claim_lease_expires_at > statement_timestamp()
+    RETURNING * INTO consumed;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'OIDC consume lost CAS, claim, or lease race' USING ERRCODE = '40001';
+    END IF;
+    RETURN consumed;
+END
+$function$;
+
+CREATE FUNCTION security_runtime.expire_oidc_flow(
+    p_flow_id uuid, p_expected_version bigint
+) RETURNS security_runtime.oidc_flows
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, security_runtime
+AS $function$
+DECLARE
+    expired security_runtime.oidc_flows%ROWTYPE;
+BEGIN
+    UPDATE security_runtime.oidc_flows
+    SET state = 'EXPIRED', terminal_at = statement_timestamp(), version = version + 1
+    WHERE flow_id = p_flow_id AND version = p_expected_version AND
+          ((state = 'PENDING' AND expires_at <= statement_timestamp()) OR
+           (state = 'CLAIMED' AND LEAST(expires_at, claim_lease_expires_at) <= statement_timestamp()))
+    RETURNING * INTO expired;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'OIDC expiry lost CAS or row is not expired' USING ERRCODE = '40001';
+    END IF;
+    RETURN expired;
+END
+$function$;
+
+CREATE FUNCTION security_runtime.create_operator_session(
+    p_session_id uuid, p_operator_id uuid, p_authentication_epoch bigint,
+    p_subject_hash char(64), p_current_handle_digest char(64),
+    p_lookup_key_generation text, p_created_ip_prefix_hash char(64),
+    p_user_agent_family text
+) RETURNS security_runtime.operator_sessions
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, security_runtime
+AS $function$
+DECLARE
+    existing security_runtime.operator_sessions%ROWTYPE;
+    created security_runtime.operator_sessions%ROWTYPE;
+BEGIN
+    PERFORM pg_advisory_xact_lock(hashtextextended(p_operator_id::text, 20260829));
+    SELECT * INTO existing FROM security_runtime.operator_sessions
+    WHERE session_id = p_session_id FOR UPDATE;
+    IF FOUND THEN
+        IF (existing.operator_id, existing.authentication_epoch,
+            existing.subject_hash, existing.lookup_key_generation,
+            existing.created_ip_prefix_hash,
+            existing.user_agent_family) IS DISTINCT FROM
+           (p_operator_id, p_authentication_epoch, p_subject_hash,
+            p_lookup_key_generation, p_created_ip_prefix_hash,
+            p_user_agent_family) OR
+           (p_current_handle_digest IS DISTINCT FROM existing.current_handle_digest AND
+            p_current_handle_digest IS DISTINCT FROM existing.previous_handle_digest) THEN
+            RAISE EXCEPTION 'operator session idempotency or binding conflict' USING ERRCODE = '23505';
+        END IF;
+        RETURN existing;
+    END IF;
+
+    WITH active AS MATERIALIZED (
+        SELECT session_id, issued_at
+        FROM security_runtime.operator_sessions
+        WHERE operator_id = p_operator_id AND state = 'ACTIVE'
+        FOR UPDATE
+    ), oldest AS (
+        SELECT session_id FROM active
+        WHERE (SELECT count(*) FROM active) >= 2
+        ORDER BY issued_at, session_id
+        LIMIT 1
+    )
+    UPDATE security_runtime.operator_sessions AS session
+    SET state = 'REVOKED', end_reason = 'SESSION_CAP_EVICTION',
+        ended_at = statement_timestamp(), version = session.version + 1
+    FROM oldest
+    WHERE session.session_id = oldest.session_id;
+
+    INSERT INTO security_runtime.operator_sessions (
+        session_id, operator_id, authentication_epoch, subject_hash,
+        current_handle_digest, lookup_key_generation, issued_at,
+        reauthenticated_at, last_seen_at, idle_expires_at,
+        absolute_expires_at, rotate_after, created_ip_prefix_hash,
+        user_agent_family
+    ) VALUES (
+        p_session_id, p_operator_id, p_authentication_epoch, p_subject_hash,
+        p_current_handle_digest, p_lookup_key_generation, statement_timestamp(),
+        statement_timestamp(), statement_timestamp(), statement_timestamp() + interval '30 minutes',
+        statement_timestamp() + interval '8 hours', statement_timestamp() + interval '15 minutes',
+        p_created_ip_prefix_hash, p_user_agent_family
+    ) RETURNING * INTO created;
+    RETURN created;
+END
+$function$;
+
+CREATE FUNCTION security_runtime.touch_operator_session(
+    p_session_id uuid, p_expected_version bigint, p_presented_handle_digest char(64)
+) RETURNS security_runtime.operator_sessions
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, security_runtime
+AS $function$
+DECLARE
+    touched security_runtime.operator_sessions%ROWTYPE;
+BEGIN
+    UPDATE security_runtime.operator_sessions
+    SET last_seen_at = statement_timestamp(),
+        idle_expires_at = LEAST(absolute_expires_at, statement_timestamp() + interval '30 minutes'),
+        version = version + 1
+    WHERE session_id = p_session_id AND version = p_expected_version
+      AND state = 'ACTIVE' AND idle_expires_at > statement_timestamp()
+      AND absolute_expires_at > statement_timestamp()
+      AND (current_handle_digest = p_presented_handle_digest OR
+           (previous_handle_digest = p_presented_handle_digest AND
+            previous_handle_expires_at > statement_timestamp()))
+    RETURNING * INTO touched;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'operator session touch lost CAS or handle/expiry check' USING ERRCODE = '40001';
+    END IF;
+    RETURN touched;
+END
+$function$;
+
+CREATE FUNCTION security_runtime.rotate_operator_session(
+    p_session_id uuid, p_expected_version bigint,
+    p_expected_current_handle_digest char(64), p_new_current_handle_digest char(64)
+) RETURNS security_runtime.operator_sessions
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, security_runtime
+AS $function$
+DECLARE
+    rotated security_runtime.operator_sessions%ROWTYPE;
+BEGIN
+    UPDATE security_runtime.operator_sessions
+    SET current_handle_digest = p_new_current_handle_digest,
+        previous_handle_digest = current_handle_digest,
+        previous_handle_expires_at = LEAST(absolute_expires_at, statement_timestamp() + interval '30 seconds'),
+        last_seen_at = statement_timestamp(),
+        idle_expires_at = LEAST(absolute_expires_at, statement_timestamp() + interval '30 minutes'),
+        rotate_after = LEAST(absolute_expires_at, statement_timestamp() + interval '15 minutes'),
+        version = version + 1
+    WHERE session_id = p_session_id AND version = p_expected_version
+      AND state = 'ACTIVE' AND current_handle_digest = p_expected_current_handle_digest
+      AND p_new_current_handle_digest <> p_expected_current_handle_digest
+      AND rotate_after <= statement_timestamp()
+      AND idle_expires_at > statement_timestamp()
+      AND absolute_expires_at > statement_timestamp() + interval '30 seconds'
+      AND (previous_handle_digest IS NULL OR previous_handle_expires_at <= statement_timestamp())
+    RETURNING * INTO rotated;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'operator session rotation lost CAS or current-handle/window check' USING ERRCODE = '40001';
+    END IF;
+    RETURN rotated;
+END
+$function$;
+
+CREATE FUNCTION security_runtime.end_operator_session(
+    p_session_id uuid, p_expected_version bigint, p_terminal_state text,
+    p_end_reason text
+) RETURNS security_runtime.operator_sessions
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = pg_catalog, security_runtime
+AS $function$
+DECLARE
+    ended security_runtime.operator_sessions%ROWTYPE;
+BEGIN
+    IF p_terminal_state NOT IN ('REVOKED','EXPIRED') THEN
+        RAISE EXCEPTION 'operator session terminal state is invalid' USING ERRCODE = '22023';
+    END IF;
+    UPDATE security_runtime.operator_sessions
+    SET state = p_terminal_state, end_reason = p_end_reason,
+        ended_at = statement_timestamp(), version = version + 1
+    WHERE session_id = p_session_id AND version = p_expected_version AND state = 'ACTIVE'
+    RETURNING * INTO ended;
+    IF NOT FOUND THEN
+        RAISE EXCEPTION 'operator session termination lost CAS or state race' USING ERRCODE = '40001';
+    END IF;
+    RETURN ended;
+END
+$function$;
+
 CREATE FUNCTION security_runtime.prune_expired(p_oidc_before timestamptz, p_session_before timestamptz)
 RETURNS TABLE (deleted_oidc_flows bigint, deleted_operator_sessions bigint)
 LANGUAGE plpgsql
@@ -268,19 +653,301 @@ $function$;
 
 ALTER TABLE security_runtime.oidc_flows OWNER TO alon_ai_auth_owner;
 ALTER TABLE security_runtime.operator_sessions OWNER TO alon_ai_auth_owner;
+ALTER FUNCTION security_runtime.enforce_oidc_flow_initial() OWNER TO alon_ai_auth_owner;
 ALTER FUNCTION security_runtime.enforce_oidc_flow_lifecycle() OWNER TO alon_ai_auth_owner;
 ALTER FUNCTION security_runtime.enforce_operator_session_lifecycle() OWNER TO alon_ai_auth_owner;
 ALTER FUNCTION security_runtime.enforce_operator_session_scope() OWNER TO alon_ai_auth_owner;
+ALTER FUNCTION security_runtime.create_oidc_flow(uuid, char(64), char(64), char(64), bytea, bytea, text, char(64), text, char(64), char(64), text, char(64), text, char(64)) OWNER TO alon_ai_auth_owner;
+ALTER FUNCTION security_runtime.claim_oidc_flow(uuid, bigint, uuid, char(64)) OWNER TO alon_ai_auth_owner;
+ALTER FUNCTION security_runtime.consume_oidc_flow(uuid, bigint, char(64), text, text, char(64), smallint) OWNER TO alon_ai_auth_owner;
+ALTER FUNCTION security_runtime.expire_oidc_flow(uuid, bigint) OWNER TO alon_ai_auth_owner;
+ALTER FUNCTION security_runtime.create_operator_session(uuid, uuid, bigint, char(64), char(64), text, char(64), text) OWNER TO alon_ai_auth_owner;
+ALTER FUNCTION security_runtime.touch_operator_session(uuid, bigint, char(64)) OWNER TO alon_ai_auth_owner;
+ALTER FUNCTION security_runtime.rotate_operator_session(uuid, bigint, char(64), char(64)) OWNER TO alon_ai_auth_owner;
+ALTER FUNCTION security_runtime.end_operator_session(uuid, bigint, text, text) OWNER TO alon_ai_auth_owner;
 ALTER FUNCTION security_runtime.prune_expired(timestamptz, timestamptz) OWNER TO alon_ai_auth_owner;
 
 REVOKE ALL ON ALL TABLES IN SCHEMA security_runtime FROM PUBLIC;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA security_runtime FROM PUBLIC;
 GRANT USAGE ON SCHEMA security_runtime TO alon_ai_api_runtime, alon_ai_retention_runtime;
-GRANT SELECT, INSERT, UPDATE ON security_runtime.oidc_flows, security_runtime.operator_sessions TO alon_ai_api_runtime;
+REVOKE INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER ON security_runtime.oidc_flows, security_runtime.operator_sessions FROM alon_ai_api_runtime;
+GRANT SELECT ON security_runtime.oidc_flows, security_runtime.operator_sessions TO alon_ai_api_runtime;
+GRANT EXECUTE ON FUNCTION security_runtime.create_oidc_flow(uuid, char(64), char(64), char(64), bytea, bytea, text, char(64), text, char(64), char(64), text, char(64), text, char(64)) TO alon_ai_api_runtime;
+GRANT EXECUTE ON FUNCTION security_runtime.claim_oidc_flow(uuid, bigint, uuid, char(64)) TO alon_ai_api_runtime;
+GRANT EXECUTE ON FUNCTION security_runtime.consume_oidc_flow(uuid, bigint, char(64), text, text, char(64), smallint) TO alon_ai_api_runtime;
+GRANT EXECUTE ON FUNCTION security_runtime.expire_oidc_flow(uuid, bigint) TO alon_ai_api_runtime;
+GRANT EXECUTE ON FUNCTION security_runtime.create_operator_session(uuid, uuid, bigint, char(64), char(64), text, char(64), text) TO alon_ai_api_runtime;
+GRANT EXECUTE ON FUNCTION security_runtime.touch_operator_session(uuid, bigint, char(64)) TO alon_ai_api_runtime;
+GRANT EXECUTE ON FUNCTION security_runtime.rotate_operator_session(uuid, bigint, char(64), char(64)) TO alon_ai_api_runtime;
+GRANT EXECUTE ON FUNCTION security_runtime.end_operator_session(uuid, bigint, text, text) TO alon_ai_api_runtime;
 GRANT EXECUTE ON FUNCTION security_runtime.prune_expired(timestamptz, timestamptz) TO alon_ai_retention_runtime;
 ```
 
-Application writes use `UPDATE ... WHERE primary_key=? AND version=?` and require exactly one row; stale CAS affects zero rows. Claim uses only `PENDING -> CLAIMED`; a second claimant, lease-expired claimant, or callback replay cannot exchange and closes the flow as `EXPIRED`. Session creation takes the per-operator advisory lock, revokes the oldest ACTIVE session through an ordinary versioned update when two exist, then inserts; the trigger independently rejects a third. Rotation is one CAS winner, makes the old current handle the sole previous digest for at most 30 seconds, and cannot rotate from the previous handle. Cross-column digest collision, terminal reopening, bulk update without version increment, and DELETE through the API role fail.
+The migration is one transaction, and every security-definer function is owned by the `NOLOGIN` auth owner, fixes `search_path` to `pg_catalog,security_runtime`, schema-qualifies table access, receives only typed scalar arguments, and has PUBLIC execute revoked before the API role can log in. `alon_ai_api_runtime` has table SELECT plus exactly the eight lifecycle functions above; raw INSERT/UPDATE/DELETE/TRUNCATE/REFERENCES/TRIGGER privileges are absent and direct-write negatives return `42501`. The retention role can execute only `prune_expired`; product/worker/public roles have neither schema usage nor function/table privileges.
+
+`create_oidc_flow` is idempotent only when the flow ID or `(operator_origin_hash,idempotency_key_hash)` resolves to the byte-identical complete request binding; conflict is `23505`. It alone inserts exact `PENDING`, version 1, ten-minute rows. `claim_oidc_flow` gives one current-version winner a canonical two-minute lease bounded by flow expiry; consume/expire accept only their exact state, version, claim/lease conditions. A stale/concurrent/expired function call returns `40001` and performs no write. The insert/lifecycle triggers independently freeze state/nonce/PKCE ciphertext and payload, origin, issuer/client/callback hashes, return path, request idempotency/schema/hash and creation/expiry, then admit only the columns named for the exact transition. Even an owner-side migration statement cannot change request authority during `PENDING -> CLAIMED`.
+
+`create_operator_session` takes the per-operator advisory lock, returns an exact replay only while its original binding still matches, revokes the deterministic oldest ACTIVE row when two already exist, and inserts the canonical ACTIVE/version-1 timing tuple. Touch, rotate and end are separate current-version functions; lost races return `40001`. Rotation can use only the current handle after `rotate_after`, changes that handle, copies the old current digest to previous, and atomically sets the one 30-second overlap, 30-minute idle limit and next 15-minute rotation. It cannot run while an earlier overlap is active. When current does not change, the trigger freezes the previous digest/expiry and rotation deadline; therefore a prior handle cannot be fabricated, replaced, extended or slid by a touch or termination. The row check retains that set-once historical tuple after expiry without requiring it to remain later than a subsequently advanced `last_seen_at`; the authentication predicate alone makes an expired previous handle unusable, while current-handle touch and the next genuine rotation remain legal. Terminal rows and the complete subject/epoch/key/device/time binding are immutable. Cross-row digest collision, active-session cap, terminal reopening, broad update and direct API DML all fail independently of application code.
+
+### Permanent rollback-only security-runtime fixture
+
+The exact fixture below runs only after the DB-01 plus primary SEC-02 SQL extraction compiles in a fresh database. It proves two ordinary auth tables, zero API direct-write grants, exactly eight API lifecycle-function grants, `42501` raw DML denial, one `40001` claim winner, idempotent OIDC create, function-mediated create/touch/genuine rotation, current-handle touch after an expired overlap, and the three reviewer counterexamples against owner authority so the lifecycle trigger—not an earlier ACL—must return the exact `23514` message. The disposable superuser may use replica mode only to seed an exact historical post-rotation row without a wall-clock sleep; its asserted touch runs through the API function under normal trigger enforcement. It ends with `ROLLBACK`; retaining a row or accepting a different failure target fails the fixture.
+
+```sql
+\set ON_ERROR_STOP on
+\pset pager off
+
+BEGIN;
+
+DO $$
+DECLARE
+    table_count integer;
+    write_grants integer;
+    api_function_grants integer;
+BEGIN
+    SELECT count(*) INTO table_count
+    FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+    WHERE n.nspname='security_runtime' AND c.relkind='r';
+    SELECT count(*) INTO write_grants
+    FROM information_schema.role_table_grants
+    WHERE grantee='alon_ai_api_runtime' AND table_schema='security_runtime'
+      AND privilege_type IN ('INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER');
+    SELECT count(*) INTO api_function_grants
+    FROM information_schema.role_routine_grants
+    WHERE grantee='alon_ai_api_runtime' AND specific_schema='security_runtime'
+      AND privilege_type='EXECUTE';
+    IF table_count <> 2 OR write_grants <> 0 OR api_function_grants <> 8 THEN
+        RAISE EXCEPTION 'security catalog mismatch tables=% writes=% functions=%', table_count, write_grants, api_function_grants;
+    END IF;
+    RAISE NOTICE 'SECURITY_CATALOG_GREEN tables=% api_direct_writes=% api_execute_functions=%', table_count, write_grants, api_function_grants;
+END $$;
+
+INSERT INTO public.operators (operator_id,subject,display_name)
+VALUES
+ ('20000000-0000-4000-8000-000000000001','exceptional-security-green','Exceptional Security GREEN'),
+ ('20000000-0000-4000-8000-000000000002','exceptional-overlap-green','Exceptional Overlap GREEN');
+
+SET LOCAL ROLE alon_ai_api_runtime;
+
+DO $$
+DECLARE actual_state text;
+BEGIN
+    BEGIN
+        INSERT INTO security_runtime.oidc_flows (
+          flow_id,flow_handle_digest,state_digest,nonce_digest,pkce_verifier_ciphertext,
+          flow_payload_ciphertext,encryption_key_generation,operator_origin_hash,
+          callback_issuer,client_id_hash,redirect_uri_hash,return_path,
+          idempotency_key_hash,request_schema_version,request_hash,expires_at
+        ) VALUES (
+          '20000000-0000-4000-8000-000000000099',repeat('0',64),repeat('1',64),repeat('2',64),
+          convert_to(repeat('p',32),'UTF8'),convert_to(repeat('f',32),'UTF8'),'key.v1',repeat('3',64),
+          'https://accounts.google.com',repeat('4',64),repeat('5',64),'/acl',repeat('6',64),
+          'oidc.request.v1',repeat('7',64),statement_timestamp()+interval '10 minutes'
+        );
+        RAISE EXCEPTION 'API direct INSERT escaped';
+    EXCEPTION WHEN insufficient_privilege THEN
+        GET STACKED DIAGNOSTICS actual_state=RETURNED_SQLSTATE;
+        IF actual_state <> '42501' THEN RAISE; END IF;
+        RAISE NOTICE 'SECURITY_ACL_GREEN operation=direct_insert sqlstate=%', actual_state;
+    END;
+END $$;
+
+SELECT (security_runtime.create_oidc_flow(
+  '20000000-0000-4000-8000-000000000101',repeat('1',64),repeat('2',64),repeat('3',64),
+  convert_to(repeat('p',32),'UTF8'),convert_to(repeat('f',32),'UTF8'),'key.v1',repeat('4',64),
+  'https://accounts.google.com',repeat('5',64),repeat('6',64),'/before',repeat('7',64),
+  'oidc.request.v1',repeat('8',64)
+)).flow_id;
+-- Exact replay returns the same row; no second row.
+SELECT (security_runtime.create_oidc_flow(
+  '20000000-0000-4000-8000-000000000101',repeat('1',64),repeat('2',64),repeat('3',64),
+  convert_to(repeat('p',32),'UTF8'),convert_to(repeat('f',32),'UTF8'),'key.v1',repeat('4',64),
+  'https://accounts.google.com',repeat('5',64),repeat('6',64),'/before',repeat('7',64),
+  'oidc.request.v1',repeat('8',64)
+)).flow_id;
+SELECT (security_runtime.claim_oidc_flow(
+  '20000000-0000-4000-8000-000000000101',1,
+  '20000000-0000-4000-8000-000000000111',repeat('9',64)
+)).version;
+
+DO $$
+DECLARE actual_state text;
+BEGIN
+    BEGIN
+        PERFORM security_runtime.claim_oidc_flow(
+          '20000000-0000-4000-8000-000000000101',1,
+          '20000000-0000-4000-8000-000000000112',repeat('a',64));
+        RAISE EXCEPTION 'second OIDC claimant escaped';
+    EXCEPTION WHEN serialization_failure THEN
+        GET STACKED DIAGNOSTICS actual_state=RETURNED_SQLSTATE;
+        IF actual_state <> '40001' THEN RAISE; END IF;
+        RAISE NOTICE 'SECURITY_CAS_GREEN operation=second_claim sqlstate=%',actual_state;
+    END;
+END $$;
+
+DO $$
+DECLARE actual_state text;
+BEGIN
+    BEGIN
+        UPDATE security_runtime.oidc_flows SET version=version+1
+        WHERE flow_id='20000000-0000-4000-8000-000000000101';
+        RAISE EXCEPTION 'API direct UPDATE escaped';
+    EXCEPTION WHEN insufficient_privilege THEN
+        GET STACKED DIAGNOSTICS actual_state=RETURNED_SQLSTATE;
+        IF actual_state <> '42501' THEN RAISE; END IF;
+        RAISE NOTICE 'SECURITY_ACL_GREEN operation=direct_update sqlstate=%',actual_state;
+    END;
+END $$;
+
+SELECT (security_runtime.create_operator_session(
+  '20000000-0000-4000-8000-000000000201','20000000-0000-4000-8000-000000000001',
+  1,repeat('b',64),repeat('c',64),'lookup.v1',repeat('d',64),'CHROME'
+)).version;
+SELECT (security_runtime.touch_operator_session(
+  '20000000-0000-4000-8000-000000000201',1,repeat('c',64)
+)).version;
+
+RESET ROLE;
+SET LOCAL ROLE alon_ai_auth_owner;
+
+-- Older canonical row permits a genuine rotation to be exercised without a wait.
+INSERT INTO security_runtime.operator_sessions (
+ session_id,operator_id,authentication_epoch,subject_hash,current_handle_digest,
+ lookup_key_generation,issued_at,reauthenticated_at,last_seen_at,idle_expires_at,
+ absolute_expires_at,rotate_after,created_ip_prefix_hash,user_agent_family
+) VALUES (
+ '20000000-0000-4000-8000-000000000202','20000000-0000-4000-8000-000000000001',1,
+ repeat('1',64),repeat('2',64),'lookup.v1',statement_timestamp()-interval '20 minutes',
+ statement_timestamp()-interval '20 minutes',statement_timestamp()-interval '20 minutes',
+ statement_timestamp()+interval '10 minutes',statement_timestamp()+interval '7 hours 40 minutes',
+ statement_timestamp()-interval '5 minutes',repeat('3',64),'FIREFOX'
+);
+
+-- Exact reviewer fabrication against an unrotated row.
+DO $$
+DECLARE actual_state text; actual_message text;
+BEGIN
+    BEGIN
+        UPDATE security_runtime.operator_sessions
+        SET previous_handle_digest=repeat('4',64),
+            previous_handle_expires_at=statement_timestamp()+interval '30 seconds',
+            last_seen_at=statement_timestamp(),
+            idle_expires_at=statement_timestamp()+interval '30 minutes',
+            version=version+1
+        WHERE session_id='20000000-0000-4000-8000-000000000202';
+        RAISE EXCEPTION 'previous-handle fabrication escaped';
+    EXCEPTION WHEN check_violation THEN
+        GET STACKED DIAGNOSTICS actual_state=RETURNED_SQLSTATE,actual_message=MESSAGE_TEXT;
+        IF actual_state <> '23514' OR actual_message <> 'ACTIVE session touch changed non-touch authority' THEN RAISE; END IF;
+        RAISE NOTICE 'SECURITY_TRIGGER_GREEN mutation=fabricated_previous_handle sqlstate=% message=%',actual_state,actual_message;
+    END;
+END $$;
+
+RESET ROLE;
+SET LOCAL ROLE alon_ai_api_runtime;
+SELECT (security_runtime.rotate_operator_session(
+  '20000000-0000-4000-8000-000000000202',1,repeat('2',64),repeat('5',64)
+)).version;
+SELECT (security_runtime.touch_operator_session(
+  '20000000-0000-4000-8000-000000000202',2,repeat('5',64)
+)).version;
+RESET ROLE;
+SET LOCAL ROLE alon_ai_auth_owner;
+
+-- Exact reviewer OIDC mutation, attempted with table-owner authority so the
+-- trigger rather than the ACL proves the complete binding.
+DO $$
+DECLARE actual_state text; actual_message text;
+BEGIN
+    BEGIN
+        UPDATE security_runtime.oidc_flows
+        SET state='CONSUMED',
+            pkce_verifier_ciphertext=convert_to(repeat('q',32),'UTF8'),
+            operator_origin_hash=repeat('a',64),return_path='/after',
+            result_schema_version='oidc.result.v1',result_kind='SUCCEEDED',
+            result_hash=repeat('f',64),result_http_status=303,
+            terminal_at=statement_timestamp(),version=version+1
+        WHERE flow_id='20000000-0000-4000-8000-000000000101';
+        RAISE EXCEPTION 'OIDC binding mutation escaped';
+    EXCEPTION WHEN check_violation THEN
+        GET STACKED DIAGNOSTICS actual_state=RETURNED_SQLSTATE,actual_message=MESSAGE_TEXT;
+        IF actual_state <> '23514' OR actual_message <> 'immutable complete OIDC request binding changed' THEN RAISE; END IF;
+        RAISE NOTICE 'SECURITY_TRIGGER_GREEN mutation=oidc_complete_binding sqlstate=% message=%',actual_state,actual_message;
+    END;
+END $$;
+
+DO $$
+DECLARE actual_state text; actual_message text;
+BEGIN
+    BEGIN
+        UPDATE security_runtime.operator_sessions
+        SET previous_handle_digest=repeat('f',64),
+            previous_handle_expires_at=statement_timestamp()+interval '30 seconds',
+            last_seen_at=statement_timestamp(),
+            idle_expires_at=statement_timestamp()+interval '30 minutes',
+            version=version+1
+        WHERE session_id='20000000-0000-4000-8000-000000000202';
+        RAISE EXCEPTION 'previous-handle replacement escaped';
+    EXCEPTION WHEN check_violation THEN
+        GET STACKED DIAGNOSTICS actual_state=RETURNED_SQLSTATE,actual_message=MESSAGE_TEXT;
+        IF actual_state <> '23514' OR actual_message <> 'ACTIVE session touch changed non-touch authority' THEN RAISE; END IF;
+        RAISE NOTICE 'SECURITY_TRIGGER_GREEN mutation=replaced_previous_handle sqlstate=% message=%',actual_state,actual_message;
+    END;
+END $$;
+
+DO $$
+DECLARE actual_state text; actual_message text;
+BEGIN
+    BEGIN
+        UPDATE security_runtime.operator_sessions
+        SET previous_handle_expires_at=statement_timestamp()+interval '30 seconds',
+            last_seen_at=statement_timestamp(),
+            idle_expires_at=statement_timestamp()+interval '30 minutes',
+            version=version+1
+        WHERE session_id='20000000-0000-4000-8000-000000000202';
+        RAISE EXCEPTION 'previous-handle slide escaped';
+    EXCEPTION WHEN check_violation THEN
+        GET STACKED DIAGNOSTICS actual_state=RETURNED_SQLSTATE,actual_message=MESSAGE_TEXT;
+        IF actual_state <> '23514' OR actual_message <> 'ACTIVE session touch changed non-touch authority' THEN RAISE; END IF;
+        RAISE NOTICE 'SECURITY_TRIGGER_GREEN mutation=sliding_previous_handle sqlstate=% message=%',actual_state,actual_message;
+    END;
+END $$;
+
+RESET ROLE;
+
+-- Exact historical result of a genuine rotation two minutes ago. Replica mode
+-- avoids a wall-clock wait only for this seed; the target touch is origin/API.
+SET LOCAL session_replication_role = replica;
+INSERT INTO security_runtime.operator_sessions (
+ session_id,operator_id,authentication_epoch,subject_hash,current_handle_digest,
+ previous_handle_digest,previous_handle_expires_at,lookup_key_generation,
+ issued_at,reauthenticated_at,last_seen_at,idle_expires_at,absolute_expires_at,
+ rotate_after,created_ip_prefix_hash,user_agent_family,version
+) VALUES (
+ '20000000-0000-4000-8000-000000000203','20000000-0000-4000-8000-000000000002',1,
+ repeat('6',64),repeat('7',64),repeat('8',64),statement_timestamp()-interval '90 seconds',
+ 'lookup.v1',statement_timestamp()-interval '20 minutes',statement_timestamp()-interval '20 minutes',
+ statement_timestamp()-interval '2 minutes',statement_timestamp()+interval '28 minutes',
+ statement_timestamp()+interval '7 hours 40 minutes',statement_timestamp()+interval '13 minutes',
+ repeat('9',64),'SAFARI',2
+);
+SET LOCAL session_replication_role = origin;
+SET LOCAL ROLE alon_ai_api_runtime;
+SELECT (security_runtime.touch_operator_session(
+  '20000000-0000-4000-8000-000000000203',2,repeat('7',64)
+)).version;
+RESET ROLE;
+
+DO $$
+DECLARE flow_count integer; session_count integer;
+BEGIN
+    SELECT count(*) INTO flow_count FROM security_runtime.oidc_flows;
+    SELECT count(*) INTO session_count FROM security_runtime.operator_sessions;
+    IF flow_count<>1 OR session_count<>3 THEN RAISE EXCEPTION 'unexpected row counts'; END IF;
+    RAISE NOTICE 'SECURITY_FUNCTION_GREEN flows=% sessions=% oidc_version=2 touched_version=2 rotated_version=3 post_overlap_touch_version=3',flow_count,session_count;
+END $$;
+ROLLBACK;
+```
 
 `security_runtime.prune_expired` is the retention role's only capability and copies SEC-06 `retention.policy.v1` row `AUTH_RUNTIME_DETAIL`: terminal flow detail is removed within 24 hours and every terminated session-detail row no later than 30 days after termination, with no legal/incident extension. A hold must extract separately minimized authentication audit under `SAFETY_LONG`; that audit contains only allowed IDs/hashes/enums and is not an operational session row. Encrypted pgBackRest backups cover this schema under canonical row `OPERATIONAL_BACKUP_CHAINS`; no table is excluded and no personal-data recovery point exceeds 35 days. On restore, before API readiness or role login, the release-owned repair runs the following exact transaction and verifies both update counts plus key-generation availability:
 

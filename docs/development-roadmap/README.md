@@ -276,7 +276,7 @@ Files may link to repeated global constraints here, but task-specific requiremen
 
 ## Final-review contract closure and remaining evidence gates
 
-The consolidated final correction wave closes the review's documentation contradictions without claiming that the planned product exists. The canonical contract now has exact, machine-checkable rulings for all 18 findings:
+The consolidated final correction wave addressed the original review's 18 documentation findings without claiming that the planned product exists. A later executable scoped review rejected the prior blanket closure because residual authority gaps remained; the original register below is current only together with the exceptional residual register that follows it:
 
 1. M0 consumes the frozen 46-product-table, 66-operation, command, event, service, route, report, agent-artifact, and compliance-artifact catalogs; `OperatorTimeEvidenceV1` is signed non-product evidence and adds no table or operation.
 2. The first M9 experiment is immutable at 5 sends per rolling 24 hours and 10 total; final SEND applies the minimum of every applicable signed ceiling.
@@ -296,6 +296,19 @@ The consolidated final correction wave closes the review's documentation contrad
 16. `MarketEvidenceArtifactV1.evidence_gaps` accepts the canonical empty tuple and rejects empty members, duplicates, and more than ten entries.
 17. The enrichment interpolation defect is removed while the validator still rejects unresolved placeholders.
 18. FRONTEND-07's exhaustive test names the exact thirteen-state `MessageState` set without changing that set.
+
+### Exceptional residual closure
+
+The authorized exceptional repair closes only the residual documentation-contract defects proven against commit `fbfe25e0`; it does not close implementation, provider, deployment, legal, recipient, or live-evidence gates:
+
+1. DB-04/05 now exposes and consumes exact agent/experiment/workflow cost authority. The closed provenance shapes also bind Gmail cost to the same distinct provider call, send attempt and provider result, and forbid duplicate workflow/send allocation. Rollback fixtures retain the accepted W2/A1 splice and analogous missing-workflow, cross-attempt-result, send-plus-workflow, and call-ID mutations with their named `23503|23514` targets.
+2. Campaign supersession is a deferrable same-campaign/same-experiment composite reference to generated `campaign_version-1`; self, future, skipped, cross-campaign, and cross-experiment rows are permanent named-FK negatives.
+3. `IncidentRouteV1` publishes exactly 18 immutable `(severity,trigger_code,alert_id,runbook_id)` rows in OBS-05/OBS-02/DB-01. The formerly accepted `INFO + SEND_AUTHORITY_VIOLATION + ALERT_SEND_AUTHORITY_VIOLATION + IR-01` row and all 72 wrong-severity permutations target `ck_incidents_route_tuple`/`23514`; notification escalation is a separate projection.
+4. `security_runtime` remains exactly two tables. Complete OIDC request binding is immutable; prior session handles arise only from a genuine current-handle rotation and cannot be fabricated/replaced/slid; API direct table writes are denied and exactly eight owned, fixed-search-path security-definer functions expose transition-specific CAS writes. INFRA-03 leaves provider credential lease/CAS metadata in the managed secret-store contract, not a third auth table.
+5. TEST-03/04 invoke only the manifest-bound physical absolute runner from every required cwd; no relative runner invocation remains and the 24-command/handler catalog is unchanged.
+6. `MetricAttributeRegistryV1` now enumerates every finite literal and tuple domain, including the single honest service, eight session actions, seven provider operation classes, four cost states and 14 Gmail boundaries. Imports name exact enumerated catalogs and fail on set drift. The same 39 names mechanically derive 2,906 series; the unchanged number is a consequence of the explicit sets, not padding.
+7. Hold precedence is limited to eligible live product/restricted records. It cannot extend auth detail, token/key maximums, or the 35-day recoverable-personal-data ceiling; INFRA-04 and LAUNCH-05 now cite the already-signed canonical matrix instead of calling session retention unresolved.
+8. The rollback-only product/security/ACL fixtures and exact-set validators are retained as implementation acceptance inputs. PostgreSQL compilation of planned SQL or passing document validators is evidence about this roadmap only; no Alembic migration, auth runtime, metric exporter, command runner, incident router, secret adapter, backup policy, or production service is thereby implemented.
 
 Each item remains an implementation evidence gate: passing documentation scans or compiling planned DDL grants no deployment, provider, legal, recipient, campaign, control, or send authority. The ignored historical Task 6 report contains superseded counts and is not canonical evidence. Fresh local PostgreSQL compilation validates the documented schemas only; it does not implement migrations or replace the unchanged-foundation CI record. The 2026-08-29 maintenance advisory baseline remains explicitly `INCOMPLETE`, and real DBOS/Gmail/AWS/VPS/backup/restore/M8/M9 evidence remains absent until its owning milestone command exits successfully with signed artifacts.
 

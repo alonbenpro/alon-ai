@@ -60,6 +60,7 @@ CREATE TABLE agent_runs (
     CONSTRAINT fk_agent_runs_workflow_input FOREIGN KEY (workflow_run_id, experiment_id, input_snapshot_hash) REFERENCES workflow_runs (workflow_run_id, experiment_id, input_hash) ON DELETE RESTRICT,
     CONSTRAINT uq_agent_runs_input UNIQUE (workflow_run_id, agent_type, input_snapshot_hash, agent_version),
     CONSTRAINT uq_agent_runs_scope UNIQUE (agent_run_id, experiment_id),
+    CONSTRAINT uq_agent_runs_cost_authority UNIQUE (agent_run_id, experiment_id, workflow_run_id),
     CONSTRAINT uq_agent_runs_producer_authority UNIQUE (agent_run_id, experiment_id, agent_type, agent_version, produced_artifact_type, input_snapshot_hash),
     CONSTRAINT ck_agent_runs_type_output CHECK ((agent_type, produced_artifact_type) IN (('IDEA_DISCOVERY','IdeaCandidate'),('OFFER_DESIGN','OfferHypothesis'),('MARKET_RESEARCH','MarketEvidence'),('LEAD_RESEARCH','LeadEvidence'),('LEAD_QUALIFICATION','QualificationAssessment'),('OUTREACH_DRAFTING','OutreachDraft'),('REPLY_CLASSIFICATION','ReplyClassification'),('EXPERIMENT_EVALUATION','ExperimentDecision'))),
     CONSTRAINT ck_agent_runs_hash CHECK (input_snapshot_hash ~ '^[0-9a-f]{64}$'),
@@ -279,7 +280,7 @@ CREATE INDEX ix_evaluation_results_agent_passed ON evaluation_results (agent_run
 
 Normative fixtures retain `https://example.com/report?id=42&page=3&lang=en` unchanged; normalize `HTTPS://EXAMPLE.COM:443/a/../report?id=42#results` to `https://example.com/report?id=42`; and reject `https://user:pass@example.com/a`, `http://example.com/a`, `https://example.com/a?token=abc`, `https://example.com/a?x-amz-signature=abc`, `https://example.com/a?redirect=https%3A%2F%2Fevil.example`, duplicate allowlisted keys, malformed percent escapes, and secret-shaped query values. Tests assert the raw locator and rejected input never appear in any public serializer or telemetry sink.
 
-`evaluation_cases.input_hash` and `expected_hash` use DB-01's canonical RFC 8785 envelope algorithm with their respective text schema versions and JSON payloads. `agent_runs.input_snapshot_hash` is not a new digest: its composite FK requires the exact verified `workflow_runs.input_hash`. Evaluation fixtures include DB-01's golden vectors; schema migration validates the old digest before an in-memory upcast and writes a new immutable evaluation-case version rather than mutating bytes.
+`evaluation_cases.input_hash` and `expected_hash` use DB-01's canonical RFC 8785 envelope algorithm with their respective text schema versions and JSON payloads. `agent_runs.input_snapshot_hash` is not a new digest: its composite FK requires the exact verified `workflow_runs.input_hash`. `uq_agent_runs_cost_authority` additionally publishes the immutable `(agent_run_id,experiment_id,workflow_run_id)` tuple consumed by DB-05, so a cost row cannot pair an agent from W1 with W2 merely because both runs share an experiment. Evaluation fixtures include DB-01's golden vectors; schema migration validates the old digest before an in-memory upcast and writes a new immutable evaluation-case version rather than mutating bytes.
 
 | Table | Exclusive write owner | Retention class / retention owner |
 | --- | --- | --- |

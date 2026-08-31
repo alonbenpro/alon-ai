@@ -219,10 +219,12 @@ CREATE TABLE cost_entries (
     cost_entry_id uuid NOT NULL,
     provider text NOT NULL,
     operation text NOT NULL,
+    provider_call_id uuid NOT NULL,
     experiment_id uuid NOT NULL,
     workflow_run_id uuid NULL,
     agent_run_id uuid NULL,
     send_attempt_id uuid NULL,
+    provider_result_id uuid NULL,
     usage_schema_version integer NOT NULL,
     usage_json jsonb NOT NULL,
     usage_hash char(64) NOT NULL,
@@ -239,11 +241,18 @@ CREATE TABLE cost_entries (
     CONSTRAINT pk_cost_entries PRIMARY KEY (cost_entry_id),
     CONSTRAINT fk_cost_entries_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
     CONSTRAINT fk_cost_entries_workflow FOREIGN KEY (workflow_run_id, experiment_id) REFERENCES workflow_runs (workflow_run_id, experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_cost_entries_agent_run FOREIGN KEY (agent_run_id, experiment_id) REFERENCES agent_runs (agent_run_id, experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_cost_entries_agent_run FOREIGN KEY (agent_run_id, experiment_id, workflow_run_id) REFERENCES agent_runs (agent_run_id, experiment_id, workflow_run_id) ON DELETE RESTRICT,
     CONSTRAINT fk_cost_entries_send_attempt FOREIGN KEY (send_attempt_id, experiment_id) REFERENCES send_attempts (send_attempt_id, experiment_id) ON DELETE RESTRICT,
+    CONSTRAINT fk_cost_entries_provider_result FOREIGN KEY (provider_result_id, send_attempt_id, provider_call_id, provider) REFERENCES provider_results (provider_result_id, send_attempt_id, provider_call_id, provider) ON DELETE RESTRICT,
+    CONSTRAINT uq_cost_entries_provider_call UNIQUE (provider, provider_call_id),
     CONSTRAINT uq_cost_entries_provider_key UNIQUE (provider, idempotency_key),
     CONSTRAINT uq_cost_entries_authority UNIQUE (cost_entry_id, experiment_id, currency),
-    CONSTRAINT ck_cost_entries_usage CHECK (usage_schema_version > 0 AND jsonb_typeof(usage_json) = 'object' AND usage_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_cost_entries_usage CHECK (usage_schema_version > 0 AND jsonb_typeof(usage_json) = 'object' AND usage_hash ~ '^[0-9a-f]{64}$' AND usage_json ? 'provider_call_id' AND usage_json ->> 'provider_call_id' = provider_call_id::text AND idempotency_key = provider_call_id::text),
+    CONSTRAINT ck_cost_entries_provenance_shape CHECK (
+        (agent_run_id IS NULL AND send_attempt_id IS NULL AND provider_result_id IS NULL) OR
+        (agent_run_id IS NOT NULL AND workflow_run_id IS NOT NULL AND send_attempt_id IS NULL AND provider_result_id IS NULL) OR
+        (agent_run_id IS NULL AND workflow_run_id IS NULL AND send_attempt_id IS NOT NULL AND provider_result_id IS NOT NULL)
+    ),
     CONSTRAINT ck_cost_entries_amount CHECK (amount_minor >= 0 AND currency ~ '^[A-Z]{3}$'),
     CONSTRAINT ck_cost_entries_fx CHECK ((currency = 'ILS' AND reporting_amount_minor_ils = amount_minor AND fx_rate IS NULL AND fx_rate_source IS NULL AND fx_rate_date IS NULL) OR (currency <> 'ILS' AND reporting_amount_minor_ils IS NOT NULL AND fx_rate > 0 AND fx_rate_source IS NOT NULL AND fx_rate_date IS NOT NULL))
 );
@@ -283,6 +292,8 @@ CREATE INDEX ix_repair_actions_incident ON repair_actions (incident_id, executed
 ```
 
 `command_idempotency.request_hash` and present `result_hash` use DB-01's exact UTF-8 RFC 8785 envelope digest with the stored text schema version and JSON payload. `IN_PROGRESS` and `FAILED` have all result columns SQL `NULL`; `SUCCEEDED` has the complete triplet. Replay verifies bytes and schema version before returning a stored result; version migration never mutates an existing command row.
+
+`cost_entries` has four closed provenance shapes: shared operation (all optional owner IDs null), workflow-only, agent (`agent_run_id` plus its exact `experiment_id` and owning `workflow_run_id`), or Gmail send (`send_attempt_id` plus the exact same-attempt/call/provider `provider_result_id`, with workflow/agent null). `provider_call_id` is mandatory and distinct from aggregate identities; it equals both the provider idempotency key and `usage_json.provider_call_id`. Allocation therefore cannot be duplicated across workflow/agent/send levels: an agent from W1 cannot be attached to W2, a send/result cannot be paired with a workflow, and a result or call from another Gmail operation fails the named four-column composite FK. `ProviderCostReconciliationService` additionally verifies the signed provider ledger/request/result hashes before insert; JSON never substitutes for the relational run/result constraints.
 
 `repair_kind` is the closed recovery action selector; `command_type` is the exact existing typed command it invokes. API, audit, telemetry and UI carry the registered kind, never a caller string. `RecoveryCommandService` rejects unknown catalog/version/kind before command claim, and exact replay requires the original kind, before/after hashes and evidence. Adding a repair kind requires the same additive catalog-version migration protocol as incidents plus a typed inverse/recovery test; removing or silently remapping a retained kind is forbidden.
 
