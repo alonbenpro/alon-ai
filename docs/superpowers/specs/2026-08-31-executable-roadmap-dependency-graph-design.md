@@ -72,6 +72,20 @@ The syntax is deliberately narrow:
 
 Every non-root task must name at least one dependency. The default document-local relationship is sequential: `T02` depends on `T01`, and so on. A task may additionally depend on final prerequisite tasks from other documents. This intentionally favors a safe, comprehensible solo-developer sequence over speculative parallelism.
 
+### Root authority and cross-document edge assignment
+
+The sole true graph root is `PRODUCT-01-T01`. `scripts/validate_roadmap.py` owns this closed allowlist as a Python constant, `ROOT_TASK_IDS = frozenset({"PRODUCT-01-T01"})`; it is not another source field, config file, or user-selectable CLI input. A task may use `depends_on=-` if and only if its ID is in that constant, and every allowlisted root must use `depends_on=-`. The validator rejects every other root declaration, an allowlisted task with dependencies, and any non-root task without at least one dependency.
+
+Assign cross-document dependencies by a reviewable source-to-source procedure, not by intuition about folders or document headers:
+
+1. For each consumer task, first retain the default dependency on its immediately preceding task in the same document unless a documented graph root is intended.
+2. Read the consumer checkbox's verbatim `Input:` clause and identify the exact provider task whose verbatim `Output:` clause supplies that input. Add only that provider task ID to `depends_on`; preserve a small review table for each non-local edge in the refactor review record: `provider ID + quoted Output -> consumer ID + quoted Input + applicable staging ruling`.
+3. When more than one provider output is required, name each provider ID and quote the distinct input it satisfies. When an input is only a document-local continuation, do not invent an extra cross-document edge.
+4. Check every proposed edge against the milestone-specific staging rulings below, especially the M1 harness, M3 offline-agent, Gmail-contract-before-workflow, security-interface-first, privacy/telemetry, cost-accounting, testing-ownership, and M8/M9 deployment boundaries. Split an early contract task from a later integration/evidence task when that is the only honest way to avoid a future dependency.
+5. Reject blind whole-document prerequisites, automatically inferred folder-order edges, and dependencies justified only by a later consumer mentioning the provider. The metadata graph contains only task-level, evidence-backed edges; prose remains descriptive.
+
+The review table is review evidence, not a second execution authority: the adjacent metadata remains the sole graph input. This procedure makes each cross-document edge explainable without adding a free-form metadata attribute that the validator cannot reliably enforce.
+
 ## Multi-agent execution contract
 
 The roadmap supports bounded parallel implementation only after the dependency graph and resource locks prove that tasks are independent. Folder separation, different filenames, or a large ready frontier is insufficient evidence.
@@ -211,7 +225,11 @@ Tasks appear in the validator's deterministic topological order. JSON uses UTF-8
 - a prohibition on starting the next wave until the current barrier closes; and
 - recovery instructions for failed, conflicting, stale-base, or abandoned task branches.
 
+For every task assignment, the plan's acceptance-evidence reference is the source link and verbatim verification clause retained by the validator. The coordinator copies that reference into the implementer prompt unchanged; backticked commands are the only commands copied as acceptance commands. The coordinator may add normal repository verification required by the task's declared locks, but may not substitute, broaden, or fabricate evidence commands in place of the source clause.
+
 The file is operationally exact only for the SHA-256 source-graph fingerprint printed in its header. Any source-task metadata change alters that fingerprint, makes the file stale, and blocks `--check` until regeneration. A Git commit hash is not embedded because generating a file containing its own eventual commit hash would be circular.
+
+The fingerprint is the lowercase SHA-256 hexadecimal digest of exactly these UTF-8 bytes, with no trailing newline: `json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")`. `payload` is an object with keys `schema_version`, `milestones`, `root_task_ids`, `manifest_documents`, and `tasks`; `schema_version` is `1`, `milestones` is `M0` through `M9` in that order, `root_task_ids` is the sorted allowlist, and `manifest_documents` is the root-manifest source-path list in manifest order. `tasks` is the validated deterministic topological order. Each task object contains exactly `id`, `milestone`, `document_id`, `title`, `source`, `line`, `depends_on`, `mode`, `locks`, and `verification`; dependency and lock arrays retain their validated source order, and `verification` is the extracted clause defined below. This is the canonical input for the header in both generated Markdown files; a renderer must not hash a rendered file, platform newline conversion, an absolute path, generated timestamp, or a Git revision.
 
 The root roadmap README links to all three generated artifacts and states that subsystem directory order and prose prerequisites are non-authoritative when they conflict with validated task metadata.
 
@@ -226,20 +244,24 @@ python3 scripts/validate_roadmap.py --write
 
 `--check` is read-only and exits nonzero with deterministic, path-and-line diagnostics when any invariant fails or any generated artifact is stale. `--write` validates source metadata first, writes all three generated artifacts atomically, rereads them, and exits nonzero if the resulting files do not match the renderers.
 
+The root manifest is parsed only from `docs/development-roadmap/README.md`, starting immediately after the unique `## Complete file manifest mapped to vertical gates` heading and ending immediately before the next level-two heading, currently `## Launch promotion ladder`. Within those boundaries, the parser accepts only manifest-table rows whose first cell is a single backticked relative POSIX path matching ``(?:[0-9]{2}-[a-z0-9-]+/)+[0-9]{2}-[a-z0-9-]+\.md`` and whose second cell is exactly `M0` through `M9`; it ignores the table header and subsection headings. The path is resolved only under `docs/development-roadmap/`; leading slashes, backslashes, `.` or `..` segments, duplicate rows, rows outside the boundaries, malformed code spans, and any resolved path outside that directory are validation errors. The parsed row order is the root-manifest document order used for deterministic tie-breaking.
+
+For every parsed ordered checkbox, the validator retains its source path, checkbox line, complete checkbox body, and a verbatim verification clause. The verification clause is the text beginning with the literal `Test evidence:` marker and ending immediately before the literal `Failure behavior:` marker in that checkbox body. Missing, repeated, or reversed markers are validation errors. `AGENT_EXECUTION_PLAN.md` links to that checkbox line and reproduces this clause verbatim as the acceptance-evidence reference. Implementer prompts receive that same source link and clause; any backticked command inside it is copied verbatim as an acceptance command, while a clause without a command remains evidence-only and does not authorize the generator or coordinator to invent one. This uses the existing task prose and adds no metadata field.
+
 The validator enforces:
 
 1. all 77 roadmap task documents are present in the root manifest and have one unique document ID;
 2. every ordered implementation checkbox has exactly one adjacent metadata record and no orphan metadata exists;
 3. task IDs are unique, contiguous within their document, and match their document ID;
 4. milestones are valid and nondecreasing within a document;
-5. every non-root task has at least one known dependency and root tasks are explicitly allowlisted;
+5. every non-root task has at least one known dependency, and root declarations exactly match the validator-owned sole-root allowlist;
 6. no task depends on itself, a later milestone, or an unknown task;
 7. the directed graph is acyclic, with an explicit cycle path in the diagnostic;
 8. deterministic topological ordering uses milestone number, root-manifest document order, task number, and task ID as stable tie-breakers;
 9. every task has a valid mode and nonempty lock set from the closed vocabulary;
 10. every serial-only lock appears only on a `serial` task;
 11. deterministic waves contain at most four implementers, remain within one milestone, use only dependencies completed in earlier waves, and have pairwise-disjoint locks;
-12. every generated source path and Markdown link resolves;
+12. every generated source path and Markdown link resolves, and every task has one extractable verbatim `Test evidence:` clause followed by `Failure behavior:`;
 13. generated JSON and both generated Markdown files exactly equal current renderer output in `--check` mode; and
 14. the final graph contains exactly the number of ordered implementation checkboxes parsed from source.
 
@@ -261,6 +283,9 @@ Add `backend/tests/unit/test_roadmap_validator.py`. Tests invoke real parser and
 - a wave with a current-wave dependency, milestone crossing, shared lock, or fifth implementer fails;
 - stable tie-breaking produces the hand-checked order;
 - deterministic wave construction produces hand-checked task/agent/merge assignments;
+- only `PRODUCT-01-T01` may be a root, root/dependency mismatches fail, and malformed root-manifest boundaries or paths fail;
+- a missing, repeated, or malformed verification clause fails, while a valid clause is copied verbatim into the generated plan and prompt data;
+- canonical fingerprint bytes remain stable for identical validated payloads and change for a manifest-order, task-metadata, source-line, or verification-clause change;
 - stale generated JSON, execution-order Markdown, or agent-plan Markdown fails in `--check` mode;
 - `--write` followed by `--check` succeeds; and
 - the real 77-file roadmap passes and contains the expected parsed task count.
@@ -293,6 +318,8 @@ If a task legitimately needs an interface from a later operational stage, split 
 6. Assign execution modes and exclusive locks, then generate the complete manifest, execution order, and agent execution plan.
 7. Update root instructions, Makefile, and CI.
 8. Run focused tests, the validator, full repository verification, independent review, and Graphify incremental update.
+
+During steps 2 through 5, every edited checkbox receives syntactically complete metadata, including mode and locks. Step 6 is the cross-corpus review and correction of those assignments before generation; it is not permission to leave required fields blank in an earlier slice. The real repository's `--check` and `--write` remain full-corpus operations: until all 77 documents are annotated, their failure is expected and `--write` must not create or refresh real generated artifacts. Verify each staged slice only through the validator's pure parsing/rendering functions against a self-contained temporary miniature roadmap tree in the focused tests. Do not add a partial CLI mode, a partial root manifest, or partial generated artifacts. After step 6 confirms the complete graph, run the real `--write` once, then require real `--check` to pass before the integration changes in step 7.
 
 Each migration step must leave no duplicate task IDs and must not claim that a planned product capability exists.
 
