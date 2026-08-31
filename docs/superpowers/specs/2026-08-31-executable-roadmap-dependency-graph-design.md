@@ -63,7 +63,7 @@ The syntax is deliberately narrow:
 - the document prefix equals the file's `**Document ID:**` value;
 - task numbers start at `T01`, increase contiguously in source order, and never encode the milestone so moving a task between gates does not change its identity;
 - `milestone` is exactly one of `M0` through `M9`;
-- `depends_on` is `-` only for a true graph root, otherwise a comma-separated list of task IDs with no spaces;
+- `depends_on` is `-` only for a true graph root, otherwise a comma-separated list of unique task IDs with no spaces; after uniqueness validation, its order is the declared source order;
 - `mode` is exactly `parallel` or `serial`;
 - `locks` is a comma-separated list from the closed lock vocabulary below, with no spaces or duplicates;
 - the metadata line must be immediately followed by one unchecked implementation checkbox;
@@ -79,12 +79,12 @@ The sole true graph root is `PRODUCT-01-T01`. `scripts/validate_roadmap.py` owns
 Assign cross-document dependencies by a reviewable source-to-source procedure, not by intuition about folders or document headers:
 
 1. For each consumer task, first retain the default dependency on its immediately preceding task in the same document unless a documented graph root is intended.
-2. Read the consumer checkbox's verbatim `Input:` clause and identify the exact provider task whose verbatim `Output:` clause supplies that input. Add only that provider task ID to `depends_on`; preserve a small review table for each non-local edge in the refactor review record: `provider ID + quoted Output -> consumer ID + quoted Input + applicable staging ruling`.
+2. Read the consumer checkbox's verbatim `Input:` clause and identify the exact provider task whose verbatim `Output:` clause supplies that input. Add only that provider task ID to `depends_on`; during a staged slice, preserve a small review table for each non-local edge in the coordinator report or review package: `provider ID + quoted Output -> consumer ID + quoted Input + applicable staging ruling`.
 3. When more than one provider output is required, name each provider ID and quote the distinct input it satisfies. When an input is only a document-local continuation, do not invent an extra cross-document edge.
 4. Check every proposed edge against the milestone-specific staging rulings below, especially the M1 harness, M3 offline-agent, Gmail-contract-before-workflow, security-interface-first, privacy/telemetry, cost-accounting, testing-ownership, and M8/M9 deployment boundaries. Split an early contract task from a later integration/evidence task when that is the only honest way to avoid a future dependency.
 5. Reject blind whole-document prerequisites, automatically inferred folder-order edges, and dependencies justified only by a later consumer mentioning the provider. The metadata graph contains only task-level, evidence-backed edges; prose remains descriptive.
 
-The review table is review evidence, not a second execution authority: the adjacent metadata remains the sole graph input. This procedure makes each cross-document edge explainable without adding a free-form metadata attribute that the validator cannot reliably enforce.
+The interim review table is review evidence, not a second execution authority: the adjacent metadata remains the sole graph input. Once the complete graph validates, `AGENT_EXECUTION_PLAN.md` renders the deterministic **Cross-document edge appendix**. It contains one row for every dependency whose provider and consumer have different document IDs, ordered by consumer deterministic topological position and then that consumer's validated source-order dependency position. Each row contains the provider ID and verbatim `Output:` clause, plus the consumer ID and verbatim `Input:` clause. The appendix is the reviewable final record; staged-slice tables remain only in the coordinator report or review package.
 
 ## Multi-agent execution contract
 
@@ -142,7 +142,7 @@ worktree: ../alon-ai-task-<lowercase-task-id>
 branch:   agent/<lowercase-task-id>
 ```
 
-An implementer receives only its task definition, dependency evidence, allowed locks/surfaces, acceptance commands, base commit, and report path. It may not start a dependent task, edit the integration checkout, merge, push, widen its locks, or spawn another implementation agent.
+An implementer receives only its task definition, dependency evidence, allowed locks/surfaces, acceptance-evidence reference, any explicitly marked acceptance commands, base commit, and report path. Acceptance commands are optional; absent an explicit command declaration, the implementer retains the stated evidence without executing a generic code span. It may not start a dependent task, edit the integration checkout, merge, push, widen its locks, or spawn another implementation agent.
 
 The coordinator assigns one reviewer to the task branch when the implementer reports completion. After approval, `C0` integrates branches one at a time in the generated merge order. Every branch after the first is rebased or merged onto the new integration head and reruns its declared verification before acceptance, even when Git reports no textual conflict. Failure returns only that task to its implementer/reviewer loop; it never permits the next wave to start.
 
@@ -179,6 +179,8 @@ The following rulings remove the known cycles:
 ### Machine-readable manifest
 
 `docs/development-roadmap/execution-manifest.json` is generated with this shape:
+
+This is an illustrative shape only. The sample `line` value below is non-authoritative; generated artifacts use the current parsed source line, which is included in the canonical fingerprint input.
 
 ```json
 {
@@ -220,16 +222,17 @@ Tasks appear in the validator's deterministic topological order. JSON uses UTF-8
 - the exact role limits: `C0`, `I1..I4`, and `R1..R4`;
 - the absolute nine-agent ceiling and four-implementer ceiling;
 - worktree, branch, prompt-scope, review, integration, cleanup, and evidence rules;
-- one section per deterministic wave with milestone, agent count, base prerequisite barrier, exact task-to-agent assignment, source link, dependencies, mode, locks, branch/worktree names, acceptance-evidence reference, reviewer assignment, merge order, and newly unlocked tasks;
+- one section per deterministic wave with milestone, agent count, base prerequisite barrier, exact task-to-agent assignment, source link, dependencies, mode, locks, branch/worktree names, acceptance-evidence reference, optional explicitly marked acceptance commands, reviewer assignment, merge order, and newly unlocked tasks;
+- a deterministic Cross-document edge appendix with the exact provider/consumer clause records defined above;
 - explicit one-agent waves for every serial task;
 - a prohibition on starting the next wave until the current barrier closes; and
 - recovery instructions for failed, conflicting, stale-base, or abandoned task branches.
 
-For every task assignment, the plan's acceptance-evidence reference is the source link and verbatim verification clause retained by the validator. The coordinator copies that reference into the implementer prompt unchanged; backticked commands are the only commands copied as acceptance commands. The coordinator may add normal repository verification required by the task's declared locks, but may not substitute, broaden, or fabricate evidence commands in place of the source clause.
+For every task assignment, the plan's acceptance-evidence reference is the source link and full verbatim verification clause retained by the validator. The coordinator copies that reference into the implementer prompt unchanged. An acceptance-command declaration is only a literal `Command:` followed by exactly one code span, or a literal `Commands:` followed by one or more code spans separated by commas; only those attached code spans are copied as optional acceptance commands. A bare code span, identifier, path, task ID, or version in a verification clause is evidence-only and must never be executed or promoted to a command. Current clauses without either marker are therefore evidence-only. A malformed marker declaration is a validation error. The coordinator may add normal repository verification required by the task's declared locks, but may not substitute, broaden, or fabricate evidence commands in place of the source clause.
 
 The file is operationally exact only for the SHA-256 source-graph fingerprint printed in its header. Any source-task metadata change alters that fingerprint, makes the file stale, and blocks `--check` until regeneration. A Git commit hash is not embedded because generating a file containing its own eventual commit hash would be circular.
 
-The fingerprint is the lowercase SHA-256 hexadecimal digest of exactly these UTF-8 bytes, with no trailing newline: `json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")`. `payload` is an object with keys `schema_version`, `milestones`, `root_task_ids`, `manifest_documents`, and `tasks`; `schema_version` is `1`, `milestones` is `M0` through `M9` in that order, `root_task_ids` is the sorted allowlist, and `manifest_documents` is the root-manifest source-path list in manifest order. `tasks` is the validated deterministic topological order. Each task object contains exactly `id`, `milestone`, `document_id`, `title`, `source`, `line`, `depends_on`, `mode`, `locks`, and `verification`; dependency and lock arrays retain their validated source order, and `verification` is the extracted clause defined below. This is the canonical input for the header in both generated Markdown files; a renderer must not hash a rendered file, platform newline conversion, an absolute path, generated timestamp, or a Git revision.
+The fingerprint is the lowercase SHA-256 hexadecimal digest of exactly these UTF-8 bytes, with no trailing newline: `json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"), allow_nan=False).encode("utf-8")`. `payload` is an object with keys `schema_version`, `milestones`, `root_task_ids`, `manifest_documents`, and `tasks`; `schema_version` is `1`, `milestones` is `M0` through `M9` in that order, `root_task_ids` is the sorted allowlist, and `manifest_documents` is the root-manifest source-path list in manifest order. `tasks` is the validated deterministic topological order. Each task object contains exactly `id`, `milestone`, `document_id`, `title`, `source`, `line`, `depends_on`, `mode`, `locks`, `input`, `output`, and `verification`; dependency and lock arrays retain their validated source order, while `input`, `output`, and `verification` are the extracted clauses defined below. This is the canonical input for the header in both generated Markdown files; a renderer must not hash a rendered file, platform newline conversion, an absolute path, generated timestamp, or a Git revision.
 
 The root roadmap README links to all three generated artifacts and states that subsystem directory order and prose prerequisites are non-authoritative when they conflict with validated task metadata.
 
@@ -242,11 +245,11 @@ python3 scripts/validate_roadmap.py --check
 python3 scripts/validate_roadmap.py --write
 ```
 
-`--check` is read-only and exits nonzero with deterministic, path-and-line diagnostics when any invariant fails or any generated artifact is stale. `--write` validates source metadata first, writes all three generated artifacts atomically, rereads them, and exits nonzero if the resulting files do not match the renderers.
+`--check` is read-only and exits nonzero with deterministic, path-and-line diagnostics when any invariant fails or any generated artifact is stale. `--write` validates source metadata and renders all three artifacts in memory before touching an output. It writes a temporary sibling for each target, then uses `os.replace` for each target file; each replacement is atomic, but the three-file set is not a cross-file transaction. If any replacement fails after another has succeeded, `--write` exits nonzero, leaves the resulting drift visible to `--check`, and requires a later successful `--write` to repair it. After all replacements succeed, it rereads the three files and exits nonzero if any differs from its renderer.
 
 The root manifest is parsed only from `docs/development-roadmap/README.md`, starting immediately after the unique `## Complete file manifest mapped to vertical gates` heading and ending immediately before the next level-two heading, currently `## Launch promotion ladder`. Within those boundaries, the parser accepts only manifest-table rows whose first cell is a single backticked relative POSIX path matching ``(?:[0-9]{2}-[a-z0-9-]+/)+[0-9]{2}-[a-z0-9-]+\.md`` and whose second cell is exactly `M0` through `M9`; it ignores the table header and subsection headings. The path is resolved only under `docs/development-roadmap/`; leading slashes, backslashes, `.` or `..` segments, duplicate rows, rows outside the boundaries, malformed code spans, and any resolved path outside that directory are validation errors. The parsed row order is the root-manifest document order used for deterministic tie-breaking.
 
-For every parsed ordered checkbox, the validator retains its source path, checkbox line, complete checkbox body, and a verbatim verification clause. The verification clause is the text beginning with the literal `Test evidence:` marker and ending immediately before the literal `Failure behavior:` marker in that checkbox body. Missing, repeated, or reversed markers are validation errors. `AGENT_EXECUTION_PLAN.md` links to that checkbox line and reproduces this clause verbatim as the acceptance-evidence reference. Implementer prompts receive that same source link and clause; any backticked command inside it is copied verbatim as an acceptance command, while a clause without a command remains evidence-only and does not authorize the generator or coordinator to invent one. This uses the existing task prose and adds no metadata field.
+For every parsed ordered checkbox, the validator retains its source path, checkbox line, complete checkbox body, and one verbatim `Input:` clause, `Output:` clause, and verification clause. The input clause begins at `Input:` and ends immediately before `Operation:`; the output clause begins at `Output:` and ends immediately before `Test evidence:`; the verification clause begins at `Test evidence:` and ends immediately before `Failure behavior:`. Missing, repeated, or out-of-order markers are validation errors. Within the verification clause, the only acceptance-command grammar is `Command:` followed by exactly one code span, or `Commands:` followed by one or more code spans separated by commas. A marker without that exact form is an error; all code spans not attached to one of those markers are evidence-only. `AGENT_EXECUTION_PLAN.md` links to that checkbox line and reproduces the full clause verbatim, while prompts copy only grammar-valid marked code spans as optional commands. This uses the existing task prose and adds no metadata field.
 
 The validator enforces:
 
@@ -255,13 +258,13 @@ The validator enforces:
 3. task IDs are unique, contiguous within their document, and match their document ID;
 4. milestones are valid and nondecreasing within a document;
 5. every non-root task has at least one known dependency, and root declarations exactly match the validator-owned sole-root allowlist;
-6. no task depends on itself, a later milestone, or an unknown task;
+6. no task depends on itself, a later milestone, an unknown task, or the same dependency ID more than once; dependency order is retained only after duplicate rejection;
 7. the directed graph is acyclic, with an explicit cycle path in the diagnostic;
 8. deterministic topological ordering uses milestone number, root-manifest document order, task number, and task ID as stable tie-breakers;
 9. every task has a valid mode and nonempty lock set from the closed vocabulary;
 10. every serial-only lock appears only on a `serial` task;
 11. deterministic waves contain at most four implementers, remain within one milestone, use only dependencies completed in earlier waves, and have pairwise-disjoint locks;
-12. every generated source path and Markdown link resolves, and every task has one extractable verbatim `Test evidence:` clause followed by `Failure behavior:`;
+12. every generated source path and Markdown link resolves, and every task has one extractable verbatim `Input:`, `Output:`, and `Test evidence:` clause in the required order followed by `Failure behavior:`;
 13. generated JSON and both generated Markdown files exactly equal current renderer output in `--check` mode; and
 14. the final graph contains exactly the number of ordered implementation checkboxes parsed from source.
 
@@ -276,7 +279,7 @@ Add `backend/tests/unit/test_roadmap_validator.py`. Tests invoke real parser and
 - orphan or duplicate metadata fails;
 - duplicate/noncontiguous/wrong-prefix task IDs fail;
 - unknown milestone and decreasing document milestone fail;
-- unknown, empty, self, and future-milestone dependencies fail;
+- unknown, empty, duplicate, self, and future-milestone dependencies fail, while unique dependency order remains source order;
 - a same-milestone cycle reports the concrete cycle;
 - unknown/empty/duplicate locks and invalid execution modes fail;
 - a serial-only lock on a parallel task fails;
@@ -284,8 +287,10 @@ Add `backend/tests/unit/test_roadmap_validator.py`. Tests invoke real parser and
 - stable tie-breaking produces the hand-checked order;
 - deterministic wave construction produces hand-checked task/agent/merge assignments;
 - only `PRODUCT-01-T01` may be a root, root/dependency mismatches fail, and malformed root-manifest boundaries or paths fail;
-- a missing, repeated, or malformed verification clause fails, while a valid clause is copied verbatim into the generated plan and prompt data;
-- canonical fingerprint bytes remain stable for identical validated payloads and change for a manifest-order, task-metadata, source-line, or verification-clause change;
+- a missing, repeated, or malformed verification clause fails; the full valid clause is copied verbatim, generic code spans remain evidence-only, and only grammar-valid `Command:` or `Commands:` code spans become optional prompt commands;
+- the generated Cross-document edge appendix contains every and only cross-document edge in its specified deterministic order with verbatim provider Output and consumer Input clauses;
+- a simulated per-file replacement failure exits nonzero and leaves drift for `--check`, while a later successful `--write` repairs all three artifacts;
+- canonical fingerprint bytes remain stable for identical validated payloads and change for a manifest-order, task-metadata, source-line, Input, Output, or verification-clause change;
 - stale generated JSON, execution-order Markdown, or agent-plan Markdown fails in `--check` mode;
 - `--write` followed by `--check` succeeds; and
 - the real 77-file roadmap passes and contains the expected parsed task count.
