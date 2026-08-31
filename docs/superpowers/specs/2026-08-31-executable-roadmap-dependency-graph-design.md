@@ -17,9 +17,10 @@ In scope:
 - assign a stable task ID to every checkbox inside every `## Ordered implementation tasks` section;
 - assign each task to exactly one milestone from M0 through M9;
 - record every task prerequisite as an explicit task ID;
+- declare every task's execution mode and exclusive resource locks;
 - split multi-milestone document work logically through per-task milestone metadata without fragmenting the 77 reference documents;
-- generate one machine-readable manifest and one human-readable topological execution order;
-- reject cycles, future-milestone dependencies, missing tasks, invalid stage order, and generated-file drift;
+- generate one machine-readable manifest, one human-readable topological execution order, and one exact multi-agent execution plan;
+- reject cycles, future-milestone dependencies, missing tasks, invalid stage order, unsafe parallel waves, and generated-file drift;
 - update misleading document-level prerequisite prose where it contradicts the executable graph;
 - make roadmap validation part of local and CI checks; and
 - refresh Graphify after the tracked documentation and validator changes.
@@ -30,7 +31,7 @@ Out of scope:
 - changing the selected Pydantic AI, DBOS, PostgreSQL, Gmail, FastAPI, Next.js, or infrastructure architecture;
 - changing the M0-M9 product outcomes or authorizing outreach;
 - splitting all 77 reference documents into hundreds of individual files;
-- estimating dates or parallel team capacity; and
+- estimating dates, staffing a human team, or optimizing beyond the approved four-implementer safety cap; and
 - treating generated task order as proof that any implementation milestone has passed.
 
 ## Approaches considered
@@ -52,22 +53,97 @@ Place one strict metadata comment immediately before each ordered implementation
 Every checkbox inside a `## Ordered implementation tasks` section has exactly one preceding metadata line:
 
 ```markdown
-<!-- roadmap-task id=PRODUCT-01-T01 milestone=M0 depends_on=ROADMAP-ROOT-T01 -->
+<!-- roadmap-task id=PRODUCT-01-T01 milestone=M0 depends_on=- mode=parallel locks=product-contracts -->
 - [ ] **Capture the M0 bet —** Input: ...
 ```
 
 The syntax is deliberately narrow:
 
-- `id` matches `^[A-Z][A-Z0-9]*-[0-9]{2}-T[0-9]{2}$`, except the root index may use `ROADMAP-ROOT-TNN`;
+- `id` matches `^[A-Z][A-Z0-9]*-[0-9]{2}-T[0-9]{2}$`;
 - the document prefix equals the file's `**Document ID:**` value;
 - task numbers start at `T01`, increase contiguously in source order, and never encode the milestone so moving a task between gates does not change its identity;
 - `milestone` is exactly one of `M0` through `M9`;
 - `depends_on` is `-` only for a true graph root, otherwise a comma-separated list of task IDs with no spaces;
+- `mode` is exactly `parallel` or `serial`;
+- `locks` is a comma-separated list from the closed lock vocabulary below, with no spaces or duplicates;
 - the metadata line must be immediately followed by one unchecked implementation checkbox;
 - acceptance, test-strategy, and maintenance checkboxes outside `## Ordered implementation tasks` are not execution nodes; and
 - source order inside one document must be milestone-monotonic, although dependencies—not file position—remain authoritative.
 
 Every non-root task must name at least one dependency. The default document-local relationship is sequential: `T02` depends on `T01`, and so on. A task may additionally depend on final prerequisite tasks from other documents. This intentionally favors a safe, comprehensible solo-developer sequence over speculative parallelism.
+
+## Multi-agent execution contract
+
+The roadmap supports bounded parallel implementation only after the dependency graph and resource locks prove that tasks are independent. Folder separation, different filenames, or a large ready frontier is insufficient evidence.
+
+### Exact agent limits
+
+- One coordinator agent, identified as `C0`, owns the integration branch, dependency-evidence checks, wave assignment, merge order, status records, and milestone gates.
+- A wave may contain one to four implementation agents, identified as `I1` through `I4`. Four is the hard implementation-concurrency cap even when the graph exposes a wider frontier.
+- Each completed implementation task receives one read-only review agent, identified as `R1` through `R4`, before merge. Reviewers may overlap unfinished implementers in the same wave.
+- The absolute live-agent ceiling is nine: one coordinator, four implementers, and four reviewers. The number of worktrees with unmerged implementation changes remains at most four.
+- A `serial` task is the only implementation task in its wave. Review and coordinator roles do not convert serial implementation into parallel implementation.
+- A barrier closes every wave: all implementation tasks must be reviewed, merged in the generated order, retested after integration, and recorded complete before any task in the next wave starts.
+
+These are project safety limits, not claims about the Codex platform's technical slot count. The cap reflects one solo operator's review and integration capacity.
+
+### Closed exclusive-lock vocabulary
+
+Locks represent shared implementation authority, not merely source directories:
+
+- `roadmap-root`
+- `product-contracts`
+- `architecture-contracts`
+- `database-schema`
+- `migration-head`
+- `workflow-runtime`
+- `agent-runtime`
+- `agent-artifacts`
+- `provider-contracts`
+- `gmail-side-effects`
+- `backend-domain`
+- `openapi-contract`
+- `frontend-client`
+- `security-runtime`
+- `compliance-policy`
+- `telemetry-catalog`
+- `test-command-registry`
+- `dependency-lockfiles`
+- `compose-topology`
+- `ci-release`
+- `backup-restore`
+- `live-environment`
+- `milestone-gate`
+
+Two tasks with any intersecting lock cannot share a wave. Every task declares at least one lock. Adding or renaming a lock requires an approved architecture-spec change; arbitrary per-task strings are invalid.
+
+The following locks force `mode=serial`: `migration-head`, `gmail-side-effects`, `security-runtime`, `openapi-contract`, `frontend-client`, `test-command-registry`, `dependency-lockfiles`, `compose-topology`, `ci-release`, `backup-restore`, `live-environment`, and `milestone-gate`. This deliberately serializes migrations, canonical generated contracts, credentials, live external effects, releases, deployment, recovery, and gate evidence.
+
+### Worktree, branch, and merge protocol
+
+Every implementation task runs in a separate Git worktree and branch created from the exact integration-branch commit recorded at wave start:
+
+```text
+worktree: ../alon-ai-task-<lowercase-task-id>
+branch:   agent/<lowercase-task-id>
+```
+
+An implementer receives only its task definition, dependency evidence, allowed locks/surfaces, acceptance commands, base commit, and report path. It may not start a dependent task, edit the integration checkout, merge, push, widen its locks, or spawn another implementation agent.
+
+The coordinator assigns one reviewer to the task branch when the implementer reports completion. After approval, `C0` integrates branches one at a time in the generated merge order. Every branch after the first is rebased or merged onto the new integration head and reruns its declared verification before acceptance, even when Git reports no textual conflict. Failure returns only that task to its implementer/reviewer loop; it never permits the next wave to start.
+
+### Deterministic wave construction
+
+The generator builds waves within one milestone at a time:
+
+1. A candidate is ready only when all dependencies completed in earlier waves. A dependency in the current wave does not count.
+2. Candidates are scanned in deterministic topological order.
+3. If the first candidate is `serial`, it forms a one-task wave.
+4. Otherwise, add up to four `parallel` candidates whose lock sets do not intersect any selected task.
+5. Deferred candidates remain eligible for the next wave; no candidate may skip an unfinished earlier milestone gate.
+6. The generated merge order equals the selected task order.
+
+This conservative greedy schedule is reproducible and reviewable. It does not claim theoretical maximum graph parallelism; it produces the exact safe plan this solo-operated project will use.
 
 ## Milestone-specific staging rules
 
@@ -102,7 +178,9 @@ The following rulings remove the known cycles:
       "title": "Capture the M0 bet",
       "source": "docs/development-roadmap/00-product-strategy/01-product-scope.md",
       "line": 129,
-      "depends_on": ["ROADMAP-ROOT-T01"]
+      "depends_on": [],
+      "mode": "parallel",
+      "locks": ["product-contracts"]
     }
   ]
 }
@@ -121,7 +199,21 @@ Tasks appear in the validator's deterministic topological order. JSON uses UTF-8
 - a globally numbered task list showing ID, title, source link, and dependency IDs; and
 - a frontier rule explaining that a task is executable only when every dependency has retained passing evidence.
 
-The root roadmap README links to both generated artifacts and states that subsystem directory order and prose prerequisites are non-authoritative when they conflict with validated task metadata.
+### Multi-agent execution plan
+
+`docs/development-roadmap/AGENT_EXECUTION_PLAN.md` is generated from the validated graph and lock sets. It contains:
+
+- the exact role limits: `C0`, `I1..I4`, and `R1..R4`;
+- the absolute nine-agent ceiling and four-implementer ceiling;
+- worktree, branch, prompt-scope, review, integration, cleanup, and evidence rules;
+- one section per deterministic wave with milestone, agent count, base prerequisite barrier, exact task-to-agent assignment, source link, dependencies, mode, locks, branch/worktree names, acceptance-evidence reference, reviewer assignment, merge order, and newly unlocked tasks;
+- explicit one-agent waves for every serial task;
+- a prohibition on starting the next wave until the current barrier closes; and
+- recovery instructions for failed, conflicting, stale-base, or abandoned task branches.
+
+The file is operationally exact only for the SHA-256 source-graph fingerprint printed in its header. Any source-task metadata change alters that fingerprint, makes the file stale, and blocks `--check` until regeneration. A Git commit hash is not embedded because generating a file containing its own eventual commit hash would be circular.
+
+The root roadmap README links to all three generated artifacts and states that subsystem directory order and prose prerequisites are non-authoritative when they conflict with validated task metadata.
 
 ## Validator architecture
 
@@ -132,7 +224,7 @@ python3 scripts/validate_roadmap.py --check
 python3 scripts/validate_roadmap.py --write
 ```
 
-`--check` is read-only and exits nonzero with deterministic, path-and-line diagnostics when any invariant fails or either generated artifact is stale. `--write` validates source metadata first, writes both generated artifacts atomically, rereads them, and exits nonzero if the resulting files do not match the renderers.
+`--check` is read-only and exits nonzero with deterministic, path-and-line diagnostics when any invariant fails or any generated artifact is stale. `--write` validates source metadata first, writes all three generated artifacts atomically, rereads them, and exits nonzero if the resulting files do not match the renderers.
 
 The validator enforces:
 
@@ -144,25 +236,32 @@ The validator enforces:
 6. no task depends on itself, a later milestone, or an unknown task;
 7. the directed graph is acyclic, with an explicit cycle path in the diagnostic;
 8. deterministic topological ordering uses milestone number, root-manifest document order, task number, and task ID as stable tie-breakers;
-9. every generated source path and Markdown link resolves;
-10. generated JSON and Markdown exactly equal current renderer output in `--check` mode; and
-11. the final graph contains exactly the number of ordered implementation checkboxes parsed from source.
+9. every task has a valid mode and nonempty lock set from the closed vocabulary;
+10. every serial-only lock appears only on a `serial` task;
+11. deterministic waves contain at most four implementers, remain within one milestone, use only dependencies completed in earlier waves, and have pairwise-disjoint locks;
+12. every generated source path and Markdown link resolves;
+13. generated JSON and both generated Markdown files exactly equal current renderer output in `--check` mode; and
+14. the final graph contains exactly the number of ordered implementation checkboxes parsed from source.
 
-The script must never edit the 77 source documents. Source metadata edits remain reviewable changes made by the roadmap refactor; generation only changes the two declared artifacts.
+The script must never edit the 77 source documents. Source metadata edits remain reviewable changes made by the roadmap refactor; generation only changes the three declared artifacts.
 
 ## Test design
 
 Add `backend/tests/unit/test_roadmap_validator.py`. Tests invoke real parser and renderer behavior against temporary miniature roadmap trees, using hand-written expected task orders and diagnostics. Required cases:
 
-- a valid graph produces deterministic JSON and Markdown;
+- a valid graph produces deterministic JSON and both Markdown artifacts;
 - an ordered checkbox without metadata fails;
 - orphan or duplicate metadata fails;
 - duplicate/noncontiguous/wrong-prefix task IDs fail;
 - unknown milestone and decreasing document milestone fail;
 - unknown, empty, self, and future-milestone dependencies fail;
 - a same-milestone cycle reports the concrete cycle;
+- unknown/empty/duplicate locks and invalid execution modes fail;
+- a serial-only lock on a parallel task fails;
+- a wave with a current-wave dependency, milestone crossing, shared lock, or fifth implementer fails;
 - stable tie-breaking produces the hand-checked order;
-- stale generated JSON or Markdown fails in `--check` mode;
+- deterministic wave construction produces hand-checked task/agent/merge assignments;
+- stale generated JSON, execution-order Markdown, or agent-plan Markdown fails in `--check` mode;
 - `--write` followed by `--check` succeeds; and
 - the real 77-file roadmap passes and contains the expected parsed task count.
 
@@ -173,11 +272,14 @@ Tests must follow red-green-refactor. The first test run must fail because the v
 - Add a `roadmap` Make target that runs `python3 scripts/validate_roadmap.py --check`.
 - Make `lint`, `test`, and CI execute the roadmap check without requiring backend dependency installation.
 - Update the root README and roadmap README with the new execution command and artifact links.
+- Document that the generated agent plan—not folder order—is the sole authority for parallel dispatch.
 - Keep Graphify output ignored. After all tracked changes, run the documented incremental Graphify update and save the useful result in local memory.
 
 ## Failure behavior
 
-Any validator failure blocks roadmap execution and CI. Agents must not guess around a missing dependency, manually edit generated artifacts, or treat a cycle as permission to implement both sides simultaneously. They must repair the source metadata or milestone assignment, regenerate, and retain the validator output.
+Any validator failure blocks roadmap execution and CI. Agents must not guess around a missing dependency, manually edit generated artifacts, treat a cycle as permission to implement both sides simultaneously, or add an unreviewed lock to force concurrency. They must repair the source metadata, lock assignment, execution mode, or milestone assignment, regenerate, and retain the validator output.
+
+A task branch that edits outside its declared locks or source-task scope is rejected and rerun with corrected metadata or a narrower diff. A merge conflict, stale base, failed integration test, missing review, abandoned agent, or incomplete evidence keeps the task and wave open. The coordinator may replace the agent, but cannot promote another task past the barrier.
 
 If a task legitimately needs an interface from a later operational stage, split the provider task into an earlier contract task and a later integration/evidence task. Lowering a milestone merely to silence the validator is forbidden because it hides work rather than removing the dependency.
 
@@ -188,7 +290,7 @@ If a task legitimately needs an interface from a later operational stage, split 
 3. Migrate M3-M5, correcting agent/provider activation dependencies.
 4. Migrate M6-M7, correcting Gmail, security, privacy, telemetry, and operator-control staging.
 5. Migrate M8-M9, correcting testing, infrastructure, launch, and public-ingress staging.
-6. Generate the complete manifest and execution order.
+6. Assign execution modes and exclusive locks, then generate the complete manifest, execution order, and agent execution plan.
 7. Update root instructions, Makefile, and CI.
 8. Run focused tests, the validator, full repository verification, independent review, and Graphify incremental update.
 
@@ -197,9 +299,12 @@ Each migration step must leave no duplicate task IDs and must not claim that a p
 ## Acceptance criteria
 
 - All 389 current ordered implementation checkboxes have stable task IDs, exact milestones, and explicit dependencies.
-- The validator reports zero missing metadata, unknown dependencies, milestone inversions, and cycles.
+- All 389 tasks have a validated execution mode and at least one closed-vocabulary lock.
+- The validator reports zero missing metadata, unknown dependencies, milestone inversions, cycles, unsafe lock overlaps, and invalid waves.
 - The generated manifest contains exactly 389 tasks unless source task count changes intentionally in the same reviewed diff.
 - `EXECUTION_ORDER.md` lists exactly the same task IDs once each in deterministic topological order.
+- `AGENT_EXECUTION_PLAN.md` assigns every task exactly once to a deterministic wave, with one to four implementers, separate worktree/branch names, reviewer assignment, merge order, and no same-wave dependency or lock conflict.
+- The plan never exceeds four implementation agents or nine total live agents and makes every serial-only task a one-implementer wave.
 - Known cycles and forward references are eliminated through staged task dependencies rather than waived.
 - Root and per-document prose no longer contradicts the executable graph.
 - `make roadmap`, focused validator tests, existing backend/frontend tests, lint, typecheck, build, and generated-contract checks pass.
