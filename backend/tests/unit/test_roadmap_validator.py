@@ -126,6 +126,17 @@ def test_manifest_like_rows_outside_authority_are_owned(
         assert parse_manifest(tmp_path)[0].source.endswith("01-scope.md")
 
 
+def test_route_row_with_bare_m_is_not_manifest_like(tmp_path: Path) -> None:
+    roadmap = write_tree(tmp_path)
+    readme = roadmap / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8") + "\n| /route | M |\n",
+        encoding="utf-8",
+    )
+
+    assert parse_manifest(tmp_path)[0].source.endswith("01-scope.md")
+
+
 def test_manifest_data_row_has_exactly_two_cells(tmp_path: Path) -> None:
     roadmap = write_tree(tmp_path)
     readme = roadmap / "README.md"
@@ -567,6 +578,29 @@ def test_plural_commands_use_only_comma_separators(
             parse_roadmap(tmp_path)
     else:
         assert parse_roadmap(tmp_path).tasks[0].acceptance_commands == expected
+
+
+@pytest.mark.parametrize(
+    "declaration",
+    [
+        "Command: `first` then Commands: `second`",
+        "Commands: `first` then Command: `second`",
+    ],
+)
+def test_multiple_outside_code_command_markers_fail(
+    tmp_path: Path, declaration: str
+) -> None:
+    roadmap = write_tree(tmp_path)
+    document = roadmap / "00-product" / "01-scope.md"
+    document.write_text(
+        document.read_text(encoding="utf-8").replace(
+            "Test evidence: review.", f"Test evidence: {declaration}."
+        ),
+        encoding="utf-8",
+    )
+
+    with pytest.raises(ValidationError, match="multiple command markers"):
+        parse_roadmap(tmp_path)
 
 
 @pytest.mark.parametrize(

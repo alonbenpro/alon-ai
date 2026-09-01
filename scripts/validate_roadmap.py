@@ -117,7 +117,7 @@ def _manifest_like(line: str) -> bool:
     if len(cells) < 2:
         return False
     first, second = cells[:2]
-    return _path_shaped(first) and second.startswith("M")
+    return _path_shaped(first) and len(second) > 1 and second.startswith("M")
 
 
 def _path_shaped(cell: str) -> bool:
@@ -189,17 +189,18 @@ def _commands(verification: str) -> tuple[str, ...]:
         for match in re.finditer(r"`[^`\n]*`", verification)
     ]
 
-    def outside(pattern: str) -> re.Match[str] | None:
-        return next(
-            (
-                match
-                for match in re.finditer(pattern, verification)
-                if not any(start < match.start() < end for start, end in code_ranges)
-            ),
-            None,
-        )
+    def outside(pattern: str) -> list[re.Match[str]]:
+        return [
+            match
+            for match in re.finditer(pattern, verification)
+            if not any(start < match.start() < end for start, end in code_ranges)
+        ]
 
-    plural = outside(r"\bCommands:")
+    plural_markers = outside(r"\bCommands:")
+    singular_markers = outside(r"\bCommand:")
+    if len(plural_markers) + len(singular_markers) > 1:
+        raise ValidationError("multiple command markers")
+    plural = plural_markers[0] if plural_markers else None
     if plural is not None:
         tail = verification[plural.end() :].lstrip()
         spans = list(re.finditer(r"`([^`\n]*)`", tail))
@@ -213,7 +214,7 @@ def _commands(verification: str) -> tuple[str, ...]:
             if tail[previous.end() : current.start()].strip() != ",":
                 raise ValidationError("plural Commands require comma separators")
         return tuple(span.group(1) for span in spans)
-    marker = outside(r"\bCommand:")
+    marker = singular_markers[0] if singular_markers else None
     if marker is None:
         return ()
     tail = verification[marker.end() :].lstrip()
