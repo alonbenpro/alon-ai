@@ -1,4 +1,3 @@
-import json
 import os
 from dataclasses import replace
 from hashlib import sha256
@@ -1383,44 +1382,159 @@ def test_valid_graph_renders_hand_checked_deterministic_artifacts(
     execution = render_execution_order(roadmap)
     agents = render_agent_plan(roadmap)
 
-    assert json.loads(manifest) == {
-        "milestones": [f"M{number}" for number in range(10)],
-        "schema_version": 1,
-        "tasks": [
-            {
-                "depends_on": [],
-                "document_id": "PRODUCT-01",
-                "id": "PRODUCT-01-T01",
-                "line": 8,
-                "locks": ["product-contracts"],
-                "milestone": "M0",
-                "mode": "parallel",
-                "source": "docs/development-roadmap/00-product/01-scope.md",
-                "title": "Capture scope",
-            }
-        ],
+    expected_manifest = """{
+  "milestones": [
+    "M0",
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8",
+    "M9"
+  ],
+  "schema_version": 1,
+  "tasks": [
+    {
+      "depends_on": [],
+      "document_id": "PRODUCT-01",
+      "id": "PRODUCT-01-T01",
+      "line": 8,
+      "locks": [
+        "product-contracts"
+      ],
+      "milestone": "M0",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/00-product/01-scope.md",
+      "title": "Capture scope"
     }
-    assert manifest.endswith("\n")
-    assert execution == render_execution_order(roadmap)
-    assert agents == render_agent_plan(roadmap)
-    assert "generated; it does not prove implementation status" in execution
-    assert "python3 scripts/validate_roadmap.py --write" in execution
-    assert "python3 scripts/validate_roadmap.py --check" in execution
-    assert "- Tasks: 1\n- Documents: 1" in execution
-    assert all(f"## M{number}" in execution for number in range(10))
-    assert (
-        "1. `PRODUCT-01-T01` — Capture scope "
-        "([source](00-product/01-scope.md#L8)); dependencies: none"
-    ) in execution
-    assert "C0 owns integration" in agents
-    assert "I1..I4" in agents and "R1..R4" in agents
-    assert "absolute live-agent ceiling is nine" in agents
-    assert "## Wave 1 — M0" in agents
-    assert "### I1 / R1 — `PRODUCT-01-T01`" in agents
-    assert "- Merge order: 1" in agents
-    assert "- Newly unlocked tasks: none" in agents
-    assert "## Cross-document edge appendix" in agents
-    assert agents.endswith("\n")
+  ]
+}
+"""
+    expected_execution = """# Executable Roadmap Order
+
+> Warning: generated; it does not prove implementation status. Edit source task metadata, never this file.
+
+- Regenerate: `python3 scripts/validate_roadmap.py --write`
+- Validate: `python3 scripts/validate_roadmap.py --check`
+- Source-graph fingerprint: `f0dc57de7c221d5544df3159f52d50f0a391aea13c9ff65ebdb1431bbf384400`
+
+## Totals
+
+- Tasks: 1
+- Documents: 1
+- M0: 1
+- M1: 0
+- M2: 0
+- M3: 0
+- M4: 0
+- M5: 0
+- M6: 0
+- M7: 0
+- M8: 0
+- M9: 0
+- By document:
+  - `PRODUCT-01`: 1
+
+## Frontier rule
+
+A task is executable only when every dependency has retained passing evidence from an earlier completed wave.
+
+## M0
+
+1. `PRODUCT-01-T01` — Capture scope ([source](00-product/01-scope.md#L8)); dependencies: none
+
+## M1
+
+No tasks.
+
+## M2
+
+No tasks.
+
+## M3
+
+No tasks.
+
+## M4
+
+No tasks.
+
+## M5
+
+No tasks.
+
+## M6
+
+No tasks.
+
+## M7
+
+No tasks.
+
+## M8
+
+No tasks.
+
+## M9
+
+No tasks.
+"""
+    expected_agents = """# Agent Execution Plan
+
+> Warning: generated for the source graph below; it does not prove implementation status.
+
+- Source-graph fingerprint: `f0dc57de7c221d5544df3159f52d50f0a391aea13c9ff65ebdb1431bbf384400`
+- Regenerate: `python3 scripts/validate_roadmap.py --write`
+- Validate: `python3 scripts/validate_roadmap.py --check`
+
+## Operating contract
+
+- C0 owns integration, dependency evidence, wave assignment, merge order, status, and milestone gates.
+- Implementers are I1..I4; read-only reviewers are R1..R4.
+- The absolute live-agent ceiling is nine and the implementation/worktree ceiling is four.
+- Each task uses its listed `agent/<task-id>` branch and sibling `../alon-ai-task-<task-id>` worktree from the exact wave-base integration commit.
+- Prompts include only the assigned task, dependency evidence, declared locks/surfaces, source acceptance evidence, optional marked commands, base commit, and report path.
+- Implementers may not start dependent tasks, edit the integration checkout, merge, push, widen declared locks, or spawn implementation agents.
+- Generic or unmarked code spans in task evidence are evidence-only; only grammar-valid explicit `Command:` or `Commands:` spans become optional acceptance commands.
+- C0 may add normal repository verification required by declared locks, but may not substitute, broaden, or fabricate evidence commands.
+- Each reviewer checks only its completed task before C0 merges branches one at a time in generated merge order.
+- After the first branch in a wave, each later branch is rebased or merged onto the updated integration head and reruns its declared verification before acceptance.
+- C0 reruns declared verification after each integration, records retained evidence, and cleans up merged branches/worktrees.
+- The next wave cannot start until every implementation is reviewed, merged, retested, recorded, and the barrier closes.
+- A failed task returns only that task to its implementer/reviewer loop and never opens the next wave.
+- Conflict, stale base, or abandonment keeps the task and wave open; repair or replace that task branch without promoting later work.
+
+## Wave 1 — M0
+
+- Agent count: 1 implementer(s) and 1 reviewer(s)
+- Base prerequisite barrier: none (graph root)
+
+### I1 / R1 — `PRODUCT-01-T01`
+
+- Source: [source](00-product/01-scope.md#L8)
+- Dependencies: none
+- Mode: `parallel`
+- Locks: `product-contracts`
+- Branch: `agent/product-01-t01`
+- Worktree: `../alon-ai-task-product-01-t01`
+- Acceptance evidence: [source](00-product/01-scope.md#L8) — Test evidence: review.
+- Optional acceptance commands: none
+- Merge order: 1
+
+- Newly unlocked tasks: none
+- Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
+
+## Cross-document edge appendix
+
+- None.
+"""
+
+    assert manifest == expected_manifest
+    assert execution == expected_execution
+    assert agents == expected_agents
 
 
 def test_cross_document_appendix_is_ordered_and_preserves_literal_pipes(
@@ -1486,6 +1600,30 @@ def test_check_reports_each_missing_or_stale_artifact_separately(
 
     with pytest.raises(ValidationError, match=rf"{state} artifact: {relative_path}"):
         check_artifacts(tmp_path)
+
+
+def test_check_treats_crlf_artifact_bytes_as_stale(tmp_path: Path) -> None:
+    write_tree(tmp_path)
+    write_artifacts(tmp_path)
+    target = tmp_path / ARTIFACT_PATHS[1]
+    target.write_bytes(target.read_bytes().replace(b"\n", b"\r\n"))
+
+    with pytest.raises(ValidationError, match=f"stale artifact: {ARTIFACT_PATHS[1]}"):
+        check_artifacts(tmp_path)
+
+
+def test_write_reread_rejects_crlf_byte_drift(tmp_path: Path) -> None:
+    write_tree(tmp_path)
+
+    def replace_with_crlf(source: str | Path, destination: str | Path) -> None:
+        os.replace(source, destination)
+        target = Path(destination)
+        target.write_bytes(target.read_bytes().replace(b"\n", b"\r\n"))
+
+    with pytest.raises(
+        ValidationError, match=f"artifact reread mismatch: {ARTIFACT_PATHS[0]}"
+    ):
+        write_artifacts(tmp_path, replace_func=replace_with_crlf)
 
 
 def test_write_then_check_succeeds_for_complete_miniature_repository(

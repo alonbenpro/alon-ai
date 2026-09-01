@@ -805,10 +805,15 @@ def render_agent_plan(roadmap: Roadmap) -> str:
         "- The absolute live-agent ceiling is nine and the implementation/worktree ceiling is four.",
         "- Each task uses its listed `agent/<task-id>` branch and sibling `../alon-ai-task-<task-id>` worktree from the exact wave-base integration commit.",
         "- Prompts include only the assigned task, dependency evidence, declared locks/surfaces, source acceptance evidence, optional marked commands, base commit, and report path.",
+        "- Implementers may not start dependent tasks, edit the integration checkout, merge, push, widen declared locks, or spawn implementation agents.",
+        "- Generic or unmarked code spans in task evidence are evidence-only; only grammar-valid explicit `Command:` or `Commands:` spans become optional acceptance commands.",
+        "- C0 may add normal repository verification required by declared locks, but may not substitute, broaden, or fabricate evidence commands.",
         "- Each reviewer checks only its completed task before C0 merges branches one at a time in generated merge order.",
+        "- After the first branch in a wave, each later branch is rebased or merged onto the updated integration head and reruns its declared verification before acceptance.",
         "- C0 reruns declared verification after each integration, records retained evidence, and cleans up merged branches/worktrees.",
         "- The next wave cannot start until every implementation is reviewed, merged, retested, recorded, and the barrier closes.",
-        "- Failure, conflict, stale base, or abandonment keeps the task and wave open; repair or replace that task branch without promoting later work.",
+        "- A failed task returns only that task to its implementer/reviewer loop and never opens the next wave.",
+        "- Conflict, stale base, or abandonment keeps the task and wave open; repair or replace that task branch without promoting later work.",
     ]
     completed_before: set[str] = set()
     for wave in waves:
@@ -936,7 +941,7 @@ def check_artifacts(root: Path) -> None:
         target = root / relative
         if not target.is_file():
             diagnostics.append(f"missing artifact: {relative}")
-        elif target.read_text(encoding="utf-8") != expected[relative]:
+        elif target.read_bytes() != expected[relative].encode("utf-8"):
             diagnostics.append(f"stale artifact: {relative}")
     if diagnostics:
         raise ValidationError("\n".join(diagnostics))
@@ -950,20 +955,21 @@ def write_artifacts(
     roadmap = parse_roadmap(root)
     contents = render_artifacts(roadmap)
     _validate_rendered_artifacts(root, roadmap, contents)
+    encoded_contents = {
+        relative: content.encode("utf-8") for relative, content in contents.items()
+    }
     temporary_paths: dict[str, Path] = {}
     try:
         for relative in ARTIFACT_PATHS:
             target = root / relative
             with tempfile.NamedTemporaryFile(
-                mode="w",
-                encoding="utf-8",
-                newline="\n",
+                mode="wb",
                 dir=target.parent,
                 prefix=f".{target.name}.",
                 suffix=".tmp",
                 delete=False,
             ) as handle:
-                handle.write(contents[relative])
+                handle.write(encoded_contents[relative])
                 temporary_paths[relative] = Path(handle.name)
     except OSError as error:
         for temporary in temporary_paths.values():
@@ -988,7 +994,7 @@ def write_artifacts(
             temporary.unlink(missing_ok=True)
 
     for relative in ARTIFACT_PATHS:
-        if (root / relative).read_text(encoding="utf-8") != contents[relative]:
+        if (root / relative).read_bytes() != encoded_contents[relative]:
             raise ValidationError(f"artifact reread mismatch: {relative}")
 
 
