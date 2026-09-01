@@ -1,11 +1,29 @@
+import json
+import os
+from dataclasses import replace
+from hashlib import sha256
 from pathlib import Path
 
 import pytest
 from scripts.validate_roadmap import (
+    ARTIFACT_PATHS,
+    Roadmap,
     ValidationError,
+    Wave,
+    build_waves,
+    canonical_fingerprint_bytes,
+    check_artifacts,
+    graph_fingerprint,
+    main,
     parse_dependency_list,
     parse_manifest,
     parse_roadmap,
+    render_agent_plan,
+    render_execution_manifest,
+    render_execution_order,
+    topological_order,
+    validate_waves,
+    write_artifacts,
 )
 
 ROOT_ROW = "| `00-product/01-scope.md` | M0 |"
@@ -60,6 +78,88 @@ def append_second(roadmap: Path, *, depends: str, milestone: str = "M0") -> None
         ),
         encoding="utf-8",
     )
+
+
+def add_document(
+    roadmap: Path,
+    *,
+    relative: str,
+    document_id: str,
+    milestone: str,
+    tasks: list[tuple[str, str, str, str]],
+) -> None:
+    """Add tasks as (id, depends_on, mode, locks) to a miniature roadmap."""
+    readme = roadmap / "README.md"
+    row = f"| `{relative}` | {milestone} |"
+    readme.write_text(
+        readme.read_text(encoding="utf-8").replace(ROOT_ROW, f"{ROOT_ROW}\n{row}"),
+        encoding="utf-8",
+    )
+    body = []
+    for task_id, depends_on, mode, locks in tasks:
+        body.extend(
+            [
+                f"<!-- roadmap-task id={task_id} milestone={milestone} depends_on={depends_on} mode={mode} locks={locks} -->",
+                f"- [ ] **{task_id} title —** Input: input for {task_id}. Operation: operate {task_id}. Output: output from {task_id}. Test evidence: review {task_id}. Failure behavior: block {task_id}.",
+            ]
+        )
+    document = roadmap / relative
+    document.parent.mkdir(parents=True, exist_ok=True)
+    document.write_text(
+        "\n".join(
+            [
+                f"# {document_id}",
+                "",
+                f"**Document ID:** {document_id}",
+                "",
+                "## Ordered implementation tasks",
+                "",
+                *body,
+                "",
+                "## Acceptance",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+
+def write_wave_tree(tmp_path: Path):
+    roadmap = write_tree(tmp_path)
+    add_document(
+        roadmap,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[
+            ("ARCH-01-T01", "PRODUCT-01-T01", "parallel", "architecture-contracts"),
+            ("ARCH-01-T02", "PRODUCT-01-T01", "parallel", "database-schema"),
+            ("ARCH-01-T03", "PRODUCT-01-T01", "parallel", "agent-runtime"),
+            ("ARCH-01-T04", "PRODUCT-01-T01", "parallel", "provider-contracts"),
+            (
+                "ARCH-01-T05",
+                "ARCH-01-T01,ARCH-01-T02,ARCH-01-T03,ARCH-01-T04",
+                "parallel",
+                "backend-domain",
+            ),
+        ],
+    )
+    return parse_roadmap(tmp_path)
+
+
+def write_chain_tree(tmp_path: Path):
+    roadmap = write_tree(tmp_path)
+    add_document(
+        roadmap,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[
+            ("ARCH-01-T01", "PRODUCT-01-T01", "parallel", "architecture-contracts"),
+            ("ARCH-01-T02", "ARCH-01-T01", "parallel", "backend-domain"),
+        ],
+    )
+    return parse_roadmap(tmp_path)
 
 
 def test_valid_minimal_tree_parses(tmp_path: Path) -> None:
@@ -137,7 +237,7 @@ def test_route_row_with_bare_m_is_not_manifest_like(tmp_path: Path) -> None:
     assert parse_manifest(tmp_path)[0].source.endswith("01-scope.md")
 
 
-def test_manifest_data_row_has_exactly_two_cells(tmp_path: Path) -> None:
+def test_manifest_data_row_may_retain_descriptive_columns(tmp_path: Path) -> None:
     roadmap = write_tree(tmp_path)
     readme = roadmap / "README.md"
     readme.write_text(
@@ -147,8 +247,7 @@ def test_manifest_data_row_has_exactly_two_cells(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    with pytest.raises(ValidationError, match="exactly two cells"):
-        parse_manifest(tmp_path)
+    assert parse_manifest(tmp_path)[0].source.endswith("01-scope.md")
 
 
 def test_manifest_extra_outer_delimiters_count_as_cells(tmp_path: Path) -> None:
@@ -161,7 +260,7 @@ def test_manifest_extra_outer_delimiters_count_as_cells(tmp_path: Path) -> None:
         encoding="utf-8",
     )
 
-    with pytest.raises(ValidationError, match="exactly two cells"):
+    with pytest.raises(ValidationError, match="outer delimiters"):
         parse_manifest(tmp_path)
 
 
@@ -881,3 +980,596 @@ def test_serial_only_locks_require_serial_mode(tmp_path: Path, lock: str) -> Non
 
     with pytest.raises(ValidationError, match="serial-only lock"):
         parse_roadmap(tmp_path)
+
+
+def test_same_milestone_cycle_reports_concrete_path(tmp_path: Path) -> None:
+    roadmap = write_tree(tmp_path)
+    add_document(
+        roadmap,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[
+            ("ARCH-01-T01", "ARCH-01-T02", "parallel", "architecture-contracts"),
+            ("ARCH-01-T02", "ARCH-01-T01", "parallel", "backend-domain"),
+        ],
+    )
+
+    parsed = parse_roadmap(tmp_path)
+
+    with pytest.raises(
+        ValidationError,
+        match=r"cycle: ARCH-01-T01 -> ARCH-01-T02 -> ARCH-01-T01",
+    ):
+        topological_order(parsed)
+
+
+def test_topological_order_uses_stable_milestone_manifest_task_tie_breaks(
+    tmp_path: Path,
+) -> None:
+    roadmap = write_tree(tmp_path)
+    add_document(
+        roadmap,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[
+            ("ARCH-01-T01", "PRODUCT-01-T01", "parallel", "architecture-contracts"),
+            ("ARCH-01-T02", "ARCH-01-T01", "parallel", "backend-domain"),
+        ],
+    )
+    add_document(
+        roadmap,
+        relative="02-data/01-schema.md",
+        document_id="DATA-01",
+        milestone="M0",
+        tasks=[
+            ("DATA-01-T01", "PRODUCT-01-T01", "parallel", "database-schema"),
+        ],
+    )
+
+    order = topological_order(parse_roadmap(tmp_path))
+
+    assert tuple(task.id for task in order) == (
+        "PRODUCT-01-T01",
+        "DATA-01-T01",
+        "ARCH-01-T01",
+        "ARCH-01-T02",
+    )
+
+
+def test_waves_have_hand_checked_assignments_merge_order_and_unlocks(
+    tmp_path: Path,
+) -> None:
+    roadmap = write_wave_tree(tmp_path)
+
+    waves = build_waves(roadmap)
+
+    assert [
+        (
+            wave.index,
+            wave.milestone,
+            tuple(
+                (
+                    assignment.task.id,
+                    assignment.implementer,
+                    assignment.reviewer,
+                    assignment.merge_order,
+                )
+                for assignment in wave.assignments
+            ),
+            wave.newly_unlocked,
+        )
+        for wave in waves
+    ] == [
+        (
+            1,
+            "M0",
+            (("PRODUCT-01-T01", "I1", "R1", 1),),
+            ("ARCH-01-T01", "ARCH-01-T02", "ARCH-01-T03", "ARCH-01-T04"),
+        ),
+        (
+            2,
+            "M0",
+            (
+                ("ARCH-01-T01", "I1", "R1", 1),
+                ("ARCH-01-T02", "I2", "R2", 2),
+                ("ARCH-01-T03", "I3", "R3", 3),
+                ("ARCH-01-T04", "I4", "R4", 4),
+            ),
+            ("ARCH-01-T05",),
+        ),
+        (
+            3,
+            "M0",
+            (("ARCH-01-T05", "I1", "R1", 1),),
+            (),
+        ),
+    ]
+    validate_waves(roadmap, waves)
+
+
+def test_wave_validation_rejects_current_wave_dependency(tmp_path: Path) -> None:
+    roadmap = write_chain_tree(tmp_path)
+    first, second, third = build_waves(roadmap)
+    invalid = (
+        first,
+        Wave(
+            index=2,
+            milestone="M0",
+            assignments=(
+                second.assignments[0],
+                replace(
+                    third.assignments[0],
+                    implementer="I2",
+                    reviewer="R2",
+                    merge_order=2,
+                ),
+            ),
+            newly_unlocked=(),
+        ),
+    )
+
+    with pytest.raises(ValidationError, match="current-wave dependency"):
+        validate_waves(roadmap, invalid)
+
+
+def test_wave_validation_rejects_milestone_crossing(tmp_path: Path) -> None:
+    roadmap_root = write_tree(tmp_path)
+    add_document(
+        roadmap_root,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M1",
+        tasks=[
+            ("ARCH-01-T01", "PRODUCT-01-T01", "parallel", "architecture-contracts"),
+        ],
+    )
+    roadmap = parse_roadmap(tmp_path)
+    first, second = build_waves(roadmap)
+    invalid = (first, replace(second, milestone="M0"))
+
+    with pytest.raises(ValidationError, match="milestone crossing"):
+        validate_waves(roadmap, invalid)
+
+
+def test_wave_validation_rejects_shared_lock(tmp_path: Path) -> None:
+    roadmap_root = write_tree(tmp_path)
+    add_document(
+        roadmap_root,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[
+            ("ARCH-01-T01", "PRODUCT-01-T01", "parallel", "backend-domain"),
+            ("ARCH-01-T02", "PRODUCT-01-T01", "parallel", "backend-domain"),
+        ],
+    )
+    roadmap = parse_roadmap(tmp_path)
+    first, second, third = build_waves(roadmap)
+    invalid = (
+        first,
+        Wave(
+            index=2,
+            milestone="M0",
+            assignments=(
+                second.assignments[0],
+                replace(
+                    third.assignments[0],
+                    implementer="I2",
+                    reviewer="R2",
+                    merge_order=2,
+                ),
+            ),
+            newly_unlocked=(),
+        ),
+    )
+
+    with pytest.raises(ValidationError, match="shared lock"):
+        validate_waves(roadmap, invalid)
+
+
+def test_wave_validation_rejects_serial_co_tenancy(tmp_path: Path) -> None:
+    roadmap_root = write_tree(tmp_path)
+    add_document(
+        roadmap_root,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[
+            ("ARCH-01-T01", "PRODUCT-01-T01", "serial", "migration-head"),
+            ("ARCH-01-T02", "PRODUCT-01-T01", "parallel", "backend-domain"),
+        ],
+    )
+    roadmap = parse_roadmap(tmp_path)
+    first, second, third = build_waves(roadmap)
+    invalid = (
+        first,
+        Wave(
+            index=2,
+            milestone="M0",
+            assignments=(
+                second.assignments[0],
+                replace(
+                    third.assignments[0],
+                    implementer="I2",
+                    reviewer="R2",
+                    merge_order=2,
+                ),
+            ),
+            newly_unlocked=(),
+        ),
+    )
+
+    with pytest.raises(ValidationError, match="serial task must be alone"):
+        validate_waves(roadmap, invalid)
+
+
+def test_wave_validation_rejects_fifth_implementer(tmp_path: Path) -> None:
+    roadmap_root = write_tree(tmp_path)
+    add_document(
+        roadmap_root,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[
+            ("ARCH-01-T01", "PRODUCT-01-T01", "parallel", "architecture-contracts"),
+            ("ARCH-01-T02", "PRODUCT-01-T01", "parallel", "database-schema"),
+            ("ARCH-01-T03", "PRODUCT-01-T01", "parallel", "agent-runtime"),
+            ("ARCH-01-T04", "PRODUCT-01-T01", "parallel", "provider-contracts"),
+            ("ARCH-01-T05", "PRODUCT-01-T01", "parallel", "backend-domain"),
+        ],
+    )
+    roadmap = parse_roadmap(tmp_path)
+    first, second, third = build_waves(roadmap)
+    fifth = replace(
+        third.assignments[0],
+        implementer="I5",
+        reviewer="R5",
+        merge_order=5,
+    )
+    invalid = (first, replace(second, assignments=second.assignments + (fifth,)))
+
+    with pytest.raises(ValidationError, match="at most four implementers"):
+        validate_waves(roadmap, invalid)
+
+
+def test_wave_validation_rejects_missing_task(tmp_path: Path) -> None:
+    roadmap = write_wave_tree(tmp_path)
+    waves = build_waves(roadmap)
+
+    with pytest.raises(ValidationError, match="missing task"):
+        validate_waves(roadmap, waves[:-1])
+
+
+def test_wave_validation_rejects_duplicate_task(tmp_path: Path) -> None:
+    roadmap = write_wave_tree(tmp_path)
+    waves = build_waves(roadmap)
+    invalid = waves + (replace(waves[0], index=4, newly_unlocked=()),)
+
+    with pytest.raises(ValidationError, match="duplicate task"):
+        validate_waves(roadmap, invalid)
+
+
+def test_wave_validation_rejects_agent_assignment_drift(tmp_path: Path) -> None:
+    roadmap = write_wave_tree(tmp_path)
+    waves = build_waves(roadmap)
+    assignment = replace(waves[1].assignments[0], implementer="I2")
+    invalid_wave = replace(
+        waves[1], assignments=(assignment, *waves[1].assignments[1:])
+    )
+
+    with pytest.raises(ValidationError, match="agent assignment drift"):
+        validate_waves(roadmap, (waves[0], invalid_wave, waves[2]))
+
+
+def test_wave_validation_rejects_merge_order_drift(tmp_path: Path) -> None:
+    roadmap = write_wave_tree(tmp_path)
+    waves = build_waves(roadmap)
+    assignment = replace(waves[1].assignments[0], merge_order=2)
+    invalid_wave = replace(
+        waves[1], assignments=(assignment, *waves[1].assignments[1:])
+    )
+
+    with pytest.raises(ValidationError, match="merge-order drift"):
+        validate_waves(roadmap, (waves[0], invalid_wave, waves[2]))
+
+
+def test_wave_validation_requires_dependencies_in_earlier_waves(
+    tmp_path: Path,
+) -> None:
+    roadmap = write_chain_tree(tmp_path)
+    first, second, third = build_waves(roadmap)
+
+    with pytest.raises(ValidationError, match="dependency from an earlier wave"):
+        validate_waves(roadmap, (first, third, second))
+
+
+def test_wave_validation_rejects_milestone_skipping(tmp_path: Path) -> None:
+    roadmap_root = write_tree(tmp_path)
+    add_document(
+        roadmap_root,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[
+            ("ARCH-01-T01", "PRODUCT-01-T01", "parallel", "architecture-contracts"),
+        ],
+    )
+    add_document(
+        roadmap_root,
+        relative="02-data/01-schema.md",
+        document_id="DATA-01",
+        milestone="M1",
+        tasks=[
+            ("DATA-01-T01", "PRODUCT-01-T01", "parallel", "database-schema"),
+        ],
+    )
+    roadmap = parse_roadmap(tmp_path)
+    first, second, third = build_waves(roadmap)
+
+    with pytest.raises(ValidationError, match="milestone skipping"):
+        validate_waves(roadmap, (first, third, second))
+
+
+def test_canonical_fingerprint_bytes_and_digest_are_exact(tmp_path: Path) -> None:
+    write_tree(tmp_path)
+    roadmap = parse_roadmap(tmp_path)
+    expected = (
+        b'{"manifest_documents":["docs/development-roadmap/00-product/01-scope.md"],'
+        b'"milestones":["M0","M1","M2","M3","M4","M5","M6","M7","M8","M9"],'
+        b'"root_task_ids":["PRODUCT-01-T01"],"schema_version":1,"tasks":['
+        b'{"depends_on":[],"document_id":"PRODUCT-01","failure_behavior":"Failure behavior: block.",'
+        b'"id":"PRODUCT-01-T01","input":"Input: brief.","line":8,'
+        b'"locks":["product-contracts"],"milestone":"M0","mode":"parallel",'
+        b'"operation":"Operation: freeze.","output":"Output: contract.",'
+        b'"source":"docs/development-roadmap/00-product/01-scope.md",'
+        b'"title":"Capture scope","verification":"Test evidence: review."}]}'
+    )
+
+    assert canonical_fingerprint_bytes(roadmap) == expected
+    assert graph_fingerprint(roadmap) == sha256(expected).hexdigest()
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "manifest_order",
+        "source_line",
+        "task_metadata",
+        "input",
+        "operation",
+        "output",
+        "verification",
+        "failure_behavior",
+    ],
+)
+def test_fingerprint_binds_every_authoritative_input(
+    tmp_path: Path, mutation: str
+) -> None:
+    roadmap = write_chain_tree(tmp_path)
+    baseline = graph_fingerprint(roadmap)
+    tasks = list(roadmap.tasks)
+    documents = roadmap.documents
+    if mutation == "manifest_order":
+        documents = tuple(reversed(documents))
+    else:
+        field = {
+            "source_line": "line",
+            "task_metadata": "mode",
+            "input": "input",
+            "operation": "operation",
+            "output": "output",
+            "verification": "verification",
+            "failure_behavior": "failure_behavior",
+        }[mutation]
+        value = getattr(tasks[-1], field)
+        tasks[-1] = replace(
+            tasks[-1], **{field: value + 1 if field == "line" else f"{value} changed"}
+        )
+    changed = Roadmap(documents=documents, tasks=tuple(tasks))
+
+    assert graph_fingerprint(roadmap) == baseline
+    assert graph_fingerprint(changed) != baseline
+
+
+def test_valid_graph_renders_hand_checked_deterministic_artifacts(
+    tmp_path: Path,
+) -> None:
+    write_tree(tmp_path)
+    roadmap = parse_roadmap(tmp_path)
+
+    manifest = render_execution_manifest(roadmap)
+    execution = render_execution_order(roadmap)
+    agents = render_agent_plan(roadmap)
+
+    assert json.loads(manifest) == {
+        "milestones": [f"M{number}" for number in range(10)],
+        "schema_version": 1,
+        "tasks": [
+            {
+                "depends_on": [],
+                "document_id": "PRODUCT-01",
+                "id": "PRODUCT-01-T01",
+                "line": 8,
+                "locks": ["product-contracts"],
+                "milestone": "M0",
+                "mode": "parallel",
+                "source": "docs/development-roadmap/00-product/01-scope.md",
+                "title": "Capture scope",
+            }
+        ],
+    }
+    assert manifest.endswith("\n")
+    assert execution == render_execution_order(roadmap)
+    assert agents == render_agent_plan(roadmap)
+    assert "generated; it does not prove implementation status" in execution
+    assert "python3 scripts/validate_roadmap.py --write" in execution
+    assert "python3 scripts/validate_roadmap.py --check" in execution
+    assert "- Tasks: 1\n- Documents: 1" in execution
+    assert all(f"## M{number}" in execution for number in range(10))
+    assert (
+        "1. `PRODUCT-01-T01` — Capture scope "
+        "([source](00-product/01-scope.md#L8)); dependencies: none"
+    ) in execution
+    assert "C0 owns integration" in agents
+    assert "I1..I4" in agents and "R1..R4" in agents
+    assert "absolute live-agent ceiling is nine" in agents
+    assert "## Wave 1 — M0" in agents
+    assert "### I1 / R1 — `PRODUCT-01-T01`" in agents
+    assert "- Merge order: 1" in agents
+    assert "- Newly unlocked tasks: none" in agents
+    assert "## Cross-document edge appendix" in agents
+    assert agents.endswith("\n")
+
+
+def test_cross_document_appendix_is_ordered_and_preserves_literal_pipes(
+    tmp_path: Path,
+) -> None:
+    roadmap_root = write_tree(tmp_path)
+    root_document = roadmap_root / "00-product" / "01-scope.md"
+    root_document.write_text(
+        root_document.read_text(encoding="utf-8").replace(
+            "Output: contract.", "Output: contract | signed."
+        ),
+        encoding="utf-8",
+    )
+    add_document(
+        roadmap_root,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[
+            ("ARCH-01-T01", "PRODUCT-01-T01", "parallel", "architecture-contracts"),
+            (
+                "ARCH-01-T02",
+                "PRODUCT-01-T01,ARCH-01-T01",
+                "parallel",
+                "backend-domain",
+            ),
+        ],
+    )
+    consumer = roadmap_root / "01-arch" / "01-system.md"
+    consumer.write_text(
+        consumer.read_text(encoding="utf-8").replace(
+            "Input: input for ARCH-01", "Input: contract | signed for ARCH-01"
+        ),
+        encoding="utf-8",
+    )
+
+    rendered = render_agent_plan(parse_roadmap(tmp_path))
+    appendix = rendered.split("## Cross-document edge appendix\n\n", 1)[1]
+
+    assert appendix == (
+        "- Provider `PRODUCT-01-T01` — Output: contract | signed.; "
+        "Consumer `ARCH-01-T01` — Input: contract | signed for ARCH-01-T01.\n"
+        "- Provider `PRODUCT-01-T01` — Output: contract | signed.; "
+        "Consumer `ARCH-01-T02` — Input: contract | signed for ARCH-01-T02.\n"
+    )
+    assert "\\|" not in appendix
+
+
+@pytest.mark.parametrize("relative_path", ARTIFACT_PATHS)
+@pytest.mark.parametrize("state", ["missing", "stale"])
+def test_check_reports_each_missing_or_stale_artifact_separately(
+    tmp_path: Path, relative_path: str, state: str
+) -> None:
+    write_tree(tmp_path)
+    write_artifacts(tmp_path)
+    target = tmp_path / relative_path
+    if state == "missing":
+        target.unlink()
+    else:
+        target.write_text(
+            target.read_text(encoding="utf-8") + "stale\n", encoding="utf-8"
+        )
+
+    with pytest.raises(ValidationError, match=rf"{state} artifact: {relative_path}"):
+        check_artifacts(tmp_path)
+
+
+def test_write_then_check_succeeds_for_complete_miniature_repository(
+    tmp_path: Path,
+) -> None:
+    write_tree(tmp_path)
+
+    write_artifacts(tmp_path)
+
+    check_artifacts(tmp_path)
+    assert all((tmp_path / relative).is_file() for relative in ARTIFACT_PATHS)
+
+
+def test_second_replace_failure_fails_closed_and_later_write_repairs(
+    tmp_path: Path,
+) -> None:
+    write_tree(tmp_path)
+    calls = 0
+
+    def fail_second(source: str | Path, destination: str | Path) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("injected second replacement failure")
+        os.replace(source, destination)
+
+    with pytest.raises(ValidationError, match="partially updated"):
+        write_artifacts(tmp_path, replace_func=fail_second)
+    assert calls == 2
+    with pytest.raises(ValidationError):
+        check_artifacts(tmp_path)
+
+    write_artifacts(tmp_path)
+    check_artifacts(tmp_path)
+
+
+def test_cli_write_then_check_and_stale_failure_codes(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    write_tree(tmp_path)
+
+    assert main(["--write"], root=tmp_path) == 0
+    assert main(["--check"], root=tmp_path) == 0
+    target = tmp_path / ARTIFACT_PATHS[1]
+    target.write_text(target.read_text(encoding="utf-8") + "stale\n", encoding="utf-8")
+    assert main(["--check"], root=tmp_path) == 1
+    assert f"stale artifact: {ARTIFACT_PATHS[1]}" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("arguments", [[], ["--check", "--write"]])
+def test_bad_cli_invocation_exits_two(tmp_path: Path, arguments: list[str]) -> None:
+    write_tree(tmp_path)
+
+    with pytest.raises(SystemExit) as error:
+        main(arguments, root=tmp_path)
+
+    assert error.value.code == 2
+
+
+def test_cli_second_replace_failure_returns_one_then_repairs(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    write_tree(tmp_path)
+    real_replace = os.replace
+    calls = 0
+
+    def fail_second(source: str | Path, destination: str | Path) -> None:
+        nonlocal calls
+        calls += 1
+        if calls == 2:
+            raise OSError("injected CLI replacement failure")
+        real_replace(source, destination)
+
+    with monkeypatch.context() as scoped:
+        scoped.setattr("scripts.validate_roadmap.os.replace", fail_second)
+        assert main(["--write"], root=tmp_path) == 1
+    assert main(["--check"], root=tmp_path) == 1
+    assert main(["--write"], root=tmp_path) == 0
+    assert main(["--check"], root=tmp_path) == 0
+
+
+def test_real_repository_is_blocked_only_by_pending_metadata_migration() -> None:
+    repository_root = Path(__file__).resolve().parents[3]
+
+    with pytest.raises(ValidationError, match="adjacent metadata"):
+        parse_roadmap(repository_root)
