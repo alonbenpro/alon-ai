@@ -1,29 +1,41 @@
 import os
+import sys
 from dataclasses import replace
 from hashlib import sha256
+from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
 
 import pytest
-from scripts.validate_roadmap import (
-    ARTIFACT_PATHS,
-    Roadmap,
-    ValidationError,
-    Wave,
-    build_waves,
-    canonical_fingerprint_bytes,
-    check_artifacts,
-    graph_fingerprint,
-    main,
-    parse_dependency_list,
-    parse_manifest,
-    parse_roadmap,
-    render_agent_plan,
-    render_execution_manifest,
-    render_execution_order,
-    topological_order,
-    validate_waves,
-    write_artifacts,
+
+# The repository script is outside the backend package and its import path.
+_spec = spec_from_file_location(
+    "_roadmap_validator_under_test",
+    Path(__file__).resolve().parents[3] / "scripts" / "validate_roadmap.py",
 )
+assert _spec is not None and _spec.loader is not None
+_validator = module_from_spec(_spec)
+# Dataclasses resolve postponed annotations through the registered module.
+sys.modules[_spec.name] = _validator
+_spec.loader.exec_module(_validator)
+
+ARTIFACT_PATHS = _validator.ARTIFACT_PATHS
+Roadmap = _validator.Roadmap
+ValidationError = _validator.ValidationError
+Wave = _validator.Wave
+build_waves = _validator.build_waves
+canonical_fingerprint_bytes = _validator.canonical_fingerprint_bytes
+check_artifacts = _validator.check_artifacts
+graph_fingerprint = _validator.graph_fingerprint
+main = _validator.main
+parse_dependency_list = _validator.parse_dependency_list
+parse_manifest = _validator.parse_manifest
+parse_roadmap = _validator.parse_roadmap
+render_agent_plan = _validator.render_agent_plan
+render_execution_manifest = _validator.render_execution_manifest
+render_execution_order = _validator.render_execution_order
+topological_order = _validator.topological_order
+validate_waves = _validator.validate_waves
+write_artifacts = _validator.write_artifacts
 
 ROOT_ROW = "| `00-product/01-scope.md` | M0 |"
 ROOT_META = "<!-- roadmap-task id=PRODUCT-01-T01 milestone=M0 depends_on=- mode=parallel locks=product-contracts -->"
@@ -1699,7 +1711,7 @@ def test_cli_second_replace_failure_returns_one_then_repairs(
         real_replace(source, destination)
 
     with monkeypatch.context() as scoped:
-        scoped.setattr("scripts.validate_roadmap.os.replace", fail_second)
+        scoped.setattr(_validator.os, "replace", fail_second)
         assert main(["--write"], root=tmp_path) == 1
     assert main(["--check"], root=tmp_path) == 1
     assert main(["--write"], root=tmp_path) == 0
