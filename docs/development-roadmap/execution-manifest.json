@@ -1,0 +1,7136 @@
+{
+  "milestones": [
+    "M0",
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5",
+    "M6",
+    "M7",
+    "M8",
+    "M9"
+  ],
+  "schema_version": 1,
+  "tasks": [
+    {
+      "depends_on": [],
+      "document_id": "PRODUCT-01",
+      "id": "PRODUCT-01-T01",
+      "line": 137,
+      "locks": [
+        "product-contracts"
+      ],
+      "milestone": "M0",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/00-product-strategy/01-product-scope.md",
+      "title": "Capture the M0 bet"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T01"
+      ],
+      "document_id": "PRODUCT-01",
+      "id": "PRODUCT-01-T02",
+      "line": 139,
+      "locks": [
+        "product-contracts"
+      ],
+      "milestone": "M0",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/00-product-strategy/01-product-scope.md",
+      "title": "Run the narrowness test"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T02"
+      ],
+      "document_id": "PRODUCT-01",
+      "id": "PRODUCT-01-T03",
+      "line": 141,
+      "locks": [
+        "product-contracts",
+        "architecture-contracts"
+      ],
+      "milestone": "M0",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/00-product-strategy/01-product-scope.md",
+      "title": "Register artifact and authority vocabulary"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T03"
+      ],
+      "document_id": "PRODUCT-01",
+      "id": "PRODUCT-01-T04",
+      "line": 143,
+      "locks": [
+        "product-contracts"
+      ],
+      "milestone": "M0",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/00-product-strategy/01-product-scope.md",
+      "title": "Freeze non-goals for the first experiment"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T02"
+      ],
+      "document_id": "PRODUCT-02",
+      "id": "PRODUCT-02-T01",
+      "line": 111,
+      "locks": [
+        "product-contracts"
+      ],
+      "milestone": "M0",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/00-product-strategy/02-success-metrics.md",
+      "title": "Register metric definitions"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-02-T01"
+      ],
+      "document_id": "PRODUCT-02",
+      "id": "PRODUCT-02-T02",
+      "line": 113,
+      "locks": [
+        "product-contracts"
+      ],
+      "milestone": "M0",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/00-product-strategy/02-success-metrics.md",
+      "title": "Capture baseline evidence"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T02",
+        "PRODUCT-02-T01"
+      ],
+      "document_id": "PRODUCT-03",
+      "id": "PRODUCT-03-T01",
+      "line": 106,
+      "locks": [
+        "product-contracts",
+        "compliance-policy",
+        "milestone-gate"
+      ],
+      "milestone": "M0",
+      "mode": "serial",
+      "source": "docs/development-roadmap/00-product-strategy/03-risk-register-and-kill-criteria.md",
+      "title": "Approve M0 risk posture"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-03-T01"
+      ],
+      "document_id": "PRODUCT-03",
+      "id": "PRODUCT-03-T02",
+      "line": 108,
+      "locks": [
+        "product-contracts",
+        "milestone-gate"
+      ],
+      "milestone": "M0",
+      "mode": "serial",
+      "source": "docs/development-roadmap/00-product-strategy/03-risk-register-and-kill-criteria.md",
+      "title": "Review sunk-cost exposure at every gate"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T03"
+      ],
+      "document_id": "WF-00",
+      "id": "WF-00-T01",
+      "line": 67,
+      "locks": [
+        "architecture-contracts",
+        "workflow-runtime"
+      ],
+      "milestone": "M1",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/00-dbos-selection-and-temporal-fallback.md",
+      "title": "Freeze runtime responsibility map"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-03-T01"
+      ],
+      "document_id": "SEC-01",
+      "id": "SEC-01-T01",
+      "line": 101,
+      "locks": [
+        "architecture-contracts",
+        "compliance-policy"
+      ],
+      "milestone": "M1",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/08-security-and-compliance/01-threat-model.md",
+      "title": "Freeze the planned asset and Critical threat-control registry"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T03",
+        "SEC-01-T01"
+      ],
+      "document_id": "DB-03",
+      "id": "DB-03-T01",
+      "line": 652,
+      "locks": [
+        "architecture-contracts",
+        "provider-contracts"
+      ],
+      "milestone": "M1",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/03-leads-campaigns-and-messages.md",
+      "title": "Publish pure Gmail-facing composite contracts"
+    },
+    {
+      "depends_on": [
+        "SEC-01-T01"
+      ],
+      "document_id": "SEC-03",
+      "id": "SEC-03-T01",
+      "line": 82,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/03-secrets-and-oauth-token-security.md",
+      "title": "Implement the key/object contracts"
+    },
+    {
+      "depends_on": [
+        "DB-03-T01",
+        "SEC-03-T01"
+      ],
+      "document_id": "PROVIDER-01",
+      "id": "PROVIDER-01-T01",
+      "line": 165,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M1",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/01-gmail-oauth-and-adapter.md",
+      "title": "Freeze disposable Gmail OAuth and wire contracts"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-01-T01",
+        "DB-03-T01"
+      ],
+      "document_id": "PROVIDER-01",
+      "id": "PROVIDER-01-T02",
+      "line": 167,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M1",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/01-gmail-oauth-and-adapter.md",
+      "title": "Implement strict send contracts and MIME builder"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-01-T01"
+      ],
+      "document_id": "PROVIDER-02",
+      "id": "PROVIDER-02-T01",
+      "line": 85,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M1",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/02-gmail-history-sync.md",
+      "title": "Implement strict read adapter"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T03"
+      ],
+      "document_id": "TEST-01",
+      "id": "TEST-01-T01",
+      "line": 144,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/01-testing-strategy.md",
+      "title": "Freeze the coverage registry"
+    },
+    {
+      "depends_on": [
+        "TEST-01-T01"
+      ],
+      "document_id": "TEST-01",
+      "id": "TEST-01-T02",
+      "line": 146,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/01-testing-strategy.md",
+      "title": "Freeze and parse the command registry"
+    },
+    {
+      "depends_on": [
+        "TEST-01-T02"
+      ],
+      "document_id": "TEST-01",
+      "id": "TEST-01-T03",
+      "line": 148,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/01-testing-strategy.md",
+      "title": "Build environment and fixture isolation"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-01-T02",
+        "TEST-01-T03",
+        "PROVIDER-01-T01"
+      ],
+      "document_id": "TEST-04",
+      "id": "TEST-04-T01",
+      "line": 58,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M1",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/10-testing/04-gmail-side-effect-tests.md",
+      "title": "Build strict offline Gmail fixtures"
+    },
+    {
+      "depends_on": [
+        "TEST-04-T01",
+        "TEST-01-T02",
+        "PROVIDER-01-T01"
+      ],
+      "document_id": "TEST-04",
+      "id": "TEST-04-T02",
+      "line": 60,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/04-gmail-side-effect-tests.md",
+      "title": "Close offline Gmail command ownership"
+    },
+    {
+      "depends_on": [
+        "TEST-01-T03"
+      ],
+      "document_id": "TEST-01",
+      "id": "TEST-01-T04",
+      "line": 150,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/01-testing-strategy.md",
+      "title": "Implement evidence capture"
+    },
+    {
+      "depends_on": [
+        "WF-00-T01",
+        "SEC-01-T01",
+        "TEST-01-T01",
+        "TEST-01-T02",
+        "TEST-01-T03",
+        "TEST-01-T04"
+      ],
+      "document_id": "WF-01",
+      "id": "WF-01-T01",
+      "line": 196,
+      "locks": [
+        "database-schema",
+        "workflow-runtime",
+        "gmail-side-effects",
+        "live-environment"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/01-dbos-production-acceptance-spike.md",
+      "title": "Provision the isolated harness from attested external resources"
+    },
+    {
+      "depends_on": [
+        "WF-01-T01"
+      ],
+      "document_id": "WF-01",
+      "id": "WF-01-T02",
+      "line": 198,
+      "locks": [
+        "workflow-runtime",
+        "agent-runtime",
+        "provider-contracts",
+        "gmail-side-effects",
+        "live-environment"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/01-dbos-production-acceptance-spike.md",
+      "title": "Implement typed finite fixture and sole gateway"
+    },
+    {
+      "depends_on": [
+        "WF-01-T02"
+      ],
+      "document_id": "WF-01",
+      "id": "WF-01-T03",
+      "line": 200,
+      "locks": [
+        "workflow-runtime",
+        "gmail-side-effects",
+        "security-runtime",
+        "telemetry-catalog",
+        "live-environment"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/01-dbos-production-acceptance-spike.md",
+      "title": "Implement kill/reconciliation instrumentation"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-03-T02",
+        "WF-01-T03"
+      ],
+      "document_id": "PRODUCT-03",
+      "id": "PRODUCT-03-T03",
+      "line": 110,
+      "locks": [
+        "security-runtime",
+        "compliance-policy"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/00-product-strategy/03-risk-register-and-kill-criteria.md",
+      "title": "Encode the reusable fail-closed stop interface"
+    },
+    {
+      "depends_on": [
+        "WF-01-T01",
+        "WF-01-T02",
+        "WF-01-T03"
+      ],
+      "document_id": "ARCH-01",
+      "id": "ARCH-01-T01",
+      "line": 131,
+      "locks": [
+        "architecture-contracts",
+        "workflow-runtime",
+        "gmail-side-effects",
+        "milestone-gate"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/01-architecture/01-target-system-architecture.md",
+      "title": "Run M1 DBOS production acceptance"
+    },
+    {
+      "depends_on": [
+        "WF-00-T01",
+        "WF-01-T01",
+        "WF-01-T02",
+        "WF-01-T03"
+      ],
+      "document_id": "WF-00",
+      "id": "WF-00-T02",
+      "line": 69,
+      "locks": [
+        "workflow-runtime",
+        "gmail-side-effects",
+        "milestone-gate"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/00-dbos-selection-and-temporal-fallback.md",
+      "title": "Execute WF-01 acceptance suite"
+    },
+    {
+      "depends_on": [
+        "WF-01-T03"
+      ],
+      "document_id": "WF-01",
+      "id": "WF-01-T04",
+      "line": 202,
+      "locks": [
+        "workflow-runtime",
+        "gmail-side-effects",
+        "telemetry-catalog",
+        "milestone-gate",
+        "live-environment"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/01-dbos-production-acceptance-spike.md",
+      "title": "Run eight-item matrix from clean state"
+    },
+    {
+      "depends_on": [
+        "WF-01-T01",
+        "WF-01-T02",
+        "WF-01-T03",
+        "TEST-01-T03"
+      ],
+      "document_id": "TEST-03",
+      "id": "TEST-03-T01",
+      "line": 61,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M1",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/10-testing/03-workflow-recovery-tests.md",
+      "title": "Build the process-level kill harness"
+    },
+    {
+      "depends_on": [
+        "TEST-03-T01",
+        "WF-01-T01",
+        "WF-01-T02",
+        "WF-01-T03",
+        "TEST-01-T04"
+      ],
+      "document_id": "TEST-03",
+      "id": "TEST-03-T02",
+      "line": 63,
+      "locks": [
+        "workflow-runtime",
+        "gmail-side-effects",
+        "milestone-gate",
+        "live-environment"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/03-workflow-recovery-tests.md",
+      "title": "Execute the independent M1 runtime matrix"
+    },
+    {
+      "depends_on": [
+        "WF-01-T04",
+        "TEST-03-T02"
+      ],
+      "document_id": "WF-01",
+      "id": "WF-01-T05",
+      "line": 204,
+      "locks": [
+        "database-schema",
+        "workflow-runtime",
+        "gmail-side-effects",
+        "backup-restore",
+        "milestone-gate"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/01-dbos-production-acceptance-spike.md",
+      "title": "Export evidence and dispose schema"
+    },
+    {
+      "depends_on": [
+        "TEST-03-T02",
+        "WF-01-T05"
+      ],
+      "document_id": "TEST-03",
+      "id": "TEST-03-T03",
+      "line": 65,
+      "locks": [
+        "milestone-gate",
+        "workflow-runtime"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/03-workflow-recovery-tests.md",
+      "title": "Independently verify the exported M1 acceptance or rejection bundle"
+    },
+    {
+      "depends_on": [
+        "WF-00-T02",
+        "TEST-03-T03",
+        "WF-01-T05"
+      ],
+      "document_id": "WF-00",
+      "id": "WF-00-T03",
+      "line": 71,
+      "locks": [
+        "workflow-runtime",
+        "milestone-gate"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/00-dbos-selection-and-temporal-fallback.md",
+      "title": "Emit the signed discriminated DBOS gate"
+    },
+    {
+      "depends_on": [
+        "WF-00-T03"
+      ],
+      "document_id": "WF-00",
+      "id": "WF-00-T04",
+      "line": 73,
+      "locks": [
+        "workflow-runtime",
+        "dependency-lockfiles",
+        "compose-topology",
+        "milestone-gate",
+        "gmail-side-effects",
+        "live-environment"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/00-dbos-selection-and-temporal-fallback.md",
+      "title": "Resolve one selected runtime and execute fallback only on rejection"
+    },
+    {
+      "depends_on": [
+        "WF-00-T04"
+      ],
+      "document_id": "WF-00",
+      "id": "WF-00-T05",
+      "line": 75,
+      "locks": [
+        "architecture-contracts",
+        "milestone-gate"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/00-dbos-selection-and-temporal-fallback.md",
+      "title": "Reconsider adjacent layers only from new evidence"
+    },
+    {
+      "depends_on": [
+        "WF-01-T05",
+        "WF-00-T04"
+      ],
+      "document_id": "WF-01",
+      "id": "WF-01-T06",
+      "line": 206,
+      "locks": [
+        "architecture-contracts",
+        "workflow-runtime",
+        "dependency-lockfiles",
+        "compose-topology",
+        "milestone-gate"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/01-dbos-production-acceptance-spike.md",
+      "title": "Verify the converged selected-runtime branch"
+    },
+    {
+      "depends_on": [
+        "TEST-01-T02"
+      ],
+      "document_id": "INFRA-01",
+      "id": "INFRA-01-T01",
+      "line": 63,
+      "locks": [
+        "dependency-lockfiles"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/01-local-development.md",
+      "title": "Freeze prerequisites and preflight"
+    },
+    {
+      "depends_on": [
+        "INFRA-01-T01"
+      ],
+      "document_id": "INFRA-01",
+      "id": "INFRA-01-T02",
+      "line": 65,
+      "locks": [
+        "compose-topology"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/01-local-development.md",
+      "title": "Implement isolated host/Compose modes"
+    },
+    {
+      "depends_on": [
+        "INFRA-01-T02"
+      ],
+      "document_id": "INFRA-01",
+      "id": "INFRA-01-T03",
+      "line": 67,
+      "locks": [
+        "compose-topology"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/01-local-development.md",
+      "title": "Implement safe reset and cleanup"
+    },
+    {
+      "depends_on": [
+        "INFRA-01-T03"
+      ],
+      "document_id": "INFRA-01",
+      "id": "INFRA-01-T04",
+      "line": 69,
+      "locks": [
+        "compose-topology"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/01-local-development.md",
+      "title": "Document and retain local smoke evidence"
+    },
+    {
+      "depends_on": [
+        "INFRA-01-T04",
+        "TEST-01-T01",
+        "TEST-01-T02"
+      ],
+      "document_id": "INFRA-01",
+      "id": "INFRA-01-T05",
+      "line": 71,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M1",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/01-local-development.md",
+      "title": "Close local command ownership"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T03"
+      ],
+      "document_id": "ARCH-03",
+      "id": "ARCH-03-T01",
+      "line": 316,
+      "locks": [
+        "architecture-contracts",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/01-architecture/03-domain-events-and-state-machines.md",
+      "title": "Encode enums and transition tables at M2"
+    },
+    {
+      "depends_on": [
+        "ARCH-03-T01"
+      ],
+      "document_id": "ARCH-03",
+      "id": "ARCH-03-T02",
+      "line": 318,
+      "locks": [
+        "architecture-contracts",
+        "database-schema",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/01-architecture/03-domain-events-and-state-machines.md",
+      "title": "Persist events and idempotency atomically"
+    },
+    {
+      "depends_on": [
+        "ARCH-03-T02",
+        "WF-00-T04"
+      ],
+      "document_id": "ARCH-03",
+      "id": "ARCH-03-T03",
+      "line": 320,
+      "locks": [
+        "architecture-contracts",
+        "workflow-runtime",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/01-architecture/03-domain-events-and-state-machines.md",
+      "title": "Map runtime states explicitly"
+    },
+    {
+      "depends_on": [
+        "ARCH-03-T01"
+      ],
+      "document_id": "DB-01",
+      "id": "DB-01-T01",
+      "line": 266,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/01-core-data-model.md",
+      "title": "Create core domain types"
+    },
+    {
+      "depends_on": [
+        "DB-01-T01"
+      ],
+      "document_id": "DB-01",
+      "id": "DB-01-T02",
+      "line": 268,
+      "locks": [
+        "database-schema",
+        "migration-head"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/01-core-data-model.md",
+      "title": "Create the M2 core migration"
+    },
+    {
+      "depends_on": [
+        "ARCH-03-T01",
+        "DB-01-T02"
+      ],
+      "document_id": "ARCH-02",
+      "id": "ARCH-02-T01",
+      "line": 95,
+      "locks": [
+        "architecture-contracts",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/01-architecture/02-module-boundaries.md",
+      "title": "Create inward contracts at M2"
+    },
+    {
+      "depends_on": [
+        "ARCH-01-T01",
+        "ARCH-02-T01",
+        "ARCH-03-T01"
+      ],
+      "document_id": "ARCH-01",
+      "id": "ARCH-01-T02",
+      "line": 133,
+      "locks": [
+        "architecture-contracts",
+        "database-schema",
+        "migration-head",
+        "milestone-gate"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/01-architecture/01-target-system-architecture.md",
+      "title": "Build the M2 product core"
+    },
+    {
+      "depends_on": [
+        "ARCH-02-T01",
+        "ARCH-03-T01"
+      ],
+      "document_id": "ARCH-02",
+      "id": "ARCH-02-T02",
+      "line": 97,
+      "locks": [
+        "architecture-contracts",
+        "database-schema",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/01-architecture/02-module-boundaries.md",
+      "title": "Implement PostgreSQL unit of work"
+    },
+    {
+      "depends_on": [
+        "DB-01-T02"
+      ],
+      "document_id": "DB-01",
+      "id": "DB-01-T03",
+      "line": 270,
+      "locks": [
+        "database-schema",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/01-core-data-model.md",
+      "title": "Implement optimistic unit of work"
+    },
+    {
+      "depends_on": [
+        "DB-01-T03",
+        "WF-00-T04"
+      ],
+      "document_id": "DB-01",
+      "id": "DB-01-T04",
+      "line": 272,
+      "locks": [
+        "database-schema",
+        "workflow-runtime",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/01-core-data-model.md",
+      "title": "Map runtime runs"
+    },
+    {
+      "depends_on": [
+        "DB-01-T04"
+      ],
+      "document_id": "DB-01",
+      "id": "DB-01-T05",
+      "line": 274,
+      "locks": [
+        "database-schema",
+        "security-runtime"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/01-core-data-model.md",
+      "title": "Enforce both send controls default-off"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T03",
+        "PRODUCT-02-T01"
+      ],
+      "document_id": "DB-02",
+      "id": "DB-02-T01",
+      "line": 298,
+      "locks": [
+        "product-contracts",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/02-experiment-and-offer-schema.md",
+      "title": "Encode immutable brief and decision models"
+    },
+    {
+      "depends_on": [
+        "DB-02-T01"
+      ],
+      "document_id": "DB-02",
+      "id": "DB-02-T02",
+      "line": 300,
+      "locks": [
+        "database-schema",
+        "migration-head"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/02-experiment-and-offer-schema.md",
+      "title": "Migrate normalized experiment records"
+    },
+    {
+      "depends_on": [
+        "DB-02-T02"
+      ],
+      "document_id": "DB-02",
+      "id": "DB-02-T03",
+      "line": 302,
+      "locks": [
+        "database-schema",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/02-experiment-and-offer-schema.md",
+      "title": "Implement version append repositories"
+    },
+    {
+      "depends_on": [
+        "DB-02-T03"
+      ],
+      "document_id": "DB-02",
+      "id": "DB-02-T04",
+      "line": 304,
+      "locks": [
+        "database-schema",
+        "backend-domain",
+        "telemetry-catalog"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/02-experiment-and-offer-schema.md",
+      "title": "Implement deterministic metric snapshot"
+    },
+    {
+      "depends_on": [
+        "DB-02-T04"
+      ],
+      "document_id": "DB-02",
+      "id": "DB-02-T05",
+      "line": 306,
+      "locks": [
+        "database-schema",
+        "backend-domain",
+        "milestone-gate"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/02-experiment-and-offer-schema.md",
+      "title": "Record operator decision atomically"
+    },
+    {
+      "depends_on": [
+        "DB-03-T01",
+        "ARCH-03-T01"
+      ],
+      "document_id": "DB-03",
+      "id": "DB-03-T02",
+      "line": 654,
+      "locks": [
+        "database-schema",
+        "migration-head"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/03-leads-campaigns-and-messages.md",
+      "title": "Migrate identity and lead records"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T03"
+      ],
+      "document_id": "DB-04",
+      "id": "DB-04-T01",
+      "line": 301,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/04-agent-artifacts-and-evidence.md",
+      "title": "Define typed envelopes and artifact registry"
+    },
+    {
+      "depends_on": [
+        "DB-04-T01"
+      ],
+      "document_id": "DB-04",
+      "id": "DB-04-T02",
+      "line": 303,
+      "locks": [
+        "database-schema",
+        "migration-head",
+        "agent-artifacts"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/04-agent-artifacts-and-evidence.md",
+      "title": "Migrate immutable run/artifact/evidence tables"
+    },
+    {
+      "depends_on": [
+        "ARCH-03-T01"
+      ],
+      "document_id": "DB-05",
+      "id": "DB-05-T01",
+      "line": 322,
+      "locks": [
+        "architecture-contracts",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/05-audit-events-and-idempotency.md",
+      "title": "Encode event schemas/catalog"
+    },
+    {
+      "depends_on": [
+        "DB-05-T01"
+      ],
+      "document_id": "DB-05",
+      "id": "DB-05-T02",
+      "line": 324,
+      "locks": [
+        "database-schema",
+        "migration-head"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/05-audit-events-and-idempotency.md",
+      "title": "Migrate append-only safety tables"
+    },
+    {
+      "depends_on": [
+        "DB-03-T02",
+        "ARCH-03-T01",
+        "DB-05-T02"
+      ],
+      "document_id": "DB-03",
+      "id": "DB-03-T03",
+      "line": 656,
+      "locks": [
+        "database-schema",
+        "migration-head",
+        "compliance-policy"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/03-leads-campaigns-and-messages.md",
+      "title": "Migrate campaigns, approvals, and suppression"
+    },
+    {
+      "depends_on": [
+        "DB-03-T03",
+        "ARCH-03-T01"
+      ],
+      "document_id": "DB-03",
+      "id": "DB-03-T04",
+      "line": 658,
+      "locks": [
+        "database-schema",
+        "migration-head"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/03-leads-campaigns-and-messages.md",
+      "title": "Migrate message and send ledger"
+    },
+    {
+      "depends_on": [
+        "DB-05-T02"
+      ],
+      "document_id": "DB-05",
+      "id": "DB-05-T03",
+      "line": 326,
+      "locks": [
+        "database-schema",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/05-audit-events-and-idempotency.md",
+      "title": "Implement idempotent command middleware"
+    },
+    {
+      "depends_on": [
+        "DB-05-T03"
+      ],
+      "document_id": "DB-05",
+      "id": "DB-05-T04",
+      "line": 328,
+      "locks": [
+        "database-schema",
+        "workflow-runtime",
+        "backend-domain"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/05-audit-events-and-idempotency.md",
+      "title": "Implement outbox and internal consumer atomicity"
+    },
+    {
+      "depends_on": [
+        "DB-01-T02",
+        "DB-02-T02",
+        "DB-03-T04",
+        "DB-04-T02",
+        "DB-05-T02"
+      ],
+      "document_id": "DB-06",
+      "id": "DB-06-T01",
+      "line": 317,
+      "locks": [
+        "database-schema",
+        "migration-head"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/06-migrations-seeding-and-retention.md",
+      "title": "Author the M2 revision chain"
+    },
+    {
+      "depends_on": [
+        "DB-06-T01"
+      ],
+      "document_id": "DB-06",
+      "id": "DB-06-T02",
+      "line": 319,
+      "locks": [
+        "database-schema"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/06-migrations-seeding-and-retention.md",
+      "title": "Implement deterministic seeding"
+    },
+    {
+      "depends_on": [
+        "DB-06-T02"
+      ],
+      "document_id": "DB-06",
+      "id": "DB-06-T03",
+      "line": 321,
+      "locks": [
+        "database-schema",
+        "backup-restore",
+        "milestone-gate"
+      ],
+      "milestone": "M2",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/06-migrations-seeding-and-retention.md",
+      "title": "Prove backup and fresh restore"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-01-T03",
+        "DB-06-T01"
+      ],
+      "document_id": "SEC-06",
+      "id": "SEC-06-T01",
+      "line": 102,
+      "locks": [
+        "compliance-policy"
+      ],
+      "milestone": "M2",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/08-security-and-compliance/06-data-privacy-and-retention.md",
+      "title": "Publish the early privacy/minimization interface"
+    },
+    {
+      "depends_on": [
+        "DB-06-T03"
+      ],
+      "document_id": "DB-06",
+      "id": "DB-06-T04",
+      "line": 323,
+      "locks": [
+        "database-schema",
+        "migration-head",
+        "ci-release",
+        "milestone-gate"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/06-migrations-seeding-and-retention.md",
+      "title": "Implement the later-migration evidence gate"
+    },
+    {
+      "depends_on": [
+        "DB-01-T02",
+        "DB-04-T02"
+      ],
+      "document_id": "AGENT-01",
+      "id": "AGENT-01-T01",
+      "line": 678,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/01-agent-runtime-and-contracts.md",
+      "title": "Implement frozen shared models and registries"
+    },
+    {
+      "depends_on": [
+        "DB-02-T01",
+        "DB-04-T01"
+      ],
+      "document_id": "AGENT-02",
+      "id": "AGENT-02-T01",
+      "line": 117,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/02-idea-discovery-agent.md",
+      "title": "Encode input/output and prompt registry"
+    },
+    {
+      "depends_on": [
+        "DB-02-T01",
+        "DB-02-T03"
+      ],
+      "document_id": "AGENT-03",
+      "id": "AGENT-03-T01",
+      "line": 110,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/03-offer-design-agent.md",
+      "title": "Encode offer schemas/prompt/config"
+    },
+    {
+      "depends_on": [
+        "DB-02-T03"
+      ],
+      "document_id": "AGENT-04",
+      "id": "AGENT-04-T01",
+      "line": 112,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/04-market-research-agent.md",
+      "title": "Encode market schemas and source policy"
+    },
+    {
+      "depends_on": [
+        "DB-04-T01",
+        "DB-02-T04"
+      ],
+      "document_id": "AGENT-09",
+      "id": "AGENT-09-T01",
+      "line": 113,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/09-experiment-evaluation-agent.md",
+      "title": "Encode frozen metric/evidence/recommendation schemas"
+    },
+    {
+      "depends_on": [
+        "DB-02-T03",
+        "DB-03-T03",
+        "DB-03-T04",
+        "DB-04-T01"
+      ],
+      "document_id": "AGENT-10",
+      "id": "AGENT-10-T01",
+      "line": 352,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/10-agent-evals-and-versioning.md",
+      "title": "Freeze eight complete suites and the signed non-model M3 fixture manifest"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T01",
+        "AGENT-10-T01"
+      ],
+      "document_id": "AGENT-01",
+      "id": "AGENT-01-T02",
+      "line": 680,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/01-agent-runtime-and-contracts.md",
+      "title": "Implement least-authority dependency composition"
+    },
+    {
+      "depends_on": [
+        "AGENT-02-T01",
+        "AGENT-01-T01",
+        "AGENT-01-T02"
+      ],
+      "document_id": "AGENT-02",
+      "id": "AGENT-02-T02",
+      "line": 119,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/02-idea-discovery-agent.md",
+      "title": "Implement bounded agent and evidence tool"
+    },
+    {
+      "depends_on": [
+        "AGENT-03-T01",
+        "AGENT-01-T01",
+        "AGENT-01-T02"
+      ],
+      "document_id": "AGENT-03",
+      "id": "AGENT-03-T02",
+      "line": 112,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/03-offer-design-agent.md",
+      "title": "Implement bounded execution"
+    },
+    {
+      "depends_on": [
+        "AGENT-04-T01",
+        "AGENT-01-T01",
+        "AGENT-01-T02"
+      ],
+      "document_id": "AGENT-04",
+      "id": "AGENT-04-T02",
+      "line": 114,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/04-market-research-agent.md",
+      "title": "Implement bounded read-only tool flow"
+    },
+    {
+      "depends_on": [
+        "DB-03-T03",
+        "AGENT-10-T01"
+      ],
+      "document_id": "AGENT-05",
+      "id": "AGENT-05-T01",
+      "line": 111,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/05-lead-research-agent.md",
+      "title": "Encode minimized schemas/source policy"
+    },
+    {
+      "depends_on": [
+        "AGENT-05-T01",
+        "AGENT-01-T01",
+        "AGENT-01-T02"
+      ],
+      "document_id": "AGENT-05",
+      "id": "AGENT-05-T02",
+      "line": 113,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/05-lead-research-agent.md",
+      "title": "Implement bounded business tools"
+    },
+    {
+      "depends_on": [
+        "DB-03-T03",
+        "AGENT-10-T01"
+      ],
+      "document_id": "AGENT-06",
+      "id": "AGENT-06-T01",
+      "line": 112,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/06-lead-qualification-agent.md",
+      "title": "Encode frozen criteria/assessment schemas"
+    },
+    {
+      "depends_on": [
+        "AGENT-06-T01",
+        "AGENT-01-T01",
+        "AGENT-01-T02"
+      ],
+      "document_id": "AGENT-06",
+      "id": "AGENT-06-T02",
+      "line": 114,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/06-lead-qualification-agent.md",
+      "title": "Implement bounded evidence classification"
+    },
+    {
+      "depends_on": [
+        "AGENT-10-T01",
+        "DB-02-T03",
+        "DB-03-T03"
+      ],
+      "document_id": "AGENT-07",
+      "id": "AGENT-07-T01",
+      "line": 107,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/07-outreach-drafting-agent.md",
+      "title": "Encode no-authority draft schemas"
+    },
+    {
+      "depends_on": [
+        "AGENT-07-T01",
+        "AGENT-01-T01",
+        "AGENT-01-T02"
+      ],
+      "document_id": "AGENT-07",
+      "id": "AGENT-07-T02",
+      "line": 109,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/07-outreach-drafting-agent.md",
+      "title": "Implement bounded drafting"
+    },
+    {
+      "depends_on": [
+        "DB-03-T04",
+        "AGENT-10-T01"
+      ],
+      "document_id": "AGENT-08",
+      "id": "AGENT-08-T01",
+      "line": 116,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/08-reply-classification-agent.md",
+      "title": "Encode taxonomy/input/output/spans"
+    },
+    {
+      "depends_on": [
+        "AGENT-08-T01",
+        "AGENT-01-T01",
+        "AGENT-01-T02"
+      ],
+      "document_id": "AGENT-08",
+      "id": "AGENT-08-T02",
+      "line": 118,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/08-reply-classification-agent.md",
+      "title": "Implement bounded hostile-content classification"
+    },
+    {
+      "depends_on": [
+        "AGENT-09-T01",
+        "AGENT-01-T01",
+        "AGENT-01-T02"
+      ],
+      "document_id": "AGENT-09",
+      "id": "AGENT-09-T02",
+      "line": 115,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/09-experiment-evaluation-agent.md",
+      "title": "Implement bounded evidence-grounded recommendation"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T01",
+        "DB-01-T01"
+      ],
+      "document_id": "PROVIDER-03",
+      "id": "PROVIDER-03-T01",
+      "line": 104,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/03-model-provider.md",
+      "title": "Implement exact model protocol"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-03-T01"
+      ],
+      "document_id": "PROVIDER-03",
+      "id": "PROVIDER-03-T02",
+      "line": 106,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/03-model-provider.md",
+      "title": "Implement OpenAI Responses adapter"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-03-T02"
+      ],
+      "document_id": "PROVIDER-03",
+      "id": "PROVIDER-03-T03",
+      "line": 108,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/03-model-provider.md",
+      "title": "Implement ceilings and cancellation"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-03-T03"
+      ],
+      "document_id": "PROVIDER-03",
+      "id": "PROVIDER-03-T04",
+      "line": 110,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/03-model-provider.md",
+      "title": "Implement signed live-capture/fixture adapters"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T01",
+        "DB-01-T01"
+      ],
+      "document_id": "PROVIDER-04",
+      "id": "PROVIDER-04-T01",
+      "line": 100,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/04-search-provider.md",
+      "title": "Implement exact capability service"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-04-T01"
+      ],
+      "document_id": "PROVIDER-04",
+      "id": "PROVIDER-04-T02",
+      "line": 102,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/04-search-provider.md",
+      "title": "Implement Brave raw adapter and filters"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T01",
+        "DB-01-T01"
+      ],
+      "document_id": "PROVIDER-05",
+      "id": "PROVIDER-05-T01",
+      "line": 103,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/05-page-fetching-and-extraction.md",
+      "title": "Implement exact evidence/page contracts"
+    },
+    {
+      "depends_on": [
+        "DB-04-T02",
+        "PROVIDER-05-T01"
+      ],
+      "document_id": "DB-04",
+      "id": "DB-04-T03",
+      "line": 305,
+      "locks": [
+        "agent-artifacts",
+        "provider-contracts",
+        "compliance-policy"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/04-agent-artifacts-and-evidence.md",
+      "title": "Implement evidence capture and linking"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-05-T01"
+      ],
+      "document_id": "PROVIDER-05",
+      "id": "PROVIDER-05-T02",
+      "line": 105,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/05-page-fetching-and-extraction.md",
+      "title": "Implement scoped evidence reader"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T01",
+        "DB-01-T01"
+      ],
+      "document_id": "PROVIDER-06",
+      "id": "PROVIDER-06-T01",
+      "line": 99,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/06-enrichment-provider.md",
+      "title": "Implement exact two-family contracts"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T01",
+        "DB-04-T02",
+        "DB-05-T03"
+      ],
+      "document_id": "BACKEND-01",
+      "id": "BACKEND-01-T01",
+      "line": 95,
+      "locks": [
+        "backend-domain",
+        "agent-artifacts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/01-domain-services.md",
+      "title": "Implement shared M3 recording and evaluation sole writers"
+    },
+    {
+      "depends_on": [
+        "DB-04-T03",
+        "BACKEND-01-T01",
+        "ARCH-03-T01"
+      ],
+      "document_id": "DB-04",
+      "id": "DB-04-T04",
+      "line": 307,
+      "locks": [
+        "database-schema",
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/04-agent-artifacts-and-evidence.md",
+      "title": "Implement validation and acceptance transitions"
+    },
+    {
+      "depends_on": [
+        "SEC-06-T01"
+      ],
+      "document_id": "OBS-01",
+      "id": "OBS-01-T01",
+      "line": 98,
+      "locks": [
+        "telemetry-catalog"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/01-structured-events-and-correlation.md",
+      "title": "Implement schema/registry/redaction"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-03-T01",
+        "PROVIDER-04-T01",
+        "PROVIDER-05-T01",
+        "PROVIDER-06-T01",
+        "PROVIDER-01-T02",
+        "PROVIDER-02-T01",
+        "PROVIDER-01-T01"
+      ],
+      "document_id": "OBS-03",
+      "id": "OBS-03-T01",
+      "line": 76,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/03-provider-cost-accounting.md",
+      "title": "Implement currency/price/usage contracts"
+    },
+    {
+      "depends_on": [
+        "OBS-03-T01",
+        "DB-05-T02"
+      ],
+      "document_id": "OBS-03",
+      "id": "OBS-03-T02",
+      "line": 78,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/03-provider-cost-accounting.md",
+      "title": "Implement reservation/reconciliation"
+    },
+    {
+      "depends_on": [
+        "DB-05-T04",
+        "PROVIDER-03-T04",
+        "OBS-03-T02"
+      ],
+      "document_id": "DB-05",
+      "id": "DB-05-T05",
+      "line": 330,
+      "locks": [
+        "database-schema",
+        "provider-contracts",
+        "backend-domain",
+        "telemetry-catalog"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/05-audit-events-and-idempotency.md",
+      "title": "Implement policy/cost reconciliation"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-02-T02",
+        "DB-05-T05"
+      ],
+      "document_id": "PRODUCT-02",
+      "id": "PRODUCT-02-T03",
+      "line": 115,
+      "locks": [
+        "backend-domain",
+        "telemetry-catalog"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/00-product-strategy/02-success-metrics.md",
+      "title": "Implement gate queries in milestone order"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T02",
+        "OBS-03-T02"
+      ],
+      "document_id": "AGENT-01",
+      "id": "AGENT-01-T03",
+      "line": 682,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/01-agent-runtime-and-contracts.md",
+      "title": "Implement finite execution and ledger"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T03",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "OBS-03-T02"
+      ],
+      "document_id": "AGENT-01",
+      "id": "AGENT-01-T04",
+      "line": 684,
+      "locks": [
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/01-agent-runtime-and-contracts.md",
+      "title": "Implement deterministic validation/persistence handoff"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T04"
+      ],
+      "document_id": "AGENT-01",
+      "id": "AGENT-01-T05",
+      "line": 686,
+      "locks": [
+        "agent-runtime"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/01-agent-runtime-and-contracts.md",
+      "title": "Prove authority and observability boundary"
+    },
+    {
+      "depends_on": [
+        "AGENT-02-T02",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "OBS-03-T02",
+        "AGENT-01-T04"
+      ],
+      "document_id": "AGENT-02",
+      "id": "AGENT-02-T03",
+      "line": 121,
+      "locks": [
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/02-idea-discovery-agent.md",
+      "title": "Implement deterministic validator/persistence handoff"
+    },
+    {
+      "depends_on": [
+        "AGENT-03-T02",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "OBS-03-T02",
+        "AGENT-01-T04"
+      ],
+      "document_id": "AGENT-03",
+      "id": "AGENT-03-T03",
+      "line": 114,
+      "locks": [
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/03-offer-design-agent.md",
+      "title": "Implement post-validation/persistence"
+    },
+    {
+      "depends_on": [
+        "AGENT-04-T02",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "OBS-03-T02",
+        "AGENT-01-T04",
+        "DB-04-T03"
+      ],
+      "document_id": "AGENT-04",
+      "id": "AGENT-04-T03",
+      "line": 116,
+      "locks": [
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/04-market-research-agent.md",
+      "title": "Implement evidence ingest/post-validation/persistence"
+    },
+    {
+      "depends_on": [
+        "AGENT-06-T02",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "OBS-03-T02",
+        "AGENT-01-T04"
+      ],
+      "document_id": "AGENT-06",
+      "id": "AGENT-06-T03",
+      "line": 116,
+      "locks": [
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/06-lead-qualification-agent.md",
+      "title": "Implement validator and deterministic gate handoff"
+    },
+    {
+      "depends_on": [
+        "AGENT-07-T02",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "OBS-03-T02",
+        "AGENT-01-T04"
+      ],
+      "document_id": "AGENT-07",
+      "id": "AGENT-07-T03",
+      "line": 111,
+      "locks": [
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/07-outreach-drafting-agent.md",
+      "title": "Implement validator/persistence/review handoff"
+    },
+    {
+      "depends_on": [
+        "AGENT-08-T02",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "OBS-03-T02",
+        "AGENT-01-T04"
+      ],
+      "document_id": "AGENT-08",
+      "id": "AGENT-08-T03",
+      "line": 120,
+      "locks": [
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/08-reply-classification-agent.md",
+      "title": "Implement validator/persistence/safety handoff"
+    },
+    {
+      "depends_on": [
+        "AGENT-09-T02",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "OBS-03-T02",
+        "AGENT-01-T04"
+      ],
+      "document_id": "AGENT-09",
+      "id": "AGENT-09-T03",
+      "line": 117,
+      "locks": [
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/09-experiment-evaluation-agent.md",
+      "title": "Implement deterministic validator and operator-decision handoff"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-04-T02",
+        "OBS-03-T02",
+        "DB-04-T03"
+      ],
+      "document_id": "PROVIDER-04",
+      "id": "PROVIDER-04-T03",
+      "line": 104,
+      "locks": [
+        "provider-contracts",
+        "backend-domain",
+        "agent-artifacts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/04-search-provider.md",
+      "title": "Implement evidence/ledger/cost handoff"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-04-T03"
+      ],
+      "document_id": "PROVIDER-04",
+      "id": "PROVIDER-04-T04",
+      "line": 106,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/04-search-provider.md",
+      "title": "Implement capture and fixture modes"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-04-T04"
+      ],
+      "document_id": "PROVIDER-04",
+      "id": "PROVIDER-04-T05",
+      "line": 108,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/04-search-provider.md",
+      "title": "Prove replacement/authority boundary"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-05-T02",
+        "OBS-03-T02",
+        "DB-04-T03"
+      ],
+      "document_id": "PROVIDER-05",
+      "id": "PROVIDER-05-T03",
+      "line": 107,
+      "locks": [
+        "provider-contracts",
+        "backend-domain",
+        "agent-artifacts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/05-page-fetching-and-extraction.md",
+      "title": "Implement safe HTTP extractor"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-05-T03"
+      ],
+      "document_id": "PROVIDER-05",
+      "id": "PROVIDER-05-T04",
+      "line": 109,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/05-page-fetching-and-extraction.md",
+      "title": "Implement hash/span and fixture gates"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-05-T04"
+      ],
+      "document_id": "PROVIDER-05",
+      "id": "PROVIDER-05-T05",
+      "line": 111,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/05-page-fetching-and-extraction.md",
+      "title": "Prove replacement/authority and retention"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-06-T01",
+        "PROVIDER-04-T03"
+      ],
+      "document_id": "PROVIDER-06",
+      "id": "PROVIDER-06-T02",
+      "line": 101,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/06-enrichment-provider.md",
+      "title": "Implement deterministic identity/locator composition"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-06-T02"
+      ],
+      "document_id": "PROVIDER-06",
+      "id": "PROVIDER-06-T03",
+      "line": 103,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/06-enrichment-provider.md",
+      "title": "Implement signed offline fixtures and replacement suite"
+    },
+    {
+      "depends_on": [
+        "ARCH-02-T02",
+        "PROVIDER-03-T04",
+        "PROVIDER-04-T04",
+        "PROVIDER-05-T04",
+        "PROVIDER-06-T03",
+        "TEST-04-T01"
+      ],
+      "document_id": "ARCH-02",
+      "id": "ARCH-02-T03",
+      "line": 99,
+      "locks": [
+        "architecture-contracts",
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/01-architecture/02-module-boundaries.md",
+      "title": "Wrap every provider-neutral recorded path at M3"
+    },
+    {
+      "depends_on": [
+        "AGENT-05-T02",
+        "PROVIDER-05-T03",
+        "PROVIDER-06-T03",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "OBS-03-T02",
+        "AGENT-01-T04",
+        "DB-04-T03"
+      ],
+      "document_id": "AGENT-05",
+      "id": "AGENT-05-T03",
+      "line": 115,
+      "locks": [
+        "agent-artifacts",
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/05-lead-research-agent.md",
+      "title": "Implement capture/validator/persistence handoff"
+    },
+    {
+      "depends_on": [
+        "AGENT-10-T01",
+        "AGENT-01-T01",
+        "PROVIDER-03-T04",
+        "PROVIDER-04-T04",
+        "PROVIDER-05-T04",
+        "PROVIDER-06-T03",
+        "AGENT-02-T03",
+        "AGENT-03-T03",
+        "AGENT-04-T03",
+        "AGENT-05-T03",
+        "AGENT-06-T03",
+        "AGENT-07-T03",
+        "AGENT-08-T03",
+        "AGENT-09-T03"
+      ],
+      "document_id": "AGENT-10",
+      "id": "AGENT-10-T02",
+      "line": 354,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/10-agent-evals-and-versioning.md",
+      "title": "Freeze implemented candidate configurations"
+    },
+    {
+      "depends_on": [
+        "AGENT-10-T02",
+        "PROVIDER-03-T01",
+        "OBS-03-T02",
+        "AGENT-01-T01",
+        "AGENT-01-T04",
+        "PROVIDER-03-T02",
+        "BACKEND-01-T01"
+      ],
+      "document_id": "AGENT-10",
+      "id": "AGENT-10-T03",
+      "line": 356,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/10-agent-evals-and-versioning.md",
+      "title": "Implement isolated candidate capture"
+    },
+    {
+      "depends_on": [
+        "AGENT-10-T03"
+      ],
+      "document_id": "AGENT-10",
+      "id": "AGENT-10-T04",
+      "line": 358,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/04-agents/10-agent-evals-and-versioning.md",
+      "title": "Implement network-disabled deterministic scoring"
+    },
+    {
+      "depends_on": [
+        "AGENT-02-T03",
+        "AGENT-10-T01",
+        "AGENT-10-T03",
+        "AGENT-10-T04"
+      ],
+      "document_id": "AGENT-02",
+      "id": "AGENT-02-T04",
+      "line": 123,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/02-idea-discovery-agent.md",
+      "title": "Build and gate the 48-case suite"
+    },
+    {
+      "depends_on": [
+        "AGENT-03-T03",
+        "AGENT-10-T01",
+        "AGENT-10-T03",
+        "AGENT-10-T04"
+      ],
+      "document_id": "AGENT-03",
+      "id": "AGENT-03-T04",
+      "line": 116,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/03-offer-design-agent.md",
+      "title": "Build and gate 48-case suite"
+    },
+    {
+      "depends_on": [
+        "AGENT-04-T03",
+        "AGENT-10-T01",
+        "AGENT-10-T03",
+        "AGENT-10-T04"
+      ],
+      "document_id": "AGENT-04",
+      "id": "AGENT-04-T04",
+      "line": 118,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/04-market-research-agent.md",
+      "title": "Build and gate 60-case suite"
+    },
+    {
+      "depends_on": [
+        "AGENT-05-T03",
+        "AGENT-10-T01",
+        "PROVIDER-05-T04",
+        "PROVIDER-06-T03",
+        "AGENT-10-T03",
+        "AGENT-10-T04"
+      ],
+      "document_id": "AGENT-05",
+      "id": "AGENT-05-T04",
+      "line": 117,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/05-lead-research-agent.md",
+      "title": "Build and gate 60-case suite"
+    },
+    {
+      "depends_on": [
+        "AGENT-06-T03",
+        "AGENT-10-T01",
+        "AGENT-10-T03",
+        "AGENT-10-T04"
+      ],
+      "document_id": "AGENT-06",
+      "id": "AGENT-06-T04",
+      "line": 118,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/06-lead-qualification-agent.md",
+      "title": "Build and gate 80-case labeled suite"
+    },
+    {
+      "depends_on": [
+        "AGENT-07-T03",
+        "AGENT-10-T01",
+        "AGENT-10-T03",
+        "AGENT-10-T04"
+      ],
+      "document_id": "AGENT-07",
+      "id": "AGENT-07-T04",
+      "line": 113,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/07-outreach-drafting-agent.md",
+      "title": "Build and gate 64-case suite"
+    },
+    {
+      "depends_on": [
+        "AGENT-08-T03",
+        "AGENT-10-T01",
+        "AGENT-10-T03",
+        "AGENT-10-T04"
+      ],
+      "document_id": "AGENT-08",
+      "id": "AGENT-08-T04",
+      "line": 122,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/08-reply-classification-agent.md",
+      "title": "Build and gate 120-case labeled suite"
+    },
+    {
+      "depends_on": [
+        "AGENT-09-T03",
+        "AGENT-10-T01",
+        "AGENT-10-T03",
+        "AGENT-10-T04"
+      ],
+      "document_id": "AGENT-09",
+      "id": "AGENT-09-T04",
+      "line": 119,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/09-experiment-evaluation-agent.md",
+      "title": "Build and gate 72-case suite"
+    },
+    {
+      "depends_on": [
+        "AGENT-10-T04",
+        "AGENT-02-T04",
+        "AGENT-03-T04",
+        "AGENT-04-T04",
+        "AGENT-05-T04",
+        "AGENT-06-T04",
+        "AGENT-07-T04",
+        "AGENT-08-T04",
+        "AGENT-09-T04"
+      ],
+      "document_id": "AGENT-10",
+      "id": "AGENT-10-T05",
+      "line": 360,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "milestone-gate",
+        "ci-release"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/10-agent-evals-and-versioning.md",
+      "title": "Implement comparison and operator promotion"
+    },
+    {
+      "depends_on": [
+        "DB-04-T04",
+        "AGENT-10-T05"
+      ],
+      "document_id": "DB-04",
+      "id": "DB-04-T05",
+      "line": 309,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "telemetry-catalog"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/02-database/04-agent-artifacts-and-evidence.md",
+      "title": "Gate agent promotion on evaluations"
+    },
+    {
+      "depends_on": [
+        "ARCH-01-T02",
+        "ARCH-02-T01",
+        "AGENT-10-T05",
+        "DB-04-T05",
+        "ARCH-02-T03"
+      ],
+      "document_id": "ARCH-01",
+      "id": "ARCH-01-T03",
+      "line": 135,
+      "locks": [
+        "architecture-contracts",
+        "agent-runtime",
+        "agent-artifacts",
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/01-architecture/01-target-system-architecture.md",
+      "title": "Add offline intelligence vertically"
+    },
+    {
+      "depends_on": [
+        "AGENT-10-T05"
+      ],
+      "document_id": "AGENT-10",
+      "id": "AGENT-10-T06",
+      "line": 362,
+      "locks": [
+        "agent-runtime",
+        "ci-release"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/04-agents/10-agent-evals-and-versioning.md",
+      "title": "Implement runtime selection/monitoring/rollback"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-03-T04",
+        "AGENT-10-T05"
+      ],
+      "document_id": "PROVIDER-03",
+      "id": "PROVIDER-03-T05",
+      "line": 112,
+      "locks": [
+        "provider-contracts",
+        "milestone-gate"
+      ],
+      "milestone": "M3",
+      "mode": "serial",
+      "source": "docs/development-roadmap/05-providers/03-model-provider.md",
+      "title": "Bind promoted product model activation"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-03-T05"
+      ],
+      "document_id": "PROVIDER-03",
+      "id": "PROVIDER-03-T06",
+      "line": 114,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/03-model-provider.md",
+      "title": "Prove replacement and authority seams"
+    },
+    {
+      "depends_on": [
+        "OBS-03-T02"
+      ],
+      "document_id": "OBS-03",
+      "id": "OBS-03-T03",
+      "line": 80,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M3",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/03-provider-cost-accounting.md",
+      "title": "Implement Bank of Israel FX capture"
+    },
+    {
+      "depends_on": [
+        "AGENT-10-T05",
+        "DB-02-T03",
+        "DB-02-T04",
+        "PRODUCT-02-T01"
+      ],
+      "document_id": "WF-03",
+      "id": "WF-03-T01",
+      "line": 48,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/03-idea-validation-workflow.md",
+      "title": "Freeze M4 fixture/input contract"
+    },
+    {
+      "depends_on": [
+        "WF-03-T01",
+        "PROVIDER-03-T01",
+        "PROVIDER-04-T01",
+        "PROVIDER-05-T01",
+        "OBS-03-T02",
+        "BACKEND-01-T01",
+        "DB-04-T04"
+      ],
+      "document_id": "WF-03",
+      "id": "WF-03-T02",
+      "line": 50,
+      "locks": [
+        "workflow-runtime",
+        "backend-domain",
+        "agent-artifacts"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/03-idea-validation-workflow.md",
+      "title": "Implement typed artifact steps"
+    },
+    {
+      "depends_on": [
+        "BACKEND-01-T01",
+        "ARCH-03-T01",
+        "DB-06-T01"
+      ],
+      "document_id": "BACKEND-01",
+      "id": "BACKEND-01-T02",
+      "line": 97,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/01-domain-services.md",
+      "title": "Implement pure domain values/transitions"
+    },
+    {
+      "depends_on": [
+        "BACKEND-01-T02",
+        "ARCH-02-T01",
+        "DB-05-T03"
+      ],
+      "document_id": "BACKEND-01",
+      "id": "BACKEND-01-T03",
+      "line": 99,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/01-domain-services.md",
+      "title": "Implement unit of work/idempotent executor"
+    },
+    {
+      "depends_on": [
+        "BACKEND-01-T03",
+        "DB-06-T01"
+      ],
+      "document_id": "BACKEND-01",
+      "id": "BACKEND-01-T04",
+      "line": 101,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/01-domain-services.md",
+      "title": "Implement M2/M4/M5 sole-writer authority"
+    },
+    {
+      "depends_on": [
+        "BACKEND-01-T04",
+        "AGENT-10-T05",
+        "PROVIDER-03-T06",
+        "PROVIDER-04-T05",
+        "PROVIDER-05-T05",
+        "WF-01-T05",
+        "WF-00-T04"
+      ],
+      "document_id": "WF-02",
+      "id": "WF-02-T01",
+      "line": 54,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/02-experiment-lifecycle.md",
+      "title": "Implement stage command service"
+    },
+    {
+      "depends_on": [
+        "WF-02-T01"
+      ],
+      "document_id": "WF-02",
+      "id": "WF-02-T02",
+      "line": 56,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/02-experiment-lifecycle.md",
+      "title": "Implement finite coordinator"
+    },
+    {
+      "depends_on": [
+        "WF-02-T02"
+      ],
+      "document_id": "WF-02",
+      "id": "WF-02-T03",
+      "line": 58,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/02-experiment-lifecycle.md",
+      "title": "Implement completion/failure handlers"
+    },
+    {
+      "depends_on": [
+        "WF-02-T03"
+      ],
+      "document_id": "WF-02",
+      "id": "WF-02-T04",
+      "line": 60,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/02-experiment-lifecycle.md",
+      "title": "Enforce active-run exclusion and budgets"
+    },
+    {
+      "depends_on": [
+        "WF-03-T02",
+        "DB-04-T04",
+        "BACKEND-01-T04",
+        "AGENT-02-T03",
+        "AGENT-03-T03",
+        "AGENT-04-T03"
+      ],
+      "document_id": "WF-03",
+      "id": "WF-03-T03",
+      "line": 52,
+      "locks": [
+        "workflow-runtime",
+        "backend-domain",
+        "agent-artifacts"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/03-idea-validation-workflow.md",
+      "title": "Implement validation/acceptance/materialization"
+    },
+    {
+      "depends_on": [
+        "WF-03-T03",
+        "WF-02-T03"
+      ],
+      "document_id": "WF-03",
+      "id": "WF-03-T04",
+      "line": 54,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/03-idea-validation-workflow.md",
+      "title": "Complete evidence bundle and stage"
+    },
+    {
+      "depends_on": [
+        "WF-03-T04"
+      ],
+      "document_id": "WF-03",
+      "id": "WF-03-T05",
+      "line": 56,
+      "locks": [
+        "workflow-runtime",
+        "milestone-gate"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/03-idea-validation-workflow.md",
+      "title": "Prove no-send boundary"
+    },
+    {
+      "depends_on": [
+        "BACKEND-01-T04",
+        "PROVIDER-03-T01",
+        "PROVIDER-04-T01",
+        "PROVIDER-05-T01",
+        "OBS-03-T02"
+      ],
+      "document_id": "BACKEND-01",
+      "id": "BACKEND-01-T05",
+      "line": 103,
+      "locks": [
+        "backend-domain",
+        "provider-contracts"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/01-domain-services.md",
+      "title": "Implement side-effect orchestration"
+    },
+    {
+      "depends_on": [
+        "BACKEND-01-T03"
+      ],
+      "document_id": "BACKEND-02",
+      "id": "BACKEND-02-T01",
+      "line": 262,
+      "locks": [
+        "openapi-contract"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/02-api-contracts.md",
+      "title": "Implement the M4 private route foundation"
+    },
+    {
+      "depends_on": [
+        "BACKEND-02-T01",
+        "BACKEND-01-T04"
+      ],
+      "document_id": "BACKEND-02",
+      "id": "BACKEND-02-T02",
+      "line": 264,
+      "locks": [
+        "openapi-contract"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/02-api-contracts.md",
+      "title": "Implement M4/M5 no-send routes and client"
+    },
+    {
+      "depends_on": [
+        "BACKEND-02-T02"
+      ],
+      "document_id": "FRONTEND-01",
+      "id": "FRONTEND-01-T01",
+      "line": 163,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/01-information-architecture.md",
+      "title": "Generate and gate the product client"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-01-T01",
+        "BACKEND-02-T01"
+      ],
+      "document_id": "FRONTEND-01",
+      "id": "FRONTEND-01-T02",
+      "line": 165,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/01-information-architecture.md",
+      "title": "Build the three-destination operator shell"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-01-T02"
+      ],
+      "document_id": "FRONTEND-01",
+      "id": "FRONTEND-01-T03",
+      "line": 167,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/01-information-architecture.md",
+      "title": "Implement shared query/mutation primitives"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-01-T03"
+      ],
+      "document_id": "FRONTEND-01",
+      "id": "FRONTEND-01-T04",
+      "line": 169,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/01-information-architecture.md",
+      "title": "Prove frontend authority boundaries"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-01-T01",
+        "DB-02-T01"
+      ],
+      "document_id": "FRONTEND-02",
+      "id": "FRONTEND-02-T01",
+      "line": 70,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/02-experiment-creation-flow.md",
+      "title": "Build the generated-schema form"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-02-T01"
+      ],
+      "document_id": "FRONTEND-02",
+      "id": "FRONTEND-02-T02",
+      "line": 72,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/02-experiment-creation-flow.md",
+      "title": "Implement create/replay/navigation"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-02-T02"
+      ],
+      "document_id": "FRONTEND-02",
+      "id": "FRONTEND-02-T03",
+      "line": 74,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/02-experiment-creation-flow.md",
+      "title": "Implement explicit scope approval and revision"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-02-T03"
+      ],
+      "document_id": "FRONTEND-02",
+      "id": "FRONTEND-02-T04",
+      "line": 76,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/02-experiment-creation-flow.md",
+      "title": "Verify privacy and responsive access"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-02-T03",
+        "FRONTEND-01-T01"
+      ],
+      "document_id": "FRONTEND-03",
+      "id": "FRONTEND-03-T01",
+      "line": 75,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/03-experiment-control-center.md",
+      "title": "Render exhaustive experiment/run truth"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-03-T01"
+      ],
+      "document_id": "FRONTEND-03",
+      "id": "FRONTEND-03-T02",
+      "line": 77,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/03-experiment-control-center.md",
+      "title": "Implement stage and control commands"
+    },
+    {
+      "depends_on": [
+        "INFRA-01-T05",
+        "DB-06-T02",
+        "BACKEND-02-T02"
+      ],
+      "document_id": "INFRA-01",
+      "id": "INFRA-01-T06",
+      "line": 73,
+      "locks": [
+        "migration-head",
+        "openapi-contract",
+        "frontend-client"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/01-local-development.md",
+      "title": "Implement product migration, seed, and generation workflow"
+    },
+    {
+      "depends_on": [
+        "INFRA-01-T06",
+        "DB-01-T05"
+      ],
+      "document_id": "INFRA-01",
+      "id": "INFRA-01-T07",
+      "line": 75,
+      "locks": [
+        "compose-topology",
+        "migration-head"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/01-local-development.md",
+      "title": "Complete product local reset and cleanup"
+    },
+    {
+      "depends_on": [
+        "INFRA-01-T07",
+        "TEST-01-T02"
+      ],
+      "document_id": "INFRA-01",
+      "id": "INFRA-01-T08",
+      "line": 77,
+      "locks": [
+        "compose-topology",
+        "test-command-registry"
+      ],
+      "milestone": "M4",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/01-local-development.md",
+      "title": "Complete product smoke evidence and local command ownership"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-06-T03",
+        "OBS-03-T01",
+        "OBS-03-T02"
+      ],
+      "document_id": "PROVIDER-06",
+      "id": "PROVIDER-06-T04",
+      "line": 105,
+      "locks": [
+        "provider-contracts",
+        "live-environment"
+      ],
+      "milestone": "M5",
+      "mode": "serial",
+      "source": "docs/development-roadmap/05-providers/06-enrichment-provider.md",
+      "title": "Implement the terms-gated live enrichment adapter"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-06-T04"
+      ],
+      "document_id": "PROVIDER-06",
+      "id": "PROVIDER-06-T05",
+      "line": 107,
+      "locks": [
+        "provider-contracts"
+      ],
+      "milestone": "M5",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/06-enrichment-provider.md",
+      "title": "Prove minimization and authority"
+    },
+    {
+      "depends_on": [
+        "BACKEND-01-T05"
+      ],
+      "document_id": "BACKEND-01",
+      "id": "BACKEND-01-T06",
+      "line": 105,
+      "locks": [
+        "architecture-contracts"
+      ],
+      "milestone": "M5",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/01-domain-services.md",
+      "title": "Prove boundary and current-truth gates"
+    },
+    {
+      "depends_on": [
+        "WF-03-T05",
+        "DB-02-T03",
+        "WF-03-T03"
+      ],
+      "document_id": "WF-04",
+      "id": "WF-04-T01",
+      "line": 48,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M5",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/04-lead-qualification-workflow.md",
+      "title": "Freeze criteria and candidate bounds"
+    },
+    {
+      "depends_on": [
+        "WF-04-T01",
+        "PROVIDER-06-T02"
+      ],
+      "document_id": "WF-04",
+      "id": "WF-04-T02",
+      "line": 50,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M5",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/04-lead-qualification-workflow.md",
+      "title": "Implement deterministic business identity"
+    },
+    {
+      "depends_on": [
+        "WF-04-T02",
+        "PROVIDER-06-T01",
+        "PROVIDER-06-T03",
+        "PROVIDER-05-T01",
+        "AGENT-05-T03"
+      ],
+      "document_id": "WF-04",
+      "id": "WF-04-T03",
+      "line": 52,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M5",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/04-lead-qualification-workflow.md",
+      "title": "Implement research/evidence subtask"
+    },
+    {
+      "depends_on": [
+        "WF-04-T03",
+        "AGENT-06-T03",
+        "BACKEND-01-T04"
+      ],
+      "document_id": "WF-04",
+      "id": "WF-04-T04",
+      "line": 54,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M5",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/04-lead-qualification-workflow.md",
+      "title": "Implement qualification gate"
+    },
+    {
+      "depends_on": [
+        "WF-04-T04",
+        "WF-02-T03"
+      ],
+      "document_id": "WF-04",
+      "id": "WF-04-T05",
+      "line": 56,
+      "locks": [
+        "workflow-runtime",
+        "milestone-gate"
+      ],
+      "milestone": "M5",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/04-lead-qualification-workflow.md",
+      "title": "Complete M5 and prove no-send"
+    },
+    {
+      "depends_on": [
+        "ARCH-01-T03",
+        "WF-03-T05",
+        "WF-04-T05",
+        "PROVIDER-06-T03",
+        "WF-00-T04"
+      ],
+      "document_id": "ARCH-01",
+      "id": "ARCH-01-T04",
+      "line": 137,
+      "locks": [
+        "architecture-contracts",
+        "workflow-runtime",
+        "agent-artifacts",
+        "backend-domain",
+        "milestone-gate"
+      ],
+      "milestone": "M5",
+      "mode": "serial",
+      "source": "docs/development-roadmap/01-architecture/01-target-system-architecture.md",
+      "title": "Adjudicate the M4/M5 no-send architecture"
+    },
+    {
+      "depends_on": [
+        "DB-05-T02",
+        "ARCH-03-T01",
+        "DB-03-T01"
+      ],
+      "document_id": "BACKEND-03",
+      "id": "BACKEND-03-T01",
+      "line": 118,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/03-policy-engine.md",
+      "title": "Encode eligibility/basis/SEND facts and reason registry"
+    },
+    {
+      "depends_on": [
+        "BACKEND-03-T01"
+      ],
+      "document_id": "BACKEND-03",
+      "id": "BACKEND-03-T02",
+      "line": 120,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/03-policy-engine.md",
+      "title": "Implement deterministic rule composition"
+    },
+    {
+      "depends_on": [
+        "BACKEND-03-T02"
+      ],
+      "document_id": "BACKEND-03",
+      "id": "BACKEND-03-T03",
+      "line": 122,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/03-policy-engine.md",
+      "title": "Implement PolicyEvaluationService"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-02-T01",
+        "BACKEND-03-T01",
+        "ARCH-03-T01",
+        "PROVIDER-01-T02",
+        "DB-03-T01"
+      ],
+      "document_id": "BACKEND-04",
+      "id": "BACKEND-04-T01",
+      "line": 82,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/04-send-gateway.md",
+      "title": "Implement intent and gateway contracts"
+    },
+    {
+      "depends_on": [
+        "DB-05-T02",
+        "DB-01-T01",
+        "DB-01-T02"
+      ],
+      "document_id": "BACKEND-05",
+      "id": "BACKEND-05-T01",
+      "line": 138,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/05-approval-and-command-handling.md",
+      "title": "Implement command envelope/registry/executor"
+    },
+    {
+      "depends_on": [
+        "SEC-06-T01",
+        "PRODUCT-01-T02"
+      ],
+      "document_id": "SEC-04",
+      "id": "SEC-04-T01",
+      "line": 84,
+      "locks": [
+        "compliance-policy",
+        "milestone-gate"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/04-outreach-compliance.md",
+      "title": "Freeze isolated-test and prohibited-recipient policy"
+    },
+    {
+      "depends_on": [
+        "SEC-04-T01"
+      ],
+      "document_id": "SEC-04",
+      "id": "SEC-04-T02",
+      "line": 86,
+      "locks": [
+        "compliance-policy"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/08-security-and-compliance/04-outreach-compliance.md",
+      "title": "Implement recipient evidence contracts"
+    },
+    {
+      "depends_on": [
+        "SEC-04-T02",
+        "AGENT-07-T03"
+      ],
+      "document_id": "SEC-04",
+      "id": "SEC-04-T03",
+      "line": 88,
+      "locks": [
+        "compliance-policy"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/08-security-and-compliance/04-outreach-compliance.md",
+      "title": "Implement disclosures and prohibited-content validator"
+    },
+    {
+      "depends_on": [
+        "DB-05-T02",
+        "ARCH-03-T01",
+        "DB-01-T05",
+        "SEC-04-T01"
+      ],
+      "document_id": "SEC-05",
+      "id": "SEC-05-T01",
+      "line": 90,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/05-suppression-budgets-and-kill-switch.md",
+      "title": "Seed and implement independent controls"
+    },
+    {
+      "depends_on": [
+        "SEC-05-T01",
+        "DB-03-T03",
+        "DB-03-T04",
+        "DB-03-T01"
+      ],
+      "document_id": "SEC-05",
+      "id": "SEC-05-T02",
+      "line": 92,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/05-suppression-budgets-and-kill-switch.md",
+      "title": "Implement suppression under last-mile locks"
+    },
+    {
+      "depends_on": [
+        "SEC-05-T02",
+        "OBS-03-T02"
+      ],
+      "document_id": "SEC-05",
+      "id": "SEC-05-T03",
+      "line": 94,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/05-suppression-budgets-and-kill-switch.md",
+      "title": "Implement hierarchical reservations and rates"
+    },
+    {
+      "depends_on": [
+        "DB-01-T02",
+        "SEC-06-T01"
+      ],
+      "document_id": "SEC-02",
+      "id": "SEC-02-T01",
+      "line": 992,
+      "locks": [
+        "security-runtime",
+        "migration-head"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/02-authentication-and-private-access.md",
+      "title": "Migrate and introspect the exact operational schema"
+    },
+    {
+      "depends_on": [
+        "SEC-02-T01",
+        "SEC-03-T01"
+      ],
+      "document_id": "SEC-02",
+      "id": "SEC-02-T02",
+      "line": 994,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/02-authentication-and-private-access.md",
+      "title": "Implement strict OIDC flow state"
+    },
+    {
+      "depends_on": [
+        "SEC-02-T02"
+      ],
+      "document_id": "SEC-02",
+      "id": "SEC-02-T03",
+      "line": 996,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/02-authentication-and-private-access.md",
+      "title": "Implement server-side sessions"
+    },
+    {
+      "depends_on": [
+        "SEC-02-T03",
+        "BACKEND-02-T01"
+      ],
+      "document_id": "SEC-02",
+      "id": "SEC-02-T04",
+      "line": 998,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/02-authentication-and-private-access.md",
+      "title": "Enforce private request boundary"
+    },
+    {
+      "depends_on": [
+        "SEC-02-T04",
+        "BACKEND-05-T01"
+      ],
+      "document_id": "WF-06",
+      "id": "WF-06-T01",
+      "line": 66,
+      "locks": [
+        "workflow-runtime",
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/06-pause-cancel-resume-and-recovery.md",
+      "title": "Implement idempotent control command service"
+    },
+    {
+      "depends_on": [
+        "WF-06-T01"
+      ],
+      "document_id": "WF-06",
+      "id": "WF-06-T02",
+      "line": 68,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/06-pause-cancel-resume-and-recovery.md",
+      "title": "Implement cooperative acknowledgement"
+    },
+    {
+      "depends_on": [
+        "WF-06-T02"
+      ],
+      "document_id": "WF-06",
+      "id": "WF-06-T03",
+      "line": 70,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/06-pause-cancel-resume-and-recovery.md",
+      "title": "Implement guarded resume/retry"
+    },
+    {
+      "depends_on": [
+        "WF-02-T04",
+        "BACKEND-05-T01",
+        "WF-06-T03"
+      ],
+      "document_id": "WF-02",
+      "id": "WF-02-T05",
+      "line": 62,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/02-experiment-lifecycle.md",
+      "title": "Wire pause/cancel/recovery"
+    },
+    {
+      "depends_on": [
+        "SEC-02-T04"
+      ],
+      "document_id": "SEC-02",
+      "id": "SEC-02-T05",
+      "line": 1000,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/02-authentication-and-private-access.md",
+      "title": "Implement lifecycle and emergency controls"
+    },
+    {
+      "depends_on": [
+        "BACKEND-05-T01",
+        "SEC-02-T04",
+        "SEC-02-T05",
+        "SEC-03-T01",
+        "DB-03-T04",
+        "PROVIDER-01-T02"
+      ],
+      "document_id": "BACKEND-05",
+      "id": "BACKEND-05-T02",
+      "line": 140,
+      "locks": [
+        "backend-domain",
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/05-approval-and-command-handling.md",
+      "title": "Implement authenticated sensitive preview receipt service"
+    },
+    {
+      "depends_on": [
+        "BACKEND-05-T02",
+        "BACKEND-03-T03"
+      ],
+      "document_id": "BACKEND-05",
+      "id": "BACKEND-05-T03",
+      "line": 142,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/05-approval-and-command-handling.md",
+      "title": "Implement eligibility-bound manual approval lifecycle"
+    },
+    {
+      "depends_on": [
+        "BACKEND-03-T03",
+        "SEC-05-T03",
+        "BACKEND-05-T03"
+      ],
+      "document_id": "BACKEND-03",
+      "id": "BACKEND-03-T04",
+      "line": 124,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/03-policy-engine.md",
+      "title": "Implement last-mile SEND, suppression, and rate reservation"
+    },
+    {
+      "depends_on": [
+        "BACKEND-04-T01",
+        "BACKEND-03-T04",
+        "SEC-05-T03"
+      ],
+      "document_id": "BACKEND-04",
+      "id": "BACKEND-04-T02",
+      "line": 84,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/04-send-gateway.md",
+      "title": "Implement exact pre-call transaction/order"
+    },
+    {
+      "depends_on": [
+        "BACKEND-05-T03"
+      ],
+      "document_id": "BACKEND-05",
+      "id": "BACKEND-05-T04",
+      "line": 144,
+      "locks": [
+        "backend-domain",
+        "workflow-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/05-approval-and-command-handling.md",
+      "title": "Implement stage/control/runtime handlers"
+    },
+    {
+      "depends_on": [
+        "BACKEND-05-T04",
+        "DB-03-T03"
+      ],
+      "document_id": "BACKEND-05",
+      "id": "BACKEND-05-T05",
+      "line": 146,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/05-approval-and-command-handling.md",
+      "title": "Implement all-current-eligible campaign snapshot creation"
+    },
+    {
+      "depends_on": [
+        "BACKEND-05-T05",
+        "SEC-05-T02"
+      ],
+      "document_id": "BACKEND-05",
+      "id": "BACKEND-05-T06",
+      "line": 148,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/05-approval-and-command-handling.md",
+      "title": "Implement send/recovery/control enable gates"
+    },
+    {
+      "depends_on": [
+        "ARCH-03-T01",
+        "DB-05-T01",
+        "PRODUCT-03-T01"
+      ],
+      "document_id": "OBS-05",
+      "id": "OBS-05-T01",
+      "line": 142,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/05-incident-response.md",
+      "title": "Implement incident/evidence contracts"
+    },
+    {
+      "depends_on": [
+        "OBS-05-T01",
+        "PRODUCT-03-T03"
+      ],
+      "document_id": "OBS-05",
+      "id": "OBS-05-T02",
+      "line": 144,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/05-incident-response.md",
+      "title": "Implement containment and recovery commands"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-03-T01",
+        "DB-06-T03",
+        "AGENT-10-T05",
+        "WF-03-T05",
+        "WF-04-T05",
+        "WF-01-T01",
+        "WF-00-T04"
+      ],
+      "document_id": "LAUNCH-01",
+      "id": "LAUNCH-01-T01",
+      "line": 92,
+      "locks": [
+        "milestone-gate",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/01-test-inbox-pilot.md",
+      "title": "Attest the isolated pilot construction target"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-01-T02",
+        "SEC-03-T01",
+        "SEC-02-T04",
+        "BACKEND-05-T01",
+        "DB-03-T04",
+        "DB-05-T03",
+        "LAUNCH-01-T01"
+      ],
+      "document_id": "PROVIDER-01",
+      "id": "PROVIDER-01-T03",
+      "line": 169,
+      "locks": [
+        "security-runtime",
+        "provider-contracts",
+        "database-schema",
+        "backend-domain",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/05-providers/01-gmail-oauth-and-adapter.md",
+      "title": "Implement OAuth secret-store saga and command boundary"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-01-T03"
+      ],
+      "document_id": "PROVIDER-01",
+      "id": "PROVIDER-01-T04",
+      "line": 171,
+      "locks": [
+        "provider-contracts",
+        "gmail-side-effects",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/05-providers/01-gmail-oauth-and-adapter.md",
+      "title": "Implement one-call Gmail adapter"
+    },
+    {
+      "depends_on": [
+        "ARCH-02-T03",
+        "DB-01-T05",
+        "DB-05-T05",
+        "PROVIDER-01-T02",
+        "PROVIDER-01-T04"
+      ],
+      "document_id": "ARCH-02",
+      "id": "ARCH-02-T04",
+      "line": 101,
+      "locks": [
+        "architecture-contracts",
+        "provider-contracts",
+        "gmail-side-effects",
+        "backend-domain",
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/01-architecture/02-module-boundaries.md",
+      "title": "Move send orchestration outward at M6"
+    },
+    {
+      "depends_on": [
+        "BACKEND-04-T02",
+        "PROVIDER-01-T04"
+      ],
+      "document_id": "BACKEND-04",
+      "id": "BACKEND-04-T03",
+      "line": 86,
+      "locks": [
+        "gmail-side-effects",
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/04-send-gateway.md",
+      "title": "Implement one provider call and result transactions"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-01-T04",
+        "BACKEND-04-T03"
+      ],
+      "document_id": "PROVIDER-01",
+      "id": "PROVIDER-01-T05",
+      "line": 173,
+      "locks": [
+        "gmail-side-effects",
+        "provider-contracts"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/05-providers/01-gmail-oauth-and-adapter.md",
+      "title": "Integrate sole SendGateway path"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-02-T01",
+        "BACKEND-04-T03",
+        "DB-03-T01",
+        "PROVIDER-01-T03"
+      ],
+      "document_id": "PROVIDER-02",
+      "id": "PROVIDER-02-T02",
+      "line": 87,
+      "locks": [
+        "gmail-side-effects",
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/05-providers/02-gmail-history-sync.md",
+      "title": "Implement Sent reconciliation"
+    },
+    {
+      "depends_on": [
+        "ARCH-03-T03",
+        "DB-03-T04",
+        "PROVIDER-02-T02"
+      ],
+      "document_id": "ARCH-03",
+      "id": "ARCH-03-T04",
+      "line": 322,
+      "locks": [
+        "architecture-contracts",
+        "gmail-side-effects",
+        "backend-domain",
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/01-architecture/03-domain-events-and-state-machines.md",
+      "title": "Implement message ambiguity path before Gmail activation"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-02-T02"
+      ],
+      "document_id": "PROVIDER-02",
+      "id": "PROVIDER-02-T03",
+      "line": 89,
+      "locks": [
+        "provider-contracts",
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/02-gmail-history-sync.md",
+      "title": "Implement atomic incremental pages"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-02-T03"
+      ],
+      "document_id": "PROVIDER-02",
+      "id": "PROVIDER-02-T04",
+      "line": 91,
+      "locks": [
+        "provider-contracts",
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/05-providers/02-gmail-history-sync.md",
+      "title": "Implement 404 full-sync recovery"
+    },
+    {
+      "depends_on": [
+        "BACKEND-04-T03",
+        "PROVIDER-02-T02"
+      ],
+      "document_id": "BACKEND-04",
+      "id": "BACKEND-04-T04",
+      "line": 88,
+      "locks": [
+        "gmail-side-effects",
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/04-send-gateway.md",
+      "title": "Implement disjoint reconciliation/retry handoff"
+    },
+    {
+      "depends_on": [
+        "DB-03-T04",
+        "DB-01-T05",
+        "BACKEND-05-T03",
+        "BACKEND-04-T04"
+      ],
+      "document_id": "DB-03",
+      "id": "DB-03-T05",
+      "line": 660,
+      "locks": [
+        "database-schema",
+        "gmail-side-effects",
+        "backend-domain",
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/03-leads-campaigns-and-messages.md",
+      "title": "Implement sole send transaction boundaries"
+    },
+    {
+      "depends_on": [
+        "DB-03-T05",
+        "PROVIDER-02-T01",
+        "PROVIDER-02-T03"
+      ],
+      "document_id": "DB-03",
+      "id": "DB-03-T06",
+      "line": 662,
+      "locks": [
+        "database-schema",
+        "gmail-side-effects",
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/03-leads-campaigns-and-messages.md",
+      "title": "Implement atomic history sync"
+    },
+    {
+      "depends_on": [
+        "WF-06-T03",
+        "BACKEND-04-T04",
+        "PROVIDER-02-T02"
+      ],
+      "document_id": "WF-06",
+      "id": "WF-06-T04",
+      "line": 72,
+      "locks": [
+        "gmail-side-effects",
+        "workflow-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/06-pause-cancel-resume-and-recovery.md",
+      "title": "Implement send drain/reconciliation"
+    },
+    {
+      "depends_on": [
+        "SEC-03-T01",
+        "PROVIDER-01-T03"
+      ],
+      "document_id": "SEC-03",
+      "id": "SEC-03-T02",
+      "line": 84,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/03-secrets-and-oauth-token-security.md",
+      "title": "Implement Gmail credential lifecycle"
+    },
+    {
+      "depends_on": [
+        "SEC-03-T02"
+      ],
+      "document_id": "SEC-03",
+      "id": "SEC-03-T03",
+      "line": 86,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/03-secrets-and-oauth-token-security.md",
+      "title": "Apply exact access/redaction controls"
+    },
+    {
+      "depends_on": [
+        "SEC-03-T03"
+      ],
+      "document_id": "SEC-03",
+      "id": "SEC-03-T04",
+      "line": 88,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/03-secrets-and-oauth-token-security.md",
+      "title": "Implement rotation, emergency revoke, and recovery-package refresh"
+    },
+    {
+      "depends_on": [
+        "OBS-01-T01",
+        "PROVIDER-01-T04",
+        "PROVIDER-02-T01",
+        "OBS-03-T02"
+      ],
+      "document_id": "OBS-01",
+      "id": "OBS-01-T02",
+      "line": 100,
+      "locks": [
+        "telemetry-catalog"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/01-structured-events-and-correlation.md",
+      "title": "Propagate correlation/causation"
+    },
+    {
+      "depends_on": [
+        "OBS-01-T02"
+      ],
+      "document_id": "OBS-01",
+      "id": "OBS-01-T03",
+      "line": 102,
+      "locks": [
+        "telemetry-catalog"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/01-structured-events-and-correlation.md",
+      "title": "Instrument exact boundaries"
+    },
+    {
+      "depends_on": [
+        "SEC-05-T03",
+        "OBS-01-T03",
+        "BACKEND-04-T03",
+        "PRODUCT-03-T03"
+      ],
+      "document_id": "SEC-05",
+      "id": "SEC-05-T04",
+      "line": 96,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/05-suppression-budgets-and-kill-switch.md",
+      "title": "Wire deterministic kill triggers and alerts"
+    },
+    {
+      "depends_on": [
+        "BACKEND-02-T02",
+        "PROVIDER-01-T04",
+        "PROVIDER-02-T01",
+        "BACKEND-03-T03",
+        "BACKEND-04-T04",
+        "BACKEND-05-T06",
+        "SEC-03-T02",
+        "SEC-04-T03",
+        "SEC-05-T04",
+        "SEC-02-T04",
+        "BACKEND-05-T02"
+      ],
+      "document_id": "BACKEND-02",
+      "id": "BACKEND-02-T03",
+      "line": 266,
+      "locks": [
+        "openapi-contract",
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/02-api-contracts.md",
+      "title": "Implement the isolated M6 owned-inbox API"
+    },
+    {
+      "depends_on": [
+        "TEST-04-T02",
+        "PROVIDER-01-T03",
+        "DB-03-T04",
+        "DB-05-T03"
+      ],
+      "document_id": "TEST-04",
+      "id": "TEST-04-T03",
+      "line": 62,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/04-gmail-side-effect-tests.md",
+      "title": "Prove the six-point OAuth saga"
+    },
+    {
+      "depends_on": [
+        "TEST-04-T03",
+        "BACKEND-04-T04",
+        "SEC-05-T03"
+      ],
+      "document_id": "TEST-04",
+      "id": "TEST-04-T04",
+      "line": 64,
+      "locks": [
+        "gmail-side-effects"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/04-gmail-side-effect-tests.md",
+      "title": "Prove 14-step gateway authority and results"
+    },
+    {
+      "depends_on": [
+        "DB-01-T01",
+        "AGENT-01-T01",
+        "PROVIDER-01-T02",
+        "PROVIDER-01-T04",
+        "PROVIDER-02-T01",
+        "PROVIDER-03-T01",
+        "PROVIDER-04-T01",
+        "PROVIDER-05-T01",
+        "PROVIDER-06-T01",
+        "TEST-01-T03",
+        "TEST-01-T02"
+      ],
+      "document_id": "TEST-02",
+      "id": "TEST-02-T01",
+      "line": 418,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/02-contract-and-integration-tests.md",
+      "title": "Freeze schema and digest manifests"
+    },
+    {
+      "depends_on": [
+        "TEST-02-T01",
+        "DB-06-T01",
+        "SEC-06-T01"
+      ],
+      "document_id": "TEST-02",
+      "id": "TEST-02-T02",
+      "line": 420,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/02-contract-and-integration-tests.md",
+      "title": "Prove the complete PostgreSQL contract"
+    },
+    {
+      "depends_on": [
+        "TEST-03-T03",
+        "TEST-02-T02",
+        "ARCH-03-T01",
+        "WF-02-T05",
+        "WF-03-T05",
+        "WF-04-T05"
+      ],
+      "document_id": "TEST-03",
+      "id": "TEST-03-T04",
+      "line": 67,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/10-testing/03-workflow-recovery-tests.md",
+      "title": "Prove every finite workflow and delivery edge"
+    },
+    {
+      "depends_on": [
+        "TEST-03-T04",
+        "WF-06-T04"
+      ],
+      "document_id": "TEST-03",
+      "id": "TEST-03-T05",
+      "line": 69,
+      "locks": [
+        "workflow-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/10-testing/03-workflow-recovery-tests.md",
+      "title": "Prove controls, versioning and migration"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-01-T01",
+        "TEST-04-T01",
+        "TEST-04-T03",
+        "TEST-04-T02",
+        "BACKEND-04-T04",
+        "PROVIDER-02-T04",
+        "SEC-05-T02",
+        "OBS-03-T02",
+        "BACKEND-01-T06"
+      ],
+      "document_id": "LAUNCH-01",
+      "id": "LAUNCH-01-T02",
+      "line": 94,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/01-test-inbox-pilot.md",
+      "title": "Close offline Gmail and authority evidence"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-01-T02",
+        "PRODUCT-03-T01",
+        "DB-06-T03",
+        "AGENT-10-T05",
+        "WF-03-T05",
+        "WF-04-T05",
+        "WF-01-T01",
+        "WF-00-T04",
+        "PROVIDER-01-T03",
+        "SEC-05-T04",
+        "OBS-01-T03"
+      ],
+      "document_id": "LAUNCH-01",
+      "id": "LAUNCH-01-T03",
+      "line": 96,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/01-test-inbox-pilot.md",
+      "title": "Freeze the pilot entry and target"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-01-T05",
+        "LAUNCH-01-T03"
+      ],
+      "document_id": "PROVIDER-01",
+      "id": "PROVIDER-01-T06",
+      "line": 175,
+      "locks": [
+        "gmail-side-effects",
+        "security-runtime",
+        "provider-contracts",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/05-providers/01-gmail-oauth-and-adapter.md",
+      "title": "Build fixture and credential-security gates"
+    },
+    {
+      "depends_on": [
+        "PROVIDER-02-T04",
+        "LAUNCH-01-T03"
+      ],
+      "document_id": "PROVIDER-02",
+      "id": "PROVIDER-02-T05",
+      "line": 93,
+      "locks": [
+        "gmail-side-effects",
+        "milestone-gate",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/05-providers/02-gmail-history-sync.md",
+      "title": "Gate M6 fixtures and operations"
+    },
+    {
+      "depends_on": [
+        "TEST-03-T03",
+        "SEC-05-T03",
+        "BACKEND-05-T06",
+        "PROVIDER-01-T03",
+        "SEC-02-T04",
+        "LAUNCH-01-T03",
+        "WF-00-T04"
+      ],
+      "document_id": "WF-05",
+      "id": "WF-05-T01",
+      "line": 69,
+      "locks": [
+        "gmail-side-effects",
+        "workflow-runtime",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/05-outreach-and-reply-workflow.md",
+      "title": "Provision isolated M6 authority"
+    },
+    {
+      "depends_on": [
+        "WF-05-T01",
+        "BACKEND-05-T03",
+        "WF-04-T04",
+        "AGENT-07-T03"
+      ],
+      "document_id": "WF-05",
+      "id": "WF-05-T02",
+      "line": 71,
+      "locks": [
+        "workflow-runtime",
+        "backend-domain"
+      ],
+      "milestone": "M6",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/05-outreach-and-reply-workflow.md",
+      "title": "Implement eligibility/approval/intent path"
+    },
+    {
+      "depends_on": [
+        "WF-05-T02",
+        "SEC-05-T03",
+        "BACKEND-04-T04"
+      ],
+      "document_id": "WF-05",
+      "id": "WF-05-T03",
+      "line": 73,
+      "locks": [
+        "gmail-side-effects",
+        "workflow-runtime",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/05-outreach-and-reply-workflow.md",
+      "title": "Implement gateway, rate lease, suppression, and reconciliation"
+    },
+    {
+      "depends_on": [
+        "WF-05-T03",
+        "PROVIDER-02-T04",
+        "AGENT-08-T03",
+        "SEC-05-T02"
+      ],
+      "document_id": "WF-05",
+      "id": "WF-05-T04",
+      "line": 75,
+      "locks": [
+        "gmail-side-effects",
+        "workflow-runtime"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/05-outreach-and-reply-workflow.md",
+      "title": "Implement recipient-signal sync/classification"
+    },
+    {
+      "depends_on": [
+        "BACKEND-04-T04",
+        "PROVIDER-01-T06",
+        "PROVIDER-02-T05",
+        "SEC-05-T04",
+        "TEST-03-T03",
+        "BACKEND-03-T03",
+        "BACKEND-05-T06",
+        "WF-00-T04",
+        "LAUNCH-01-T03"
+      ],
+      "document_id": "BACKEND-04",
+      "id": "BACKEND-04-T05",
+      "line": 90,
+      "locks": [
+        "gmail-side-effects",
+        "milestone-gate",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/04-send-gateway.md",
+      "title": "Prove M6 gateway, service authority, and observability"
+    },
+    {
+      "depends_on": [
+        "WF-05-T04",
+        "BACKEND-04-T05",
+        "SEC-05-T04",
+        "WF-06-T04",
+        "LAUNCH-01-T03"
+      ],
+      "document_id": "WF-05",
+      "id": "WF-05-T05",
+      "line": 77,
+      "locks": [
+        "gmail-side-effects",
+        "milestone-gate",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/05-outreach-and-reply-workflow.md",
+      "title": "Prove controls, rate, suppression, and campaign completion"
+    },
+    {
+      "depends_on": [
+        "TEST-04-T04",
+        "PROVIDER-02-T04",
+        "WF-05-T04"
+      ],
+      "document_id": "TEST-04",
+      "id": "TEST-04-T05",
+      "line": 66,
+      "locks": [
+        "gmail-side-effects"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/04-gmail-side-effect-tests.md",
+      "title": "Prove reconciliation and recipient signals"
+    },
+    {
+      "depends_on": [
+        "TEST-04-T05",
+        "WF-05-T05",
+        "BACKEND-04-T05",
+        "SEC-05-T04",
+        "PROVIDER-01-T06",
+        "PROVIDER-02-T05",
+        "LAUNCH-01-T03"
+      ],
+      "document_id": "TEST-04",
+      "id": "TEST-04-T06",
+      "line": 68,
+      "locks": [
+        "gmail-side-effects",
+        "milestone-gate",
+        "test-command-registry",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/04-gmail-side-effect-tests.md",
+      "title": "Run the controlled M6 owned-alias gate and close live command ownership"
+    },
+    {
+      "depends_on": [
+        "WF-05-T05",
+        "TEST-04-T06"
+      ],
+      "document_id": "WF-05",
+      "id": "WF-05-T06",
+      "line": 79,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/05-outreach-and-reply-workflow.md",
+      "title": "Keep product outreach disabled until gate record"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-01-T03"
+      ],
+      "document_id": "LAUNCH-01",
+      "id": "LAUNCH-01-T04",
+      "line": 98,
+      "locks": [
+        "gmail-side-effects",
+        "milestone-gate",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/01-test-inbox-pilot.md",
+      "title": "Execute the exact live catalog one message at a time"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-01-T04"
+      ],
+      "document_id": "LAUNCH-01",
+      "id": "LAUNCH-01-T05",
+      "line": 100,
+      "locks": [
+        "gmail-side-effects",
+        "milestone-gate",
+        "live-environment"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/01-test-inbox-pilot.md",
+      "title": "Exercise signals and operator stop"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-01-T05"
+      ],
+      "document_id": "LAUNCH-01",
+      "id": "LAUNCH-01-T06",
+      "line": 102,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M6",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/01-test-inbox-pilot.md",
+      "title": "Close cleanup and promotion"
+    },
+    {
+      "depends_on": [
+        "ARCH-03-T04"
+      ],
+      "document_id": "ARCH-03",
+      "id": "ARCH-03-T05",
+      "line": 324,
+      "locks": [
+        "architecture-contracts",
+        "openapi-contract",
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/01-architecture/03-domain-events-and-state-machines.md",
+      "title": "Generate API/UI state mappings"
+    },
+    {
+      "depends_on": [
+        "BACKEND-03-T01",
+        "SEC-04-T02",
+        "DB-05-T02",
+        "ARCH-03-T01",
+        "OBS-05-T01"
+      ],
+      "document_id": "BACKEND-06",
+      "id": "BACKEND-06-T01",
+      "line": 98,
+      "locks": [
+        "openapi-contract",
+        "backend-domain"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/06-reporting-and-query-services.md",
+      "title": "Encode projection schemas/query versions"
+    },
+    {
+      "depends_on": [
+        "BACKEND-02-T03",
+        "SEC-02-T04",
+        "BACKEND-06-T01"
+      ],
+      "document_id": "BACKEND-02",
+      "id": "BACKEND-02-T04",
+      "line": 268,
+      "locks": [
+        "openapi-contract",
+        "security-runtime"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/02-api-contracts.md",
+      "title": "Freeze the authenticated M7 report/recovery contract"
+    },
+    {
+      "depends_on": [
+        "BACKEND-06-T01"
+      ],
+      "document_id": "BACKEND-06",
+      "id": "BACKEND-06-T02",
+      "line": 100,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M7",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/06-reporting-and-query-services.md",
+      "title": "Implement overview/funnel/recovery queries"
+    },
+    {
+      "depends_on": [
+        "BACKEND-06-T02",
+        "OBS-03-T03"
+      ],
+      "document_id": "BACKEND-06",
+      "id": "BACKEND-06-T03",
+      "line": 102,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M7",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/06-reporting-and-query-services.md",
+      "title": "Implement cost/provider queries"
+    },
+    {
+      "depends_on": [
+        "BACKEND-06-T03",
+        "BACKEND-02-T04"
+      ],
+      "document_id": "BACKEND-06",
+      "id": "BACKEND-06-T04",
+      "line": 104,
+      "locks": [
+        "openapi-contract",
+        "backend-domain"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/06-reporting-and-query-services.md",
+      "title": "Implement repeatable-read/exported-snapshot pagination/API routes"
+    },
+    {
+      "depends_on": [
+        "BACKEND-02-T04",
+        "BACKEND-06-T04"
+      ],
+      "document_id": "BACKEND-02",
+      "id": "BACKEND-02-T05",
+      "line": 270,
+      "locks": [
+        "openapi-contract",
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/02-api-contracts.md",
+      "title": "Generate and gate the disabled-public API manifest and client"
+    },
+    {
+      "depends_on": [
+        "ARCH-02-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "ARCH-02",
+      "id": "ARCH-02-T05",
+      "line": 103,
+      "locks": [
+        "architecture-contracts",
+        "openapi-contract",
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/01-architecture/02-module-boundaries.md",
+      "title": "Enforce frontend/API boundary at M7"
+    },
+    {
+      "depends_on": [
+        "BACKEND-03-T04",
+        "BACKEND-06-T02",
+        "BACKEND-06-T04"
+      ],
+      "document_id": "BACKEND-03",
+      "id": "BACKEND-03-T05",
+      "line": 126,
+      "locks": [
+        "backend-domain"
+      ],
+      "milestone": "M7",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/06-backend/03-policy-engine.md",
+      "title": "Gate versions and operator explainability"
+    },
+    {
+      "depends_on": [
+        "BACKEND-05-T06",
+        "SEC-03-T01",
+        "PROVIDER-01-T03",
+        "BACKEND-02-T03",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "BACKEND-05",
+      "id": "BACKEND-05-T07",
+      "line": 150,
+      "locks": [
+        "openapi-contract",
+        "milestone-gate"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/05-approval-and-command-handling.md",
+      "title": "Prove OAuth saga, callback, and operator workflows"
+    },
+    {
+      "depends_on": [
+        "OBS-01-T03",
+        "SEC-02-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "OBS-01",
+      "id": "OBS-01-T04",
+      "line": 104,
+      "locks": [
+        "telemetry-catalog",
+        "security-runtime"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/01-structured-events-and-correlation.md",
+      "title": "Integrate authenticated private and report correlation"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-01-T04",
+        "BACKEND-02-T05",
+        "SEC-02-T04",
+        "SEC-02-T05",
+        "FRONTEND-02-T04",
+        "FRONTEND-03-T01"
+      ],
+      "document_id": "FRONTEND-01",
+      "id": "FRONTEND-01-T05",
+      "line": 171,
+      "locks": [
+        "frontend-client",
+        "security-runtime"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/01-information-architecture.md",
+      "title": "Integrate complete generated client and authenticated private shell"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-03-T02",
+        "FRONTEND-01-T05",
+        "BACKEND-02-T05",
+        "BACKEND-06-T04",
+        "BACKEND-05-T04",
+        "WF-06-T03"
+      ],
+      "document_id": "FRONTEND-03",
+      "id": "FRONTEND-03-T03",
+      "line": 79,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/03-experiment-control-center.md",
+      "title": "Integrate complete control-center reports and operator controls"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-03-T03"
+      ],
+      "document_id": "FRONTEND-03",
+      "id": "FRONTEND-03-T04",
+      "line": 81,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/03-experiment-control-center.md",
+      "title": "Implement closed failure exits and campaign handoff"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-03-T04",
+        "BACKEND-06-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-03",
+      "id": "FRONTEND-03-T05",
+      "line": 83,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/03-experiment-control-center.md",
+      "title": "Implement immutable decision handoff"
+    },
+    {
+      "depends_on": [
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-04",
+      "id": "FRONTEND-04-T01",
+      "line": 72,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/04-evidence-and-agent-artifacts.md",
+      "title": "Implement generated reference components"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-04-T01",
+        "BACKEND-06-T04"
+      ],
+      "document_id": "FRONTEND-04",
+      "id": "FRONTEND-04-T02",
+      "line": 74,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/04-evidence-and-agent-artifacts.md",
+      "title": "Implement report-backed provider/timeline evidence"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-04-T02",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-04",
+      "id": "FRONTEND-04-T03",
+      "line": 76,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/04-evidence-and-agent-artifacts.md",
+      "title": "Prove artifact mutation remains server-authoritative"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-04-T03",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-04",
+      "id": "FRONTEND-04-T04",
+      "line": 78,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/04-evidence-and-agent-artifacts.md",
+      "title": "Gate lifecycle actions on accepted artifacts"
+    },
+    {
+      "depends_on": [
+        "BACKEND-02-T05",
+        "BACKEND-02-T02"
+      ],
+      "document_id": "FRONTEND-05",
+      "id": "FRONTEND-05-T01",
+      "line": 74,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/05-lead-and-campaign-management.md",
+      "title": "Implement immutable all-eligible version creation/read"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-05-T01"
+      ],
+      "document_id": "FRONTEND-05",
+      "id": "FRONTEND-05-T02",
+      "line": 76,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/05-lead-and-campaign-management.md",
+      "title": "Render exhaustive lead/member/message safety states"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-05-T02",
+        "BACKEND-05-T06"
+      ],
+      "document_id": "FRONTEND-05",
+      "id": "FRONTEND-05-T03",
+      "line": 78,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/05-lead-and-campaign-management.md",
+      "title": "Implement readiness and four campaign controls"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-05-T03",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-05",
+      "id": "FRONTEND-05-T04",
+      "line": 80,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/05-lead-and-campaign-management.md",
+      "title": "Implement typed suppression management"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-05-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-05",
+      "id": "FRONTEND-05-T05",
+      "line": 82,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/05-lead-and-campaign-management.md",
+      "title": "Enforce API boundaries and authority"
+    },
+    {
+      "depends_on": [
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-06",
+      "id": "FRONTEND-06-T01",
+      "line": 75,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/06-approval-inbox.md",
+      "title": "Implement queue/detail projections"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-06-T01",
+        "SEC-02-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-06",
+      "id": "FRONTEND-06-T02",
+      "line": 77,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/06-approval-inbox.md",
+      "title": "Implement sensitive preview, approve, and deny"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-06-T02"
+      ],
+      "document_id": "FRONTEND-06",
+      "id": "FRONTEND-06-T03",
+      "line": 79,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/06-approval-inbox.md",
+      "title": "Implement revoke and consumption visibility"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-06-T03"
+      ],
+      "document_id": "FRONTEND-06",
+      "id": "FRONTEND-06-T04",
+      "line": 81,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/06-approval-inbox.md",
+      "title": "Prove eligibility/final-SEND separation"
+    },
+    {
+      "depends_on": [
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-07",
+      "id": "FRONTEND-07-T01",
+      "line": 66,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/07-message-and-reply-timeline.md",
+      "title": "Render message authority and chronology"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-07-T01",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-07",
+      "id": "FRONTEND-07-T02",
+      "line": 68,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/07-message-and-reply-timeline.md",
+      "title": "Implement approval request"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-07-T02",
+        "BACKEND-05-T03",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-07",
+      "id": "FRONTEND-07-T03",
+      "line": 70,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/07-message-and-reply-timeline.md",
+      "title": "Implement send-intent authority action"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-07-T03",
+        "BACKEND-04-T04",
+        "WF-06-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-07",
+      "id": "FRONTEND-07-T04",
+      "line": 72,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/07-message-and-reply-timeline.md",
+      "title": "Implement ambiguity/recovery and retry abort"
+    },
+    {
+      "depends_on": [
+        "BACKEND-06-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-08",
+      "id": "FRONTEND-08-T01",
+      "line": 69,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/08-cost-funnel-and-decision-analytics.md",
+      "title": "Implement report provenance/query hooks"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-08-T01"
+      ],
+      "document_id": "FRONTEND-08",
+      "id": "FRONTEND-08-T02",
+      "line": 71,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/08-cost-funnel-and-decision-analytics.md",
+      "title": "Implement funnel and accessible chart/table"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-08-T02",
+        "BACKEND-06-T03"
+      ],
+      "document_id": "FRONTEND-08",
+      "id": "FRONTEND-08-T03",
+      "line": 73,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/08-cost-funnel-and-decision-analytics.md",
+      "title": "Implement cost/provider evidence"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-08-T03",
+        "BACKEND-06-T02",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-08",
+      "id": "FRONTEND-08-T04",
+      "line": 75,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/08-cost-funnel-and-decision-analytics.md",
+      "title": "Implement immutable decision confirmation"
+    },
+    {
+      "depends_on": [
+        "BACKEND-06-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-09",
+      "id": "FRONTEND-09-T01",
+      "line": 112,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/09-error-recovery-and-accessibility.md",
+      "title": "Implement five-kind recovery overview"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-09-T01",
+        "BACKEND-04-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-09",
+      "id": "FRONTEND-09-T02",
+      "line": 114,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/09-error-recovery-and-accessibility.md",
+      "title": "Implement ambiguity and typed repair"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-09-T02",
+        "SEC-05-T04"
+      ],
+      "document_id": "FRONTEND-09",
+      "id": "FRONTEND-09-T03",
+      "line": 116,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/09-error-recovery-and-accessibility.md",
+      "title": "Implement kill controls and authority separation"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-09-T03",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "FRONTEND-09",
+      "id": "FRONTEND-09-T04",
+      "line": 118,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/09-error-recovery-and-accessibility.md",
+      "title": "Implement operator OIDC session and Gmail OAuth/mailbox saga UX"
+    },
+    {
+      "depends_on": [
+        "ARCH-01-T04",
+        "BACKEND-03-T03",
+        "PROVIDER-01-T03",
+        "DB-03-T06",
+        "WF-01-T01",
+        "TEST-04-T06",
+        "BACKEND-02-T05",
+        "FRONTEND-03-T05",
+        "FRONTEND-04-T04",
+        "FRONTEND-05-T05",
+        "FRONTEND-06-T04",
+        "FRONTEND-07-T04",
+        "FRONTEND-08-T04",
+        "FRONTEND-09-T04",
+        "FRONTEND-01-T05",
+        "FRONTEND-03-T03"
+      ],
+      "document_id": "ARCH-01",
+      "id": "ARCH-01-T05",
+      "line": 139,
+      "locks": [
+        "architecture-contracts",
+        "gmail-side-effects",
+        "openapi-contract",
+        "frontend-client",
+        "security-runtime",
+        "milestone-gate"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/01-architecture/01-target-system-architecture.md",
+      "title": "Adjudicate the M6/M7 private-operator architecture"
+    },
+    {
+      "depends_on": [
+        "BACKEND-06-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "BACKEND-06",
+      "id": "BACKEND-06-T05",
+      "line": 106,
+      "locks": [
+        "milestone-gate",
+        "backend-domain"
+      ],
+      "milestone": "M7",
+      "mode": "serial",
+      "source": "docs/development-roadmap/06-backend/06-reporting-and-query-services.md",
+      "title": "Prove decision reproducibility, redaction, and UI contract"
+    },
+    {
+      "depends_on": [
+        "OBS-01-T04"
+      ],
+      "document_id": "OBS-01",
+      "id": "OBS-01-T05",
+      "line": 106,
+      "locks": [
+        "live-environment",
+        "telemetry-catalog"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/01-structured-events-and-correlation.md",
+      "title": "Deploy private sink/self-health"
+    },
+    {
+      "depends_on": [
+        "OBS-01-T05"
+      ],
+      "document_id": "OBS-01",
+      "id": "OBS-01-T06",
+      "line": 108,
+      "locks": [
+        "milestone-gate",
+        "telemetry-catalog"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/01-structured-events-and-correlation.md",
+      "title": "Prove absence and usability"
+    },
+    {
+      "depends_on": [
+        "OBS-03-T03"
+      ],
+      "document_id": "OBS-03",
+      "id": "OBS-03-T04",
+      "line": 82,
+      "locks": [
+        "live-environment",
+        "telemetry-catalog"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/03-provider-cost-accounting.md",
+      "title": "Implement reports/alerts/invoice review"
+    },
+    {
+      "depends_on": [
+        "OBS-03-T04",
+        "AGENT-10-T01",
+        "AGENT-10-T05"
+      ],
+      "document_id": "OBS-03",
+      "id": "OBS-03-T05",
+      "line": 84,
+      "locks": [
+        "milestone-gate",
+        "telemetry-catalog"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/03-provider-cost-accounting.md",
+      "title": "Reconcile eval and runtime windows"
+    },
+    {
+      "depends_on": [
+        "FRONTEND-09-T04",
+        "FRONTEND-01-T04",
+        "FRONTEND-02-T04",
+        "FRONTEND-04-T04",
+        "FRONTEND-05-T05",
+        "FRONTEND-06-T04",
+        "FRONTEND-07-T04",
+        "FRONTEND-03-T01",
+        "FRONTEND-03-T02",
+        "FRONTEND-03-T04",
+        "FRONTEND-08-T01",
+        "FRONTEND-08-T02",
+        "FRONTEND-08-T03",
+        "FRONTEND-03-T05",
+        "FRONTEND-08-T04",
+        "FRONTEND-01-T05",
+        "FRONTEND-03-T03"
+      ],
+      "document_id": "FRONTEND-09",
+      "id": "FRONTEND-09-T05",
+      "line": 120,
+      "locks": [
+        "frontend-client"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/07-frontend/09-error-recovery-and-accessibility.md",
+      "title": "Apply and verify global accessibility/responsive contract"
+    },
+    {
+      "depends_on": [
+        "SEC-02-T05"
+      ],
+      "document_id": "SEC-02",
+      "id": "SEC-02-T06",
+      "line": 1002,
+      "locks": [
+        "security-runtime",
+        "backup-restore",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/02-authentication-and-private-access.md",
+      "title": "Prove bootstrap and restore"
+    },
+    {
+      "depends_on": [
+        "OBS-01-T01",
+        "OBS-01-T03"
+      ],
+      "document_id": "OBS-02",
+      "id": "OBS-02-T01",
+      "line": 226,
+      "locks": [
+        "telemetry-catalog"
+      ],
+      "milestone": "M8",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/02-metrics-tracing-and-alerting.md",
+      "title": "Implement exact metric/span registries"
+    },
+    {
+      "depends_on": [
+        "AGENT-10-T01"
+      ],
+      "document_id": "OBS-04",
+      "id": "OBS-04-T01",
+      "line": 94,
+      "locks": [
+        "agent-artifacts"
+      ],
+      "milestone": "M8",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/04-agent-and-workflow-evaluations.md",
+      "title": "Implement governed datasets/manifests"
+    },
+    {
+      "depends_on": [
+        "OBS-04-T01"
+      ],
+      "document_id": "OBS-04",
+      "id": "OBS-04-T02",
+      "line": 96,
+      "locks": [
+        "agent-artifacts",
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/04-agent-and-workflow-evaluations.md",
+      "title": "Implement isolated capture and exact ownership"
+    },
+    {
+      "depends_on": [
+        "OBS-04-T02",
+        "AGENT-10-T04",
+        "AGENT-10-T05"
+      ],
+      "document_id": "OBS-04",
+      "id": "OBS-04-T03",
+      "line": 98,
+      "locks": [
+        "agent-runtime",
+        "agent-artifacts",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/04-agent-and-workflow-evaluations.md",
+      "title": "Implement deterministic scoring/promotion/rollback"
+    },
+    {
+      "depends_on": [
+        "TEST-01-T03",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "TEST-05",
+      "id": "TEST-05-T01",
+      "line": 54,
+      "locks": [
+        "test-command-registry",
+        "frontend-client"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/05-end-to-end-browser-tests.md",
+      "title": "Build isolated browser fixture composition"
+    },
+    {
+      "depends_on": [
+        "TEST-05-T01",
+        "FRONTEND-01-T04",
+        "FRONTEND-02-T04",
+        "FRONTEND-03-T01",
+        "FRONTEND-03-T02",
+        "FRONTEND-04-T04",
+        "FRONTEND-05-T05",
+        "FRONTEND-06-T04",
+        "FRONTEND-07-T04",
+        "FRONTEND-08-T01",
+        "FRONTEND-08-T03",
+        "FRONTEND-09-T04",
+        "FRONTEND-01-T05",
+        "FRONTEND-03-T03"
+      ],
+      "document_id": "TEST-05",
+      "id": "TEST-05-T02",
+      "line": 56,
+      "locks": [
+        "test-command-registry",
+        "frontend-client"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/05-end-to-end-browser-tests.md",
+      "title": "Implement private operator journeys"
+    },
+    {
+      "depends_on": [
+        "TEST-05-T02",
+        "SEC-02-T06",
+        "PROVIDER-01-T06",
+        "FRONTEND-09-T05"
+      ],
+      "document_id": "TEST-05",
+      "id": "TEST-05-T03",
+      "line": 58,
+      "locks": [
+        "test-command-registry",
+        "frontend-client"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/05-end-to-end-browser-tests.md",
+      "title": "Prove auth/OAuth/control/recovery security"
+    },
+    {
+      "depends_on": [
+        "TEST-05-T03"
+      ],
+      "document_id": "TEST-05",
+      "id": "TEST-05-T04",
+      "line": 60,
+      "locks": [
+        "test-command-registry",
+        "frontend-client"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/05-end-to-end-browser-tests.md",
+      "title": "Prove accessibility and responsive contract"
+    },
+    {
+      "depends_on": [
+        "TEST-01-T01"
+      ],
+      "document_id": "TEST-06",
+      "id": "TEST-06-T01",
+      "line": 46,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/06-load-security-and-chaos-tests.md",
+      "title": "Freeze capacity and destructive-target guards"
+    },
+    {
+      "depends_on": [
+        "TEST-01-T01"
+      ],
+      "document_id": "INFRA-02",
+      "id": "INFRA-02-T01",
+      "line": 56,
+      "locks": [
+        "ci-release"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/02-ci-cd-and-release-process.md",
+      "title": "Extend deterministic/deep CI gates"
+    },
+    {
+      "depends_on": [
+        "INFRA-02-T01"
+      ],
+      "document_id": "INFRA-02",
+      "id": "INFRA-02-T02",
+      "line": 58,
+      "locks": [
+        "ci-release"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/02-ci-cd-and-release-process.md",
+      "title": "Build immutable supply-chain candidate"
+    },
+    {
+      "depends_on": [
+        "TEST-06-T01",
+        "INFRA-02-T02"
+      ],
+      "document_id": "TEST-06",
+      "id": "TEST-06-T02",
+      "line": 48,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/06-load-security-and-chaos-tests.md",
+      "title": "Measure private capacity/rate/budget"
+    },
+    {
+      "depends_on": [
+        "INFRA-02-T02"
+      ],
+      "document_id": "INFRA-03",
+      "id": "INFRA-03-T01",
+      "line": 55,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/03-private-vps-deployment.md",
+      "title": "Provision and attest the private host"
+    },
+    {
+      "depends_on": [
+        "INFRA-03-T01",
+        "INFRA-02-T02"
+      ],
+      "document_id": "INFRA-03",
+      "id": "INFRA-03-T02",
+      "line": 57,
+      "locks": [
+        "compose-topology"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/03-private-vps-deployment.md",
+      "title": "Deploy the modular-monolith topology"
+    },
+    {
+      "depends_on": [
+        "INFRA-03-T02",
+        "SEC-03-T01"
+      ],
+      "document_id": "INFRA-03",
+      "id": "INFRA-03-T03",
+      "line": 59,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/03-private-vps-deployment.md",
+      "title": "Integrate managed secret/KMS adapter"
+    },
+    {
+      "depends_on": [
+        "INFRA-03-T03"
+      ],
+      "document_id": "INFRA-03",
+      "id": "INFRA-03-T04",
+      "line": 61,
+      "locks": [
+        "backup-restore",
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/03-private-vps-deployment.md",
+      "title": "Gate the sole off-provider recovery repository"
+    },
+    {
+      "depends_on": [
+        "INFRA-03-T04"
+      ],
+      "document_id": "INFRA-03",
+      "id": "INFRA-03-T05",
+      "line": 63,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/03-private-vps-deployment.md",
+      "title": "Configure private DNS/TLS/proxy/firewall"
+    },
+    {
+      "depends_on": [
+        "INFRA-03-T04"
+      ],
+      "document_id": "INFRA-04",
+      "id": "INFRA-04-T01",
+      "line": 155,
+      "locks": [
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/04-postgresql-backups-and-restores.md",
+      "title": "Configure exact dual-repository WAL archiving"
+    },
+    {
+      "depends_on": [
+        "INFRA-04-T01"
+      ],
+      "document_id": "INFRA-04",
+      "id": "INFRA-04-T02",
+      "line": 157,
+      "locks": [
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/04-postgresql-backups-and-restores.md",
+      "title": "Implement signed per-repository backups"
+    },
+    {
+      "depends_on": [
+        "SEC-03-T04",
+        "INFRA-04-T02"
+      ],
+      "document_id": "SEC-03",
+      "id": "SEC-03-T05",
+      "line": 90,
+      "locks": [
+        "security-runtime",
+        "backup-restore",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/03-secrets-and-oauth-token-security.md",
+      "title": "Prove clean backup/restore"
+    },
+    {
+      "depends_on": [
+        "SEC-01-T01",
+        "BACKEND-02-T05",
+        "OBS-01-T06",
+        "INFRA-03-T02",
+        "INFRA-04-T02"
+      ],
+      "document_id": "SEC-01",
+      "id": "SEC-01-T02",
+      "line": 103,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/01-threat-model.md",
+      "title": "Close implemented security boundaries against the planned registry"
+    },
+    {
+      "depends_on": [
+        "SEC-01-T02"
+      ],
+      "document_id": "SEC-01",
+      "id": "SEC-01-T03",
+      "line": 105,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/01-threat-model.md",
+      "title": "Build the Critical abuse corpus"
+    },
+    {
+      "depends_on": [
+        "SEC-01-T03"
+      ],
+      "document_id": "SEC-01",
+      "id": "SEC-01-T04",
+      "line": 107,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/01-threat-model.md",
+      "title": "Exercise disable and recovery"
+    },
+    {
+      "depends_on": [
+        "OBS-02-T01",
+        "BACKEND-02-T05",
+        "DB-06-T01",
+        "WF-05-T05",
+        "AGENT-10-T05",
+        "SEC-05-T04",
+        "OBS-03-T02",
+        "INFRA-04-T02"
+      ],
+      "document_id": "OBS-02",
+      "id": "OBS-02-T02",
+      "line": 228,
+      "locks": [
+        "telemetry-catalog"
+      ],
+      "milestone": "M8",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/02-metrics-tracing-and-alerting.md",
+      "title": "Instrument safety and service paths"
+    },
+    {
+      "depends_on": [
+        "SEC-06-T01",
+        "SEC-01-T02",
+        "SEC-02-T05",
+        "SEC-03-T04",
+        "INFRA-04-T02",
+        "PROVIDER-01-T06",
+        "PROVIDER-02-T05",
+        "PROVIDER-03-T06",
+        "PROVIDER-04-T05",
+        "PROVIDER-05-T05",
+        "PROVIDER-06-T05",
+        "OBS-02-T01",
+        "OBS-02-T02",
+        "OBS-04-T01",
+        "OBS-04-T02"
+      ],
+      "document_id": "SEC-06",
+      "id": "SEC-06-T02",
+      "line": 104,
+      "locks": [
+        "compliance-policy",
+        "milestone-gate",
+        "security-runtime",
+        "backup-restore",
+        "database-schema"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/06-data-privacy-and-retention.md",
+      "title": "Complete the live inventory and approve authoritative retention"
+    },
+    {
+      "depends_on": [
+        "DB-06-T04",
+        "SEC-06-T02"
+      ],
+      "document_id": "DB-06",
+      "id": "DB-06-T05",
+      "line": 325,
+      "locks": [
+        "database-schema",
+        "backend-domain",
+        "security-runtime",
+        "compliance-policy"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/02-database/06-migrations-seeding-and-retention.md",
+      "title": "Implement the database retention engine and recovery graph"
+    },
+    {
+      "depends_on": [
+        "OBS-02-T02"
+      ],
+      "document_id": "OBS-02",
+      "id": "OBS-02-T03",
+      "line": 230,
+      "locks": [
+        "telemetry-catalog"
+      ],
+      "milestone": "M8",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/02-metrics-tracing-and-alerting.md",
+      "title": "Build five dashboards and SLO calculations"
+    },
+    {
+      "depends_on": [
+        "OBS-02-T03"
+      ],
+      "document_id": "OBS-02",
+      "id": "OBS-02-T04",
+      "line": 232,
+      "locks": [
+        "telemetry-catalog",
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/02-metrics-tracing-and-alerting.md",
+      "title": "Implement alert routes/runbooks"
+    },
+    {
+      "depends_on": [
+        "OBS-02-T04"
+      ],
+      "document_id": "OBS-02",
+      "id": "OBS-02-T05",
+      "line": 234,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/02-metrics-tracing-and-alerting.md",
+      "title": "Prove SLO and blind-spot gates"
+    },
+    {
+      "depends_on": [
+        "TEST-02-T02",
+        "SEC-06-T02",
+        "DB-06-T05",
+        "INFRA-04-T02"
+      ],
+      "document_id": "TEST-02",
+      "id": "TEST-02-T03",
+      "line": 422,
+      "locks": [
+        "test-command-registry",
+        "database-schema",
+        "backup-restore",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/02-contract-and-integration-tests.md",
+      "title": "Prove authoritative retention, holds, purge and restored schemas"
+    },
+    {
+      "depends_on": [
+        "TEST-02-T03",
+        "PROVIDER-01-T04",
+        "PROVIDER-02-T01",
+        "PROVIDER-03-T04",
+        "PROVIDER-04-T04",
+        "PROVIDER-05-T04",
+        "PROVIDER-06-T03",
+        "AGENT-01-T03",
+        "AGENT-10-T01",
+        "AGENT-10-T03",
+        "DB-05-T05",
+        "OBS-03-T02"
+      ],
+      "document_id": "TEST-02",
+      "id": "TEST-02-T04",
+      "line": 424,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/02-contract-and-integration-tests.md",
+      "title": "Prove provider, agent, evaluation and cost contracts"
+    },
+    {
+      "depends_on": [
+        "TEST-02-T04",
+        "BACKEND-02-T05"
+      ],
+      "document_id": "TEST-02",
+      "id": "TEST-02-T05",
+      "line": 426,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/02-contract-and-integration-tests.md",
+      "title": "Prove API and generated-client partition"
+    },
+    {
+      "depends_on": [
+        "TEST-02-T05",
+        "BACKEND-03-T01",
+        "OBS-05-T01"
+      ],
+      "document_id": "TEST-02",
+      "id": "TEST-02-T06",
+      "line": 428,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/02-contract-and-integration-tests.md",
+      "title": "Prove policy and incident closure"
+    },
+    {
+      "depends_on": [
+        "TEST-02-T06"
+      ],
+      "document_id": "TEST-02",
+      "id": "TEST-02-T07",
+      "line": 430,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/02-contract-and-integration-tests.md",
+      "title": "Validate the script-derived lane"
+    },
+    {
+      "depends_on": [
+        "TEST-06-T02",
+        "SEC-01-T02"
+      ],
+      "document_id": "TEST-06",
+      "id": "TEST-06-T03",
+      "line": 50,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/06-load-security-and-chaos-tests.md",
+      "title": "Execute T01-T16 and canary corpus"
+    },
+    {
+      "depends_on": [
+        "INFRA-02-T02",
+        "INFRA-04-T02"
+      ],
+      "document_id": "INFRA-02",
+      "id": "INFRA-02-T03",
+      "line": 60,
+      "locks": [
+        "ci-release"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/02-ci-cd-and-release-process.md",
+      "title": "Implement safe migration/promotion ceremony"
+    },
+    {
+      "depends_on": [
+        "INFRA-02-T03"
+      ],
+      "document_id": "INFRA-02",
+      "id": "INFRA-02-T04",
+      "line": 62,
+      "locks": [
+        "ci-release"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/02-ci-cd-and-release-process.md",
+      "title": "Implement application rollback"
+    },
+    {
+      "depends_on": [
+        "TEST-06-T03",
+        "INFRA-04-T02",
+        "INFRA-02-T04"
+      ],
+      "document_id": "TEST-06",
+      "id": "TEST-06-T04",
+      "line": 52,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/06-load-security-and-chaos-tests.md",
+      "title": "Execute bounded chaos and rollback"
+    },
+    {
+      "depends_on": [
+        "TEST-06-T04",
+        "TEST-01-T01"
+      ],
+      "document_id": "TEST-06",
+      "id": "TEST-06-T05",
+      "line": 54,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/06-load-security-and-chaos-tests.md",
+      "title": "Close adversarial command ownership"
+    },
+    {
+      "depends_on": [
+        "INFRA-02-T04"
+      ],
+      "document_id": "INFRA-02",
+      "id": "INFRA-02-T05",
+      "line": 64,
+      "locks": [
+        "ci-release"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/02-ci-cd-and-release-process.md",
+      "title": "Exercise upgrade policy"
+    },
+    {
+      "depends_on": [
+        "INFRA-02-T05"
+      ],
+      "document_id": "INFRA-02",
+      "id": "INFRA-02-T06",
+      "line": 66,
+      "locks": [
+        "ci-release"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/02-ci-cd-and-release-process.md",
+      "title": "Close CI/release command ownership"
+    },
+    {
+      "depends_on": [
+        "INFRA-03-T05",
+        "BACKEND-02-T05",
+        "SEC-01-T02"
+      ],
+      "document_id": "INFRA-03",
+      "id": "INFRA-03-T06",
+      "line": 65,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/03-private-vps-deployment.md",
+      "title": "Stage but do not activate public unsubscribe edge"
+    },
+    {
+      "depends_on": [
+        "SEC-04-T03",
+        "SEC-05-T02",
+        "BACKEND-02-T05",
+        "SEC-01-T02",
+        "INFRA-03-T06",
+        "PROVIDER-02-T01"
+      ],
+      "document_id": "SEC-04",
+      "id": "SEC-04-T04",
+      "line": 90,
+      "locks": [
+        "gmail-side-effects",
+        "compliance-policy"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/04-outreach-compliance.md",
+      "title": "Implement the activation-ready reply and public-stop path"
+    },
+    {
+      "depends_on": [
+        "INFRA-03-T06",
+        "TEST-06-T02",
+        "INFRA-02-T04"
+      ],
+      "document_id": "INFRA-03",
+      "id": "INFRA-03-T07",
+      "line": 67,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/03-private-vps-deployment.md",
+      "title": "Prove capacity, upgrade and rollback"
+    },
+    {
+      "depends_on": [
+        "INFRA-03-T07"
+      ],
+      "document_id": "INFRA-03",
+      "id": "INFRA-03-T08",
+      "line": 69,
+      "locks": [
+        "compose-topology"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/03-private-vps-deployment.md",
+      "title": "Close topology command ownership"
+    },
+    {
+      "depends_on": [
+        "INFRA-04-T02",
+        "SEC-06-T02"
+      ],
+      "document_id": "INFRA-04",
+      "id": "INFRA-04-T03",
+      "line": 159,
+      "locks": [
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/04-postgresql-backups-and-restores.md",
+      "title": "Implement the prepared/authorized/committed deletion ledger"
+    },
+    {
+      "depends_on": [
+        "INFRA-04-T03",
+        "SEC-06-T02",
+        "DB-06-T05"
+      ],
+      "document_id": "INFRA-04",
+      "id": "INFRA-04-T04",
+      "line": 161,
+      "locks": [
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/04-postgresql-backups-and-restores.md",
+      "title": "Implement policy-bounded pruning"
+    },
+    {
+      "depends_on": [
+        "SEC-06-T02",
+        "DB-06-T05",
+        "INFRA-04-T04"
+      ],
+      "document_id": "SEC-06",
+      "id": "SEC-06-T03",
+      "line": 106,
+      "locks": [
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/06-data-privacy-and-retention.md",
+      "title": "Implement idempotent hold/redact/purge"
+    },
+    {
+      "depends_on": [
+        "SEC-06-T03"
+      ],
+      "document_id": "SEC-06",
+      "id": "SEC-06-T04",
+      "line": 108,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/06-data-privacy-and-retention.md",
+      "title": "Implement verified rights workflow"
+    },
+    {
+      "depends_on": [
+        "SEC-06-T04"
+      ],
+      "document_id": "SEC-06",
+      "id": "SEC-06-T05",
+      "line": 110,
+      "locks": [
+        "compliance-policy",
+        "security-runtime",
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/06-data-privacy-and-retention.md",
+      "title": "Exercise privacy incident and provider exit"
+    },
+    {
+      "depends_on": [
+        "INFRA-04-T04"
+      ],
+      "document_id": "INFRA-04",
+      "id": "INFRA-04-T05",
+      "line": 163,
+      "locks": [
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/04-postgresql-backups-and-restores.md",
+      "title": "Implement isolated PITR/full restore"
+    },
+    {
+      "depends_on": [
+        "WF-06-T04",
+        "OBS-05-T01",
+        "INFRA-04-T05"
+      ],
+      "document_id": "WF-06",
+      "id": "WF-06-T05",
+      "line": 74,
+      "locks": [
+        "backup-restore",
+        "workflow-runtime"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/03-workflows/06-pause-cancel-resume-and-recovery.md",
+      "title": "Implement recovery/repair runbook command"
+    },
+    {
+      "depends_on": [
+        "TEST-03-T05",
+        "INFRA-04-T02",
+        "WF-06-T05"
+      ],
+      "document_id": "TEST-03",
+      "id": "TEST-03-T06",
+      "line": 71,
+      "locks": [
+        "backup-restore",
+        "workflow-runtime"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/03-workflow-recovery-tests.md",
+      "title": "Prove typed repair and isolated restore"
+    },
+    {
+      "depends_on": [
+        "TEST-03-T06"
+      ],
+      "document_id": "TEST-03",
+      "id": "TEST-03-T07",
+      "line": 73,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/03-workflow-recovery-tests.md",
+      "title": "Close command ownership"
+    },
+    {
+      "depends_on": [
+        "OBS-04-T03",
+        "ARCH-03-T01",
+        "DB-05-T01",
+        "ARCH-02-T01",
+        "BACKEND-01-T04",
+        "WF-00-T01",
+        "PROVIDER-01-T02",
+        "PROVIDER-02-T01",
+        "PROVIDER-03-T01",
+        "PROVIDER-04-T01",
+        "PROVIDER-05-T01",
+        "PROVIDER-06-T01",
+        "WF-02-T05",
+        "WF-03-T05",
+        "WF-04-T05",
+        "WF-06-T05",
+        "PROVIDER-01-T01",
+        "TEST-03-T03",
+        "TEST-03-T04",
+        "TEST-03-T06",
+        "TEST-04-T06",
+        "WF-05-T05",
+        "WF-01-T03",
+        "TEST-04-T05"
+      ],
+      "document_id": "OBS-04",
+      "id": "OBS-04-T04",
+      "line": 100,
+      "locks": [
+        "workflow-runtime",
+        "backup-restore",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/04-agent-and-workflow-evaluations.md",
+      "title": "Implement workflow evaluation suites"
+    },
+    {
+      "depends_on": [
+        "OBS-04-T04"
+      ],
+      "document_id": "OBS-04",
+      "id": "OBS-04-T05",
+      "line": 102,
+      "locks": [
+        "telemetry-catalog"
+      ],
+      "milestone": "M8",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/04-agent-and-workflow-evaluations.md",
+      "title": "Operate shadow/drift/rolling gates"
+    },
+    {
+      "depends_on": [
+        "OBS-05-T02",
+        "PRODUCT-03-T03",
+        "SEC-02-T05",
+        "SEC-03-T04",
+        "INFRA-02-T04",
+        "INFRA-04-T05",
+        "WF-06-T05"
+      ],
+      "document_id": "OBS-05",
+      "id": "OBS-05-T03",
+      "line": 146,
+      "locks": [
+        "security-runtime",
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/05-incident-response.md",
+      "title": "Complete all typed incident recovery runbooks"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-03-T03",
+        "SEC-05-T04",
+        "OBS-05-T02",
+        "OBS-05-T03"
+      ],
+      "document_id": "PRODUCT-03",
+      "id": "PRODUCT-03-T04",
+      "line": 112,
+      "locks": [
+        "security-runtime",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/00-product-strategy/03-risk-register-and-kill-criteria.md",
+      "title": "Exercise integrated operator recovery"
+    },
+    {
+      "depends_on": [
+        "OBS-05-T03",
+        "OBS-02-T04"
+      ],
+      "document_id": "OBS-05",
+      "id": "OBS-05-T04",
+      "line": 148,
+      "locks": [
+        "telemetry-catalog",
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/05-incident-response.md",
+      "title": "Wire alerts/contacts/communications"
+    },
+    {
+      "depends_on": [
+        "OBS-05-T04"
+      ],
+      "document_id": "OBS-05",
+      "id": "OBS-05-T05",
+      "line": 150,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/05-incident-response.md",
+      "title": "Exercise all runbooks"
+    },
+    {
+      "depends_on": [
+        "OBS-05-T05"
+      ],
+      "document_id": "OBS-05",
+      "id": "OBS-05-T06",
+      "line": 152,
+      "locks": [
+        "security-runtime"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/05-incident-response.md",
+      "title": "Implement post-incident and re-enable gate"
+    },
+    {
+      "depends_on": [
+        "TEST-01-T04",
+        "TEST-02-T07",
+        "TEST-05-T04",
+        "TEST-06-T04",
+        "TEST-03-T06",
+        "TEST-04-T06",
+        "TEST-03-T07",
+        "TEST-06-T05"
+      ],
+      "document_id": "TEST-01",
+      "id": "TEST-01-T05",
+      "line": 152,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/01-testing-strategy.md",
+      "title": "Wire CI/release gates"
+    },
+    {
+      "depends_on": [
+        "TEST-01-T05"
+      ],
+      "document_id": "TEST-01",
+      "id": "TEST-01-T06",
+      "line": 154,
+      "locks": [
+        "test-command-registry"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/01-testing-strategy.md",
+      "title": "Operate flake and quarantine policy"
+    },
+    {
+      "depends_on": [
+        "OBS-02-T01",
+        "OBS-01-T03",
+        "BACKEND-06-T02"
+      ],
+      "document_id": "INFRA-05",
+      "id": "INFRA-05-T01",
+      "line": 84,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/05-monitoring-and-disaster-recovery.md",
+      "title": "Implement telemetry and authoritative comparisons"
+    },
+    {
+      "depends_on": [
+        "INFRA-05-T01",
+        "OBS-02-T04",
+        "OBS-05-T01",
+        "OBS-05-T04"
+      ],
+      "document_id": "INFRA-05",
+      "id": "INFRA-05-T02",
+      "line": 86,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/05-monitoring-and-disaster-recovery.md",
+      "title": "Implement exact alert/incident routing"
+    },
+    {
+      "depends_on": [
+        "INFRA-05-T02"
+      ],
+      "document_id": "INFRA-05",
+      "id": "INFRA-05-T03",
+      "line": 88,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/05-monitoring-and-disaster-recovery.md",
+      "title": "Establish two independent on-call paths"
+    },
+    {
+      "depends_on": [
+        "INFRA-05-T03",
+        "OBS-05-T01"
+      ],
+      "document_id": "INFRA-05",
+      "id": "INFRA-05-T04",
+      "line": 90,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/05-monitoring-and-disaster-recovery.md",
+      "title": "Implement direct Critical signaling and the E2E watchdog"
+    },
+    {
+      "depends_on": [
+        "INFRA-05-T04",
+        "INFRA-04-T03"
+      ],
+      "document_id": "INFRA-05",
+      "id": "INFRA-05-T05",
+      "line": 92,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/05-monitoring-and-disaster-recovery.md",
+      "title": "Monitor the sole AWS S3 deletion witness"
+    },
+    {
+      "depends_on": [
+        "INFRA-05-T05",
+        "INFRA-02-T04",
+        "SEC-03-T04",
+        "INFRA-04-T02"
+      ],
+      "document_id": "INFRA-05",
+      "id": "INFRA-05-T06",
+      "line": 94,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/05-monitoring-and-disaster-recovery.md",
+      "title": "Execute every DR scenario"
+    },
+    {
+      "depends_on": [
+        "INFRA-04-T05",
+        "INFRA-05-T06"
+      ],
+      "document_id": "INFRA-04",
+      "id": "INFRA-04-T06",
+      "line": 165,
+      "locks": [
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/04-postgresql-backups-and-restores.md",
+      "title": "Exercise clean-host recovery every 90 days"
+    },
+    {
+      "depends_on": [
+        "INFRA-04-T06"
+      ],
+      "document_id": "INFRA-04",
+      "id": "INFRA-04-T07",
+      "line": 167,
+      "locks": [
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/04-postgresql-backups-and-restores.md",
+      "title": "Exercise off-Google bootstrap and key rotation"
+    },
+    {
+      "depends_on": [
+        "INFRA-04-T07"
+      ],
+      "document_id": "INFRA-04",
+      "id": "INFRA-04-T08",
+      "line": 169,
+      "locks": [
+        "backup-restore"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/04-postgresql-backups-and-restores.md",
+      "title": "Close backup/restore command ownership"
+    },
+    {
+      "depends_on": [
+        "INFRA-05-T06",
+        "INFRA-04-T06"
+      ],
+      "document_id": "INFRA-05",
+      "id": "INFRA-05-T07",
+      "line": 96,
+      "locks": [
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/05-monitoring-and-disaster-recovery.md",
+      "title": "Operate freshness and re-enable gates"
+    },
+    {
+      "depends_on": [
+        "ARCH-01-T05",
+        "INFRA-03-T07",
+        "INFRA-04-T06",
+        "INFRA-05-T07",
+        "OBS-05-T03"
+      ],
+      "document_id": "ARCH-01",
+      "id": "ARCH-01-T06",
+      "line": 141,
+      "locks": [
+        "architecture-contracts",
+        "compose-topology",
+        "backup-restore",
+        "live-environment",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/01-architecture/01-target-system-architecture.md",
+      "title": "Prove private operations"
+    },
+    {
+      "depends_on": [
+        "INFRA-05-T07"
+      ],
+      "document_id": "INFRA-05",
+      "id": "INFRA-05-T08",
+      "line": 98,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/11-infrastructure/05-monitoring-and-disaster-recovery.md",
+      "title": "Close command and DR scenario sets"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-01-T06",
+        "INFRA-02-T04",
+        "INFRA-04-T06",
+        "OBS-02-T05",
+        "INFRA-05-T07",
+        "ARCH-01-T05",
+        "TEST-01-T02",
+        "TEST-01-T05",
+        "INFRA-03-T08"
+      ],
+      "document_id": "LAUNCH-02",
+      "id": "LAUNCH-02-T01",
+      "line": 70,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/02-controlled-internal-launch.md",
+      "title": "Freeze the internal entry and authority-zero target"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-02-T01",
+        "INFRA-02-T02",
+        "INFRA-04-T02"
+      ],
+      "document_id": "LAUNCH-02",
+      "id": "LAUNCH-02-T02",
+      "line": 72,
+      "locks": [
+        "live-environment",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/02-controlled-internal-launch.md",
+      "title": "Promote the private candidate safely"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-02-T02"
+      ],
+      "document_id": "LAUNCH-02",
+      "id": "LAUNCH-02-T03",
+      "line": 74,
+      "locks": [
+        "live-environment",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/02-controlled-internal-launch.md",
+      "title": "Run bounded synthetic/internal operations"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-02-T03",
+        "INFRA-03-T04",
+        "INFRA-04-T06",
+        "INFRA-05-T06",
+        "TEST-06-T04"
+      ],
+      "document_id": "LAUNCH-02",
+      "id": "LAUNCH-02-T04",
+      "line": 76,
+      "locks": [
+        "backup-restore",
+        "live-environment",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/02-controlled-internal-launch.md",
+      "title": "Prove restore, witness, alerts and DR"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-02-T04"
+      ],
+      "document_id": "LAUNCH-02",
+      "id": "LAUNCH-02-T05",
+      "line": 78,
+      "locks": [
+        "ci-release",
+        "live-environment",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/02-controlled-internal-launch.md",
+      "title": "Close rollback and M8 exit"
+    },
+    {
+      "depends_on": [
+        "INFRA-02-T02"
+      ],
+      "document_id": "LAUNCH-05",
+      "id": "LAUNCH-05-T01",
+      "line": 117,
+      "locks": [
+        "dependency-lockfiles",
+        "ci-release"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/05-maintenance-and-upgrade-policy.md",
+      "title": "Build the reproducible advisory and inventory review"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-05-T01"
+      ],
+      "document_id": "LAUNCH-05",
+      "id": "LAUNCH-05-T02",
+      "line": 119,
+      "locks": [
+        "dependency-lockfiles",
+        "ci-release"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/05-maintenance-and-upgrade-policy.md",
+      "title": "Produce pinned immutable candidates"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-05-T02"
+      ],
+      "document_id": "LAUNCH-05",
+      "id": "LAUNCH-05-T03",
+      "line": 121,
+      "locks": [
+        "ci-release"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/05-maintenance-and-upgrade-policy.md",
+      "title": "Run class-specific migrations/evaluations"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-05-T03",
+        "INFRA-02-T04",
+        "INFRA-04-T02"
+      ],
+      "document_id": "LAUNCH-05",
+      "id": "LAUNCH-05-T04",
+      "line": 123,
+      "locks": [
+        "ci-release",
+        "backup-restore",
+        "live-environment"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/05-maintenance-and-upgrade-policy.md",
+      "title": "Canary, promote and prove rollback/restore"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-05-T04"
+      ],
+      "document_id": "LAUNCH-05",
+      "id": "LAUNCH-05-T05",
+      "line": 125,
+      "locks": [
+        "ci-release",
+        "milestone-gate"
+      ],
+      "milestone": "M8",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/05-maintenance-and-upgrade-policy.md",
+      "title": "Operate cadence, EOL and emergency controls"
+    },
+    {
+      "depends_on": [
+        "SEC-04-T04",
+        "PRODUCT-01-T02",
+        "SEC-06-T02",
+        "SEC-05-T04"
+      ],
+      "document_id": "SEC-04",
+      "id": "SEC-04-T05",
+      "line": 92,
+      "locks": [
+        "compliance-policy",
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/04-outreach-compliance.md",
+      "title": "Obtain real-recipient counsel and provider-policy decision"
+    },
+    {
+      "depends_on": [
+        "SEC-01-T04",
+        "OBS-04-T05",
+        "INFRA-04-T06",
+        "LAUNCH-05-T04"
+      ],
+      "document_id": "SEC-01",
+      "id": "SEC-01-T05",
+      "line": 109,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/01-threat-model.md",
+      "title": "Review residual risk before every authority increase"
+    },
+    {
+      "depends_on": [
+        "PRODUCT-02-T03",
+        "SEC-01-T05"
+      ],
+      "document_id": "PRODUCT-02",
+      "id": "PRODUCT-02-T04",
+      "line": 117,
+      "locks": [
+        "product-contracts",
+        "compliance-policy",
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/00-product-strategy/02-success-metrics.md",
+      "title": "Pre-register the M9 decision"
+    },
+    {
+      "depends_on": [
+        "TEST-05-T04",
+        "SEC-04-T04"
+      ],
+      "document_id": "TEST-05",
+      "id": "TEST-05-T05",
+      "line": 62,
+      "locks": [
+        "test-command-registry",
+        "frontend-client"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/05-end-to-end-browser-tests.md",
+      "title": "Prove scanner-safe public unsubscribe"
+    },
+    {
+      "depends_on": [
+        "TEST-05-T05",
+        "TEST-01-T01"
+      ],
+      "document_id": "TEST-05",
+      "id": "TEST-05-T06",
+      "line": 64,
+      "locks": [
+        "test-command-registry",
+        "frontend-client"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/05-end-to-end-browser-tests.md",
+      "title": "Close private/public browser command ownership"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-02-T05",
+        "SEC-01-T05",
+        "TEST-05-T05",
+        "DB-02-T03",
+        "BACKEND-05-T05",
+        "PROVIDER-01-T03",
+        "SEC-04-T02",
+        "SEC-05-T03",
+        "PRODUCT-02-T04",
+        "SEC-04-T05"
+      ],
+      "document_id": "LAUNCH-03",
+      "id": "LAUNCH-03-T01",
+      "line": 89,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/03-first-real-experiment.md",
+      "title": "Freeze one real-experiment entry"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-03-T01",
+        "INFRA-03-T06",
+        "BACKEND-02-T05",
+        "SEC-04-T04",
+        "SEC-04-T05"
+      ],
+      "document_id": "LAUNCH-03",
+      "id": "LAUNCH-03-T02",
+      "line": 91,
+      "locks": [
+        "live-environment",
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/03-first-real-experiment.md",
+      "title": "Publish and mode only scanner-safe suppression ingress"
+    },
+    {
+      "depends_on": [
+        "OBS-01-T06",
+        "LAUNCH-03-T02",
+        "SEC-04-T04"
+      ],
+      "document_id": "OBS-01",
+      "id": "OBS-01-T07",
+      "line": 110,
+      "locks": [
+        "telemetry-catalog",
+        "live-environment"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/09-observability-and-evaluation/01-structured-events-and-correlation.md",
+      "title": "Integrate active public-edge correlation"
+    },
+    {
+      "depends_on": [
+        "TEST-06-T05",
+        "LAUNCH-03-T02",
+        "BACKEND-02-T05",
+        "SEC-04-T04",
+        "OBS-01-T07"
+      ],
+      "document_id": "TEST-06",
+      "id": "TEST-06-T06",
+      "line": 56,
+      "locks": [
+        "test-command-registry",
+        "live-environment"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/10-testing/06-load-security-and-chaos-tests.md",
+      "title": "Prove active public route, WAF, and recipient-stop controls"
+    },
+    {
+      "depends_on": [
+        "SEC-04-T05",
+        "TEST-06-T06",
+        "SEC-05-T04",
+        "OBS-03-T04",
+        "TEST-03-T06"
+      ],
+      "document_id": "SEC-04",
+      "id": "SEC-04-T06",
+      "line": 94,
+      "locks": [
+        "milestone-gate",
+        "compliance-policy"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/04-outreach-compliance.md",
+      "title": "Prove the bounded authority ladder"
+    },
+    {
+      "depends_on": [
+        "SEC-05-T04",
+        "SEC-04-T06",
+        "TEST-03-T06",
+        "OBS-05-T06"
+      ],
+      "document_id": "SEC-05",
+      "id": "SEC-05-T05",
+      "line": 98,
+      "locks": [
+        "security-runtime",
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/08-security-and-compliance/05-suppression-budgets-and-kill-switch.md",
+      "title": "Prove earned re-enable"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-03-T02",
+        "SEC-04-T02",
+        "BACKEND-05-T03",
+        "BACKEND-03-T04",
+        "SEC-05-T03",
+        "SEC-04-T06",
+        "SEC-05-T05",
+        "TEST-06-T06"
+      ],
+      "document_id": "LAUNCH-03",
+      "id": "LAUNCH-03-T03",
+      "line": 93,
+      "locks": [
+        "gmail-side-effects",
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/03-first-real-experiment.md",
+      "title": "Approve and send each initial message manually"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-03-T03",
+        "INFRA-04-T07",
+        "INFRA-05-T07"
+      ],
+      "document_id": "LAUNCH-03",
+      "id": "LAUNCH-03-T04",
+      "line": 95,
+      "locks": [
+        "gmail-side-effects",
+        "live-environment",
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/03-first-real-experiment.md",
+      "title": "Suppress every recipient signal and watch aborts"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-03-T04"
+      ],
+      "document_id": "LAUNCH-03",
+      "id": "LAUNCH-03-T05",
+      "line": 97,
+      "locks": [
+        "gmail-side-effects",
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/03-first-real-experiment.md",
+      "title": "Close the window and record the decision"
+    },
+    {
+      "depends_on": [
+        "AGENT-01-T01",
+        "PROVIDER-02-T01",
+        "PROVIDER-03-T01",
+        "PROVIDER-04-T01",
+        "PROVIDER-05-T01",
+        "PROVIDER-06-T01",
+        "SEC-05-T03",
+        "WF-02-T05",
+        "WF-03-T05",
+        "WF-04-T05",
+        "PROVIDER-01-T01"
+      ],
+      "document_id": "LAUNCH-04",
+      "id": "LAUNCH-04-T01",
+      "line": 78,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/04-earned-autonomy.md",
+      "title": "Freeze levels, scopes and caps"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-04-T01"
+      ],
+      "document_id": "LAUNCH-04",
+      "id": "LAUNCH-04-T02",
+      "line": 80,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/04-earned-autonomy.md",
+      "title": "Pre-register and compute promotion populations exactly"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-04-T02",
+        "LAUNCH-03-T05",
+        "AGENT-10-T05",
+        "LAUNCH-02-T05",
+        "OBS-04-T05",
+        "OBS-05-T06",
+        "INFRA-02-T04"
+      ],
+      "document_id": "LAUNCH-04",
+      "id": "LAUNCH-04-T03",
+      "line": 82,
+      "locks": [
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/04-earned-autonomy.md",
+      "title": "Require operator-signed one-level promotion"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-04-T03"
+      ],
+      "document_id": "LAUNCH-04",
+      "id": "LAUNCH-04-T04",
+      "line": 84,
+      "locks": [
+        "security-runtime",
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/04-earned-autonomy.md",
+      "title": "Enforce permanent authority boundaries"
+    },
+    {
+      "depends_on": [
+        "LAUNCH-04-T04"
+      ],
+      "document_id": "LAUNCH-04",
+      "id": "LAUNCH-04-T05",
+      "line": 86,
+      "locks": [
+        "ci-release",
+        "milestone-gate"
+      ],
+      "milestone": "M9",
+      "mode": "serial",
+      "source": "docs/development-roadmap/12-launch-and-operations/04-earned-autonomy.md",
+      "title": "Implement demotion and rollback"
+    }
+  ]
+}

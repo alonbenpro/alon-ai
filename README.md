@@ -85,6 +85,7 @@ On 2026-08-28, immutable [GitHub Actions run 33179438858](https://github.com/alo
 
 | Command | Purpose |
 | --- | --- |
+| `make roadmap` | Validate inline roadmap metadata and generated execution artifacts |
 | `make generate` | Regenerate OpenAPI JSON and TypeScript schema declarations |
 | `make format` | Format Python and apply frontend lint fixes |
 | `make lint` | Check Python formatting/linting and frontend linting |
@@ -127,3 +128,5 @@ Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconcili
 ## Roadmap and explicit non-goals
 
 Near term: complete DBOS production acceptance, then follow the [development roadmap](docs/development-roadmap/README.md) and only build controlled outreach features that earlier gates make safe. Pydantic AI and DBOS are the selected initial stack; Temporal is the mandatory fallback after a disqualifying M1 result. LangChain, LangGraph, Restate, and Prefect are excluded from the initial stack. The foundation explicitly does not yet include public auth, multi-user accounts, billing, public webhooks, VPS deployment, Redis/Celery/RabbitMQ/Kafka, microservices, Kubernetes, vector databases, or a complete experiment state machine.
+
+Execution order and parallel dispatch are governed by the [execution manifest](docs/development-roadmap/execution-manifest.json), [execution order](docs/development-roadmap/EXECUTION_ORDER.md), and [agent execution plan](docs/development-roadmap/AGENT_EXECUTION_PLAN.md) after `python3 scripts/validate_roadmap.py --check` passes.

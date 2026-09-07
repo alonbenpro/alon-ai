@@ -33,6 +33,8 @@ The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail 
 
 ## How to execute this roadmap
 
+Run `python3 scripts/validate_roadmap.py --check` (or `make roadmap`) before selecting work. The generated [execution manifest](execution-manifest.json), [execution order](EXECUTION_ORDER.md), and [agent execution plan](AGENT_EXECUTION_PLAN.md) are execution/parallel-dispatch views; they do not prove implementation status.
+
 1. Open the current milestone in the table below.
 2. Follow links from that milestone across subsystem folders; directory order has no authority.
 3. Complete each checkbox with the named evidence retained in the repository or the milestone evidence bundle.

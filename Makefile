@@ -1,8 +1,11 @@
-.PHONY: setup generate format lint typecheck test build containers dev down
+.PHONY: setup roadmap generate format lint typecheck test build containers dev down
 
 setup:
 	cd backend && uv sync --locked --all-extras --dev
 	npm --prefix frontend ci
+
+roadmap:
+	python3 scripts/validate_roadmap.py --check
 
 generate:
 	npm --prefix frontend run api:generate
@@ -11,7 +14,7 @@ format:
 	cd backend && uv run ruff format .
 	npm --prefix frontend run lint -- --fix
 
-lint:
+lint: roadmap
 	cd backend && uv run ruff format --check .
 	cd backend && uv run ruff check .
 	npm --prefix frontend run lint
