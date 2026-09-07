@@ -2,9 +2,9 @@
 
 **Document ID:** FRONTEND-04
 **Status:** Planned evidence review/acceptance UX over exact BACKEND-02 artifact/evidence/evaluation routes
-**Milestone:** M4-M7, after accepted artifact/provider/report projections exist
+**Milestone:** M7 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [DB-04](../02-database/04-agent-artifacts-and-evidence.md), [AGENT-01](../04-agents/01-agent-runtime-and-contracts.md), [AGENT-10](../04-agents/10-agent-evals-and-versioning.md), [BACKEND-06](../06-backend/06-reporting-and-query-services.md), and [FRONTEND-01](01-information-architecture.md)
+**Prerequisites:** exact local order `FRONTEND-04-T01 -> FRONTEND-04-T02 -> FRONTEND-04-T03 -> FRONTEND-04-T04`; cross-document task Inputs `FRONTEND-04-T01 <- BACKEND-02-T05; FRONTEND-04-T02 <- BACKEND-06-T04; FRONTEND-04-T03 <- BACKEND-02-T05; FRONTEND-04-T04 <- BACKEND-02-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [DB-04](../02-database/04-agent-artifacts-and-evidence.md), [AGENT-01](../04-agents/01-agent-runtime-and-contracts.md), [AGENT-10](../04-agents/10-agent-evals-and-versioning.md), [BACKEND-06](../06-backend/06-reporting-and-query-services.md), and [FRONTEND-01](01-information-architecture.md)
 **Outputs:** Provenance-first generated-client detail/evidence/evaluation components, explicit redaction/abstention/eval semantics, and exact accept/reject reconciliation
 **Unlocks:** Evidence-aware approvals and experiment decisions without granting agent authority
 **Risk:** High
@@ -68,9 +68,13 @@ Accept/reject dialogs display exact artifact ID/type/schema/artifact version/con
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=FRONTEND-04-T01 milestone=M7 depends_on=BACKEND-02-T05 mode=serial locks=frontend-client -->
 - [ ] **Implement generated reference components —** Input: exact embedded generated unions. Operation: render exhaustive artifact/agent/evidence/eval statuses, IDs/versions/hashes, abstention, supersession, relationship, redaction, and UTC/presentation times. Output: provenance-first cards. Test evidence: every-state typed fixtures and unknown-union failure. Failure behavior: block only affected card and show correlation.
+<!-- roadmap-task id=FRONTEND-04-T02 milestone=M7 depends_on=FRONTEND-04-T01,BACKEND-06-T04 mode=serial locks=frontend-client -->
 - [ ] **Implement report-backed provider/timeline evidence —** Input: exported-snapshot pages and provider report. Operation: render stable pages/data tables, preserve as-of/high-watermark/warnings, and restart expired snapshots. Output: reproducible evidence context. Test evidence: pagination concurrency/expiry, partial, cost-currency, and ambiguity fixtures. Failure behavior: discard mixed traversal; never merge snapshots.
+<!-- roadmap-task id=FRONTEND-04-T03 milestone=M7 depends_on=FRONTEND-04-T02,BACKEND-02-T05 mode=serial locks=frontend-client -->
 - [ ] **Prove artifact mutation remains server-authoritative —** Input: route/import/network graph. Operation: assert only exact accept/reject mutations, no acceptance calculation, provider fetch, raw capture access, or inferred materialization. Output: evidence review UI with server-reconciled decisions. Test evidence: network allowlist, stale version/hash/supersession races, and static AST scan. Failure behavior: block release.
+<!-- roadmap-task id=FRONTEND-04-T04 milestone=M7 depends_on=FRONTEND-04-T03,BACKEND-02-T05 mode=serial locks=frontend-client -->
 - [ ] **Gate lifecycle actions on accepted artifacts —** Input: UX acceptance criteria versus 66-operation manifest. Operation: require fresh accepted artifact IDs/versions/hashes before dependent research/campaign/approval/evaluation actions. Output: fail-closed lifecycle gate. Test evidence: operation/schema coverage diff. Failure behavior: refetch or block; never infer acceptance.
 
 ## Test strategy

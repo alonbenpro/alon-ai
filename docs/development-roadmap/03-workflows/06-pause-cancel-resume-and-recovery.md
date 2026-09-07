@@ -2,9 +2,9 @@
 
 **Document ID:** WF-06
 **Status:** Planned cross-workflow control/recovery contract
-**Milestone:** M6, with M4-M5 no-send controls implemented earlier
+**Milestone:** M6, M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [WF-02](02-experiment-lifecycle.md), [WF-05](05-outreach-and-reply-workflow.md), DB-01/03/05, authenticated command handling, and M1-proven runtime control/recovery behavior
+**Prerequisites:** exact local order `WF-06-T01 -> WF-06-T02 -> WF-06-T03 -> WF-06-T04 -> WF-06-T05`; cross-document task Inputs `WF-06-T01 <- SEC-02-T04,BACKEND-05-T01; WF-06-T04 <- BACKEND-04-T04,PROVIDER-02-T02; WF-06-T05 <- OBS-05-T01,INFRA-04-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [WF-02](02-experiment-lifecycle.md), [WF-05](05-outreach-and-reply-workflow.md), DB-01/03/05, authenticated command handling, and M1-proven runtime control/recovery behavior
 **Outputs:** Idempotent control commands, cooperative/runtime pause/cancel mapping, guarded resume, closed failure exits, ambiguous-send quarantine, and recovery/repair evidence
 **Unlocks:** Safe M6 pilot and M7 operator control center
 **Risk:** Critical
@@ -62,11 +62,16 @@ The `FAILED -> READY_FOR_OUTREACH` path is deliberate: it never jumps to `OUTREA
 
 ## Ordered implementation tasks
 
-- [ ] **Implement idempotent control command service —** Input: authenticated operator, expected versions, reason, command key. Operation: validate matrix, persist request/state/events/audit/outbox/result atomically, then signal runtime. Output: authoritative requested state. Test evidence: command replay, stale version, illegal state matrix. Failure behavior: typed denial/no runtime call.
+<!-- roadmap-task id=WF-06-T01 milestone=M6 depends_on=SEC-02-T04,BACKEND-05-T01 mode=parallel locks=workflow-runtime,backend-domain -->
+- [ ] **Implement idempotent control command service —** Input: SEC-02 real authenticated operator context, expected versions, reason, command key and BACKEND-05 implemented command bus. Operation: invoke the sole BACKEND-05 command owner to persist exact command/state/event/audit/outbox/result rows atomically, signal runtime only after commit, and retain acknowledgement/failure; the workflow is not a second writer. Output: authoritative requested state. Test evidence: command replay, stale version, illegal state matrix. Failure behavior: typed denial/no runtime call.
+<!-- roadmap-task id=WF-06-T02 milestone=M6 depends_on=WF-06-T01 mode=parallel locks=workflow-runtime -->
 - [ ] **Implement cooperative acknowledgement —** Input: requested state and runtime handle. Operation: prevent new steps/dequeues, wait boundedly for safe boundary, record canonical run acknowledgement. Output: `PAUSED`/`CANCELLED` or visible pending/incident state. Test evidence: kill/restart at request, signal, step, acknowledgement. Failure behavior: keep control closed and escalate; never report completion early.
-- [ ] **Implement guarded resume/retry —** Input: saved state/prior failure plus current evidence. Operation: revalidate every version/gate/control; resume nonterminal paused run or create a new failed-stage run. Output: exact ARCH-03 state/events. Test evidence: changed artifact/policy/suppression/gate and retry-exhaustion cases. Failure behavior: remain paused/failed.
+<!-- roadmap-task id=WF-06-T03 milestone=M6 depends_on=WF-06-T02 mode=parallel locks=workflow-runtime -->
+- [ ] **Implement guarded resume/retry —** Input: saved state/prior failure plus current evidence. Operation: revalidate every version/gate/control; resume nonterminal paused run or create a new failed-stage run; compose the preceding cooperative acknowledgement handler into the reusable guarded transition interface. Output: implemented versioned guarded resume/retry transition and acknowledgement handler interface plus exact ARCH-03 states/events. Test evidence: changed artifact/policy/suppression/gate and retry-exhaustion cases. Failure behavior: remain paused/failed.
+<!-- roadmap-task id=WF-06-T04 milestone=M6 depends_on=WF-06-T03,BACKEND-04-T04,PROVIDER-02-T02 mode=serial locks=gmail-side-effects,workflow-runtime -->
 - [ ] **Implement send drain/reconciliation —** Input: all nonterminal messages/attempts/provider evidence. Operation: cancel provably unsent work; quarantine and reconcile possibly sent work; prohibit retry/replacement permanently for every ambiguous/negative/conflicting read result. Only a separate explicit provider rejection or signed local pre-write proof may create retryable state. Output: terminal or permanently quarantined operator-visible ledger. Test evidence: cancel at every WF-05 network boundary plus zero/many/delayed-search non-escape. Failure behavior: both controls off, incident open.
-- [ ] **Implement recovery/repair runbook command —** Input: incident, product/runtime/provider comparison, signed evidence. Operation: choose a typed repair transition, record before/after hashes, execute under idempotency, and verify invariants. Output: auditable recovery without SQL. Test evidence: corrupted/unknown-state fixtures and restore drill. Failure behavior: keep system degraded/off and restore to isolated database.
+<!-- roadmap-task id=WF-06-T05 milestone=M8 depends_on=WF-06-T04,OBS-05-T01,INFRA-04-T05 mode=serial locks=backup-restore,workflow-runtime -->
+- [ ] **Implement recovery/repair runbook command —** Input: incident, product/runtime/provider comparison, signed evidence. Operation: choose a typed repair transition, record before/after hashes, execute under idempotency, and verify invariants. Output: implemented versioned idempotent typed recovery/repair command interface and auditable recovery evidence without SQL. Test evidence: corrupted/unknown-state fixtures and restore drill. Failure behavior: keep system degraded/off and restore to isolated database.
 
 ## Test strategy
 

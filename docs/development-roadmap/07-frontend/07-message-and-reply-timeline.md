@@ -2,9 +2,9 @@
 
 **Document ID:** FRONTEND-07
 **Status:** Planned M6-M7 redacted message surface; no product messages, sends, replies, or route exist today
-**Milestone:** M6 owned-inbox evidence, M7 operator diagnosis, M9 bounded product use only after gates
+**Milestone:** M7 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [ARCH-03 message states/events](../01-architecture/03-domain-events-and-state-machines.md#campaign-and-message-state-machines), [WF-05](../03-workflows/05-outreach-and-reply-workflow.md), [BACKEND-04](../06-backend/04-send-gateway.md), [BACKEND-05](../06-backend/05-approval-and-command-handling.md), and [BACKEND-02](../06-backend/02-api-contracts.md)
+**Prerequisites:** exact local order `FRONTEND-07-T01 -> FRONTEND-07-T02 -> FRONTEND-07-T03 -> FRONTEND-07-T04`; cross-document task Inputs `FRONTEND-07-T01 <- BACKEND-02-T05; FRONTEND-07-T02 <- BACKEND-02-T05; FRONTEND-07-T03 <- BACKEND-05-T03,BACKEND-02-T05; FRONTEND-07-T04 <- BACKEND-04-T04,WF-06-T04,BACKEND-02-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [ARCH-03 message states/events](../01-architecture/03-domain-events-and-state-machines.md#campaign-and-message-state-machines), [WF-05](../03-workflows/05-outreach-and-reply-workflow.md), [BACKEND-04](../06-backend/04-send-gateway.md), [BACKEND-05](../06-backend/05-approval-and-command-handling.md), and [BACKEND-02](../06-backend/02-api-contracts.md)
 **Outputs:** Redacted message/send/reply chronology, approval/intention controls, ambiguity quarantine, retry-abort control, and exact authoritative reconciliation
 **Unlocks:** Diagnosis of one message without Gmail-console action or unsafe resend
 **Risk:** Critical
@@ -62,10 +62,14 @@ Dialogs follow heading-first focus, trap, pending no-close, focus return, Enter/
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=FRONTEND-07-T01 milestone=M7 depends_on=BACKEND-02-T05 mode=serial locks=frontend-client -->
 - [ ] **Render message authority and chronology —** Input: generated redacted resource and canonical events. Operation: show exact state/version/IDs/hashes, separate direct/reconciled outcomes, reply/classification semantics, and server UTC/Jerusalem presentation. Output: diagnosable timeline. Test evidence: every state/event/outcome/redaction fixture. Failure behavior: unsupported record blocks actions.
+<!-- roadmap-task id=FRONTEND-07-T02 milestone=M7 depends_on=FRONTEND-07-T01,BACKEND-02-T05 mode=serial locks=frontend-client -->
 - [ ] **Implement approval request —** Input: latest message ETag, refetched accepted artifact versions/hashes, and generated scope request. Operation: review, submit one key, render returned approval, invalidate/refetch. Output: `APPROVAL_PENDING` server state. Test evidence: eligibility denial, stale basis, replay, and no-intent/provider-call tests. Failure behavior: remain draft and preserve denial reasons.
-- [ ] **Implement send-intent authority action —** Input: exact approved message/approval snapshot. Operation: typed confirmation, submit one key + ETag, render 202 as queued-intent acceptance only, and poll. Output: server intent/queue state. Test evidence: approval consumed once, mutable final denial, double-submit, unknown outcome, no optimistic send. Failure behavior: no second intent and no client retry.
-- [ ] **Implement ambiguity/recovery and retry abort —** Input: server attempt/reconciliation/retry facts. Operation: remove send actions, deep-link typed recovery, or confirm terminal abort. Output: no blind retry. Test evidence: timeout/crash/zero-one-many Sent matches, abort race/exhaustion, and cross-mailbox denial. Failure behavior: quarantine and both controls conservative.
+<!-- roadmap-task id=FRONTEND-07-T03 milestone=M7 depends_on=FRONTEND-07-T02,BACKEND-05-T03,BACKEND-02-T05 mode=serial locks=frontend-client -->
+- [ ] **Implement send-intent authority action —** Input: exact approved message/approval snapshot, using BACKEND-02 canonical generated client/types. Operation: typed confirmation, submit one key + ETag, render 202 as queued-intent acceptance only, and poll. Output: server intent/queue state. Test evidence: approval consumed once, mutable final denial, double-submit, unknown outcome, no optimistic send. Failure behavior: no second intent and no client retry.
+<!-- roadmap-task id=FRONTEND-07-T04 milestone=M7 depends_on=FRONTEND-07-T03,BACKEND-04-T04,WF-06-T04,BACKEND-02-T05 mode=serial locks=frontend-client -->
+- [ ] **Implement ambiguity/recovery and retry abort —** Input: server attempt/reconciliation/retry facts, using BACKEND-02 canonical generated client/types. Operation: remove send actions, deep-link typed recovery, or confirm terminal abort. Output: no blind retry. Test evidence: timeout/crash/zero-one-many Sent matches, abort race/exhaustion, and cross-mailbox denial. Failure behavior: quarantine and both controls conservative.
 
 ## Test strategy
 

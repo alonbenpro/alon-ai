@@ -2,9 +2,9 @@
 
 **Document ID:** AGENT-03
 **Status:** Planned M3 specialist; no implementation exists
-**Milestone:** M3; first workflow use at M4
+**Milestone:** M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [AGENT-01](01-agent-runtime-and-contracts.md), promoted [AGENT-02](02-idea-discovery-agent.md), DB-02/DB-04, and one operator-selected idea
+**Prerequisites:** exact local order `AGENT-03-T01 -> AGENT-03-T02 -> AGENT-03-T03 -> AGENT-03-T04`; cross-document task Inputs `AGENT-03-T01 <- DB-02-T01,DB-02-T03; AGENT-03-T02 <- AGENT-01-T01,AGENT-01-T02; AGENT-03-T03 <- BACKEND-01-T01,DB-04-T04,OBS-03-T02,AGENT-01-T04; AGENT-03-T04 <- AGENT-10-T01,AGENT-10-T03,AGENT-10-T04`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01](01-agent-runtime-and-contracts.md), promoted [AGENT-02](02-idea-discovery-agent.md), DB-02/DB-04, and one operator-selected idea
 **Outputs:** Versioned `OfferHypothesis` `PRODUCED` artifact, abstention/failure results, fixtures, scores, and promotion evidence
 **Unlocks:** [AGENT-04](04-market-research-agent.md) and WF-03 offer review
 **Risk:** High
@@ -106,10 +106,14 @@ Operator review is always required before offer acceptance/materialization and s
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=AGENT-03-T01 milestone=M3 depends_on=DB-02-T01,DB-02-T03 mode=parallel locks=agent-runtime -->
 - [ ] **Encode offer schemas/prompt/config —** Input: selected idea and DB-02 fields. Operation: implement exact models, hashes, registry, prompt. Output: typed agent contract. Test evidence: schema/boundary snapshots. Failure behavior: invalid input blocks model.
-- [ ] **Implement bounded execution —** Input: verified envelope/evidence IDs. Operation: expose only `evidence.read`, one structured call plus JSON repair, ceilings/cancellation. Output: offer, abstention, or failure. Test evidence: fake provider boundary matrix. Failure behavior: no partial artifact.
-- [ ] **Implement post-validation/persistence —** Input: output/ledger. Operation: verify bounds, citations, specificity, authority and persist only `PRODUCED`. Output: immutable artifact/event/cost. Test evidence: adversarial and atomicity cases. Failure behavior: WF-03 remains blocked.
-- [ ] **Build and gate 48-case suite —** Input: frozen cases/rubrics. Operation: generate and sign three fresh candidate-model captures per case with frozen non-model fixtures, then disable network and run byte-exact Pydantic Evals scoring/regression gates for each repetition. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
+<!-- roadmap-task id=AGENT-03-T02 milestone=M3 depends_on=AGENT-03-T01,AGENT-01-T01,AGENT-01-T02 mode=parallel locks=agent-runtime -->
+- [ ] **Implement bounded execution —** Input: verified envelope/evidence IDs; AGENT-01 importable envelope contracts and immutable AgentDependenciesV1. Operation: expose only `evidence.read`, one structured call plus JSON repair, ceilings/cancellation. Output: offer, abstention, or failure. Test evidence: fake provider boundary matrix. Failure behavior: no partial artifact.
+<!-- roadmap-task id=AGENT-03-T03 milestone=M3 depends_on=AGENT-03-T02,BACKEND-01-T01,DB-04-T04,OBS-03-T02,AGENT-01-T04 mode=parallel locks=agent-artifacts,backend-domain -->
+- [ ] **Implement post-validation/persistence —** Input: output/ledger; implemented M3 recorder/PRODUCED insertion, validation/acceptance, cost-reconciliation and terminal-handoff interfaces; signed fixture rows, never later product commands. Operation: verify bounds, citations, specificity, authority and persist only `PRODUCED`. Output: immutable artifact/event/cost, with the immutable specialist implementation/configuration identity and its frozen typed capability contract. Test evidence: adversarial and atomicity cases; execute these checks against signed M3 fixture rows and actual M3 services; later lead/reply/approval/product transitions remain mandatory at their existing product owners. Failure behavior: WF-03 remains blocked.
+<!-- roadmap-task id=AGENT-03-T04 milestone=M3 depends_on=AGENT-03-T03,AGENT-10-T01,AGENT-10-T03,AGENT-10-T04 mode=serial locks=agent-runtime,agent-artifacts,live-environment -->
+- [ ] **Build and gate 48-case suite —** Input: frozen cases/rubrics; AGENT-10 signed fresh capture-set and deterministic scoring package/repetition summaries. Operation: select this specialist's exact frozen-case subset from the AGENT-10 capture set, independently verify three fresh candidate calls per case and all signatures/configuration/fixture hashes, invoke the shared deterministic scorer and evaluate every original specialist component/duration/cost/regression gate; retain the full repetition and suite summaries without a second capture or promotion writer. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
 
 ## Test strategy
 

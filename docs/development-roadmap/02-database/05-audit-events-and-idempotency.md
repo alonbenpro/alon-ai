@@ -2,9 +2,9 @@
 
 **Document ID:** DB-05
 **Status:** Planned M2 transactional safety substrate
-**Milestone:** M2
+**Milestone:** M2, M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [DB-01](01-core-data-model.md), [ARCH-02](../01-architecture/02-module-boundaries.md), and canonical [ARCH-03 event catalog](../01-architecture/03-domain-events-and-state-machines.md)
+**Prerequisites:** exact local order `DB-05-T01 -> DB-05-T02 -> DB-05-T03 -> DB-05-T04 -> DB-05-T05`; cross-document task Inputs `DB-05-T01 <- ARCH-03-T01; DB-05-T05 <- PROVIDER-03-T04,OBS-03-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): [DB-01](01-core-data-model.md), [ARCH-02](../01-architecture/02-module-boundaries.md), and canonical [ARCH-03 event catalog](../01-architecture/03-domain-events-and-state-machines.md)
 **Outputs:** Exact event/audit envelopes, command replay, policy facts, outbox delivery, consumer dedupe, provider cost, and correction/reconciliation records
 **Unlocks:** Durable application commands and every M2-M9 side-effect audit chain
 **Risk:** Critical
@@ -318,10 +318,15 @@ An internal outbox consumer starts one PostgreSQL transaction, rechecks absence 
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=DB-05-T01 milestone=M2 depends_on=ARCH-03-T01 mode=parallel locks=architecture-contracts,backend-domain -->
 - [ ] **Encode event schemas/catalog —** Input: every ARCH-03 `.v1` name/payload. Operation: register typed payload, aggregate applicability, actor rules, redaction, and upcast policy. Output: executable catalog. Test evidence: `test_arch03_event_catalog_is_exact_and_complete`. Failure behavior: unknown/malformed event aborts transaction.
+<!-- roadmap-task id=DB-05-T02 milestone=M2 depends_on=DB-05-T01 mode=serial locks=database-schema,migration-head -->
 - [ ] **Migrate append-only safety tables —** Input: table contract. Operation: create constraints/indexes/immutable protections and FKs. Output: M2 event/audit/idempotency/outbox/policy/cost schema. Test evidence: migration introspection and mutation-denial tests. Failure behavior: rollback revision.
-- [ ] **Implement idempotent command middleware —** Input: authenticated command, scope/key, canonical request hash. Operation: claim or replay exact result inside unit of work. Output: one command effect. Test evidence: concurrent duplicate and hash-conflict tests. Failure behavior: typed conflict; no second effect.
+<!-- roadmap-task id=DB-05-T03 milestone=M2 depends_on=DB-05-T02 mode=parallel locks=database-schema,backend-domain -->
+- [ ] **Implement idempotent command middleware —** Input: authenticated command, scope/key, canonical request hash. Operation: implement the shared UnitOfWork/IdempotentCommandExecutor middleware to claim or replay the exact result inside one atomic transaction with audit/event writes; later product command composition delegates to this sole implementation. Output: implemented versioned IdempotentCommandExecutor atomic claim/replay/UnitOfWork interface plus one command effect. Test evidence: concurrent duplicate and hash-conflict tests. Failure behavior: typed conflict; no second effect.
+<!-- roadmap-task id=DB-05-T04 milestone=M2 depends_on=DB-05-T03 mode=parallel locks=database-schema,workflow-runtime,backend-domain -->
 - [ ] **Implement outbox and internal consumer atomicity —** Input: committed outbox rows. Operation: lease a bounded batch, publish at least once, and make each internal consumer commit its business writes plus `outbox_deliveries` in one PostgreSQL transaction. Output: eventually delivered internal events with atomic consumer effects. Test evidence: crash before business write, between business write and receipt, before commit, and after commit. Failure behavior: rollback/redeliver for internal writes; bounded backoff/dead-letter incident for poison events; external effects are rejected from this path.
+<!-- roadmap-task id=DB-05-T05 milestone=M3 depends_on=DB-05-T04,PROVIDER-03-T04,OBS-03-T02 mode=parallel locks=database-schema,provider-contracts,backend-domain,telemetry-catalog -->
 - [ ] **Implement policy/cost reconciliation —** Input: frozen facts/provider usage. Operation: persist decision before authority and reconcile reservation to cost afterward. Output: explainable gate and cost ledger. Test evidence: overspend, duplicate invoice, currency, and missing-result tests. Failure behavior: deny/disable paid call and open discrepancy.
 
 ## Test strategy

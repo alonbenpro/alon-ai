@@ -2,9 +2,9 @@
 
 **Document ID:** FRONTEND-08
 **Status:** Planned M7 read/decision surface; no product reports, metrics, costs, or decision UI exist today
-**Milestone:** M7 diagnosis; final first-real-experiment decision at M9
+**Milestone:** M7 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [PRODUCT-02](../00-product-strategy/02-success-metrics.md), [DB-02 metrics](../02-database/02-experiment-and-offer-schema.md), [DB-05 cost ledger](../02-database/05-audit-events-and-idempotency.md), [BACKEND-06](../06-backend/06-reporting-and-query-services.md), and [BACKEND-02 report routes](../06-backend/02-api-contracts.md#exact-route-and-openapi-operation-manifest)
+**Prerequisites:** exact local order `FRONTEND-08-T01 -> FRONTEND-08-T02 -> FRONTEND-08-T03 -> FRONTEND-08-T04`; cross-document task Inputs `FRONTEND-08-T01 <- BACKEND-06-T04,BACKEND-02-T05; FRONTEND-08-T03 <- BACKEND-06-T03; FRONTEND-08-T04 <- BACKEND-06-T02,BACKEND-02-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [PRODUCT-02](../00-product-strategy/02-success-metrics.md), [DB-02 metrics](../02-database/02-experiment-and-offer-schema.md), [DB-05 cost ledger](../02-database/05-audit-events-and-idempotency.md), [BACKEND-06](../06-backend/06-reporting-and-query-services.md), and [BACKEND-02 report routes](../06-backend/02-api-contracts.md#exact-route-and-openapi-operation-manifest)
 **Outputs:** Reproducible overview/funnel/cost/timeline/provider analytics, explicit denominators/freshness/currency evidence, and immutable decision confirmation
 **Unlocks:** Evidence-based `SCALE`, `REVISE`, `KILL`, or `INCONCLUSIVE` recording; never automatic scale/spend
 **Risk:** High
@@ -65,10 +65,14 @@ Loading keeps units/labels blank rather than zero. Empty timeline/funnel explici
 
 ## Ordered implementation tasks
 
-- [ ] **Implement report provenance/query hooks —** Input: six generated operations and snapshot rules. Operation: render version/as-of/high-watermark/completeness/warnings/correlation, stable paging, and expiry restart. Output: reproducible panels. Test evidence: concurrent-commit, expired/lost cursor, stale/partial/503 fixtures. Failure behavior: discard mixed pages and disable decision.
+<!-- roadmap-task id=FRONTEND-08-T01 milestone=M7 depends_on=BACKEND-06-T04,BACKEND-02-T05 mode=serial locks=frontend-client -->
+- [ ] **Implement report provenance/query hooks —** Input: six generated operations and snapshot rules, using BACKEND-02 canonical generated client/types. Operation: render version/as-of/high-watermark/completeness/warnings/correlation, stable paging, and expiry restart. Output: reproducible panels. Test evidence: concurrent-commit, expired/lost cursor, stale/partial/503 fixtures. Failure behavior: discard mixed pages and disable decision.
+<!-- roadmap-task id=FRONTEND-08-T02 milestone=M7 depends_on=FRONTEND-08-T01 mode=serial locks=frontend-client -->
 - [ ] **Implement funnel and accessible chart/table —** Input: server counts/conversions/hashes. Operation: display exact statuses/numerators/denominators and equivalent visualization without arithmetic. Output: honest funnel. Test evidence: zero denominator, missing, insufficient evidence, direct/reconciled dedupe, suppression/ambiguity fixtures. Failure behavior: no fabricated zero/value.
+<!-- roadmap-task id=FRONTEND-08-T03 milestone=M7 depends_on=FRONTEND-08-T02,BACKEND-06-T03 mode=serial locks=frontend-client -->
 - [ ] **Implement cost/provider evidence —** Input: server original-currency/reservation/conversion/discrepancy fields. Operation: group/display exactly as returned and expose recorded ILS provenance. Output: cost diagnosis. Test evidence: unlike currencies, rounding vectors, missing FX, reservation lifecycle, provider parity. Failure behavior: incomplete ILS and visible discrepancy.
-- [ ] **Implement immutable decision confirmation —** Input: fresh complete server snapshot/rule references plus refetched accepted artifact versions/hashes. Operation: confirm exact generated request/key/ETag, submit once, invalidate/refetch, and render immutable result. Output: operator-owned decision. Test evidence: each kind, stale report/ETag, duplicate decision, network unknown, no downstream authority. Failure behavior: remain evaluating and preserve inputs.
+<!-- roadmap-task id=FRONTEND-08-T04 milestone=M7 depends_on=FRONTEND-08-T03,BACKEND-06-T02,BACKEND-02-T05 mode=serial locks=frontend-client -->
+- [ ] **Implement immutable decision confirmation —** Input: fresh complete server snapshot/rule references plus refetched accepted artifact versions/hashes, using BACKEND-02 canonical generated client/types. Operation: confirm exact generated request/key/ETag, submit once, invalidate/refetch, and render immutable result. Output: operator-owned decision plus implemented decision-handoff UI surface/action contract. Test evidence: each kind, stale report/ETag, duplicate decision, network unknown, no downstream authority. Failure behavior: remain evaluating and preserve inputs.
 
 ## Test strategy
 

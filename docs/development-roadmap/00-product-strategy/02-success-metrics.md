@@ -2,9 +2,9 @@
 
 **Document ID:** PRODUCT-02
 **Status:** Planned gate definition
-**Milestone:** M0
+**Milestone:** M0, M3, M9 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [PRODUCT-01 product scope](01-product-scope.md)
+**Prerequisites:** exact local order `PRODUCT-02-T01 -> PRODUCT-02-T02 -> PRODUCT-02-T03 -> PRODUCT-02-T04`; cross-document task Inputs `PRODUCT-02-T01 <- PRODUCT-01-T02; PRODUCT-02-T03 <- DB-05-T05; PRODUCT-02-T04 <- SEC-01-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [PRODUCT-01 product scope](01-product-scope.md)
 **Outputs:** Metric definitions, hard gates, experiment decision rules, evidence bundle
 **Unlocks:** PRODUCT-03 risk gate, M3 evaluations, and M9 decision record
 **Risk:** High
@@ -107,10 +107,14 @@ These records, operations, and consumers are planned and absent from the current
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=PRODUCT-02-T01 milestone=M0 depends_on=PRODUCT-01-T02 mode=parallel locks=product-contracts -->
 - [ ] **Register metric definitions —** Input: this file and the approved `ExperimentBrief`. Operation: create versioned definitions with exact numerator, denominator, exclusions, owner, query version, and decision action. Output: immutable metric registry. Test evidence: schema and duplicate-name/version tests. Failure behavior: refuse observations for unknown definitions.
+<!-- roadmap-task id=PRODUCT-02-T02 milestone=M0 depends_on=PRODUCT-02-T01 mode=parallel locks=product-contracts -->
 - [ ] **Capture baseline evidence —** Input: manual records or zero-history declaration. Operation: record scope-matched counts, time, spend, source, and confidence. Output: baseline bundle. Test evidence: completeness query and operator signature. Failure behavior: prohibit improvement claims when evidence is absent.
+<!-- roadmap-task id=PRODUCT-02-T03 milestone=M3 depends_on=PRODUCT-02-T02,DB-05-T05 mode=parallel locks=backend-domain,telemetry-catalog -->
 - [ ] **Implement gate queries in milestone order —** Input: event/audit/cost records introduced from M2 onward. Operation: compute raw counts and derived rates deterministically. Output: versioned `MetricObservation` rows. Test evidence: golden datasets including zero denominators, duplicates, late replies, bounces, and FX conversion. Failure behavior: return unavailable with reason; never coerce missing data to zero.
-- [ ] **Pre-register the M9 decision —** Input: safety gates, sample cap, reply window, price, delivery-cost assumptions. Operation: freeze the rule before contacting a real recipient. Output: signed decision-rule version. Test evidence: audit query proves it predates the first send intent. Failure behavior: block real-recipient authority.
+<!-- roadmap-task id=PRODUCT-02-T04 milestone=M9 depends_on=PRODUCT-02-T03,SEC-01-T05 mode=serial locks=product-contracts,compliance-policy,milestone-gate -->
+- [ ] **Pre-register the M9 decision —** Input: safety gates, sample cap, reply window, price, delivery-cost assumptions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: freeze the rule before contacting a real recipient; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: signed decision-rule version. Test evidence: audit query proves it predates the first send intent. Failure behavior: block real-recipient authority.
 
 ## Test strategy
 

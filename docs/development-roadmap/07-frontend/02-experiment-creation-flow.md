@@ -2,9 +2,9 @@
 
 **Document ID:** FRONTEND-02
 **Status:** Planned M4 operator flow; no product form or experiment API exists today
-**Milestone:** M4, after M2 persistence and BACKEND-02 product client generation
+**Milestone:** M4 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [PRODUCT-01 M0 brief](../00-product-strategy/01-product-scope.md#m0-experiment-brief), [DB-02](../02-database/02-experiment-and-offer-schema.md), [BACKEND-02](../06-backend/02-api-contracts.md), and [FRONTEND-01](01-information-architecture.md)
+**Prerequisites:** exact local order `FRONTEND-02-T01 -> FRONTEND-02-T02 -> FRONTEND-02-T03 -> FRONTEND-02-T04`; cross-document task Inputs `FRONTEND-02-T01 <- FRONTEND-01-T01,DB-02-T01`. Descriptive source authorities/resources (not whole-document completion dependencies): [PRODUCT-01 M0 brief](../00-product-strategy/01-product-scope.md#m0-experiment-brief), [DB-02](../02-database/02-experiment-and-offer-schema.md), [BACKEND-02](../06-backend/02-api-contracts.md), and [FRONTEND-01](01-information-architecture.md)
 **Outputs:** Typed creation/revision/scope-approval workflow with caps, authority, validation, confirmation, and exact reconciliation
 **Unlocks:** FRONTEND-03 no-send research control and the first finite experiment run
 **Risk:** High
@@ -66,9 +66,13 @@ Revision from `FAILED` warns that it creates a new immutable brief version and i
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=FRONTEND-02-T01 milestone=M4 depends_on=FRONTEND-01-T01,DB-02-T01 mode=serial locks=frontend-client -->
 - [ ] **Build the generated-schema form —** Input: `CreateExperimentRequestV1` and DB-02 field contract. Operation: compose accessible fieldsets, structural hints, integer minor-unit inputs, literal authority choices, and strict rule editors without duplicating policy. Output: reviewable request. Test evidence: generated-type compile plus missing/boundary/extra-field fixtures. Failure behavior: no request and focus error summary.
-- [ ] **Implement create/replay/navigation —** Input: frozen reviewed payload and operator session. Operation: create one idempotency key, submit once, preserve exact payload/key through unknown outcome, and navigate by returned `Location`/ID. Output: authoritative `DRAFT` resource. Test evidence: double-click, Enter, timeout-after-commit, exact replay, hash-conflict tests. Failure behavior: retain review and safe IDs; never create a second key automatically.
+<!-- roadmap-task id=FRONTEND-02-T02 milestone=M4 depends_on=FRONTEND-02-T01 mode=serial locks=frontend-client -->
+- [ ] **Implement create/replay/navigation —** Input: frozen reviewed payload and fixture-only operator session. Operation: create one idempotency key, submit once, preserve exact payload/key through unknown outcome, and navigate by returned `Location`/ID; exercise only signed synthetic fixture sessions at M4; real SEC-02 session integration is the later frontend foundation gate. Output: authoritative `DRAFT` resource. Test evidence: double-click, Enter, timeout-after-commit, exact replay, hash-conflict tests. Failure behavior: retain review and safe IDs; never create a second key automatically.
+<!-- roadmap-task id=FRONTEND-02-T03 milestone=M4 depends_on=FRONTEND-02-T02 mode=serial locks=frontend-client -->
 - [ ] **Implement explicit scope approval and revision —** Input: latest ETag/resource and generated requests. Operation: confirm authority, attach `If-Match`, reconcile receipt/new resource, and invalidate exact dependencies. Output: server-owned version/state. Test evidence: stale ETag, illegal state, approval invalidation, immutable prior-version tests. Failure behavior: refetch and require a new review.
+<!-- roadmap-task id=FRONTEND-02-T04 milestone=M4 depends_on=FRONTEND-02-T03 mode=serial locks=frontend-client -->
 - [ ] **Verify privacy and responsive access —** Input: form at 320/768/1280 CSS pixels and keyboard/screen reader. Operation: verify no PII/secrets in storage/URL/telemetry, logical focus, help/error association, and no page overflow. Output: M4-ready creation UX evidence. Test evidence: axe/storage/network/screenshot matrix. Failure behavior: disable draft storage or release.
 
 ## Test strategy

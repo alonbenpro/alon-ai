@@ -2,9 +2,9 @@
 
 **Document ID:** DB-02
 **Status:** Planned M2 product schema
-**Milestone:** M2; first consumed by M4
+**Milestone:** M2 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [DB-01](01-core-data-model.md), [product scope](../00-product-strategy/01-product-scope.md), [success metrics](../00-product-strategy/02-success-metrics.md), and [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md)
+**Prerequisites:** exact local order `DB-02-T01 -> DB-02-T02 -> DB-02-T03 -> DB-02-T04 -> DB-02-T05`; cross-document task Inputs `DB-02-T01 <- PRODUCT-01-T03,PRODUCT-02-T01`. Descriptive source authorities/resources (not whole-document completion dependencies): [DB-01](01-core-data-model.md), [product scope](../00-product-strategy/01-product-scope.md), [success metrics](../00-product-strategy/02-success-metrics.md), and [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md)
 **Outputs:** Immutable experiment briefs, ideas, offer hypotheses, metric plans/snapshots, and operator decisions
 **Unlocks:** WF-02 experiment lifecycle, WF-03 idea validation, M4 synthetic experiment
 **Risk:** High
@@ -294,11 +294,16 @@ JSON fields have versioned Pydantic schemas and GIN indexes only after query evi
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=DB-02-T01 milestone=M2 depends_on=PRODUCT-01-T03,PRODUCT-02-T01 mode=parallel locks=product-contracts,backend-domain -->
 - [ ] **Encode immutable brief and decision models —** Input: M0 artifact/metric contracts. Operation: define complete schemas, hashes, version links, and canonical decision enum. Output: domain values and migration model. Test evidence: `test_brief_requires_every_m0_field` and immutability tests. Failure behavior: reject incomplete record and block scope approval.
+<!-- roadmap-task id=DB-02-T02 milestone=M2 depends_on=DB-02-T01 mode=serial locks=database-schema,migration-head -->
 - [ ] **Migrate normalized experiment records —** Input: table contract. Operation: create tables, FKs, constraints, partial uniques, immutable triggers, and indexes. Output: empty M2 schema. Test evidence: real-PostgreSQL constraint matrix. Failure behavior: rollback entire revision.
+<!-- roadmap-task id=DB-02-T03 milestone=M2 depends_on=DB-02-T02 mode=parallel locks=database-schema,backend-domain -->
 - [ ] **Implement version append repositories —** Input: expected experiment version and new content. Operation: insert a new immutable version and link predecessor; never update content. Output: versioned brief/idea/offer. Test evidence: `test_concurrent_offer_version_append_has_one_winner`. Failure behavior: conflict with no version gap.
+<!-- roadmap-task id=DB-02-T04 milestone=M2 depends_on=DB-02-T03 mode=parallel locks=database-schema,backend-domain,telemetry-catalog -->
 - [ ] **Implement deterministic metric snapshot —** Input: frozen definition versions and cutoff. Operation: select eligible observations, compute values, hash inputs, and persist immutable snapshot. Output: reproducible decision input. Test evidence: `test_metric_snapshot_recomputes_byte_equivalent`. Failure behavior: mark insufficient evidence; do not synthesize zero.
-- [ ] **Record operator decision atomically —** Input: `EVALUATING` experiment, snapshot, evidence bundle, rule version, idempotency key. Operation: validate, insert immutable decision, transition to `DECIDED`, and append event/audit/outbox. Output: authoritative decision. Test evidence: command replay and two-writer race. Failure behavior: typed denial; no partial decision.
+<!-- roadmap-task id=DB-02-T05 milestone=M2 depends_on=DB-02-T04 mode=serial locks=database-schema,backend-domain,milestone-gate -->
+- [ ] **Record operator decision atomically —** Input: `EVALUATING` experiment, snapshot, evidence bundle, rule version, idempotency key; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: validate, insert immutable decision, transition to `DECIDED`, and append event/audit/outbox; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: authoritative decision. Test evidence: command replay and two-writer race. Failure behavior: typed denial; no partial decision.
 
 ## Test strategy
 

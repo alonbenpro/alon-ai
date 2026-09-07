@@ -2,9 +2,9 @@
 
 **Document ID:** PROVIDER-06
 **Status:** Planned fixture-first M3 boundary; live enrichment disabled until M5 evidence and provider-terms approval
-**Milestone:** M3 contract, optional M5 live activation
+**Milestone:** M3, M5 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [AGENT-01 capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), [DB-03](../02-database/03-leads-campaigns-and-messages.md), DB-04/05, and [AGENT-05](../04-agents/05-lead-research-agent.md)
+**Prerequisites:** exact local order `PROVIDER-06-T01 -> PROVIDER-06-T02 -> PROVIDER-06-T03 -> PROVIDER-06-T04 -> PROVIDER-06-T05`; cross-document task Inputs `PROVIDER-06-T01 <- AGENT-01-T01,DB-01-T01; PROVIDER-06-T02 <- PROVIDER-04-T03; PROVIDER-06-T04 <- OBS-03-T01,OBS-03-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01 capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), [DB-03](../02-database/03-leads-campaigns-and-messages.md), DB-04/05, and [AGENT-05](../04-agents/05-lead-research-agent.md)
 **Outputs:** Exact `business.search`/`business.details` protocols, disabled/fixture/live Google Places adapters, business-only minimization, evidence/cost/terms gates, and replacement seam
 **Unlocks:** Optional M5 business-evidence improvement after simpler primary evidence fails a retained gate
 **Risk:** High
@@ -95,10 +95,15 @@ Fixtures cover zero/duplicate/contradictory candidates, identity normalization, 
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=PROVIDER-06-T01 milestone=M3 depends_on=AGENT-01-T01,DB-01-T01 mode=parallel locks=provider-contracts -->
 - [ ] **Implement exact two-family contracts —** Input: Task 3 models and DB-01 canonicalizer. Operation: preserve methods/literals/fields/unions/hashes/timeouts/error allowlists/fixtures/ledgers. Output: provider-neutral port plus disabled adapter. Test evidence: `test_business_capabilities_are_wire_exact_with_agent01`. Failure behavior: zero provider access.
+<!-- roadmap-task id=PROVIDER-06-T02 milestone=M3 depends_on=PROVIDER-06-T01,PROVIDER-04-T03 mode=parallel locks=provider-contracts -->
 - [ ] **Implement deterministic identity/locator composition —** Input: frozen candidate evidence. Operation: normalize/hash identity, build immutable locator snapshot, reject zero/many/conflict, and preserve DB-03 conflict quarantine. Output: bounded business identity context. Test evidence: Unicode/domain/country/concurrency/conflict vectors. Failure behavior: no auto-merge/details.
-- [ ] **Implement terms-gated Google Places adapter —** Input: approved live gate, field mask, key, request, reservation. Operation: call Text Search/Details once, discard forbidden fields, ingest evidence, and construct exact results. Output: public business facts. Test evidence: fake HTTP/field/terms/quota/cost matrix. Failure behavior: disabled or typed failure.
-- [ ] **Implement signed fixtures and replacement suite —** Input: sanitized captures. Operation: recompute all request/result/ledger/content hashes and replay with network disabled; run fake second provider. Output: reproducible M3/M5 evidence. Test evidence: tamper/cross-capability/zero-network/parity tests. Failure behavior: no promotion/activation.
+<!-- roadmap-task id=PROVIDER-06-T03 milestone=M3 depends_on=PROVIDER-06-T02 mode=parallel locks=provider-contracts -->
+- [ ] **Implement signed offline fixtures and replacement suite —** Input: signed synthetic or sanitized recorded enrichment captures supplied without live activation. Operation: recompute request/result/meta/usage/ledger/content hashes, replay with network disabled, and run the fake second provider. Output: deterministic M3 enrichment fixture containing frozen provider result/meta/usage plus replacement evidence. Test evidence: tamper, cross-capability, zero-network, usage, and parity tests. Failure behavior: no promotion or activation.
+<!-- roadmap-task id=PROVIDER-06-T04 milestone=M5 depends_on=PROVIDER-06-T03,OBS-03-T01,OBS-03-T02 mode=serial locks=provider-contracts,live-environment -->
+- [ ] **Implement the terms-gated live enrichment adapter —** Input: the disabled provider-neutral port, proposed field mask, current external provider terms/privacy record, OBS-03 cost ceiling, explicit operator approval, key, request, and reservation. Operation: verify and sign the permitted-field/retention/logging/key/terms/privacy/cost gate atomically immediately before at most one live Text Search/Details call; discard forbidden fields, ingest evidence, and construct exact results. Output: signed M5 activation-gate receipt plus public business facts or a typed failure. Test evidence: gate denial plus fake HTTP, field, terms, quota, and cost cases. Failure behavior: retain rejection evidence and keep the adapter disabled.
+<!-- roadmap-task id=PROVIDER-06-T05 milestone=M5 depends_on=PROVIDER-06-T04 mode=parallel locks=provider-contracts -->
 - [ ] **Prove minimization and authority —** Input: provider fields/logs/import graph. Operation: scan for contacts/credentials/content and assert no merge/qualification/state/send path. Output: safety/terms evidence. Test evidence: forbidden-field and call-graph tests. Failure behavior: live adapter revoked.
 
 ## Test strategy

@@ -2,9 +2,9 @@
 
 **Document ID:** WF-02
 **Status:** Planned product workflow; no implementation exists
-**Milestone:** M4, then reused in M5-M7
+**Milestone:** M4, M6 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** M1 runtime accepted, M2 [DB-01](../02-database/01-core-data-model.md) through [DB-06](../02-database/06-migrations-seeding-and-retention.md), M3 promoted agent/provider contracts, and [ARCH-03 experiment state machine](../01-architecture/03-domain-events-and-state-machines.md#experiment-state-machine)
+**Prerequisites:** exact local order `WF-02-T01 -> WF-02-T02 -> WF-02-T03 -> WF-02-T04 -> WF-02-T05`; cross-document task Inputs `WF-02-T01 <- BACKEND-01-T04,AGENT-10-T05,PROVIDER-03-T06,PROVIDER-04-T05,PROVIDER-05-T05,WF-01-T05,WF-00-T04; WF-02-T05 <- BACKEND-05-T01,WF-06-T03`. Descriptive source authorities/resources (not whole-document completion dependencies): M1 runtime accepted, M2 [DB-01](../02-database/01-core-data-model.md) through [DB-06](../02-database/06-migrations-seeding-and-retention.md), M3 promoted agent/provider contracts, and [ARCH-03 experiment state machine](../01-architecture/03-domain-events-and-state-machines.md#experiment-state-machine)
 **Outputs:** Finite per-stage workflow identity, queue/control semantics, exact experiment/run transitions, and evidence handoffs
 **Unlocks:** WF-03 idea validation, WF-04 lead qualification, WF-05 outreach/reply, and M7 controls
 **Risk:** High
@@ -50,11 +50,16 @@ Every stage producer constructs the DB-01 envelope `{"schema_version":<string>,"
 
 ## Ordered implementation tasks
 
-- [ ] **Implement stage command service —** Input: expected experiment version, stage, frozen prerequisites, command key. Operation: apply ARCH-03 transition and atomically create canonical run/events. Output: authoritative run ID/state. Test evidence: exhaustive start guard and duplicate-command tests. Failure behavior: typed denial; no run.
+<!-- roadmap-task id=WF-02-T01 milestone=M4 depends_on=BACKEND-01-T04,AGENT-10-T05,PROVIDER-03-T06,PROVIDER-04-T05,PROVIDER-05-T05,WF-01-T05,WF-00-T04 mode=parallel locks=workflow-runtime -->
+- [ ] **Implement stage command service —** Input: expected experiment version, stage, frozen prerequisites, command key; signed SelectedRuntimeDecisionV1 selecting DBOS only on acceptance or Temporal only after the identical mandatory fallback suite passed. Operation: apply ARCH-03 transition and atomically create canonical run/events. Output: authoritative run ID/state. Test evidence: exhaustive start guard and duplicate-command tests. Failure behavior: typed denial; no run.
+<!-- roadmap-task id=WF-02-T02 milestone=M4 depends_on=WF-02-T01 mode=parallel locks=workflow-runtime -->
 - [ ] **Implement finite coordinator —** Input: run/experiment/version IDs. Operation: call the named child workflow/application commands, wait only on durable runtime primitives, and terminate with typed result/error. Output: finite stage result. Test evidence: success/failure/restart/version replay. Failure behavior: sanitized failure report; no direct aggregate write.
-- [ ] **Implement completion/failure handlers —** Input: child result and expected state/version. Operation: revalidate evidence, close run, transition aggregate, and emit exact events atomically. Output: next canonical state. Test evidence: injected conflict/evidence-revocation/atomicity cases. Failure behavior: run enters operator-visible `FAILED` or result-awaiting-repair; never guess.
+<!-- roadmap-task id=WF-02-T03 milestone=M4 depends_on=WF-02-T02 mode=parallel locks=workflow-runtime -->
+- [ ] **Implement completion/failure handlers —** Input: child result and expected state/version. Operation: revalidate evidence, close run, transition aggregate, and emit exact events atomically. Output: versioned atomic completion-handler interface plus next canonical state. Test evidence: injected conflict/evidence-revocation/atomicity cases. Failure behavior: run enters operator-visible `FAILED` or result-awaiting-repair; never guess.
+<!-- roadmap-task id=WF-02-T04 milestone=M4 depends_on=WF-02-T03 mode=parallel locks=workflow-runtime -->
 - [ ] **Enforce active-run exclusion and budgets —** Input: concurrent starts and run caps. Operation: rely on partial unique plus budget reservation before paid work. Output: at most one active same-stage run and bounded cost/time. Test evidence: real-PostgreSQL race and exhaustion tests. Failure behavior: reject second run/call.
-- [ ] **Wire pause/cancel/recovery —** Input: authenticated control command. Operation: invoke WF-06 cooperative/runtime control and recheck guards on resume. Output: canonical run/experiment states. Test evidence: restart during each control boundary. Failure behavior: fail closed; outreach dequeue remains stopped.
+<!-- roadmap-task id=WF-02-T05 milestone=M6 depends_on=WF-02-T04,BACKEND-05-T01,WF-06-T03 mode=parallel locks=workflow-runtime -->
+- [ ] **Wire pause/cancel/recovery —** Input: the BACKEND-05 authenticated control command plus WF-06 exact ARCH-03 state/event transition result. Operation: invoke WF-06 cooperative/runtime control and recheck guards on resume. Output: complete versioned finite WF-02 workflow contract plus canonical run/experiment states. Test evidence: restart during each control boundary. Failure behavior: fail closed; outreach dequeue remains stopped.
 
 ## Test strategy
 

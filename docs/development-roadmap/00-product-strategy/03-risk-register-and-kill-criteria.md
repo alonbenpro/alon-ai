@@ -2,9 +2,9 @@
 
 **Document ID:** PRODUCT-03
 **Status:** Planned gate definition
-**Milestone:** M0
+**Milestone:** M0, M1, M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [PRODUCT-01 scope](01-product-scope.md) and [PRODUCT-02 metrics](02-success-metrics.md)
+**Prerequisites:** exact local order `PRODUCT-03-T01 -> PRODUCT-03-T02 -> PRODUCT-03-T03 -> PRODUCT-03-T04`; cross-document task Inputs `PRODUCT-03-T01 <- PRODUCT-01-T02,PRODUCT-02-T01; PRODUCT-03-T03 <- WF-01-T03; PRODUCT-03-T04 <- SEC-05-T04,OBS-05-T02,OBS-05-T03`. Descriptive source authorities/resources (not whole-document completion dependencies): [PRODUCT-01 scope](01-product-scope.md) and [PRODUCT-02 metrics](02-success-metrics.md)
 **Outputs:** Ranked risks, deterministic stop triggers, recovery rules, and engine/product kill decisions
 **Unlocks:** M1 DBOS production-acceptance gate
 **Risk:** Critical
@@ -102,10 +102,14 @@ None of these implementations exists today. ADR 0003's current `SendGateway` is 
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=PRODUCT-03-T01 milestone=M0 depends_on=PRODUCT-01-T02,PRODUCT-02-T01 mode=serial locks=product-contracts,compliance-policy,milestone-gate -->
 - [ ] **Approve M0 risk posture —** Input: scope, metrics, risk table. Operation: mark each Critical/High risk accepted for the next gate, mitigated by a named deliverable, or rejected. Output: signed risk register. Test evidence: no Critical/High risk lacks owner, trigger, and response. Failure behavior: block M1.
-- [ ] **Encode stop triggers at each milestone —** Input: milestone-available controls. Operation: implement the narrowest fail-closed disable path and an evidence-preserving incident path. Output: exercised kill mechanism. Test evidence: named unit/integration/recovery test for every active trigger. Failure behavior: outreach or provider calls remain disabled.
-- [ ] **Exercise operator recovery —** Input: synthetic incident scenarios R01-R16. Operation: detect, stop, scope, reconcile, recover, and decide re-enable/replace/kill. Output: drill record. Test evidence: event timeline proves no unauthorized action after stop. Failure behavior: failed drill blocks promotion.
-- [ ] **Review sunk-cost exposure at every gate —** Input: spend, time, failed gates, product signals. Operation: apply the product kill/park criteria without weakening thresholds. Output: continue/revise/park/kill record. Test evidence: operator signature linked to metric snapshot. Failure behavior: no work on the next milestone.
+<!-- roadmap-task id=PRODUCT-03-T02 milestone=M0 depends_on=PRODUCT-03-T01 mode=serial locks=product-contracts,milestone-gate -->
+- [ ] **Review sunk-cost exposure at every gate —** Input: spend, time, failed gates, product signals. Operation: perform the initial M0 continue/revise/park/kill review against signed spend/time/failed-gate/product-signal snapshots and freeze the same recurring review procedure for every later gate. Output: signed initial M0 continue/revise/park/kill record and the recurring gate-review procedure; later records are created at their actual gates. Test evidence: operator signature linked to metric snapshot. Failure behavior: no work on the next milestone.
+<!-- roadmap-task id=PRODUCT-03-T03 milestone=M1 depends_on=PRODUCT-03-T02,WF-01-T03 mode=serial locks=security-runtime,compliance-policy -->
+- [ ] **Encode the reusable fail-closed stop interface —** Input: the signed risk register, WF-01 reproducible crash harness, and the document-local active-trigger catalog. Operation: implement a versioned `StopControlV1` interface, the M1 baseline disable path, and an evidence-preserving incident path; later milestone control owners integrate through this interface without changing its semantics. Output: exercised M1 kill baseline plus a versioned stop-control interface. Test evidence: the M1 harness proves disable-before-effect, retained evidence, idempotent acknowledgement, and no automatic re-enable. Failure behavior: provider calls and outreach remain disabled.
+<!-- roadmap-task id=PRODUCT-03-T04 milestone=M8 depends_on=PRODUCT-03-T03,SEC-05-T04,OBS-05-T02,OBS-05-T03 mode=serial locks=security-runtime,milestone-gate -->
+- [ ] **Exercise integrated operator recovery —** Input: synthetic incident scenarios R01-R16 plus SEC-05 bounded-stop evidence and OBS-05 typed containment/recovery services; completed IR-01..13 typed recovery/restore/rollback runbook services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: detect, stop, scope, reconcile, recover, and decide `re-enable|replace|kill` for every scenario; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: complete M8 drill record. Test evidence: event timelines prove no unauthorized action after stop. Failure behavior: a failed drill blocks promotion.
 
 ## Test strategy
 

@@ -2,9 +2,9 @@
 
 **Document ID:** OBS-02
 **Status:** Planned M8 operations gate; liveness/readiness and structured foundation logs exist, but no OTel metrics/traces, SLOs, alert manager, dashboards, or notification path exists
-**Milestone:** M6 safety metrics, M7 operator dashboards, M8 monitored private deployment
+**Milestone:** M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** OBS-01, DB-01/03/05, WF-01/05/06, AGENT-10, PROVIDER-01/02, BACKEND-04/06, SEC-01/02/05/06
+**Prerequisites:** exact local order `OBS-02-T01 -> OBS-02-T02 -> OBS-02-T03 -> OBS-02-T04 -> OBS-02-T05`; cross-document task Inputs `OBS-02-T01 <- OBS-01-T01,OBS-01-T03; OBS-02-T02 <- BACKEND-02-T05,DB-06-T01,WF-05-T05,AGENT-10-T05,SEC-05-T04,OBS-03-T02,INFRA-04-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): OBS-01, DB-01/03/05, WF-01/05/06, AGENT-10, PROVIDER-01/02, BACKEND-04/06, SEC-01/02/05/06
 **Outputs:** Exact low-cardinality metrics, span model, SLO/error budgets, dashboards, alert rules/routes, and telemetry-health gates
 **Unlocks:** M8 monitored operation and OBS-05 incident detection
 **Risk:** Critical
@@ -222,11 +222,16 @@ Unknown/mismatched severity/alert/trigger/runbook/version is rejected before not
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=OBS-02-T01 milestone=M8 depends_on=OBS-01-T01,OBS-01-T03 mode=parallel locks=telemetry-catalog -->
 - [ ] **Implement exact metric/span registries —** Input: OBS-01 and every application boundary. Operation: define instruments/units/labels/series budgets and spans/links/sampling. Output: versioned telemetry package. Test evidence: registry/schema/cardinality/sampling tests. Failure behavior: reject unregistered signal/release.
-- [ ] **Instrument safety and service paths —** Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup. Operation: emit authoritative-record-derived counters/gauges and spans without replay duplication. Output: complete signals. Test evidence: golden count/latency/exemplar fixtures at each crash boundary. Failure behavior: applicable milestone blocked.
+<!-- roadmap-task id=OBS-02-T02 milestone=M8 depends_on=OBS-02-T01,BACKEND-02-T05,DB-06-T01,WF-05-T05,AGENT-10-T05,SEC-05-T04,OBS-03-T02,INFRA-04-T02 mode=parallel locks=telemetry-catalog -->
+- [ ] **Instrument safety and service paths —** Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup; implemented API/schema/workflow/agent/control/cost/backup boundaries and their record schemas. Operation: emit authoritative-record-derived counters/gauges and spans without replay duplication. Output: complete signals. Test evidence: golden count/latency/exemplar fixtures at each crash boundary. Failure behavior: applicable milestone blocked.
+<!-- roadmap-task id=OBS-02-T03 milestone=M8 depends_on=OBS-02-T02 mode=parallel locks=telemetry-catalog -->
 - [ ] **Build five dashboards and SLO calculations —** Input: low-card metrics plus authoritative projections. Operation: implement exact panels/queries/windows/burn rules and show data freshness. Output: one-operator operational views. Test evidence: empty/low-volume/stale/gap/timezone/currency fixtures. Failure behavior: display unknown and disable unsafe interpretation.
+<!-- roadmap-task id=OBS-02-T04 milestone=M8 depends_on=OBS-02-T03 mode=serial locks=telemetry-catalog,live-environment -->
 - [ ] **Implement alert routes/runbooks —** Input: thresholds, severity mapping and notification endpoints. Operation: dedupe/page/persist/ack/escalate/test with safe payload. Output: actionable alerts. Test evidence: fire every rule and disable each channel. Failure behavior: Critical local incident plus controls false when safety channel unavailable.
-- [ ] **Prove SLO and blind-spot gates —** Input: load/security/chaos/restore scenarios. Operation: validate measurements/targets and reconcile metrics to DB rows. Output: signed M8 SLO baseline. Test evidence: injected gaps/replay/counter reset/sampling/cardinality. Failure behavior: no production-readiness claim/control enable.
+<!-- roadmap-task id=OBS-02-T05 milestone=M8 depends_on=OBS-02-T04 mode=serial locks=milestone-gate -->
+- [ ] **Prove SLO and blind-spot gates —** Input: load/security/chaos/restore scenarios; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: validate measurements/targets and reconcile metrics to DB rows; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: signed M8 SLO baseline. Test evidence: injected gaps/replay/counter reset/sampling/cardinality. Failure behavior: no production-readiness claim/control enable.
 
 ## Test strategy
 

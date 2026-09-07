@@ -2,9 +2,9 @@
 
 **Document ID:** INFRA-02
 **Status:** Planned M8 release discipline; current GitHub Actions builds/tests the foundation but does not publish signed images or deploy
-**Milestone:** M1-M8 gate automation; M8 private release
+**Milestone:** M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator; GitHub Actions produces candidates, and the operator performs the separate VPS promotion ceremony
-**Prerequisites:** TEST-01..06, INFRA-01, current CI, immutable migration/release contracts, SEC-01 supply-chain controls, OBS-04/05
+**Prerequisites:** exact local order `INFRA-02-T01 -> INFRA-02-T02 -> INFRA-02-T03 -> INFRA-02-T04 -> INFRA-02-T05 -> INFRA-02-T06`; cross-document task Inputs `INFRA-02-T01 <- TEST-01-T01; INFRA-02-T03 <- INFRA-04-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): TEST-01..06, INFRA-01, current CI, immutable migration/release contracts, SEC-01 supply-chain controls, OBS-04/05
 **Outputs:** Staged CI gates, SBOM/provenance/image digests, signed release manifest, operator-led deployment, migration compatibility, rollback and upgrade evidence
 **Unlocks:** INFRA-03 private VPS promotion and M8 release evidence
 **Risk:** Critical
@@ -52,11 +52,17 @@ CI/candidate requirements map exactly to `T7-DOC-CONTRACT|T7-CONTRACT-INTEGRATIO
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=INFRA-02-T01 milestone=M8 depends_on=TEST-01-T01 mode=serial locks=ci-release -->
 - [ ] **Extend deterministic/deep CI gates —** Input: TEST coverage manifest and current jobs. Operation: add exact affected/full suites, strict skip policy, evidence upload and freshness checks. Output: reproducible PR/scheduled decisions. Test evidence: skipped/stale/tampered/missing lane negatives. Failure behavior: candidate blocked.
+<!-- roadmap-task id=INFRA-02-T02 milestone=M8 depends_on=INFRA-02-T01 mode=serial locks=ci-release -->
 - [ ] **Build immutable supply-chain candidate —** Input: clean commit and locked dependencies. Operation: build once, scan, create SBOM/provenance/signatures and signed `ReleaseManifestV1`. Output: digest-addressed candidate. Test evidence: modified lock/image/manifest/signature and mutable-tag rejection. Failure behavior: publish no promotable manifest.
+<!-- roadmap-task id=INFRA-02-T03 milestone=M8 depends_on=INFRA-02-T02,INFRA-04-T02 mode=serial locks=ci-release -->
 - [ ] **Implement safe migration/promotion ceremony —** Input: verified candidate, exact target, backup and runtime state. Operation: resolve target, verify compatibility, migrate/add, start without workers, smoke/soak, then start compatible worker. Output: signed promotion record. Test evidence: wrong target, stale backup, low disk, active ambiguity, incompatible runtime and migration-failure cases. Failure behavior: keep prior release/controls and stop candidate.
+<!-- roadmap-task id=INFRA-02-T04 milestone=M8 depends_on=INFRA-02-T03 mode=serial locks=ci-release -->
 - [ ] **Implement application rollback —** Input: prior signed digest/config/runtime map. Operation: stop new work, route/drain, restore prior binaries/config and verify authoritative DB compatibility. Output: signed rollback release. Test evidence: mid-promotion crash and incompatible in-flight run cases. Failure behavior: stay stopped/degraded; invoke DR rather than force schema/history.
+<!-- roadmap-task id=INFRA-02-T05 milestone=M8 depends_on=INFRA-02-T04 mode=serial locks=ci-release -->
 - [ ] **Exercise upgrade policy —** Input: dependency/base image/PostgreSQL/provider/model/KMS change. Operation: new lock/SBOM/contract/eval/recovery/restore evidence and canary promotion. Output: reviewed upgrade or rejection. Test evidence: PostgreSQL major upgrade clone, secret generation rotation, provider schema drift and rollback. Failure behavior: old supported version remains; affected capability paused if security support expires.
+<!-- roadmap-task id=INFRA-02-T06 milestone=M8 depends_on=INFRA-02-T05 mode=serial locks=ci-release -->
 - [ ] **Close CI/release command ownership —** Input: every stage/gate/promotion/rollback requirement. Operation: prove exact mapping, cwd/profile/fixture/target/artifact/exit semantics and destructive guard order. Output: signed command coverage. Test evidence: orphan/duplicate, unavailable, wrong target and partial-promotion negatives. Failure behavior: no candidate or promotion credit.
 
 ## Test strategy

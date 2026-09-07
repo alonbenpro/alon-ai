@@ -2,9 +2,9 @@
 
 **Document ID:** BACKEND-03
 **Status:** Planned M6 policy implementation; only a minimal asynchronous `SendPolicy` protocol exists today
-**Milestone:** M6, with provider-budget admission used from M3
+**Milestone:** M6, M7 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [ARCH-03 policy events](../01-architecture/03-domain-events-and-state-machines.md#policy-approval-sending-and-replies), [DB-03](../02-database/03-leads-campaigns-and-messages.md), [DB-05](../02-database/05-audit-events-and-idempotency.md), and BACKEND-01
+**Prerequisites:** exact local order `BACKEND-03-T01 -> BACKEND-03-T02 -> BACKEND-03-T03 -> BACKEND-03-T04 -> BACKEND-03-T05`; cross-document task Inputs `BACKEND-03-T01 <- DB-05-T02,ARCH-03-T01,DB-03-T01; BACKEND-03-T04 <- SEC-05-T03,BACKEND-05-T03; BACKEND-03-T05 <- BACKEND-06-T02,BACKEND-06-T04`. Descriptive source authorities/resources (not whole-document completion dependencies): [ARCH-03 policy events](../01-architecture/03-domain-events-and-state-machines.md#policy-approval-sending-and-replies), [DB-03](../02-database/03-leads-campaigns-and-messages.md), [DB-05](../02-database/05-audit-events-and-idempotency.md), and BACKEND-01
 **Outputs:** Versioned policy facts/scope/hash, exact reason taxonomy, deterministic composition order, immutable decisions, and fail-closed re-evaluation
 **Unlocks:** M6 campaign admission, [BACKEND-04 SendGateway](04-send-gateway.md), and control enablement
 **Risk:** Critical
@@ -114,10 +114,15 @@ Use one injected UTC instant per evaluation. Time windows are half-open `[start,
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=BACKEND-03-T01 milestone=M6 depends_on=DB-05-T02,ARCH-03-T01,DB-03-T01 mode=parallel locks=backend-domain -->
 - [ ] **Encode eligibility/basis/SEND facts and reason registry —** Input: DB/ARCH/WF gates and exact names above. Operation: implement strict `APPROVAL_ELIGIBILITY` and final `SEND` schemas, shared immutable basis hash, independent facts hashes, `campaign_member_id`, rule/version registry, and reason enum. Output: pure policy package. Test evidence: eligibility-to-approval-to-final-SEND construction plus stale-basis/mutable-fact hash matrix. Failure behavior: no decision.
+<!-- roadmap-task id=BACKEND-03-T02 milestone=M6 depends_on=BACKEND-03-T01 mode=parallel locks=backend-domain -->
 - [ ] **Implement deterministic rule composition —** Input: frozen facts/version. Operation: execute fixed ordered rules and collect sorted denial reasons without I/O. Output: reproducible allow/deny. Test evidence: exhaustive pairwise/boundary/property fixtures. Failure behavior: deny on unknown/incomplete fact.
-- [ ] **Implement PolicyEvaluationService —** Input: fact assembly, scope, command key. Operation: verify hashes, replay/insert immutable decision plus audit/event atomically. Output: DB-05 policy authority. Test evidence: concurrency/replay/failure injection. Failure behavior: transaction rollback and side effect denied.
+<!-- roadmap-task id=BACKEND-03-T03 milestone=M6 depends_on=BACKEND-03-T02 mode=parallel locks=backend-domain -->
+- [ ] **Implement PolicyEvaluationService —** Input: fact assembly, scope, command key. Operation: verify hashes, replay/insert immutable decision plus audit/event atomically. Output: implemented versioned PolicyEvaluationService interface plus immutable DB-05 policy authority. Test evidence: concurrency/replay/failure injection. Failure behavior: transaction rollback and side effect denied.
+<!-- roadmap-task id=BACKEND-03-T04 milestone=M6 depends_on=BACKEND-03-T03,SEC-05-T03,BACKEND-05-T03 mode=parallel locks=backend-domain -->
 - [ ] **Implement last-mile SEND, suppression, and rate reservation —** Input: queued intent, approved basis, current rows, and DBOS admission. Operation: create a new SEND decision; commit suppression/no-attempt or consume one unique PostgreSQL rate lease with the attempt. Output: denied terminal suppression or exact pre-call authority. Test evidence: mutable-fact matrix, concurrent slot/lease, suppression event/no-call, and independent facts-hash tests. Failure behavior: no provider call/control enable.
+<!-- roadmap-task id=BACKEND-03-T05 milestone=M7 depends_on=BACKEND-03-T04,BACKEND-06-T02,BACKEND-06-T04 mode=parallel locks=backend-domain -->
 - [ ] **Gate versions and operator explainability —** Input: frozen policy fixtures and report projection. Operation: reproduce decisions/reasons/hashes and show safe facts/reasons without PII. Output: M6 policy evidence. Test evidence: golden decision replay and redaction scan. Failure behavior: policy version not promoted.
 
 ## Test strategy

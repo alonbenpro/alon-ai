@@ -2,9 +2,9 @@
 
 **Document ID:** OBS-03
 **Status:** Planned M3-M8 provider-cost ledger; no live providers, reservations, cost entries, invoices, FX capture, or cost dashboards exist today
-**Milestone:** M3 agent/provider gates, M6 Gmail/budget reconciliation, M7 analytics, M8 operations
+**Milestone:** M3, M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [DB-01 budgets](../02-database/01-core-data-model.md), [DB-05 `cost_entries`](../02-database/05-audit-events-and-idempotency.md), [AGENT-01 provider meta/ledger](../04-agents/01-agent-runtime-and-contracts.md), [AGENT-10 eval costs](../04-agents/10-agent-evals-and-versioning.md), six provider contracts, BACKEND-03, SEC-05, and OBS-01/02
+**Prerequisites:** exact local order `OBS-03-T01 -> OBS-03-T02 -> OBS-03-T03 -> OBS-03-T04 -> OBS-03-T05`; cross-document task Inputs `OBS-03-T01 <- PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,PROVIDER-06-T01,PROVIDER-01-T02,PROVIDER-02-T01,PROVIDER-01-T01; OBS-03-T02 <- DB-05-T02; OBS-03-T05 <- AGENT-10-T01,AGENT-10-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [DB-01 budgets](../02-database/01-core-data-model.md), [DB-05 `cost_entries`](../02-database/05-audit-events-and-idempotency.md), [AGENT-01 provider meta/ledger](../04-agents/01-agent-runtime-and-contracts.md), [AGENT-10 eval costs](../04-agents/10-agent-evals-and-versioning.md), six provider contracts, BACKEND-03, SEC-05, and OBS-01/02
 **Outputs:** Original-currency cost ledger, reservation/reconciliation protocol, immutable pricing/usage evidence, Bank of Israel ILS projection, discrepancy handling, budgets/alerts, and tests
 **Unlocks:** Cost-gated provider calls, M7 cost reports, agent promotion/cost rollback, and M8 financial operations
 **Risk:** Critical
@@ -72,11 +72,16 @@ Hard caps exist by provider call, agent config/suite, workflow run, experiment/c
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=OBS-03-T01 milestone=M3 depends_on=PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,PROVIDER-06-T01,PROVIDER-01-T02,PROVIDER-02-T01,PROVIDER-01-T01 mode=parallel locks=provider-contracts -->
 - [ ] **Implement currency/price/usage contracts —** Input: exact provider contracts and official price manifests. Operation: freeze integer units/exponents/rounding/effective versions and RFC 8785 evidence. Output: reproducible maximum/actual cost. Test evidence: tier/minimum/cancel/failure/version boundary golden vectors. Failure behavior: provider call denied.
-- [ ] **Implement reservation/reconciliation —** Input: budget account, provider call/result/ledger and price. Operation: reserve serially, call, insert one cost and reconcile/release atomically. Output: complete cost chain. Test evidence: concurrency/replay/crash/unknown/overage/zero/retry matrix. Failure behavior: hold capacity, stop paid work, incident.
+<!-- roadmap-task id=OBS-03-T02 milestone=M3 depends_on=OBS-03-T01,DB-05-T02 mode=parallel locks=backend-domain -->
+- [ ] **Implement reservation/reconciliation —** Input: budget account, provider call/result/ledger and price. Operation: reserve serially, call, insert one cost and reconcile/release atomically. Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, plus a complete cost chain. Test evidence: concurrency/replay/crash/unknown/overage/zero/retry matrix. Failure behavior: hold capacity, stop paid work, incident.
+<!-- roadmap-task id=OBS-03-T03 milestone=M3 depends_on=OBS-03-T02 mode=parallel locks=backend-domain -->
 - [ ] **Implement Bank of Israel FX capture —** Input: original currency/occurred date. Operation: fetch allowlisted official API, verify/capture/normalize/round, store source/date/hash. Output: DB-05 valid ILS evidence. Test evidence: weekend/holiday/100-unit/currency-exponent/rounding/missing/tamper vectors. Failure behavior: no guessed ILS; provider ineligible or reconciliation pending.
+<!-- roadmap-task id=OBS-03-T04 milestone=M8 depends_on=OBS-03-T03 mode=serial locks=live-environment,telemetry-catalog -->
 - [ ] **Implement reports/alerts/invoice review —** Input: reservations/costs/FX/invoice refs. Operation: group original currencies, present separate ILS completeness, compare invoice, and fire hard caps. Output: operator cost control. Test evidence: ID-set dedupe/unlike currency/discrepancy/80-100% thresholds. Failure behavior: visible incomplete state and no budget increase.
-- [ ] **Reconcile eval and runtime windows —** Input: exact AGENT-10 populations and active config. Operation: compute native mean/p95/max and rolling triggers from cost rows/provider ledgers. Output: promotion/rollback evidence. Test evidence: failed/cancelled billed calls and boundary rounding. Failure behavior: candidate rejects or active config rolls back/pauses.
+<!-- roadmap-task id=OBS-03-T05 milestone=M8 depends_on=OBS-03-T04,AGENT-10-T01,AGENT-10-T05 mode=serial locks=milestone-gate,telemetry-catalog -->
+- [ ] **Reconcile eval and runtime windows —** Input: exact AGENT-10 populations and active config; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: compute native mean/p95/max and rolling triggers from cost rows/provider ledgers; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: promotion/rollback evidence. Test evidence: failed/cancelled billed calls and boundary rounding. Failure behavior: candidate rejects or active config rolls back/pauses.
 
 ## Test strategy
 
