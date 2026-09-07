@@ -1,7 +1,7 @@
 # Executable Roadmap Dependency Graph Design
 
-**Date:** 2026-08-31  
-**Status:** Approved by the operator on 2026-08-31  
+**Date:** 2026-08-31<br>
+**Status:** Approved by the operator on 2026-08-31<br>
 **Audience:** The solo developer and every agent executing the Alon AI roadmap
 
 ## Purpose
