@@ -1718,8 +1718,29 @@ def test_cli_second_replace_failure_returns_one_then_repairs(
     assert main(["--check"], root=tmp_path) == 0
 
 
-def test_real_repository_is_blocked_only_by_pending_metadata_migration() -> None:
+def test_real_repository_source_graph_matches_reviewed_contract() -> None:
     repository_root = Path(__file__).resolve().parents[3]
 
-    with pytest.raises(ValidationError, match="adjacent metadata"):
-        parse_roadmap(repository_root)
+    roadmap = parse_roadmap(repository_root)
+    ordered = topological_order(roadmap)
+    waves = build_waves(roadmap)
+    validate_waves(roadmap, waves)
+    tasks_by_id = {task.id: task for task in roadmap.tasks}
+    cross_document_dependency_pairs = tuple(
+        (dependency, task.id)
+        for task in roadmap.tasks
+        for dependency in task.depends_on
+        if tasks_by_id[dependency].document_id != task.document_id
+    )
+
+    assert len(roadmap.tasks) == 406
+    assert len(ordered) == 406
+    assert tuple(task.id for task in roadmap.tasks if not task.depends_on) == (
+        "PRODUCT-01-T01",
+    )
+    assert len(waves) == 368
+    assert max(len(wave.assignments) for wave in waves) == 3
+    assert len(cross_document_dependency_pairs) == 810
+    assert graph_fingerprint(roadmap) == (
+        "afbf82d566136548f0cb3f5a0407758aab17bbf07d26ff2656d6224a5a132abe"
+    )
