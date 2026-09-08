@@ -6,7 +6,7 @@
 **Owner:** Solo operator
 **Prerequisites:** exact local order `SEC-02-T01 -> SEC-02-T02 -> SEC-02-T03 -> SEC-02-T04 -> SEC-02-T05 -> SEC-02-T06`; cross-document task Inputs `SEC-02-T01 <- DB-01-T02,SEC-06-T01; SEC-02-T02 <- SEC-03-T01; SEC-02-T04 <- BACKEND-02-T01`. Descriptive source authorities/resources (not whole-document completion dependencies): [BACKEND-01 `OperatorSessionService`](../06-backend/01-domain-services.md), [BACKEND-02 exact auth/session API](../06-backend/02-api-contracts.md), [FRONTEND-01](../07-frontend/01-information-architecture.md), [FRONTEND-09](../07-frontend/09-error-recovery-and-accessibility.md), SEC-01, and SEC-03
 **Outputs:** Configured-subject Google OIDC, server-side opaque sessions, CSRF/private-ingress enforcement, rotation/revocation/bootstrap/recovery, and retained authentication evidence
-**Unlocks:** Authenticated use of the exact 66-operation API and M8 private operation
+**Unlocks:** Authenticated use of the exact registered-operation API and M8 private operation
 **Risk:** Critical
 **Complexity:** XL
 
@@ -47,7 +47,7 @@ Startup refuses product routes when configuration is missing, wildcarded, HTTP o
 
 ### Server-side session store and frozen cookie contract
 
-Use the dedicated `security_runtime` namespace with exactly two operational tables: `security_runtime.oidc_flows` and `security_runtime.operator_sessions`. They are not M2 product data and do not change the frozen 46-product-table manifest. PostgreSQL is selected for the initial single-VPS deployment because API-safe transactions, restart survival, CAS, backup, and revocation already exist operationally; no Redis/Vault cluster is introduced. The API auth owner is the only application role with row access. Product workers, DBOS/Temporal roles, frontend, reporting, and agents receive no schema usage or table/function grant.
+Use the dedicated `security_runtime` namespace with exactly two operational tables: `security_runtime.oidc_flows` and `security_runtime.operator_sessions`. They are not M2 product data and do not change the frozen product-table manifest. PostgreSQL is selected for the initial single-VPS deployment because API-safe transactions, restart survival, CAS, backup, and revocation already exist operationally; no Redis/Vault cluster is introduced. The API auth owner is the only application role with row access. Product workers, DBOS/Temporal roles, frontend, reporting, and agents receive no schema usage or table/function grant.
 
 The following PostgreSQL DDL is normative and compiles after DB-01 creates `public.operators`. A migration runs it as the database owner; role creation is idempotent only to support clean disposable compile fixtures. Production migration identity and role membership are release-manifest inputs, never inferred.
 
@@ -962,7 +962,7 @@ WHERE state = 'ACTIVE';
 COMMIT;
 ```
 
-The release introspects `pg_class`/`pg_namespace` and requires the security-runtime ordinary-table set to equal exactly `{oidc_flows,operator_sessions}` and the product-table set to remain exactly the DB-06 46 names; neither set may absorb the other.
+The release introspects `pg_class`/`pg_namespace` and requires the security-runtime ordinary-table set to equal exactly `{oidc_flows,operator_sessions}` and the product-table set to remain exactly the DB-06 table-name set; neither set may absorb the other.
 
 The `__Host-alon_ai_session` cookie is exactly 256-bit random, `Secure; HttpOnly; SameSite=Strict; Path=/`, `Domain` absent. Idle expiry is 30 minutes; absolute expiry is fixed eight hours. `Max-Age` is remaining absolute lifetime capped at 28,800 seconds and `Expires` is the fixed absolute UTC instant. Active use rotates every 15 minutes; the previous handle remains valid for at most 30 seconds and cannot rotate again. Rotation never extends absolute expiry. Idle extension is server-side and cannot pass absolute expiry; writes are coalesced to at most once per minute.
 
@@ -986,10 +986,18 @@ Bootstrap is a local deployment ceremony, not an HTTP endpoint: generate/store k
 
 Lost browser/session uses normal OIDC. Lost device invokes the local authenticated `revoke-operator-sessions --all --reason <enum>` command from the VPS console/private recovery channel, then rotates keys if theft is suspected. Lost OIDC access has no bypass: keep product mutations and both send controls off, preserve data, restore Google account access or change the configured subject through an offline, two-artifact configuration release and re-bootstrap. Database recovery restores sessions as revoked/expired and flows as expired. A database/clock/key mismatch fails closed; no local admin cookie is minted.
 
+### Expanded private sales-query boundary
+
+Every new BACKEND-02 offer/lead/conversation/action/booking/calendar/checkpoint/strategy/exception operation is PRIVATE_DEPLOYMENT and uses these same session, subject, CSRF, Origin, replay and version checks. OpenAPI/private-ingress validation compares the full current method/path/operation set; the public partition remains exactly the two M9 unsubscribe operations. Internal deterministic action/booking/checkpoint/strategy services have authenticated service capability scopes, not browser sessions or agent command authority.
+
+Authenticated read permission does not grant raw PII: conversation details are redacted, purpose-scoped and no-store; sensitive exception inspection additionally requires the existing five-minute step-up and exact materialization receipt. A receipt is inspection evidence only. Normal ActionAuthorizationService decisions never require a session preview and cannot be supplied by an API request. Browser requests cannot calculate authoritative price/margin, fabricate lead slot confirmation, alter frozen cohort membership or directly activate a global strategy.
+
+The complete product table set is DB-06's updated manifest, separate from exactly security_runtime.{oidc_flows,operator_sessions}. Existing operational SQL, grants, CAS, TTL, cookie, restore-revocation and 35-day backup contracts remain binding. New product services receive no security_runtime privileges.
+
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=SEC-02-T01 milestone=M6 depends_on=DB-01-T02,SEC-06-T01 mode=serial locks=security-runtime,migration-head -->
-- [ ] **Migrate and introspect the exact operational schema —** Input: DB-01 operators and the normative DDL; early privacy/retention-class contract and document-local exact operational expiry/restore fixtures. Operation: compile on a fresh supported PostgreSQL cluster, introspect tables/columns/constraints/indexes/triggers/owners/ACLs, then execute the restore and retention transactions. Output: exactly `security_runtime.{oidc_flows,operator_sessions}` beside—not inside—the 46-table product set. Test evidence: catalog equality, role-denial, dump/restore, expiry/prune boundaries, and worker/product-role no-access fixtures. Failure behavior: authentication readiness false and release blocked.
+- [ ] **Migrate and introspect the exact operational schema —** Input: DB-01 operators and the normative DDL; early privacy/retention-class contract and document-local exact operational expiry/restore fixtures. Operation: compile on a fresh supported PostgreSQL cluster, introspect tables/columns/constraints/indexes/triggers/owners/ACLs, then execute the restore and retention transactions. Output: exactly `security_runtime.{oidc_flows,operator_sessions}` beside—not inside—the product-table product set. Test evidence: catalog equality, role-denial, dump/restore, expiry/prune boundaries, and worker/product-role no-access fixtures. Failure behavior: authentication readiness false and release blocked.
 <!-- roadmap-task id=SEC-02-T02 milestone=M6 depends_on=SEC-02-T01,SEC-03-T01 mode=serial locks=security-runtime -->
 - [ ] **Implement strict OIDC flow state —** Input: exact config, return path, Origin, anonymous key, and SEC-03 versioned key/object encryption contracts. Operation: persist digests/encrypted PKCE with 10-minute one-time claim/consume CAS and verify the complete callback protocol. Output: configured-subject authentication only. Test evidence: exact success `{code,state,iss,scope?}` and error `{error,state,iss,error_description?}` arms; callback `iss=https://accounts.google.com` accepts while callback legacy/bogus/missing/duplicate issuer rejects; verified ID-token issuer accepts each of the separate two exact values and rejects every other value; state/nonce/PKCE/audience/subject/error/replay plus two-claimer/expired-lease/stale-version matrix. Failure behavior: fixed failure redirect, cleared flow cookie, no session.
 <!-- roadmap-task id=SEC-02-T03 milestone=M6 depends_on=SEC-02-T02 mode=serial locks=security-runtime -->
@@ -1030,10 +1038,10 @@ Wrong subject, signature/JWK failure, replay, clock anomaly, session-store/key m
 - [ ] Identity OAuth and Gmail OAuth share no cookie, state, token, callback authority, scope, or service owner.
 - [ ] Session fixation/replay, CSRF/XSS/enumeration, concurrent sessions, logout/rotation/emergency revoke, bootstrap, and restore are tested.
 - [ ] Product authority is server-side and no browser/provider token is stored or exposed.
-- [ ] Fresh PostgreSQL compile/catalog/ACL/concurrency/retention/restore evidence proves exactly two operational tables and preserves the separate 46-product-table count.
+- [ ] Fresh PostgreSQL compile/catalog/ACL/concurrency/retention/restore evidence proves exactly two operational tables and preserves the separate complete DB-06 product-table set.
 
 Retain config hashes, OIDC discovery/JWK pinning evidence, protocol/security test results, cookie captures with values redacted, session lifecycle/audit counts, revoke/rotation drills, private-ingress/CSP scans, and clean bootstrap/restore reports.
 
 ## Dependencies and next deliverable
 
-SEC-02 depends on BACKEND-02's exact HTTP contract and [SEC-03](03-secrets-and-oauth-token-security.md) keying. It unlocks authenticated M7 operation and the identity part of M8; it grants no Gmail credential, approval, final `SEND`, compliance, or control-enable authority.
+SEC-02 depends on BACKEND-02's exact HTTP contract and [SEC-03](03-secrets-and-oauth-token-security.md) keying. It unlocks authenticated M7 operation and the identity part of M8; it grants no Gmail/calendar credential, action authorization, final SEND/BOOKING, compliance, or control-enable authority.

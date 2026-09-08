@@ -20,7 +20,7 @@ Current structured logs carry request IDs and secret-safe operational failures. 
 
 ## Scope and non-goals
 
-The M9 audit/idempotency boundary treats stage admission and barrier recording as authoritative commands. Keys bind experiment version, stage ordinal, exact `100/200/300/400` increment, `100/300/600/1,000` cumulative maximum, membership-set hash, prior decision reference, and expected control/policy versions. Replaying the same key returns the stored result; a different payload conflicts. Concurrent final-slot requests serialize, and no audit/event replay can create Stage 2-4 authority without the immediately prior signed `CONTINUE`.
+The M9 audit/idempotency boundary treats stage admission and barrier recording as authoritative commands. Keys bind experiment version, stage ordinal, exact `100/200/300/400` increment, `100/300/600/1,000` cumulative maximum, membership-set hash, prior decision reference, and expected control/policy versions. Replaying the same key returns the stored result; a different payload conflicts. Concurrent final-slot requests serialize, and no audit/event replay can create Stage 2-4 authority without the immediately prior authoritative `CONTINUE`.
 
 In scope: ARCH-03 envelopes/names, security denials, exact command scope/key replay, transactional outbox, at-least-once consumer dedupe, policy fact hashes, cost reserve/reconcile, supersession, and repair evidence. Non-goals: full event sourcing, global event order, exactly-once network delivery, putting full PII/bodies/secrets in payloads, treating timestamps as dedupe, Kafka, or generic workflow history replication.
 
@@ -169,53 +169,37 @@ CREATE TABLE outbox_deliveries (
 CREATE INDEX ix_outbox_deliveries_event ON outbox_deliveries (event_id, processed_at);
 
 CREATE TABLE policy_decisions (
-    policy_decision_id uuid NOT NULL,
-    scope text NOT NULL,
+    policy_decision_id uuid PRIMARY KEY,
+    scope text NOT NULL CHECK (scope IN ('EXPERIMENT','CAMPAIGN','ACTION_CREATION','SEND','COMMERCIAL','BOOKING','CHECKPOINT','STRATEGY','PROVIDER','CONTROL')),
+    action_id uuid NULL,
+    action_kind text NULL,
     experiment_id uuid NULL,
     campaign_id uuid NULL,
-    campaign_version integer NULL,
+    cohort_id uuid NULL,
     campaign_member_id uuid NULL,
-    lead_id uuid NULL,
-    message_id uuid NULL,
-    message_version bigint NULL,
-    message_content_hash char(64) NULL,
-    mailbox_id uuid NULL,
-    approval_id uuid NULL,
-    approval_preview_materialization_hash char(64) NULL,
-    artifact_version_refs_hash char(64) NULL,
-    evidence_artifact_refs jsonb NOT NULL DEFAULT '[]'::jsonb,
+    authorization_id uuid NULL,
+    scope_hash char(64) NOT NULL,
     policy_version text NOT NULL,
     allowed boolean NOT NULL,
     reason_codes text[] NOT NULL,
-    facts_schema_version integer NOT NULL,
-    facts_json jsonb NOT NULL,
+    facts_schema_version text NOT NULL,
+    facts_ciphertext bytea NOT NULL,
     facts_hash char(64) NOT NULL,
-    scope_hash char(64) NOT NULL,
+    action_attribution_id uuid NULL,
+    control_generation bigint NOT NULL,
+    checkpoint_generation bigint NULL,
+    evaluated_at timestamptz NOT NULL,
     correlation_id uuid NOT NULL,
     idempotency_key text NOT NULL,
-    evaluated_at timestamptz NOT NULL,
-    CONSTRAINT pk_policy_decisions PRIMARY KEY (policy_decision_id),
-    CONSTRAINT fk_policy_decisions_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_policy_decisions_campaign_authority FOREIGN KEY (campaign_id, campaign_version, experiment_id) REFERENCES campaigns (campaign_id, campaign_version, experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_policy_decisions_message_authority FOREIGN KEY (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id, message_version, message_content_hash) REFERENCES outreach_messages (message_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, mailbox_id, version, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT fk_policy_decisions_send_approval FOREIGN KEY (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, message_version, message_content_hash, scope_hash, artifact_version_refs_hash, approval_preview_materialization_hash) REFERENCES approvals (approval_id, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, mailbox_id, message_version, message_content_hash, scope_hash, artifact_version_refs_hash, preview_materialization_hash) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED,
-    CONSTRAINT uq_policy_decisions_command UNIQUE (scope, idempotency_key),
-    CONSTRAINT uq_policy_decisions_mailbox_identity UNIQUE (policy_decision_id, mailbox_id),
-    CONSTRAINT uq_policy_decisions_approval_basis UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed),
-    CONSTRAINT uq_policy_decisions_send_authority UNIQUE NULLS NOT DISTINCT (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, approval_id, approval_preview_materialization_hash, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed),
-    CONSTRAINT ck_policy_decisions_scope CHECK (scope IN ('EXPERIMENT','CAMPAIGN','APPROVAL_ELIGIBILITY','SEND','PROVIDER','CONTROL')),
-    CONSTRAINT ck_policy_decisions_campaign_pair CHECK ((campaign_id IS NULL) = (campaign_version IS NULL)),
-    CONSTRAINT ck_policy_decisions_approval_send_binding CHECK (
-        (scope = 'APPROVAL_ELIGIBILITY' AND experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND campaign_member_id IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND message_version > 0 AND message_content_hash ~ '^[0-9a-f]{64}$' AND mailbox_id IS NOT NULL AND approval_id IS NULL AND approval_preview_materialization_hash IS NULL AND artifact_version_refs_hash ~ '^[0-9a-f]{64}$') OR
-        (scope = 'SEND' AND experiment_id IS NOT NULL AND campaign_id IS NOT NULL AND campaign_version IS NOT NULL AND campaign_member_id IS NOT NULL AND lead_id IS NOT NULL AND message_id IS NOT NULL AND message_version > 0 AND message_content_hash ~ '^[0-9a-f]{64}$' AND mailbox_id IS NOT NULL AND approval_id IS NOT NULL AND approval_preview_materialization_hash ~ '^[0-9a-f]{64}$' AND artifact_version_refs_hash ~ '^[0-9a-f]{64}$') OR
-        scope NOT IN ('APPROVAL_ELIGIBILITY','SEND')
-    ),
-    CONSTRAINT ck_policy_decisions_reasons CHECK ((allowed AND cardinality(reason_codes) >= 0) OR (NOT allowed AND cardinality(reason_codes) > 0)),
-    CONSTRAINT ck_policy_decisions_facts CHECK (facts_schema_version > 0 AND jsonb_typeof(facts_json) = 'object' AND jsonb_typeof(evidence_artifact_refs) = 'array' AND facts_hash ~ '^[0-9a-f]{64}$' AND scope_hash ~ '^[0-9a-f]{64}$')
+    CONSTRAINT uq_policy_decisions_key UNIQUE (scope, idempotency_key),
+    CONSTRAINT uq_policy_decisions_authority UNIQUE (policy_decision_id, scope, action_id, action_kind, cohort_id, campaign_member_id, scope_hash, facts_hash, policy_version, allowed),
+    CONSTRAINT ck_policy_decisions_denial CHECK (allowed OR cardinality(reason_codes) > 0),
+    CONSTRAINT ck_policy_decisions_hashes CHECK (scope_hash ~ '^[0-9a-f]{64}$' AND facts_hash ~ '^[0-9a-f]{64}$'),
+    CONSTRAINT ck_policy_decisions_generation CHECK (control_generation > 0 AND (checkpoint_generation IS NULL OR checkpoint_generation > 0)),
+    CONSTRAINT ck_policy_decisions_action_binding CHECK (scope NOT IN ('SEND','BOOKING') OR (action_id IS NOT NULL AND action_kind IS NOT NULL AND cohort_id IS NOT NULL AND campaign_member_id IS NOT NULL AND authorization_id IS NOT NULL AND action_attribution_id IS NOT NULL))
 );
-CREATE INDEX ix_policy_decisions_reproducibility ON policy_decisions (policy_version, scope_hash, facts_hash);
-CREATE INDEX ix_policy_decisions_mailbox ON policy_decisions (mailbox_id, evaluated_at DESC) WHERE mailbox_id IS NOT NULL;
-CREATE INDEX ix_policy_decisions_approval ON policy_decisions (approval_id, evaluated_at DESC) WHERE approval_id IS NOT NULL;
+CREATE INDEX ix_policy_decisions_action ON policy_decisions (action_id, evaluated_at);
+CREATE INDEX ix_policy_decisions_cohort ON policy_decisions (cohort_id, evaluated_at);
 
 CREATE TABLE cost_entries (
     cost_entry_id uuid NOT NULL,
@@ -227,6 +211,9 @@ CREATE TABLE cost_entries (
     agent_run_id uuid NULL,
     send_attempt_id uuid NULL,
     provider_result_id uuid NULL,
+    booking_attempt_id uuid NULL,
+    booking_result_id uuid NULL,
+    action_attribution_id uuid NULL,
     usage_schema_version integer NOT NULL,
     usage_json jsonb NOT NULL,
     usage_hash char(64) NOT NULL,
@@ -251,9 +238,10 @@ CREATE TABLE cost_entries (
     CONSTRAINT uq_cost_entries_authority UNIQUE (cost_entry_id, experiment_id, currency),
     CONSTRAINT ck_cost_entries_usage CHECK (usage_schema_version > 0 AND jsonb_typeof(usage_json) = 'object' AND usage_hash ~ '^[0-9a-f]{64}$' AND usage_json ? 'provider_call_id' AND usage_json ->> 'provider_call_id' = provider_call_id::text AND idempotency_key = provider_call_id::text),
     CONSTRAINT ck_cost_entries_provenance_shape CHECK (
-        (agent_run_id IS NULL AND send_attempt_id IS NULL AND provider_result_id IS NULL) OR
-        (agent_run_id IS NOT NULL AND workflow_run_id IS NOT NULL AND send_attempt_id IS NULL AND provider_result_id IS NULL) OR
-        (agent_run_id IS NULL AND workflow_run_id IS NULL AND send_attempt_id IS NOT NULL AND provider_result_id IS NOT NULL)
+        (agent_run_id IS NULL AND send_attempt_id IS NULL AND provider_result_id IS NULL AND booking_attempt_id IS NULL AND booking_result_id IS NULL) OR
+        (agent_run_id IS NOT NULL AND workflow_run_id IS NOT NULL AND send_attempt_id IS NULL AND provider_result_id IS NULL AND booking_attempt_id IS NULL AND booking_result_id IS NULL) OR
+        (agent_run_id IS NULL AND workflow_run_id IS NULL AND send_attempt_id IS NOT NULL AND provider_result_id IS NOT NULL AND booking_attempt_id IS NULL AND booking_result_id IS NULL) OR
+        (agent_run_id IS NULL AND workflow_run_id IS NULL AND send_attempt_id IS NULL AND provider_result_id IS NULL AND booking_attempt_id IS NOT NULL AND booking_result_id IS NOT NULL)
     ),
     CONSTRAINT ck_cost_entries_amount CHECK (amount_minor >= 0 AND currency ~ '^[A-Z]{3}$'),
     CONSTRAINT ck_cost_entries_fx CHECK ((currency = 'ILS' AND reporting_amount_minor_ils = amount_minor AND fx_rate IS NULL AND fx_rate_source IS NULL AND fx_rate_date IS NULL) OR (currency <> 'ILS' AND reporting_amount_minor_ils IS NOT NULL AND fx_rate > 0 AND fx_rate_source IS NOT NULL AND fx_rate_date IS NOT NULL))
@@ -295,7 +283,7 @@ CREATE INDEX ix_repair_actions_incident ON repair_actions (incident_id, executed
 
 `command_idempotency.request_hash` and present `result_hash` use DB-01's exact UTF-8 RFC 8785 envelope digest with the stored text schema version and JSON payload. `IN_PROGRESS` and `FAILED` have all result columns SQL `NULL`; `SUCCEEDED` has the complete triplet. Replay verifies bytes and schema version before returning a stored result; version migration never mutates an existing command row.
 
-`cost_entries` has four closed provenance shapes: shared operation (all optional owner IDs null), workflow-only, agent (`agent_run_id` plus its exact `experiment_id` and owning `workflow_run_id`), or Gmail send (`send_attempt_id` plus the exact same-attempt/call/provider `provider_result_id`, with workflow/agent null). `provider_call_id` is mandatory and distinct from aggregate identities; it equals both the provider idempotency key and `usage_json.provider_call_id`. Allocation therefore cannot be duplicated across workflow/agent/send levels: an agent from W1 cannot be attached to W2, a send/result cannot be paired with a workflow, and a result or call from another Gmail operation fails the named four-column composite FK. `ProviderCostReconciliationService` additionally verifies the signed provider ledger/request/result hashes before insert; JSON never substitutes for the relational run/result constraints.
+`cost_entries` has exact disjoint provenance shapes: shared operation (all optional owner IDs null), workflow-only, agent (`agent_run_id` plus its exact `experiment_id` and owning `workflow_run_id`), or Gmail send (`send_attempt_id` plus the exact same-attempt/call/provider `provider_result_id`, with workflow/agent null), or calendar booking (booking_attempt_id plus booking_result_id with exact provider_call_id/calendar/action evidence and workflow/agent/send IDs null). `provider_call_id` is mandatory and distinct from aggregate identities; it equals both the provider idempotency key and `usage_json.provider_call_id`. Allocation therefore cannot be duplicated across workflow/agent/send levels: an agent from W1 cannot be attached to W2, a send/result cannot be paired with a workflow, and a result or call from another Gmail operation fails the named four-column composite FK. `ProviderCostReconciliationService` additionally verifies the signed provider ledger/request/result hashes before insert; JSON never substitutes for the relational run/result constraints. Deferred fk_cost_entries_booking_result binds (booking_result_id,booking_attempt_id,provider_call_id) to the exact immutable booking result; agent/Gmail/calendar costs cannot cross branches or be counted twice.
 
 `repair_kind` is the closed recovery action selector; `command_type` is the exact existing typed command it invokes. API, audit, telemetry and UI carry the registered kind, never a caller string. `RecoveryCommandService` rejects unknown catalog/version/kind before command claim, and exact replay requires the original kind, before/after hashes and evidence. Adding a repair kind requires the same additive catalog-version migration protocol as incidents plus a typed inverse/recovery test; removing or silently remapping a retained kind is forbidden.
 
@@ -314,9 +302,24 @@ CREATE INDEX ix_repair_actions_incident ON repair_actions (incident_id, executed
 
 ### Command and side-effect atomicity
 
-For aggregate commands: begin; claim `(command_scope,idempotency_key)`; verify DB-01's RFC 8785 request envelope digest and compare it; load expected version; apply pure transition; update aggregate; insert the specific event plus the aggregate's canonical `*.state_changed.v1` event where defined; insert audit; insert outbox; store result; commit. For provider work: `RequestApproval` first records one `APPROVAL_ELIGIBILITY` decision and approval basis without ApprovalRule; an approved row never inherits send authority. The last-mile transaction records a new `SEND` decision with `approval_id`, the same immutable `scope_hash`, an independent current `facts_hash`, the exact rate reservation, and the attempt before the network call. The result transaction records `send.provider_accepted.v1`, conclusive failure, or `AMBIGUOUS`. A crash in the gap enters exact-authority reconciliation, never automatic retry.
+For aggregate commands: begin; claim `(command_scope,idempotency_key)`; verify DB-01's RFC 8785 request envelope digest and compare it; load expected version; apply pure transition; update aggregate; insert the specific event plus the aggregate's canonical `*.state_changed.v1` event where defined; insert audit; insert outbox; store result; commit. For provider work: ActionAuthorizationService creates immutable ActionAuthorityScopeV1 from a deterministic ACTION_CREATION decision, then unique consumption binds one intent. The last-mile transaction records a new SEND/BOOKING decision, same immutable scope_hash and independent current facts_hash, exact consumed rate/calendar lease and attempt before network. The result transaction records acceptance, conclusive failure or ambiguity. A crash in the gap enters exact-authority reconciliation, never automatic retry.
 
 An internal outbox consumer starts one PostgreSQL transaction, rechecks absence of `(consumer_name,event_id)`, performs all internal business writes, inserts `outbox_deliveries`, and commits once. A crash rolls back both the business writes and delivery receipt; redelivery re-executes the same transaction. External provider effects are forbidden in that transaction and forbidden from any generic “effect once” claim. Gmail/model/search/extraction effects use their explicit intent/result/error or `AMBIGUOUS`/reconciliation contracts.
+
+### Action-level strategy attribution and exceptions
+
+The following normalized records are part of the exact product schema, with DB-02 physical field/type conventions. Both have created_at timestamptz. AuditRecorder writes action_attributions in the owner's transaction; ExceptionCommandService writes exception_cases. RetentionCommandService alone purges eligible payloads.
+
+| Table | Fields and constraints |
+| --- | --- |
+| action_attributions | action_attribution_id PK; action_kind AGENT_CALL/POLICY_DECISION/DRAFT/SEND/NEGOTIATION_PROPOSAL/NEGOTIATION_DECISION/BOOKING_ACTION/CHECKPOINT/LEARNING_DECISION; action_id; action_version; experiment_id?; campaign_id?; cohort_id?; checkpoint_id?; offer_id/version/hash?; strategy_version_id/hash; activation_id?; producer_strategy_version; input_snapshot_id/hash?; control_generation; checkpoint_generation?; attribution_mode PRODUCT/EVALUATION_ONLY; content_hash. UQ (action_kind,action_id,action_version); deferred typed-target FK/constraint registry rejects wrong target, cross-cohort activation or cross-offer package; product actions require exact governing activation, and a pre-cohort global learning decision pins triggering checkpoint activation; isolated evaluation-only calls require signed candidate manifest and no product scope. Index (strategy_version_id,cohort_id,action_kind). |
+| exception_cases | exception_id PK; experiment_id?; campaign_id?; cohort_id?; conversation_id?; booking_intent_id?; action_id?; reason_code; severity; state OPEN/INVESTIGATING/RESOLVED/DISMISSED; expected_control_generation; evidence_ref_set_hash; incident_id?; opened_at; resolved_at?; resolution_command_key?; resolution_reason?. All scope references must agree; index (state,opened_at). Resolution is an authenticated bounded correction/repair, never a waiver of protected bounds or an instruction to send. |
+
+Every agent call, policy decision, draft, send, negotiation proposal/decision, booking action, checkpoint and learning result gets its own immutable attribution row. Campaign-level tags alone are insufficient. Global strategy rows are not tied to one experiment; action attribution pins a real activation plus exact global package hash. Rollback affects future actions only and cannot UPDATE attribution.
+
+Event payload schemas consume ARCH-03's complete action, conversation, cohort, booking, checkpoint, learning and strategy catalogs, including action.authorization_created.v1, booking.confirmed.v1, checkpoint.evidence_frozen.v1 and checkpoint.decision_recorded.v1. No fixed historical event count limits this catalog. Unknown names/versions/actors fail before insert. Raw email/calendar/contact/budget text belongs in encrypted purpose-scoped data, never event/audit/outbox/idempotent safe responses.
+
+The deferred FK/trigger stage verifies action_authorizations creation decision, exact single consumption target, intent/action scope, fresh SEND/BOOKING decision plus immutable attribution, and checkpoint/strategy source links. Historical immutable tuple references do not include mutable status/generation pointers as parent keys; fresh-gate checks read current status under lock.
 
 ## Ordered implementation tasks
 
@@ -344,7 +347,7 @@ An internal outbox consumer starts one PostgreSQL transaction, rechecks absence 
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 
-Payload schemas are allowlists and prefer references/hashes. Actor/authority, denials, approvals, controls, ambiguous results, repairs, and credential actions are audited. Correlation/causation spans HTTP, workflow, agent, policy, provider, and outbox. Metrics expose lag, retries, stuck commands, unresolved ambiguity, policy denials, budget variance, and safe error codes. Cost entries preserve provider currency and conversion evidence.
+Payload schemas are allowlists and prefer references/hashes. Actor/authority, denials, action authorizations, controls, ambiguous results, repairs, and credential actions are audited. Correlation/causation spans HTTP, workflow, agent, policy, provider, and outbox. Metrics expose lag, retries, stuck commands, unresolved ambiguity, policy denials, budget variance, and safe error codes. Cost entries preserve provider currency and conversion evidence.
 
 ## Failure, rollback, and operator recovery
 

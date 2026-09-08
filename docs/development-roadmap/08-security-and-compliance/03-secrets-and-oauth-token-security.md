@@ -24,7 +24,7 @@ Secrets and OAuth tokens exist only in a versioned encrypted object boundary wit
 
 In scope: OIDC client secret, Gmail OAuth code/access/refresh token and account proof, session/flow encryption/lookup keys, provider API keys, database credentials, signing keys, object/backup encryption keys, CI/deploy credentials, personal-data DEKs, and test canaries.
 
-Non-goals: secrets in source or `.env` in production, one shared master key, raw tokens in the 46 product tables, secret-store listing by agents/workflows, exportable long-lived CI credentials, logging redacted prefixes/last-four values, home-grown crypto primitives, embedding secrets in system prompts, or claiming memory zeroization is perfect in managed Python.
+Non-goals: secrets in source or `.env` in production, one shared master key, raw tokens in the registered product tables, secret-store listing by agents/workflows, exportable long-lived CI credentials, logging redacted prefixes/last-four values, home-grown crypto primitives, embedding secrets in system prompts, or claiming memory zeroization is perfect in managed Python.
 
 ## Exact planned implementation surfaces
 
@@ -38,7 +38,7 @@ The initial production adapter is the deployment provider's managed KMS plus ver
 | --- | --- | --- |
 | Google OIDC client secret | `OperatorSessionService` token endpoint call | frontend, Gmail adapter, agents/workflows, logs, product DB |
 | Gmail authorization code/PKCE/state encryption | exact flow-claimed `GmailOAuthSagaService` | post-exchange reuse, query/log/error/fixture, operator UI |
-| Gmail refresh/access token | Gmail OAuth saga and `GmailProvider` for the exact mailbox/account/scope/generation | `SendGateway` plaintext persistence, agent/provider-other capability, general worker config |
+| Gmail refresh/access token | Gmail OAuth saga and `Gmail read/write adapter only for the exact mailbox/account/scope/generation | `SendGateway` plaintext persistence, agent/provider-other capability, general worker config |
 | session/flow lookup and envelope keys | SEC-02 store implementation only | application payloads, telemetry, browser |
 | provider model/search/page/business keys | matching adapter process/capability only | agents as values, other provider adapter, prompt/tool result |
 | DB credential | API/worker/migration workload identity with separate minimum privileges | frontend, provider, test fixtures, Graphify |
@@ -76,6 +76,17 @@ Quarterly clean restore proves: manifest/signature/hash; exact object versions/s
 
 Forbidden everywhere outside the secret call boundary: `Authorization`, `Cookie`, `Set-Cookie` values; OAuth code/state/nonce/PKCE; access/refresh/ID tokens; client secrets; API/DB/KMS keys; decrypted address/body/evidence or other PII; raw secret/ciphertext object; provider token/error response; environment/config dumps; or hashes of low-entropy secrets. Logging/telemetry/errors use only allowlisted enums, record UUIDs, versions/generations, safe provider/capability, and correlation. Tests use unmistakably fake canaries and assert absence in logs, traces, metrics, snapshots, exception chains, pytest output, build layers, Git, `.firecrawl`, Graphify, LLM prompts, and retained fixtures.
 
+
+### Calendar and content-key capability separation
+
+Calendar OAuth credentials use distinct object type/purpose/AAD from Gmail and OIDC, exact provider account/calendar identity, permitted scope hash, handle/version/key/activation generation, expiry and revocation state. CalendarAccountService accepts only a short-lived signed ACTIVE proof with the same leased external-before-database binding protocol; product rows retain safe hashes/versions only. Scope/account/provider swaps fail before decryption, and token retrieval never returns a complete client.
+
+CalendarReadPort resolves only bounded availability/event read credentials; only BookingGateway composition receives CalendarWritePort's create/reschedule/cancel capability. GmailReadPort and GmailWritePort are likewise separate, and only SendGateway receives the latter. Agents, workflow runtime, API/query code and generic provider wrappers cannot import or resolve either write capability. Revoke/rotate disables affected scoped/environment controls and invalidates ActionAuthorityScopeV1 generation; unresolved writes remain evidence and cannot be erased to release a credential hold.
+
+Use purpose-specific per-object DEKs for contact identities, full raw/sanitized conversation messages, budget/source spans, booking details/confirmations, immutable agent input/output snapshots and policy/evidence payloads. AAD binds table/object ID, experiment/cohort/conversation or booking scope, content version/hash, and redaction version. Ciphertext transplant and cross-environment/cross-purpose replay tests must fail. Strategy packages and checkpoint learning only receive approved minimized evidence; they never obtain a DEK, raw thread, attendee list or secret resolver.
+
+The exact SEC-06 key overlap and 35-day backup recoverability ceiling apply to calendar and new content objects. An incident can preserve minimized live evidence but cannot keep general backups/session/token payloads past non-extendable maxima. Prove calendar account/scope/version/proof/lease/GC races, revoked credential before pre-write, no sensitive logs and restore-disabled behavior before M6 calendar composition.
+
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=SEC-03-T01 milestone=M1 depends_on=SEC-01-T01 mode=serial locks=security-runtime -->
@@ -108,7 +119,7 @@ On leak/tamper/mismatch/unknown generation: deny access, disable the dependent c
 
 ## Acceptance and retained evidence
 
-- [ ] No token/secret/ciphertext exists in the 46 product tables, browser, log/error/telemetry, fixture, Graphify, prompt, Git, or image layer.
+- [ ] No token/secret/ciphertext exists in the registered product tables, browser, log/error/telemetry, fixture, Graphify, prompt, Git, or image layer.
 - [ ] Key hierarchy, object AAD/version/state, CAS/lease, access, rotation, revocation, GC, deletion, backup, and restore are executable.
 - [ ] Exact PROVIDER-01/DB-03 Gmail saga and SEC-02 session contracts remain unchanged.
 - [ ] Every credential read is exact-purpose, mailbox/version/generation bound, audited safely, and revocable.

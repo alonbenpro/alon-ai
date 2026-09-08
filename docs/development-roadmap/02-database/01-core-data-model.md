@@ -83,6 +83,8 @@ CREATE TABLE workflow_runs (
     workflow_run_id uuid NOT NULL,
     experiment_id uuid NOT NULL,
     workflow_type text NOT NULL,
+    scope_kind text NOT NULL,
+    scope_id uuid NOT NULL,
     workflow_version text NOT NULL,
     runtime text NOT NULL,
     runtime_workflow_id text NOT NULL,
@@ -107,11 +109,11 @@ CREATE TABLE workflow_runs (
     CONSTRAINT pk_workflow_runs PRIMARY KEY (workflow_run_id),
     CONSTRAINT fk_workflow_runs_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
     CONSTRAINT uq_workflow_runs_runtime_identity UNIQUE (runtime, runtime_workflow_id),
-    CONSTRAINT uq_workflow_runs_experiment_type_attempt UNIQUE (experiment_id, workflow_type, attempt_no),
+    CONSTRAINT uq_workflow_runs_experiment_type_attempt UNIQUE (experiment_id, workflow_type, scope_kind, scope_id, attempt_no),
     CONSTRAINT uq_workflow_runs_input_digest UNIQUE (workflow_run_id, input_hash),
     CONSTRAINT uq_workflow_runs_scope UNIQUE (workflow_run_id, experiment_id),
-    CONSTRAINT uq_workflow_runs_input_authority UNIQUE (workflow_run_id, experiment_id, input_hash),
     CONSTRAINT ck_workflow_runs_state CHECK (state IN ('PENDING','RUNNING','PAUSE_REQUESTED','PAUSED','CANCEL_REQUESTED','CANCELLED','SUCCEEDED','FAILED')),
+    CONSTRAINT ck_workflow_runs_scope_kind CHECK (scope_kind IN ('EXPERIMENT','LEAD','CONVERSATION','BOOKING','CHECKPOINT','LEARNING')),
     CONSTRAINT ck_workflow_runs_runtime CHECK (runtime IN ('DBOS','TEMPORAL')),
     CONSTRAINT ck_workflow_runs_bounds CHECK (attempt_no > 0 AND max_attempts > 0 AND attempt_no <= max_attempts AND max_runtime_seconds > 0 AND max_cost_minor >= 0),
     CONSTRAINT ck_workflow_runs_currency CHECK (currency ~ '^[A-Z]{3}$'),
@@ -121,7 +123,7 @@ CREATE TABLE workflow_runs (
     CONSTRAINT ck_workflow_runs_failure_error CHECK (state <> 'FAILED' OR error_code IS NOT NULL),
     CONSTRAINT ck_workflow_runs_terminal_finished CHECK ((state IN ('CANCELLED','SUCCEEDED','FAILED')) = (finished_at IS NOT NULL))
 );
-CREATE UNIQUE INDEX uq_workflow_runs_active_experiment_type ON workflow_runs (experiment_id, workflow_type) WHERE state IN ('PENDING','RUNNING','PAUSE_REQUESTED','PAUSED','CANCEL_REQUESTED');
+CREATE UNIQUE INDEX uq_workflow_runs_active_experiment_type ON workflow_runs (experiment_id, workflow_type, scope_kind, scope_id) WHERE state IN ('PENDING','RUNNING','PAUSE_REQUESTED','PAUSED','CANCEL_REQUESTED');
 CREATE INDEX ix_workflow_runs_experiment_created ON workflow_runs (experiment_id, created_at DESC);
 CREATE INDEX ix_workflow_runs_state_updated ON workflow_runs (state, updated_at);
 CREATE INDEX ix_workflow_runs_correlation ON workflow_runs (correlation_id);
@@ -139,10 +141,10 @@ CREATE TABLE system_controls (
     CONSTRAINT pk_system_controls PRIMARY KEY (control_name),
     CONSTRAINT fk_system_controls_operator FOREIGN KEY (changed_by_operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
     CONSTRAINT uq_system_controls_name_version UNIQUE (control_name, version),
-    CONSTRAINT ck_system_controls_name CHECK (control_name IN ('PRODUCT_OUTREACH','TEST_INBOX_SENDING')),
+    CONSTRAINT ck_system_controls_name CHECK (control_name IN ('PRODUCT_OUTREACH','TEST_INBOX_SENDING','CALENDAR_WRITES','TEST_CALENDAR_WRITES')),
     CONSTRAINT ck_system_controls_version CHECK (version > 0),
     CONSTRAINT ck_system_controls_actor_type CHECK (actor_type IN ('OPERATOR','SYSTEM')),
-    CONSTRAINT ck_system_controls_actor_ref CHECK ((actor_type = 'OPERATOR' AND changed_by_operator_id IS NOT NULL AND changed_by_system_actor_id IS NULL) OR (actor_type = 'SYSTEM' AND changed_by_operator_id IS NULL AND changed_by_system_actor_id IN ('SUPPRESSION_FAIL_CLOSED','GMAIL_AMBIGUITY_FAIL_CLOSED','TELEMETRY_BLINDNESS_FAIL_CLOSED','BACKUP_WITNESS_FAIL_CLOSED','CREDENTIAL_CONSISTENCY_FAIL_CLOSED','SEND_AUTHORITY_FAIL_CLOSED'))),
+    CONSTRAINT ck_system_controls_actor_ref CHECK ((actor_type = 'OPERATOR' AND changed_by_operator_id IS NOT NULL AND changed_by_system_actor_id IS NULL) OR (actor_type = 'SYSTEM' AND changed_by_operator_id IS NULL AND changed_by_system_actor_id IN ('SUPPRESSION_FAIL_CLOSED','GMAIL_AMBIGUITY_FAIL_CLOSED','TELEMETRY_BLINDNESS_FAIL_CLOSED','BACKUP_WITNESS_FAIL_CLOSED','CREDENTIAL_CONSISTENCY_FAIL_CLOSED','SEND_AUTHORITY_FAIL_CLOSED','CALENDAR_AUTHORITY_FAIL_CLOSED','STRATEGY_DETERIORATION_FAIL_CLOSED'))),
     CONSTRAINT ck_system_controls_enable_actor CHECK (NOT enabled OR actor_type = 'OPERATOR'),
     CONSTRAINT ck_system_controls_evidence CHECK (length(btrim(reason_code)) > 0 AND reason_code ~ '^[A-Z0-9][A-Z0-9_]{0,63}$' AND length(btrim(evidence_ref)) > 0 AND evidence_ref ~ '^[a-z0-9][a-z0-9:._/-]{0,199}$')
 );
@@ -260,6 +262,15 @@ After DB-02 creates `experiment_briefs`, add a deferrable composite foreign key 
 
 Every product run uses application UUID `workflow_run_id` and runtime ID `experiment:{experiment_id}:{workflow_type}:v{workflow_version}:run:{workflow_run_id}`. Retrying a failed experiment stage creates a new `workflow_run_id`; replaying a command returns the existing run. Runtime migration preserves the application UUID/correlation chain while creating a new runtime identity only through an audited handoff.
 
+
+### Scoped action controls
+
+Add action_controls with action_control_id uuid PK, scope text CHECK IN ('GLOBAL','CAMPAIGN','MAILBOX','PROVIDER','CONVERSATION','CALENDAR'), scope_id uuid NULL for GLOBAL/PROVIDER and required for the other scopes, provider_scope text NULL except for PROVIDER with exact enum GMAIL/CALENDAR/MODEL/SEARCH/PAGE/ENRICHMENT/LEAD_DISCOVERY, permitted boolean NOT NULL DEFAULT false, generation bigint NOT NULL DEFAULT 1 CHECK > 0, reason_code text NOT NULL, actor_type/service_id, evidence_ref text NOT NULL, changed_at timestamptz NOT NULL. Unique NULLS NOT DISTINCT (scope,scope_id,provider_scope); scope-discriminated FKs bind campaign/mailbox/conversation/calendar IDs to their exact tables, while GLOBAL and the closed PROVIDER enum need no fictitious parent table. A partial global singleton index rejects duplicate global authority. ControlCommandService is the exclusive writer; SAFETY_LONG / RetentionCommandService is the retention mapping.
+
+A product action requires both its independent environment control and every applicable scoped control. A configured missing row denies. Safety disable increments generation and invalidates stale action authority. Stored deterioration rules may pause actions automatically; enable/recovery remains an authenticated evidence-backed command. The global strategy activation pointer cannot enable any control. Restore seeds all effect controls false before readiness.
+
+Workflow scope_kind/scope_id has a deferred typed-target FK within the same experiment; root EXPERIMENT scope uses experiment_id. Uniqueness prevents duplicate active runs for one exact scope while allowing independent per-lead/conversation work concurrently inside the frozen cohort. Workflow input hashes describe workflow input only. Agent inputs use DB-04 agent_io_snapshots and a (workflow_run_id,experiment_id) scope FK. No workflow-input-hash equality is imposed on agent snapshots.
+
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=DB-01-T01 milestone=M2 depends_on=ARCH-03-T01 mode=parallel locks=backend-domain -->
@@ -271,7 +282,7 @@ Every product run uses application UUID `workflow_run_id` and runtime ID `experi
 <!-- roadmap-task id=DB-01-T04 milestone=M2 depends_on=DB-01-T03,WF-00-T04 mode=parallel locks=database-schema,workflow-runtime,backend-domain -->
 - [ ] **Map runtime runs —** Input: WF-00 signed `SelectedRuntimeDecisionV1` naming the accepted DBOS adapter or the validated mandatory Temporal adapter. Operation: persist canonical `workflow_runs` state without exposing engine-native state to domain/API. Output: inspectable finite run projection. Test evidence: `test_unknown_runtime_state_fails_closed`. Failure behavior: mark projection degraded, block unsafe command, open incident.
 <!-- roadmap-task id=DB-01-T05 milestone=M2 depends_on=DB-01-T04 mode=serial locks=database-schema,security-runtime -->
-- [ ] **Enforce both send controls default-off —** Input: the M2 schema plus document-local separated-control definitions and outreach-off seed contract. Operation: create and seed independent `PRODUCT_OUTREACH=false` and `TEST_INBOX_SENDING=false` control authority with versioning/audit invariants; define no M6 enable command or harness behavior here. Output: versioned M2 separated-control contract with both controls default-off. Test evidence: migration/default/version/hash/independence tests prove neither row enables the other and no M6 evidence is consumed. Failure behavior: both controls remain disabled and M6 owners cannot start from an invalid contract.
+- [ ] **Enforce all independent effect controls default-off —** Input: the M2 schema plus document-local separated-control definitions and outreach-off seed contract. Operation: create and seed independent PRODUCT_OUTREACH=false, TEST_INBOX_SENDING=false, CALENDAR_WRITES=false and TEST_CALENDAR_WRITES=false control authority with versioning/audit invariants; define no M6 enable command or harness behavior here. Output: versioned M2 separated-control contract with both controls default-off. Test evidence: migration/default/version/hash/independence tests prove neither row enables the other and no M6 evidence is consumed. Failure behavior: both controls remain disabled and M6 owners cannot start from an invalid contract.
 
 ## Test strategy
 

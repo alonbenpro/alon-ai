@@ -10,306 +10,181 @@
 **Risk:** Critical
 **Complexity:** L
 
-## Outcome and timing
 
-M2 is not complete when migrations merely apply on a developer database. It exits only when a blank PostgreSQL instance upgrades, constraints match the design, deterministic non-sensitive seeds apply, representative data survives backup/restore, rollback limitations are known, and retention operations cannot erase unresolved safety evidence.
+## Outcome and current repository state
 
-## Current repository state
+Only the empty Alembic base exists. This plan creates the DB-01..05 product records in ordered M2 revisions with deterministic catalog names, exact composite references, explicit retention and tested restore. M1 m1_spike tables remain disposable and never migrate into product data. The manifest is the table-name set below, not a historical fixed count.
 
-Alembic is configured and container tests assert migration tooling exists, but there is no product revision, seed command, fixture manifest, retention policy, purge job, encrypted backup, restore drill, compatibility test, or product data. M1 spike data, if created later, must be exported as evidence and its schema dropped; it is not a seed.
+## Migration sequence and exact foreign-key contract
 
-## Scope and non-goals
+The revision order is core -> experiment/offer -> identity/cohorts/conversation/booking -> artifacts/evidence/checkpoint/strategy -> audit/policy/cost -> deferred cross-domain constraints -> fail-closed seeds. Tables may be created before dependencies, but no migration head is accepted until every typed reference is installed and introspected. SQL tables and DB-02..05 normative record tables are equally binding; record shorthand must expand to physical typed columns before implementation. A JSON value or application-only lookup cannot replace an FK.
 
-In scope: revision order, expand/migrate/contract discipline, deterministic operator/control/test seeds, retention class assignment, legal/incident holds, data minimization, purge/redaction audit, backup/restore compatibility, and evidence manifests. Non-goals: production deployment claims, destructive automatic downgrades, seeding real recipients/secrets/provider IDs, indefinite raw evidence retention, rewriting immutable history, or using migrations to import the M1 harness.
+All FK deletes default RESTRICT; no cascade may erase audit, suppression, unresolved effects or historical attribution. Common immutable authority tuples use named unique constraints. Where the discriminator can reference more than one typed table, a deferred constraint trigger selects an exact allowlisted target and checks all scope/version/hash fields; unknown discriminators fail. Never publish a mutable current state/version as a historical parent key.
 
-## Exact planned implementation surfaces
+| Named constraint family | Exact child -> immutable parent requirement |
+| --- | --- |
+| fk_experiments_active_brief | (experiment_id,active_brief_version) -> experiment_briefs(experiment_id,brief_version), DEFERRABLE INITIALLY DEFERRED |
+| fk_offer_packages_idea; fk_offer_packages_research; fk_offer_packages_artifact | same-experiment ideas(id,version,hash), accepted MarketResearchReport and accepted OfferPackage respectively; accepted receipts bind exact artifact ID/type/version/hash |
+| fk_offer_economics_package; fk_offer_variants_package; fk_offer_discount_bands_package | exact (offer_id,experiment_id,offer_version,offer_content_hash) and normalized permitted variant/band references |
+| fk_contact_identities_person; fk_leads_business; fk_lead_assessments_identity | immutable business_identity_results(identity_result_id,business_id,result_hash) and accepted business/person identity and source evidence; QualificationService cannot alter identity; known person belongs to same business |
+| fk_lead_assessments_artifact; fk_campaign_members_qualification | accepted QualificationDecision with PRELIMINARY/FINAL phase guard; cohort member requires FINAL against identical offer/filter and lead |
+| fk_campaigns_supersedes | prior campaign_version_id resolves same campaign/experiment and campaign_version - 1; no self, skip or cross-program predecessor |
+| fk_cohorts_campaign; fk_cohorts_prior_decision; fk_campaign_members_cohort | exact CohortRef plus prior same-campaign immediately preceding CONTINUE; matching immutable membership hash/ordinal/snapshot; no duplicate recipient across experiment |
+| fk_campaign_members_recipient_identity/jurisdiction/consent/exception/legal/disclosure/google | each exact accepted protected evidence tuple with recipient/business scope, schema/version/hash and required expiry; exactly one consent/exception arm |
+| fk_artifacts_input_snapshot; fk_agent_runs_workflow; fk_agent_runs_input_snapshot; fk_snapshot_input_dependencies_source | normalized accepted predecessor/product references and distinct application/agent snapshot references; workflow FK only (workflow_run_id,experiment_id), distinct per-agent snapshot ID/hash FK; never workflow input hash equality |
+| fk_artifact_evidence_links_artifact/evidence; fk_artifact_acceptances_validation | exact artifact and evidence immutable version/hash tuples; acceptance requires exact passed validation/producer authority; later disposition appends receipt |
+| fk_action_authorizations_creation_policy; fk_action_authorizations_offer/activation/member | creation policy's action_basis_hash/action/content/facts/rules; final ActionAuthorityScopeV1 hash is computed after attaching the decision and complete accepted MemberRef/OfferRef/strategy activation/generations; no preview/manual-approval dependency |
+| fk_action_consumption_target | one authorization consumed exactly once by matching send_intent OR booking_action of correct action_kind, with same full scope_hash and action tuple |
+| fk_send_intents_authority; fk_send_attempts_intent_authority | authorization ID/scope_hash, complete MemberRef, message/version/content/materialization, mailbox/RFC/idempotency and governing attribution; immutable target keys exclude mutable cancellation/state |
+| fk_send_attempts_send_policy_authority | exact policy_decision_id, scope SEND, action_id/kind, cohort/member, scope_hash, fresh facts_hash, policy_version, allowed=true and attribution |
+| fk_send_attempts_rate_reservation | reservation_id,send_intent_id,mailbox_id,rate_policy_version,window_start,slot_number,concurrency_lease_token,consumed_at; consumed_at non-null immutable; RESERVED row cannot back attempt |
+| fk_provider_results_attempt_identity; fk_replies_observation_identity; fk_gmail_history_cursors_observation_identity | same attempt/mailbox/RFC; same observation/mailbox/Gmail message/thread; same observation/mailbox/message/history respectively |
+| fk_booking_confirmations_slot/lead; fk_booking_actions_authority; fk_booking_attempts_action/policy | exact confirmed slot/hash/timezone and lead span; exact action kind/version/calendar/event/attendees/notifications; fresh BOOKING policy and current authority/generation; no CREATE/RESCHEDULE without confirmation |
+| fk_booking_results_attempt; fk_calendar_observations_account | same booking attempt/action/calendar/provider_call_id; same authorized calendar; callback change identity unique |
+| fk_checkpoint_cohort; fk_checkpoint_bundle; fk_experiment_decisions_checkpoint/snapshot/bundle | same campaign/cohort/generation/cutoff and accepted CheckpointEvidenceBundle; one authoritative versioned decision, snapshots never mix cohorts |
+| fk_learning_run_checkpoint; fk_learning_results_run; fk_strategy_versions_evaluation; fk_strategy_activations_boundary | closed checkpoint, exact evidence partitions/all-agent registry; approved comparison/holdout/guardrail evidence; target campaign's eligible boundary plus compatible approved strategy |
+| fk_strategy_agent_versions_package/configuration; fk_strategy_rollbacks_activation | exact package and immutable configuration manifest, prior/target compatible approved strategy and closed checkpoint; historical attribution untouched |
+| fk_action_attributions_target/strategy/activation | exact typed action/version and its recorded offer/cohort/strategy/activation; no campaign-only attribution or cross-cohort splice |
+| fk_budget_reservations_cost; fk_cost_entries_agent_run/provider_result/booking_result | cost_id/experiment/currency; agent_id/experiment/workflow; Gmail result/attempt/call/provider; booking result/attempt/call respectively; disjoint provenance branches |
+| fk_domain_events_supersedes; fk_outbox_messages_event; fk_outbox_deliveries_event; fk_repair_actions_incident | exact append-only scope/event and closed incident catalog route tuple; no cross-scope repair or duplicate consumer/event receipt |
 
-Create M2 revisions under `backend/alembic/versions/`, `persistence/seeding.py`, `application/retention.py`, CLI/admin commands, and tests/fixtures. Revision order is: core ownership/control/workflow tables; experiment/offer/metric; artifacts/evidence; lead/campaign/message; event/audit/idempotency/outbox/policy/cost; deferred cross-domain FKs; named indexes/triggers. Each revision declares minimum compatible application version and whether downgrade is data-lossy.
+For physical names, scalar PK/FK/UQ names follow pk_<table>, fk_<table>_<parent_role>, uq_<table>_<key_role>; logical tuple ordering is specified above and DB-02..05. The implemented migration publishes machine-readable columns/types/nullability/default/check/index/trigger/FK target tuples. Introspection compares set/value equality to all source record fields, not only table totals.
 
-The deferred-FK revision is normative and DDL-equivalent to the following statements (all names are stable migration API):
+## Required triggers and transactional guards
 
-```sql
-ALTER TABLE experiments ADD CONSTRAINT fk_experiments_active_brief FOREIGN KEY (experiment_id, active_brief_version) REFERENCES experiment_briefs (experiment_id, brief_version) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE budget_reservations ADD CONSTRAINT fk_budget_reservations_cost_entry FOREIGN KEY (cost_entry_id, experiment_id, currency) REFERENCES cost_entries (cost_entry_id, experiment_id, currency) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE ideas ADD CONSTRAINT fk_ideas_source_artifact FOREIGN KEY (source_artifact_id, experiment_id, source_artifact_type, source_artifact_version, source_artifact_hash, source_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE offer_hypotheses ADD CONSTRAINT fk_offer_hypotheses_source_artifact FOREIGN KEY (source_artifact_id, experiment_id, source_artifact_type, source_artifact_version, source_artifact_hash, source_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE experiment_decisions ADD CONSTRAINT fk_experiment_decisions_evidence_bundle FOREIGN KEY (evidence_bundle_artifact_id, experiment_id, evidence_bundle_artifact_type, evidence_bundle_artifact_version, evidence_bundle_artifact_hash, evidence_bundle_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE leads ADD CONSTRAINT fk_leads_suppression FOREIGN KEY (suppression_entry_id) REFERENCES suppression_entries (suppression_entry_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_qualification_artifact FOREIGN KEY (qualification_artifact_id, experiment_id, qualification_artifact_type, qualification_artifact_version, qualification_artifact_hash, qualification_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_recipient_identity_artifact FOREIGN KEY (recipient_identity_evidence_artifact_id, experiment_id, recipient_identity_evidence_artifact_type, recipient_identity_evidence_artifact_version, recipient_identity_evidence_artifact_hash, recipient_identity_evidence_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_jurisdiction_artifact FOREIGN KEY (jurisdiction_evidence_artifact_id, experiment_id, jurisdiction_evidence_artifact_type, jurisdiction_evidence_artifact_version, jurisdiction_evidence_artifact_hash, jurisdiction_evidence_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_affirmative_consent_artifact FOREIGN KEY (affirmative_consent_evidence_artifact_id, experiment_id, affirmative_consent_evidence_artifact_type, affirmative_consent_evidence_artifact_version, affirmative_consent_evidence_artifact_hash, affirmative_consent_evidence_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_counsel_exception_artifact FOREIGN KEY (counsel_exception_evidence_artifact_id, experiment_id, counsel_exception_evidence_artifact_type, counsel_exception_evidence_artifact_version, counsel_exception_evidence_artifact_hash, counsel_exception_evidence_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_legal_review_artifact FOREIGN KEY (legal_review_artifact_id, experiment_id, legal_review_artifact_type, legal_review_artifact_version, legal_review_artifact_hash, legal_review_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_disclosure_sender_artifact FOREIGN KEY (disclosure_sender_template_artifact_id, experiment_id, disclosure_sender_template_artifact_type, disclosure_sender_template_artifact_version, disclosure_sender_template_artifact_hash, disclosure_sender_template_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE campaign_members ADD CONSTRAINT fk_campaign_members_google_policy_artifact FOREIGN KEY (google_policy_review_artifact_id, experiment_id, google_policy_review_artifact_type, google_policy_review_artifact_version, google_policy_review_artifact_hash, google_policy_review_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE lead_assessments ADD CONSTRAINT fk_lead_assessments_artifact FOREIGN KEY (artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash, artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE outreach_messages ADD CONSTRAINT fk_outreach_messages_artifact FOREIGN KEY (artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash, artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE approvals ADD CONSTRAINT fk_approvals_eligibility_policy_authority FOREIGN KEY (eligibility_policy_decision_id, eligibility_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, eligibility_policy_version, scope_hash, artifact_version_refs_hash, eligibility_facts_hash, eligibility_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE send_intents ADD CONSTRAINT fk_send_intents_eligibility_policy_authority FOREIGN KEY (eligibility_policy_decision_id, eligibility_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, eligibility_policy_version, scope_hash, approval_artifact_version_refs_hash, eligibility_facts_hash, eligibility_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed) ON DELETE RESTRICT;
-ALTER TABLE send_attempts ADD CONSTRAINT fk_send_attempts_send_policy_authority FOREIGN KEY (send_policy_decision_id, send_policy_scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, approval_id, approval_preview_materialization_hash, send_policy_version, scope_hash, approval_artifact_version_refs_hash, send_policy_facts_hash, send_policy_allowed) REFERENCES policy_decisions (policy_decision_id, scope, experiment_id, campaign_id, campaign_version, campaign_member_id, lead_id, message_id, message_version, message_content_hash, mailbox_id, approval_id, approval_preview_materialization_hash, policy_version, scope_hash, artifact_version_refs_hash, facts_hash, allowed) ON DELETE RESTRICT;
-ALTER TABLE replies ADD CONSTRAINT fk_replies_classification_artifact FOREIGN KEY (classification_artifact_id, experiment_id, classification_artifact_type, classification_artifact_version, classification_artifact_hash, classification_artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT;
-ALTER TABLE suppression_entries ADD CONSTRAINT fk_suppression_entries_source_observation FOREIGN KEY (source_observation_id) REFERENCES provider_observations (provider_observation_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-ALTER TABLE suppression_entries ADD CONSTRAINT fk_suppression_entries_source_reply FOREIGN KEY (source_reply_id) REFERENCES replies (reply_id) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED;
-```
+Install trg_<table>_immutable_identity for every immutable version/artifact/scope/IO/attribution/evidence/ledger tuple. Content redaction is possible only through RetentionCommandService's separately granted routine and records tombstones; ordinary application roles cannot UPDATE/DELETE bytes. Lifecycle columns have explicit one-way owner transitions.
 
-Immutable identity is enforced in PostgreSQL, not only by application convention. The trigger raises `23514` before any protected value changes; the migration installs it on approvals, intents, rate reservations, and attempts with the exact experiment/campaign/member/lead/message/mailbox/approval/eligibility/final-SEND/rate/RFC fields named in DB-03/05. `send_intents` alone permits `attempt_count` and a one-way cancellation pair; a second trigger forbids clearing/changing cancellation. Equivalent table-specific invocations protect immutable version/evidence rows.
+trg_action_authorization_consumption_once rejects two intents/actions for one authority and any mismatching scope. trg_send_intent_cancellation_once permits only true-to-false closure with timestamp/reason and proof of no started attempt; attempt insertion locks the same intent and rejects cancelled state. Do not encode open_for_attempt as a mutable FK parent token that would prevent preserving old attempts.
 
-```sql
-CREATE FUNCTION reject_immutable_columns() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF (coalesce(array_length(TG_ARGV, 1), 0) = 0 AND to_jsonb(NEW) <> to_jsonb(OLD)) OR
-     (coalesce(array_length(TG_ARGV, 1), 0) > 0 AND to_jsonb(NEW) - TG_ARGV <> to_jsonb(OLD) - TG_ARGV) THEN
-    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = TG_TABLE_NAME || ' immutable identity cannot change';
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE FUNCTION enforce_metric_source_event_scope() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE
-  total_count integer;
-  distinct_count integer;
-  valid_count integer;
-BEGIN
-  SELECT count(*), count(DISTINCT source_event_id)
-    INTO total_count, distinct_count
-    FROM unnest(NEW.source_event_ids) AS source(source_event_id);
-  SELECT count(*)
-    INTO valid_count
-    FROM unnest(NEW.source_event_ids) AS source(source_event_id)
-    JOIN domain_events event
-      ON event.event_id = source.source_event_id
-     AND event.experiment_id = NEW.experiment_id;
-  IF total_count = 0 OR total_count <> distinct_count OR total_count <> valid_count THEN
-    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'metric source_event_ids must be a duplicate-free set from the same experiment';
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE CONSTRAINT TRIGGER trg_metric_observations_source_event_scope
-AFTER INSERT OR UPDATE ON metric_observations DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION enforce_metric_source_event_scope();
-CREATE FUNCTION enforce_metric_snapshot_observation_scope() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE
-  total_count integer;
-  distinct_count integer;
-  valid_count integer;
-BEGIN
-  SELECT count(*), count(DISTINCT observation_id)
-    INTO total_count, distinct_count
-    FROM unnest(NEW.observation_ids) AS source(observation_id);
-  SELECT count(*)
-    INTO valid_count
-    FROM unnest(NEW.observation_ids) AS source(observation_id)
-    JOIN metric_observations observation
-      ON observation.metric_observation_id = source.observation_id
-     AND observation.experiment_id = NEW.experiment_id
-     AND observation.computed_at <= NEW.observation_cutoff_at;
-  IF total_count = 0 OR total_count <> distinct_count OR total_count <> valid_count THEN
-    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'metric observation_ids must be a duplicate-free same-experiment set at or before cutoff';
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE CONSTRAINT TRIGGER trg_metric_snapshots_observation_scope
-AFTER INSERT OR UPDATE ON metric_snapshots DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION enforce_metric_snapshot_observation_scope();
-CREATE FUNCTION enforce_exact_artifact_ref_array() RETURNS trigger LANGUAGE plpgsql AS $$
-DECLARE
-  refs jsonb;
-  experiment_scope uuid;
-  ref jsonb;
-  total_count integer;
-  distinct_count integer;
-  valid_count integer;
-BEGIN
-  refs := to_jsonb(NEW) -> TG_ARGV[0];
-  experiment_scope := (to_jsonb(NEW) ->> TG_ARGV[1])::uuid;
-  IF refs IS NULL OR jsonb_typeof(refs) <> 'array' THEN
-    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = TG_ARGV[0] || ' must be an artifact-reference array';
-  END IF;
-  FOR ref IN SELECT value FROM jsonb_array_elements(refs) AS item(value) LOOP
-    IF jsonb_typeof(ref) <> 'object'
-       OR NOT (ref ?& ARRAY['artifact_id','artifact_type','artifact_version','content_hash','status'])
-       OR (ref - ARRAY['artifact_id','artifact_type','artifact_version','content_hash','status']) <> '{}'::jsonb THEN
-      RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = TG_ARGV[0] || ' contains a malformed artifact authority tuple';
-    END IF;
-  END LOOP;
-  SELECT count(*), count(DISTINCT artifact_id)
-    INTO total_count, distinct_count
-    FROM jsonb_to_recordset(refs) AS item(artifact_id uuid, artifact_type text, artifact_version bigint, content_hash text, status text);
-  SELECT count(*)
-    INTO valid_count
-    FROM jsonb_to_recordset(refs) AS item(artifact_id uuid, artifact_type text, artifact_version bigint, content_hash text, status text)
-    JOIN artifacts artifact
-      ON artifact.artifact_id = item.artifact_id
-     AND artifact.experiment_id = experiment_scope
-     AND artifact.artifact_type = item.artifact_type
-     AND artifact.artifact_version = item.artifact_version
-     AND artifact.content_hash = item.content_hash
-     AND artifact.status = item.status
-    WHERE item.status = 'ACCEPTED';
-  IF total_count <> distinct_count OR total_count <> valid_count THEN
-    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = TG_ARGV[0] || ' contains duplicate, missing, cross-experiment, cross-type, cross-version, cross-hash, or non-accepted provenance';
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE CONSTRAINT TRIGGER trg_approvals_artifact_ref_scope
-AFTER INSERT OR UPDATE ON approvals DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION enforce_exact_artifact_ref_array('artifact_version_refs','experiment_id');
-CREATE CONSTRAINT TRIGGER trg_policy_decisions_artifact_ref_scope
-AFTER INSERT OR UPDATE ON policy_decisions DEFERRABLE INITIALLY DEFERRED
-FOR EACH ROW EXECUTE FUNCTION enforce_exact_artifact_ref_array('evidence_artifact_refs','experiment_id');
-CREATE TRIGGER trg_campaigns_immutable_version BEFORE UPDATE ON campaigns
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','updated_at');
-CREATE TRIGGER trg_outreach_messages_immutable_authority BEFORE UPDATE ON outreach_messages
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','version','updated_at');
-CREATE TRIGGER trg_approvals_immutable_authority BEFORE UPDATE ON approvals
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','operator_id','previewed_by_operator_id','preview_materialization_hash','preview_receipt_hash','previewed_at','preview_expires_at','reason_code','decided_at');
-CREATE FUNCTION enforce_approval_preview_once() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF OLD.preview_materialization_hash IS NOT NULL AND
-     (NEW.previewed_by_operator_id, NEW.preview_materialization_hash, NEW.preview_receipt_hash, NEW.previewed_at, NEW.preview_expires_at)
-       IS DISTINCT FROM
-     (OLD.previewed_by_operator_id, OLD.preview_materialization_hash, OLD.preview_receipt_hash, OLD.previewed_at, OLD.preview_expires_at) THEN
-    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'approval preview authority is immutable once materialized';
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE TRIGGER trg_approval_preview_once BEFORE UPDATE ON approvals
-FOR EACH ROW EXECUTE FUNCTION enforce_approval_preview_once();
-CREATE TRIGGER trg_campaign_members_immutable_authority BEFORE UPDATE ON campaign_members
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('status','removed_at');
-CREATE TRIGGER trg_send_intents_immutable_identity BEFORE UPDATE ON send_intents
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('attempt_count','open_for_attempt','cancelled_at','cancellation_reason');
-CREATE FUNCTION enforce_send_intent_manual_approval() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1
-      FROM approvals approval
-     WHERE approval.approval_id = NEW.approval_id
-       AND approval.experiment_id = NEW.experiment_id
-       AND approval.message_id = NEW.message_id
-       AND approval.message_version = NEW.message_version
-       AND approval.message_content_hash = NEW.message_content_hash
-       AND approval.scope_hash = NEW.scope_hash
-       AND approval.artifact_version_refs_hash = NEW.approval_artifact_version_refs_hash
-       AND approval.preview_materialization_hash = NEW.approval_preview_materialization_hash
-       AND approval.state = 'APPROVED'
-       AND approval.operator_id IS NOT NULL
-       AND approval.previewed_by_operator_id = approval.operator_id
-       AND approval.decided_at BETWEEN approval.previewed_at AND approval.preview_expires_at
-  ) THEN
-    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'send intent requires an exact manually previewed APPROVED authority';
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE TRIGGER trg_send_intent_manual_approval BEFORE INSERT ON send_intents
-FOR EACH ROW EXECUTE FUNCTION enforce_send_intent_manual_approval();
-CREATE FUNCTION enforce_send_intent_cancellation_once() RETURNS trigger LANGUAGE plpgsql AS $$
-BEGIN
-  IF NOT OLD.open_for_attempt AND (NEW.open_for_attempt, NEW.cancelled_at, NEW.cancellation_reason) IS DISTINCT FROM (OLD.open_for_attempt, OLD.cancelled_at, OLD.cancellation_reason) THEN
-    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'send intent cancellation is immutable';
-  END IF;
-  IF OLD.open_for_attempt AND NOT NEW.open_for_attempt AND (NEW.cancelled_at IS NULL OR NEW.cancellation_reason IS NULL) THEN
-    RAISE EXCEPTION USING ERRCODE = '23514', MESSAGE = 'send intent cancellation reason required';
-  END IF;
-  RETURN NEW;
-END $$;
-CREATE TRIGGER trg_send_intent_cancellation_once BEFORE UPDATE ON send_intents
-FOR EACH ROW EXECUTE FUNCTION enforce_send_intent_cancellation_once();
-CREATE TRIGGER trg_send_rate_reservations_immutable_identity BEFORE UPDATE ON send_rate_reservations
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','consumed_at','released_at','expired_at');
-CREATE TRIGGER trg_send_attempts_immutable_identity BEFORE UPDATE ON send_attempts
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','provider_called_at','completed_at','error_code','error_fingerprint','retry_class','reconciliation_strategy_version');
-CREATE TRIGGER trg_provider_results_append_only BEFORE UPDATE ON provider_results
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
-CREATE TRIGGER trg_provider_observations_append_only BEFORE UPDATE ON provider_observations
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
-CREATE TRIGGER trg_policy_decisions_append_only BEFORE UPDATE ON policy_decisions
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
-CREATE TRIGGER trg_incidents_immutable_route BEFORE UPDATE ON incidents
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns('state','resolution_code','evidence_ref','resolved_at','updated_at');
-CREATE TRIGGER trg_repair_actions_append_only BEFORE UPDATE ON repair_actions
-FOR EACH ROW EXECUTE FUNCTION reject_immutable_columns();
-```
+trg_cohort_frozen_configuration forbids offer, strategy, activation, filters, causal variables, membership and evidence-definition changes after opening; counters/state remain owner-controlled. trg_checkpoint_decision_once and unique checkpoint-owned outbox key prevent double decision/learning trigger. trg_strategy_activation_boundary checks campaign checkpoint closure and control generation under CAS; no mid-cohort activation. trg_authority_current_generation guards every new effect intent/attempt.
 
-### Seed manifest
+Gmail lease uniqueness, consumed evidence, ambiguity quarantine and positive-evidence reconciliation remain DB-03/BACKEND-04 authority. Calendar writes use calendar-side-effects plus a single unresolved action lease per calendar and provider conditional version/ETag; clock expiry is never conclusive absence.
 
-| Seed | Environment | Rule |
+## Deterministic seeds
+
+Seed only explicit operator bootstrap, all effect controls false (PRODUCT_OUTREACH, TEST_INBOX_SENDING, CALENDAR_WRITES, TEST_CALENDAR_WRITES), denied/default scoped controls, exact four-stage program, synthetic fixture IDs and strict policy/schema registries. Seed a validated evaluation baseline but no real accepted offer, prospect identity, consent, credential, active calendar/mailbox, fabricated commitment/booking or live strategy activation. The approved baseline package is materialized from retained configuration evidence; EXPERIMENT_BASELINE activation precedes research, and COHORT baseline activation is materialized by deterministic cohort admission. Neither is fabricated learning evidence or an in-cohort activation.
+
+Same seed version/hash replays; different bytes conflict. No seed reads external providers or imports disposable M1 data. Test resources and real demand evidence are labelled independently.
+
+## Complete product-table retention manifest
+
+Each listed table has one exclusive normal writer in DB-01..05 and one purge/redaction owner below. Payload retention can be shorter than its row class. security_runtime.oidc_flows/operator_sessions, engine histories and external credential objects are separately inventoried operational data, never product-table aliases. Any new/removed record requires atomic schema/FK/retention/access changes.
+
+| Product table | Retention class | Purge/redaction owner |
 | --- | --- | --- |
-| one operator subject placeholder | local/test only | deterministic UUID, no real email/password; production bootstrap comes from authenticated subject |
-| `PRODUCT_OUTREACH=false` and `TEST_INBOX_SENDING=false` | every environment | mandatory separate fail-closed singletons; never seed `true`; test authority never promotes product authority |
-| metric/criteria/evaluation fixtures | test | versioned and hashed; synthetic business/message content |
-| operator-owned inbox aliases | M1/M6 harness config only | never in product migration or repository fixture |
-| suppression/control/provider records | none by default | production values require authenticated commands and audit |
+| operators | BUSINESS_ACTIVE | RetentionCommandService |
+| experiments | BUSINESS_ACTIVE | RetentionCommandService |
+| budget_accounts | BUSINESS_ACTIVE | RetentionCommandService |
+| experiment_briefs | BUSINESS_ACTIVE | RetentionCommandService |
+| ideas | BUSINESS_ACTIVE | RetentionCommandService |
+| offer_packages | BUSINESS_ACTIVE | RetentionCommandService |
+| offer_economics | BUSINESS_ACTIVE | RetentionCommandService |
+| offer_variants | BUSINESS_ACTIVE | RetentionCommandService |
+| offer_discount_bands | BUSINESS_ACTIVE | RetentionCommandService |
+| metric_definitions | BUSINESS_ACTIVE | RetentionCommandService |
+| metric_observations | BUSINESS_ACTIVE | RetentionCommandService |
+| metric_snapshots | BUSINESS_ACTIVE | RetentionCommandService |
+| businesses | BUSINESS_ACTIVE | RetentionCommandService |
+| leads | BUSINESS_ACTIVE | RetentionCommandService |
+| lead_discovery_candidates | BUSINESS_ACTIVE | RetentionCommandService |
+| lead_assessments | BUSINESS_ACTIVE | RetentionCommandService |
+| campaigns | BUSINESS_ACTIVE | RetentionCommandService |
+| campaign_cohorts | BUSINESS_ACTIVE | RetentionCommandService |
+| workflow_runs | SAFETY_LONG | RetentionCommandService |
+| system_controls | SAFETY_LONG | RetentionCommandService |
+| action_controls | SAFETY_LONG | RetentionCommandService |
+| budget_reservations | SAFETY_LONG | RetentionCommandService |
+| incidents | SAFETY_LONG | RetentionCommandService |
+| experiment_decisions | SAFETY_LONG | RetentionCommandService |
+| gmail_mailboxes | SAFETY_LONG | RetentionCommandService |
+| action_authorizations | SAFETY_LONG | RetentionCommandService |
+| action_authorization_consumptions | SAFETY_LONG | RetentionCommandService |
+| suppression_entries | SAFETY_LONG | RetentionCommandService |
+| send_intents | SAFETY_LONG | RetentionCommandService |
+| send_rate_reservations | SAFETY_LONG | RetentionCommandService |
+| send_attempts | SAFETY_LONG | RetentionCommandService |
+| provider_results | SAFETY_LONG | RetentionCommandService |
+| gmail_history_cursors | SAFETY_LONG | RetentionCommandService |
+| negotiation_decisions | SAFETY_LONG | RetentionCommandService |
+| calendar_accounts | SAFETY_LONG | RetentionCommandService |
+| booking_intents | SAFETY_LONG | RetentionCommandService |
+| booking_actions | SAFETY_LONG | RetentionCommandService |
+| booking_attempts | SAFETY_LONG | RetentionCommandService |
+| booking_provider_results | SAFETY_LONG | RetentionCommandService |
+| checkpoints | SAFETY_LONG | RetentionCommandService |
+| checkpoint_evidence_members | SAFETY_LONG | RetentionCommandService |
+| global_learning_runs | SAFETY_LONG | RetentionCommandService |
+| agent_learning_results | SAFETY_LONG | RetentionCommandService |
+| global_strategy_versions | SAFETY_LONG | RetentionCommandService |
+| strategy_agent_versions | SAFETY_LONG | RetentionCommandService |
+| strategy_activations | SAFETY_LONG | RetentionCommandService |
+| strategy_rollbacks | SAFETY_LONG | RetentionCommandService |
+| artifact_validations | SAFETY_LONG | RetentionCommandService |
+| artifact_acceptances | SAFETY_LONG | RetentionCommandService |
+| domain_events | SAFETY_LONG | RetentionCommandService |
+| audit_events | SAFETY_LONG | RetentionCommandService |
+| command_idempotency | SAFETY_LONG | RetentionCommandService |
+| outbox_messages | SAFETY_LONG | RetentionCommandService |
+| outbox_deliveries | SAFETY_LONG | RetentionCommandService |
+| policy_decisions | SAFETY_LONG | RetentionCommandService |
+| cost_entries | SAFETY_LONG | RetentionCommandService |
+| repair_actions | SAFETY_LONG | RetentionCommandService |
+| action_attributions | SAFETY_LONG | RetentionCommandService |
+| exception_cases | SAFETY_LONG | RetentionCommandService |
+| business_identity_results | BUSINESS_ACTIVE | RetentionCommandService |
+| people | SENSITIVE_SHORT | RetentionCommandService |
+| contact_identities | SENSITIVE_SHORT | RetentionCommandService |
+| lead_sources | SENSITIVE_SHORT | RetentionCommandService |
+| campaign_members | SENSITIVE_SHORT | RetentionCommandService |
+| outreach_messages | SENSITIVE_SHORT | RetentionCommandService |
+| provider_observations | SENSITIVE_SHORT | RetentionCommandService |
+| conversations | SENSITIVE_SHORT | RetentionCommandService |
+| conversation_messages | SENSITIVE_SHORT | RetentionCommandService |
+| replies | SENSITIVE_SHORT | RetentionCommandService |
+| budget_assertions | SENSITIVE_SHORT | RetentionCommandService |
+| negotiation_proposals | SENSITIVE_SHORT | RetentionCommandService |
+| booking_slot_sets | SENSITIVE_SHORT | RetentionCommandService |
+| booking_slots | SENSITIVE_SHORT | RetentionCommandService |
+| booking_confirmations | SENSITIVE_SHORT | RetentionCommandService |
+| calendar_observations | SENSITIVE_SHORT | RetentionCommandService |
+| evidence_items | SENSITIVE_SHORT | RetentionCommandService |
+| agent_io_snapshots | SENSITIVE_SHORT | RetentionCommandService |
+| artifact_input_snapshots | SENSITIVE_SHORT | RetentionCommandService |
+| snapshot_input_dependencies | BUSINESS_ACTIVE | RetentionCommandService |
+| agent_runs | EVALUATION_VERSIONED | RetentionCommandService |
+| evaluation_cases | EVALUATION_VERSIONED | RetentionCommandService |
+| evaluation_results | EVALUATION_VERSIONED | RetentionCommandService |
+| artifacts | BUSINESS_ACTIVE | RetentionCommandService |
+| artifact_evidence_links | BUSINESS_ACTIVE | RetentionCommandService |
 
-### Retention classes
+## Field access, purpose, deletion and backup contract
 
-| Class | Records | Planned default and deletion guard |
+RetentionPolicyV1 in [SEC-06](../08-security-and-compliance/06-data-privacy-and-retention.md#exact-retention-policy-overlay) is the exact duration/key/backup authority. BUSINESS_ACTIVE, SAFETY_LONG, SENSITIVE_SHORT and EVALUATION_VERSIONED inherit its clocks and holds without alternate periods. Immutable content does not mean indefinite payload retention.
+
+DataInventoryV1 expands every physical column and external object to purpose, source/sensitivity, normal writer, allowed reader/service, encryption/redaction, telemetry prohibition, class/clock, hold behavior, deletion dependency order, backup expiry and restore rule. The following field groups are exhaustive overlays: every free-text/source/content field is sensitive unless an explicit schema review classifies it as a bounded non-PII enum; new/unclassified columns block collection.
+
+| Exact field group | Purpose / allowed reader and writer | Retention/deletion rule |
 | --- | --- | --- |
-| `SAFETY_LONG` | domain/audit events, command keys/results hashes, send intent/attempt/result hashes, suppression, incidents/repairs, gate decisions | retain for the approved safety/legal period; never purge unresolved incident/ambiguity/active suppression; redact payload fields separately |
-| `BUSINESS_ACTIVE` | experiments, briefs, offers, leads, campaigns, decisions, metric snapshots | retain while experiment is active and for approved post-close period; preserve minimum decision/audit references |
-| `SENSITIVE_SHORT` | encrypted recipient/message content, pseudonymous deterministic SHA-256 recipient lookup hashes, raw provider/evidence captures | shortest operational/legal period; delete payload/capture while retaining only counsel-approved restricted safety linkage, dates and reason; never describe a deterministic recipient hash as anonymous or non-reversible |
-| `EVALUATION_VERSIONED` | evaluation cases/results, schema/prompt/model metadata | retain promoted and comparison versions needed to reproduce gates; expire unused sensitive fixture content |
-| `RUNTIME_ENGINE` | DBOS/Temporal engine histories | runtime-specific retention after application terminal/reconciliation evidence is complete; never the sole audit copy |
-| `M1_DISPOSABLE` | `m1_spike.spike_runs`, `m1_spike.spike_send_attempts` | export signed evidence, verify export, then drop entire schema; no M2 migration |
+| people name/role; contact value; campaign member address; source URL/locator; evidence source/content/facts | identity/provenance and bounded research; BusinessIdentityService/EvidenceIngestService write; qualification/research/authorizer reads only permitted minimized fields; field encryption and source-scope checks | SENSITIVE_SHORT; failed unused captures 7 days, used evidence 30 days after applicable acceptance/close per SEC-06; erase encrypted content then source-dependent copies; retain minimized evidence refs only under valid hold |
+| outreach_messages and conversation_messages subject/body/sanitized_body; reply/source-span data; budget_assertions source_span and values; negotiation requested terms | complete operational conversation and commercial grounding; message/history/conversation owners write; writer/reply runner receives redacted snapshot only; authenticated purpose-bound detail query; gateway bounded plaintext memory | SENSITIVE_SHORT payload clock; complete threads remain available only during need; redact before learning/model transfer; erase raw/sanitized copies and stale IO together; sensitive budget assertions never telemetry/learning input |
+| booking slot wall labels/UTC details, confirmations/spans, attendees/provider payloads/calendar descriptions | exact scheduling and reconciliation; BookingGateway/CalendarObservationService writes; authorized availability/detail reads; no model calendar client | SENSITIVE_SHORT for payload even in SAFETY_LONG rows; close clock waits terminal reconciled booking/change; ambiguity hold minimizes necessary evidence; remove description/attendee/slot payload copies before linked raw observations |
+| agent_io_snapshots/artifact_input_snapshots snapshot_ciphertext; artifacts payload; evidence_items content; evaluation case input/expected payload | immutable trace/reproducible eval; recorder/artifact/evidence/evaluation writers; exact specialist only sees allowlisted sanitized input; no hidden reasoning; held-out cases inaccessible to candidate generation | SENSITIVE_SHORT payload clock overrides row class; keep schema/hash/config/score lineage under applicable class; expired payload yields PAYLOAD_EXPIRED, never reconstructed from backups |
+| checkpoint/learning transformed safe payload and source refs; strategy configuration/evaluation manifests | cross-campaign evaluation, promotion and rollback; CheckpointEvaluationService/StrategyActivationService writes; global learning reads only approved EvidenceTransformV1 output | relevant row class; no raw contact, thread, calendar or sensitive inferred fields; deleting source invalidates unsupported transform/citation availability; minimized non-PII statistics may remain with transform/evidence hash |
+| recipient lookup_hash/recipient_hash; identity/thread hashes | deterministic matching and no-recontact safety; RecipientLookupKeyService plus locked suppression/gateway purpose only | pseudonymous/offline enumerable; column grants, rate/audit limits, encrypted storage; active suppression can retain its own hash and opaque target ref after source purge under counsel-approved hold; never export/log/metric |
+| action authority, policy facts, immutable audit/outbox/command snapshots, exception rationale/evidence | explain action and recovery; owning service writes; restricted audit/exception operator query | encrypt any sensitive facts separately; safe enums/IDs/version/hash for telemetry; SAFETY_LONG minimum with field redaction first; no raw bodies in event/replay payload |
+| OAuth credential tuple; calendar account tuple; session/secret objects | credential binding only; mailbox/calendar/auth owners and scoped resolver | no token in product tables; external flow/credential/session and key overlap rules copied exactly from SEC-02/03/06; independent provider scopes and revocation |
 
-Exact durations are approved with the later privacy/legal decision for the chosen jurisdictions; until approved, the system fails closed by disabling automated purge, not by retaining raw sensitive data without review. Every table receives one class in a versioned manifest; missing classification blocks migration acceptance.
+All groups use encrypted volumes/WAL and the exact OPERATIONAL_BACKUP_CHAINS maximum: 14 daily plus 4 weekly chains, no personal-data recovery point older than 35 days. General backup holds never extend it. Tombstones/witnesses may outlive the chain only if proven non-PII/non-reconstructible.
 
-### Complete product-table retention manifest
+## Hold, purge, migration and restore protocol
 
-This manifest is exhaustive for the 46 M2 product tables in DB-01 through DB-05, including the last-mile `send_rate_reservations` safety ledger. External OAuth flow/credential objects are not product tables: PROVIDER-01 owns their 10-minute authorization, 24-hour replay/orphan, reference-checked GC, and encrypted-token deletion lifecycle; the mailbox row retains only the exact safe ACTIVE proof tuple. `RetentionCommandService` exclusively owns purge/redaction writes. Every row defaults to held when a legal, incident, unresolved-provider, suppression, or dependency hold applies. "Keep minimum" means retain only non-sensitive identity/hash/state evidence for the approved policy-versioned duration; "redact" is an audited payload replacement before any later FK-safe purge.
+Hold precedence is legal/regulator, incident/security, unresolved external action, active suppression/opt-out, rights dispute, decision/gate, dependency, then expiry. A hold has target/authority/review/expiry evidence, applies only to required fields and cannot extend non-extendable backup/session/token maxima. Deferred purge requires review within 24 hours and safe resolution/escalation within 72; missed clocks disable affected processing.
 
-| Table | Class | Retention owner | Default hold / purge behavior |
-| --- | --- | --- | --- |
-| `operators` | `BUSINESS_ACTIVE` | `RetentionCommandService` | deactivate, then purge after reference closure |
-| `experiments` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge only after terminal close and FK closure |
-| `workflow_runs` | `SAFETY_LONG` | `RetentionCommandService` | hold until terminal/reconciled; keep identity and hashes |
-| `system_controls` | `SAFETY_LONG` | `RetentionCommandService` | keep the versioned safety minimum |
-| `budget_accounts` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge only after all reservations reconcile |
-| `budget_reservations` | `SAFETY_LONG` | `RetentionCommandService` | hold until cost reconciliation; keep safety minimum |
-| `incidents` | `SAFETY_LONG` | `RetentionCommandService` | incident hold until resolved; keep safety minimum |
-| `experiment_briefs` | `BUSINESS_ACTIVE` | `RetentionCommandService` | hold active version; purge after experiment close |
-| `ideas` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after experiment close and FK closure |
-| `offer_hypotheses` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after experiment close and FK closure |
-| `metric_definitions` | `BUSINESS_ACTIVE` | `RetentionCommandService` | preserve decision-referenced versions |
-| `metric_observations` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after snapshot and experiment closure |
-| `metric_snapshots` | `BUSINESS_ACTIVE` | `RetentionCommandService` | preserve decision-referenced snapshots |
-| `experiment_decisions` | `SAFETY_LONG` | `RetentionCommandService` | keep immutable decision minimum |
-| `businesses` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after dependent lead closure |
-| `leads` | `BUSINESS_ACTIVE` | `RetentionCommandService` | suppression/incident hold; redact then purge |
-| `lead_assessments` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after lead/experiment close |
-| `gmail_mailboxes` | `SAFETY_LONG` | `RetentionCommandService` | hold while send/reply chains refer; keep safe OAuth flow/account/scope/credential-handle hash/version/key/generation identity, never token/ciphertext |
-| `campaigns` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge after all messages are terminal |
-| `campaign_members` | `SENSITIVE_SHORT` | `RetentionCommandService` | suppression/compliance/incident hold while linkage is required; field-encrypted address and deterministic SHA-256 lookup hash are personal-risk data; after a durable RECIPIENT suppression is independently proven, permitted member removal/purge may proceed under the approved policy because the suppression row retains its own target ref and restricted lookup hash |
-| `outreach_messages` | `SENSITIVE_SHORT` | `RetentionCommandService` | ambiguity/incident hold; redact content, retain hash |
-| `approvals` | `SAFETY_LONG` | `RetentionCommandService` | keep immutable exact-version authority tuple |
-| `suppression_entries` | `SAFETY_LONG` | `RetentionCommandService` | active suppression is an unconditional hold; RECIPIENT keeps its unique immutable opaque `recipient_target_ref_id` even after source-member cleanup; deterministic SHA-256 recipient hash stays least-column-access on encrypted volumes/WAL/backups and is never exported or used to reconstruct the target ref |
-| `send_intents` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep mailbox/member/eligibility authority chain and cancellation evidence |
-| `send_rate_reservations` | `SAFETY_LONG` | `RetentionCommandService` | hold active leases; retain consumed slot identity with attempt/result/recovery evidence |
-| `send_attempts` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep final SEND decision and consumed rate slot minimum |
-| `provider_results` | `SAFETY_LONG` | `RetentionCommandService` | ambiguity/incident hold; keep provider IDs and hashes |
-| `provider_observations` | `SENSITIVE_SHORT` | `RetentionCommandService` | ambiguity/suppression/legal hold; redact capture, retain only safe signal/authority linkage |
-| `replies` | `SENSITIVE_SHORT` | `RetentionCommandService` | legal/suppression/incident hold; redact body, retain encrypted safety linkage rather than a plaintext recipient digest |
-| `gmail_history_cursors` | `SAFETY_LONG` | `RetentionCommandService` | mailbox/incident hold; retain latest safe cursor |
-| `agent_runs` | `EVALUATION_VERSIONED` | `RetentionCommandService` | hold promoted gates; purge unused superseded versions |
-| `artifacts` | `BUSINESS_ACTIVE` | `RetentionCommandService` | acceptance/incident hold; accepted compliance-policy/identity/jurisdiction/consent-or-exception/legal-review/disclosure/Google-policy rows additionally remain held while referenced by a campaign member, approval, policy decision, suppression/dispute or the counsel-approved legal period; purge only with provenance and every such hold closed |
-| `evidence_items` | `SENSITIVE_SHORT` | `RetentionCommandService` | gate/incident hold; redact payload, retain content hash |
-| `artifact_evidence_links` | `BUSINESS_ACTIVE` | `RetentionCommandService` | purge only with both closed parents |
-| `artifact_validations` | `SAFETY_LONG` | `RetentionCommandService` | gate/incident hold; keep safety minimum |
-| `artifact_acceptances` | `SAFETY_LONG` | `RetentionCommandService` | gate/incident hold; keep safety minimum |
-| `evaluation_cases` | `EVALUATION_VERSIONED` | `RetentionCommandService` | hold promoted/comparison versions; purge unused versions |
-| `evaluation_results` | `EVALUATION_VERSIONED` | `RetentionCommandService` | hold promoted/comparison versions; purge unused versions |
-| `domain_events` | `SAFETY_LONG` | `RetentionCommandService` | aggregate/incident hold; keep event minimum |
-| `audit_events` | `SAFETY_LONG` | `RetentionCommandService` | legal/incident hold; keep audit minimum |
-| `command_idempotency` | `SAFETY_LONG` | `RetentionCommandService` | hold active commands; purge after replay horizon |
-| `outbox_messages` | `SAFETY_LONG` | `RetentionCommandService` | hold undelivered messages; purge after all receipts |
-| `outbox_deliveries` | `SAFETY_LONG` | `RetentionCommandService` | purge only with source event/message |
-| `policy_decisions` | `SAFETY_LONG` | `RetentionCommandService` | send/approval hold; keep facts hash and mailbox scope |
-| `cost_entries` | `SAFETY_LONG` | `RetentionCommandService` | finance/incident hold; keep cost minimum |
-| `repair_actions` | `SAFETY_LONG` | `RetentionCommandService` | incident hold; keep immutable repair chain |
+Compute the purge plan from introspected exact FKs. Close admission; lock target generation/holds; redact sensitive provider/body/IO/object payloads and append tombstones; retain minimum immutable authority/suppression refs; delete only dependency leaves after safe projection verification. Crash/replay is idempotent. Never delete unresolved Gmail/calendar attempts, active suppression lookup/ref or their minimum proof. Source removal cannot regenerate authority.
 
-### Safe migration protocol
+Every later migration supplies schema diff, old/new reader compatibility, active-run/attempt/activation inventory, drain/version plan, rollback limits, and tested encrypted restore. Do not stamp migration head manually. Destructive downgrade is blocked while retained authority references exist; rollback application code or use a forward repair.
 
-Additive nullable/backfilled columns and new tables deploy before writers. Backfills are resumable by primary-key range with a migration-run id and invariant counters. Readers tolerate old/new representation during the compatibility window. Constraints become validated only after backfill proof. Destructive contract revisions run after old code drains, backup succeeds, restore is proven, and unresolved workflows are zero or explicitly compatible. Workers stay stopped during a restore until schema, control-off state, event chains, and ambiguity queries pass.
+Restore before readiness: verify backup/witness/key availability; restore isolated with network off; apply all authoritative tombstones, revoke sessions/flows, force all controls false, validate exact table/FK/trigger/owner/catalog sets and provider identities; reconcile uncertain Gmail/calendar effects through read ports; verify cohort/strategy/attribution generations without activating anything. No deleted payload, stale activation or prior authorized action may become live merely because it existed in backup.
 
 ## Ordered implementation tasks
 
@@ -324,35 +199,9 @@ Additive nullable/backfilled columns and new tables deploy before writers. Backf
 <!-- roadmap-task id=DB-06-T05 milestone=M8 depends_on=DB-06-T04,SEC-06-T02 mode=serial locks=database-schema,backend-domain,security-runtime,compliance-policy -->
 - [ ] **Implement the database retention engine and recovery graph —** Input: SEC-06 authoritative `retention.policy.v1`, table classes, cutoffs, holds, and the current database dependency graph. Operation: dry-run bounded counts/IDs; require operator confirmation; redact/delete bounded batches; append audit/outbox evidence; retain the independent suppression target ref when permitted member/source rows are removed; publish the versioned recovery/retention dependency graph and live-record holds. A dependency/receipt/policy mismatch enters exact `DEFERRED_REVIEW`, assigns owner review within 24 hours and resolution-or-escalation within 72 hours, retains data without partial mutation, and closes affected controls on missed SLA. Output: versioned database retention/recovery graph plus minimized data or explicitly owned deferral. Test evidence: fixture matrix for holds, unresolved ambiguity, 24/72 clocks/escalation, missed-SLA control closure, no-partial-mutation, suppression target-ref/list/replay stability after source purge, foreign-key closure, replay, and restore. Failure behavior: stop the batch; retain the safety record and all data; close affected controls on missed SLA; open an incident on partial external deletion.
 
-## Test strategy
 
-- **Migration `test_upgrade_empty_database_to_head`:** exactly 46 tables plus every named constraint/index/trigger.
-- **Constraint `test_approval_eligibility_intent_final_send_and_rate_composites_reject_one_column_splices`:** campaign member, decision, approval, hash, mailbox, rate slot, and allowed-flag negatives.
-- **Migration `test_upgrade_from_each_supported_revision`:** no skipped compatibility edge.
-- **Seed `test_seed_is_idempotent_and_contains_no_secret_or_real_recipient`:** deterministic hash.
-- **Retention `test_purge_refuses_unresolved_ambiguous_send_and_active_hold`:** safety first.
-- **Retention SLA `test_deferred_review_has_24_hour_owner_and_72_hour_resolution_or_escalation_deadlines`:** timeout closes controls and cannot count as deletion.
-- **Restore `test_backup_restore_preserves_event_and_attempt_chain`:** counts plus hashes/foreign keys.
-- **Recovery `test_worker_start_requires_restored_control_off_and_schema_head`:** fail closed.
+## Verification and acceptance
 
-## Security, privacy, compliance, idempotency, observability, and cost
+Test fresh PostgreSQL migration and catalog equality for every table/column/type/constraint/index/trigger/owner/FK tuple; no hard-coded obsolete count. Exercise one-field authority splices, cancelled intent race, consumed rate evidence, mailbox/calendar leases, per-agent distinct hashes, global strategy scope, exact cohort/checkpoint ownership and all fifteen artifact producers.
 
-Backups are encrypted, access-limited, off-host at M8, and tested rather than assumed. Seeds and migration logs exclude secrets/PII. Retention/purge commands are authenticated, idempotent, dry-run-first, bounded, and audited. Metrics expose revision, backfill progress, purge class/count, backup age, restore result, and storage growth. Storage/provider cost is measured before increasing retention.
-
-## Failure, rollback, and operator recovery
-
-Never force a migration stamp, drop a column/table, or delete a backup to silence a failure. Stop API writes/workers, keep outreach disabled, preserve logs, restore the last proven backup into a separate database, compare constraints/events/unresolved attempts, and choose forward repair or code rollback. A failed purge retries by command idempotency key and batch cursor under the 24/72-hour deferral SLA. Legal/incident holds override automated product-row deletion and lifting them is audited; they never extend SEC-06's 30-day operational session-detail maximum or INFRA-04's 35-day personal-data backup ceiling.
-
-## Acceptance and retained evidence
-
-- [ ] Blank, prior-supported, backup-restored, and representative databases reach the same schema invariants.
-- [ ] Seeds are deterministic, non-sensitive, environment-scoped, and never enable outreach.
-- [ ] Every table has a retention class and unresolved safety records cannot be purged.
-- [ ] M1 evidence is exported and `m1_spike` is dropped rather than promoted.
-- [ ] Restore proof includes constraints, hashes, event/attempt chains, and worker-start fail-closed checks.
-
-Retain revision graph/schema diff, constraint introspection, seed hash/scan, retention dry-run/purge audits, encrypted-backup metadata, fresh-restore report, and mixed-version test output.
-
-## Dependencies and next deliverable
-
-DB-06 closes the six-file M2 database contract. Passing its migration/restore/retention evidence completes the persistence portion of M2 and unlocks M3 agent/provider work plus product workflows [WF-02](../03-workflows/02-experiment-lifecycle.md) onward.
+Restore an encrypted backup into an empty isolated instance, verify constraints and tombstone propagation, disabled controls/sessions, safe suppression projection after source purge, 35-day expiry and missing-key failure. Crash every purge/restore/deferred-review boundary. Retain schema/introspection manifests, migration/rollback/restore logs, signed fixture hashes, privacy field inventory, purge/tombstone evidence and provider reconciliation traces. Missing/unclassified fields or held dependencies block release and live collection.

@@ -2,92 +2,81 @@
 
 **Document ID:** BACKEND-01
 **Status:** Planned M2-M6 application layer; only foundation send/policy protocols exist today
-**Milestone:** M3, M4, M5 (exact scope and prerequisites are declared per task)
+**Milestone:** M3, M4, M5, M6 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `BACKEND-01-T01 -> BACKEND-01-T02 -> BACKEND-01-T03 -> BACKEND-01-T04 -> BACKEND-01-T05 -> BACKEND-01-T06`; cross-document task Inputs `BACKEND-01-T01 <- AGENT-01-T01,DB-04-T02,DB-05-T03; BACKEND-01-T02 <- ARCH-03-T01,DB-06-T01; BACKEND-01-T03 <- ARCH-02-T01,DB-05-T03; BACKEND-01-T04 <- DB-06-T01; BACKEND-01-T05 <- PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,OBS-03-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), DB-01 through DB-06, and accepted runtime/provider contracts
+**Prerequisites:** exact local order `BACKEND-01-T01 -> BACKEND-01-T02 -> BACKEND-01-T03 -> BACKEND-01-T04 -> BACKEND-01-T05 -> BACKEND-01-T06 -> BACKEND-01-T07 -> BACKEND-01-T08 -> BACKEND-01-T09 -> BACKEND-01-T10`; cross-document task Inputs `BACKEND-01-T01 <- AGENT-01-T01,DB-04-T02,DB-05-T03; BACKEND-01-T02 <- ARCH-03-T01,DB-06-T01; BACKEND-01-T03 <- ARCH-02-T01,DB-05-T03; BACKEND-01-T04 <- DB-06-T01,BACKEND-03-T03; BACKEND-01-T05 <- PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,OBS-03-T02; BACKEND-01-T07 <- DB-03-T02,DB-04-T04,AGENT-11-T03,AGENT-06-T03; BACKEND-01-T08 <- BACKEND-05-T03,BACKEND-03-T03,PROVIDER-07-T02,DB-03-T04; BACKEND-01-T09 <- DB-04-T04,AGENT-09-T04; BACKEND-01-T10 <- AGENT-12-T04,AGENT-10-T06`. Descriptive source authorities/resources (not whole-document completion dependencies): [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), DB-01 through DB-06, and accepted runtime/provider contracts
 **Outputs:** Exact service ownership, deterministic command/query boundaries, unit-of-work rules, and complete external-side-effect trace
-**Unlocks:** [BACKEND-02 API](02-api-contracts.md), policy, SendGateway, commands/approvals, and reports
+**Unlocks:** [BACKEND-02 API](02-api-contracts.md), policy, SendGateway, action/exception commands, and reports
 **Risk:** Critical
 **Complexity:** XL
 
-## Outcome and timing
 
-Business truth is produced by deterministic Python services over PostgreSQL, never by FastAPI routes, Next.js, DBOS/Temporal, agents, or provider adapters. A command verifies immutable inputs and expected versions, calls a pure transition/policy function, and commits the aggregate/event/audit/idempotency/outbox result atomically. External calls occur only after committed intent/reservation and are reconciled afterward.
+## Outcome and current repository state
 
-## Current repository state
+Business truth is produced by deterministic application services over PostgreSQL, never by routes, frontend, agents, workflows or provider adapters. Only foundation health/DB/send protocols exist today. These services and records are planned.
 
-Implemented today: FastAPI health composition, PostgreSQL health, request logging, idle worker, SQLAlchemy/Alembic wiring, minimal `SendPolicy`, `GmailProvider`, and guarded `SendGateway`. Missing: product domain models/tables, unit of work, services below, commands, policies, artifacts, workflows, providers, authentication, reports, or product endpoints. Current shortcuts in `domain/sending.py` are not the target dependency direction.
+A command locks/checks expected versions, validates immutable inputs, applies a pure rule, and commits aggregate/event/audit/idempotency/outbox together. External operations execute only after committed intent/reservation and are reconciled afterward. No network call occurs in a long database transaction.
 
-## Scope and non-goals
+## Exact planned modules and boundaries
 
-In scope: pure invariants/transitions, application service ownership, optimistic concurrency, exact table/event writes, provider intent/result handoffs, replay, cancellation, audit/cost, and deterministic clocks/IDs. Non-goals: a generic CRUD/repository layer exposed to routes, ORM entities crossing boundaries, provider calls inside transactions, event sourcing, direct workflow writes, model-authored commands, duplicate business logic in Next.js, or service aliases with overlapping ownership.
+Create application/{experiments,offers,identities,qualification,conversations,commercial_decisions,action_authorization,booking,checkpoints,strategy_activation,exceptions}.py, pure policies/commercial.py, typed inward contracts and persistence adapters. DB-01..05 defines every table's normal owner; DB-06 defines its only purge/redaction owner. No generic CRUD service or duplicate repository writer can bypass them.
 
-## Exact planned implementation surfaces
-
-Create `domain/identifiers.py`, `domain/events.py`, `domain/experiments.py`, `domain/leads.py`, `domain/artifacts.py`, `domain/messaging.py`, `domain/approvals.py`, `domain/controls.py`, `domain/offers.py`, `domain/metrics.py`; `application/uow.py`, `application/commands.py`, `application/experiments.py`, `application/artifacts.py`, `application/leads.py`, `application/campaigns.py`, `application/approvals.py`, `application/controls.py`, `application/recovery.py`, `application/gmail_mailboxes.py`, `application/gmail_sync.py`, and `application/reporting.py`; plus persistence adapters named by DB-01 through DB-05. Domain imports only standard library/domain values. Application imports domain plus inward ports. Persistence/providers/runtime/FastAPI import inward, never the reverse.
-
-### Exact write owners and responsibilities
-
-The table owners below are canonical; no route/workflow/provider/agent writes their tables directly.
-
-| Service | Exclusive authoritative writes / deterministic responsibility |
+| Service | Exclusive writes / authority |
 | --- | --- |
-| `OperatorSessionService` | FastAPI-owned Google OIDC flow/session issue, rotation, expiry, revocation, logout, configured-subject authentication; no product-table or Gmail authority |
-| `AuthenticationCommandService` | `operators`; configured authenticated-subject lifecycle only |
-| `ExperimentCommandService` | `experiments`, `experiment_decisions`; ARCH-03 transitions/decision bundle |
-| `ExperimentBriefCommandService` | immutable `experiment_briefs`; scope versions |
-| `IdeaMaterializationService`, `OfferMaterializationService` | `ideas`, `offer_hypotheses` after accepted artifact gates |
-| `MetricDefinitionCommandService`, `MetricObservationService`, `MetricSnapshotService` | their exact DB-02 metric tables and reproducible cutoffs |
-| `WorkflowRunProjectionService` | application `workflow_runs`; runtime only reports observations |
-| `ControlCommandService`, `IncidentCommandService` | `system_controls`, `incidents` |
-| `BudgetService` | `budget_accounts`, `budget_reservations`; serial admission/release/reconcile state |
-| `BusinessIdentityService` | `businesses`; identity insert/conflict quarantine, never auto-merge |
-| `LeadCommandService`, `LeadQualificationService` | `leads`, `lead_assessments`; exact ARCH-03 lead transitions |
-| `GmailOAuthSagaService`, `OAuthCredentialGarbageCollector` | external versioned flow/credential objects; idempotent STAGE/ACTIVATE/bind leases, safe orphan GC; no product-table writes |
-| `GmailMailboxCommandService`, `GmailCredentialConsistencyService` | `gmail_mailboxes`; exact ACTIVE proof tuple commit, mismatch disable/incident; no secret payload writes |
-| `CampaignCommandService`, `CampaignAdmissionService` | immutable `campaigns` versions and `campaign_members`; exact `ReadyCampaign` DRAFT -> READY owner |
-| `MessageCommandService` | `outreach_messages` except SendGateway/Recovery-owned documented send transitions |
-| `ApprovalCommandService` | `approvals`; exact campaign-member approval basis, eligibility-decision binding, lifecycle, and consumption; never final SEND authority |
-| `SuppressionCommandService`, `SuppressionQueryService`, `RecipientSignalSuppressionService` | versioned `suppression_entries` create/fail-closed deactivate; uncached safe reads; observed signal coordinator may invoke only `SuppressionCommandService.record_observed_signal` inside the exact Gmail/public-token transaction; suppression always overrides eligibility/approval |
-| `PolicyEvaluationService` | append-only `policy_decisions`; separate `APPROVAL_ELIGIBILITY` and fresh final `SEND` compositions with shared basis/independent facts hashes |
-| application `SendGateway` | eligibility-bound `send_intents`; fresh-SEND pre-call `send_attempts`; last-mile `QUEUED -> SUPPRESSED`/intent cancellation; documented transitions under BACKEND-04 |
-| `SendRateReservationService` | `send_rate_reservations`; unique mailbox/window slot and one active lease under gateway/recovery transactions |
-| `SendRecoveryService` | disjoint retry/reconciliation transitions on `send_attempts`/messages; never initial provider call |
-| `GmailResultCaptureService`, `GmailObservationService`, `GmailReplySyncService`, `GmailHistorySyncService` | respectively `provider_results`, `provider_observations`, `replies`, `gmail_history_cursors` |
-| `AgentRunRecordingService`, `ArtifactCommandService`, `EvidenceIngestService` | respectively `agent_runs`, `artifacts(PRODUCED)` plus event, and `evidence_items` |
-| `ArtifactValidationService`, `ArtifactAcceptanceService`, `ArtifactEvidenceQueryService` | links/validations plus validated/rejected event; exact version/hash accept/reject plus events; allowlisted artifact/evidence/evaluation reads |
-| `EvaluationSuiteCommandService`, `EvaluationExecutionService` | `evaluation_cases`; `evaluation_results` while delegating all `agent_runs` writes |
-| application `UnitOfWork`, `AuditRecorder`, `IdempotentCommandExecutor` | `domain_events`/`outbox_messages`; `audit_events`; `command_idempotency` |
-| each named internal consumer | business writes plus `outbox_deliveries` in one PostgreSQL transaction |
-| `ProviderCostReconciliationService`, `RecoveryCommandService`, `RetentionCommandService` | `cost_entries`; `repair_actions`; every policy-versioned purge/redaction |
+| OperatorSessionService / AuthenticationCommandService | isolated OIDC/session operations / operators only |
+| ExperimentCommandService / ExperimentBriefCommandService | experiment state / immutable briefs; runtime checkpoint result belongs to CheckpointEvaluationService |
+| IdeaBriefMaterializer / OfferMaterializationService | ideas from accepted discovered/supplied IdeaBrief / offer_packages,economics,variants,discount bands after Offer Design and deterministic acceptance |
+| MetricDefinitionCommandService / MetricObservationService / MetricSnapshotService | immutable metric definitions/observations/snapshots with exact cohort/attribution/cost cutoffs |
+| WorkflowRunProjectionService | application workflow_runs; engine history never business truth |
+| ControlCommandService / IncidentCommandService / BudgetService | system/action controls / incidents / budget accounts/reservations; no automatic cap increase or enable |
+| BusinessIdentityService | businesses,people,contact_identities,business_identity_results and accepted/deduplicated identity result; conflicts quarantine, never auto-merge |
+| EvidenceIngestService / DiscoveryCandidateService / LeadCommandService / QualificationService | lead_sources/evidence / discovery candidates / lead state / phased lead_assessments and QualificationDecision; QualificationService consumes accepted identity, never competes as identity writer |
+| CampaignCommandService / CampaignAdmissionService | campaign versions / frozen cohort and member admission; CheckpointEvaluationService has only disjoint close-state/generation transitions |
+| ConversationService | conversation counters/state, budget_assertions, negotiation_proposals; accepted evaluator objectives only; no send/calendar access |
+| MessageCommandService | immutable outgoing drafts and outbound conversation materialization; gateway/recovery alone own disjoint send state transitions |
+| CommercialPolicyEngine / CommercialDecisionService | pure authoritative economics/NegotiationDecision / immutable result persistence only; no second calculator |
+| ActionAuthorizationService | immutable action_authorizations and exactly-one consumption receipts; normal in-envelope authority without operator preview |
+| SendGateway / SendRecoveryService / SendRateReservationService | send intent/initial attempt/result orchestration / disjoint conclusive retry/reconciliation transitions / locked rate slots/leases |
+| SuppressionCommandService / SuppressionQueryService / RecipientSignalSuppressionService | suppression sole writer / uncached reads / atomic signal coordinator delegating each writer; each inbound reply stops the cold sequence; durable suppression requires its exact trigger |
+| GmailOAuthSagaService / OAuthCredentialGarbageCollector | external STAGED/ACTIVE secret objects, leases and safe orphan GC; never product token rows |
+| GmailMailboxCommandService / GmailCredentialConsistencyService | exact ACTIVE mailbox proof binding and mismatch disable |
+| GmailResultCaptureService / GmailObservationService / GmailReplySyncService / GmailHistorySyncService | provider_results / observations / replies and inbound complete conversation messages / cursor, composed in one atomic page/signal transaction |
+| CalendarAccountService / CalendarObservationService | calendar account credential proof / bounded availability/event/callback observations |
+| BookingGateway | booking_intents,booking_slot_sets,booking_slots,booking_confirmations,booking_actions,booking_attempts,booking_provider_results plus canonical state; AvailabilityService and BookingReconciliationService are read coordinators and delegate all mutations to gateway |
+| CheckpointEvaluationService | checkpoints,checkpoint_evidence_members,experiment_decisions and immutable CheckpointEvidenceBundle; close/freeze/decision/unique trigger, no fifth cohort |
+| StrategyActivationService | global_learning_runs,agent_learning_results,global_strategy_versions,strategy_agent_versions,strategy_activations,strategy_rollbacks; global package promotion and campaign-specific activation separated |
+| AgentRunRecordingService / ArtifactCommandService | immutable per-agent IO/run metadata / produced artifact and artifact_input_snapshots; normalized snapshot_input_dependencies belongs to ArtifactValidationService; deterministic materializers persist through the same artifact interface with explicit producer identity |
+| ArtifactValidationService / ArtifactAcceptanceService / ArtifactEvidenceQueryService | validations/evidence links / accepted-disposition receipts / allowlisted reads |
+| EvaluationSuiteCommandService / EvaluationExecutionService | evaluation_cases / evaluation_results; delegate run/IO writes, no global activation authority |
+| ExceptionCommandService / SensitivePreviewService | exception_cases and bounded resolution / purpose-scoped operator inspection only |
+| UnitOfWork / AuditRecorder / IdempotentCommandExecutor | domain_events/outbox / audit_events/action_attributions / command_idempotency; command atomicity |
+| named internal consumer / ProviderCostReconciliationService / RecoveryCommandService / RetentionCommandService | outbox_deliveries with business commit / cost_entries / repair_actions / all policy-versioned purge/redaction |
 
-When two services touch one aggregate, their legal transitions are disjoint and encoded in one shared domain transition table; they do not become co-writers of arbitrary columns. Provider adapters return observations only. Agents may request only a `PRODUCED` artifact through `ArtifactCommandService`; they are never DB-05 actors.
+If multiple owners touch an aggregate, legal transitions are disjoint in one canonical transition contract. One coordinator invokes each designated writer within its unit of work; it does not acquire arbitrary table mutation authority. Agent type/strategy recommendations are never DB-05 actor authority.
 
-### Command, digest, transaction, and concurrency contract
+## Transaction, hash and provider trace
 
-After `OperatorSessionService` verifies the opaque cookie, configured subject, expiry, Origin, fetch metadata, and CSRF intent, every application command is a strict frozen `CommandEnvelopeV1` with `command_type`, `command_scope`, idempotency key, authenticated actor (or operator/flow binding verified from signed OAuth state for `CompleteGmailAuthorization`), expected aggregate version where applicable, correlation/causation UUIDv4, text `request_schema_version`, JSON payload, and DB-01 lowercase SHA-256 of RFC 8785 UTF-8 `{"schema_version":version,"payload":payload}`. IDs and UTC clock are injected; no service reads global time/randomness.
+Strict CommandEnvelopeV1 carries typed command/scope/key, authenticated operator/system/workflow/provider actor, expected versions, correlation/causation, schema/payload and DB-01 RFC 8785 hash. Same key/hash returns stored result; changed hash conflicts. Aggregate state, event/audit/action attribution, idempotency and outbox commit atomically. Denials retain safe reason/evidence; projection lag cannot authorize.
 
-The exact aggregate transaction is: begin; claim `(command_scope,idempotency_key)`; verify request bytes/schema against prior claim; lock/load or optimistic-version-check; load all named authority rows; call pure transition/policy; update the sole-writer row; insert the specific ARCH-03 event and aggregate `*.state_changed.v1` where defined; insert safe audit; insert outbox; store the complete result envelope/hash; commit. A same-key/same-hash replay returns the stored status/body without another version/event. Same key/different hash is `IDEMPOTENCY_HASH_CONFLICT`. Version loss is `VERSION_CONFLICT`. Denial records safe audit/policy evidence but no aggregate mutation unless the canonical transition itself is denial/suppression.
+Read/model provider flow: accepted per-agent snapshot/configuration -> finite budget reservation/call ID/request hash -> source/tool/cancellation/deadline gate -> external call -> immutable result/provider ledger -> minimized evidence -> cost reconciliation -> typed output snapshot -> deterministic validation -> produced/accepted artifact. Source/web/email content is untrusted data and cannot grant tools/instructions.
 
-External calls and runtime signals never occur in that transaction. The OAuth callback is an explicit pre-transaction saga, not an exception to this rule: `GmailOAuthSagaService` exchanges once, makes the external credential ACTIVE, and supplies signed short-lived `ActiveCredentialProofV1`; the PostgreSQL transaction validates only that proof and copies its exact safe tuple. A 30-second secret-store bind lease plus 5-second database timeout prevents GC during commit. Only after ACTIVE proof may `GmailMailboxCommandService` atomically insert ACTIVE mailbox and SUCCEEDED command result. Outbox internal consumers atomically commit their business writes and `outbox_deliveries`; they cannot issue external effects. PostgreSQL named unique/composite FKs and immutable triggers from DB-01/03/05/06 are last-line enforcement, not optional application validation.
+Gmail flow: accepted EmailDraft + commercial result + exact offer/cohort/strategy/current conversation -> deterministic action authorization -> one intent/consumption/budget commit -> fresh locked SEND/rate/attempt commit -> one write call -> immutable result/cost/state -> ambiguity read reconciliation or finite conclusive retry -> atomic full-reply/cold-stop/cursor -> accepted bounded response objective and new draft. Durable suppression is a separate exact signal predicate.
 
-### Deterministic service flow by milestone
+Calendar flow: finally qualified buying intent + call agreement -> BookingIntent -> bounded availability -> explicit timezone/slot confirmation -> new action authority + durable kind-specific action/attempt -> one write -> positive exact event result or quarantined read reconciliation. CREATE, RESCHEDULE and CANCEL have distinct keys/notification hashes; no purchase acceptance is required for agreeing to a qualified call.
 
-| Flow | Input -> deterministic operation -> output | Exact state/event authority |
-| --- | --- | --- |
-| experiment stage | approved brief/gates/version -> start/finish/fail finite run -> stored run/result/aggregate bundle | WF-02 states; `workflow.run_*`, `experiment.*` exact `.v1` events |
-| artifact | verified run/config/provider ledger -> `PRODUCED` -> later validate/link -> later accept/materialize | DB-04 owners; `artifact.produced/validated/rejected/accepted/superseded.v1` |
-| lead | accepted evidence + identity/criteria -> conflict/research/assessment/suppression -> lead state | `lead.discovered/identity_conflict_detected/evidence_recorded/qualified/disqualified/suppressed.v1` |
-| campaign/approval | frozen campaign/member/message/artifact basis -> eligibility without ApprovalRule -> request -> step-up sensitive preview -> manual approve or deny/revoke -> exact preview-bound basis only | complete campaign family plus `policy.evaluated.v1` and `approval.requested/decided/revoked.v1`; no automated approval or send authority |
-| Gmail OAuth | claimed command/flow -> one exchange -> idempotent STAGED -> ACTIVE -> signed bind proof -> mailbox+SUCCEEDED transaction -> post-commit bind marker | audit-only OAuth lifecycle; no domain-event alias and no success without exact ACTIVE generation |
-| control/recovery | authenticated command + current evidence -> pure control/repair decision -> requested/acknowledged state | WF-06 exact experiment/run/campaign/control/send events |
-| decision/report | frozen metrics/evidence/rule + operator -> immutable decision; queries read snapshots/events | `experiment.decision_recorded.v1`; `SCALE` grants no new authority |
+Checkpoint flow: close immutable cohort -> freeze exact cutoff/denominators/cost/evidence -> agent recommendation -> deterministic CONTINUE/REVISE/KILL/INCONCLUSIVE/SAFETY_STOP -> unique closed-checkpoint learning trigger. Only CONTINUE at stages 1–3 opens next-stage eligibility; stage 4 CONTINUE is terminal.
 
-### Complete external side-effect trace
+Learning flow: new stage primary evidence + similar campaign secondary + historical failure/incident guardrails -> every applicable agent's proposal -> deterministic minimum-evidence/offline/comparison/holdout/cross-campaign gate -> approved global package -> each campaign's own eligible boundary activation. KEEP and INSUFFICIENT_EVIDENCE preserve state. Deterioration rule immediately blocks affected future actions, closes their checkpoint and activates compatible rollback only at the boundary. Neither global strategy nor memory may modify protected commercial/safety bounds.
 
-For model/search/page/business calls: verified workflow/config/input -> budget reservation -> provider capability request hash/call ID -> cancellation/deadline/rate gate -> external read/model call -> exact Task 3 result and provider ledger -> evidence ingestion where applicable -> `ProviderCostReconciliationService` -> agent deterministic validation -> only then `PRODUCED` artifact and later separate validation/acceptance. Failures cannot transition aggregates merely because a provider returned data.
+## Binding ownership and concurrency
 
-For Gmail: allowed eligibility decision -> exact campaign/version/`campaign_member_id`/message/mailbox/compliance-evidence approval basis -> operator preview and manual approval -> eligibility-bound immutable `send_intents` plus stable mailbox idempotency/RFC ID -> queue after commit -> BACKEND-04 fresh final SEND decision over all current compliance/signal facts -> suppression terminal/no-call bundle or atomic consumed `send_rate_reservations` + `send_attempts` commit -> one `SendGateway -> GmailProvider.send` network call -> `GmailResultCaptureService` -> direct `send.provider_accepted.v1`, explicit-rejection/local-pre-write `send.failed.v1`, or `send.outcome_ambiguous.v1` -> mailbox-bound PROVIDER-02 positive-evidence reconciliation with permanent quarantine on zero/multiple/conflicting observations -> cost/budget reconcile -> history page where ordinary observations commit normally but every reply/unsubscribe/bounce/complaint/soft-limit invokes one `RecipientSignalSuppressionService` transaction that stores observation/reply, suppression, pre-call intent closure/events and cursor together. Public unsubscribe POST enters the same transaction with a stored token result; GET never mutates. Every step carries correlation/causation and safe audit. No agent/workflow/provider chooses a transition.
+BusinessIdentityService returns accepted identity ID/version/evidence/hash or conflict. QualificationService consumes it, applies immutable offer filters in PRELIMINARY/FINAL phases and returns deterministic QualificationDecision; it cannot insert/merge business/person/contact identities. Final qualification is required for cold outreach and booking; suppression/legal/capacity remain independent.
+
+Cohort/CheckpointEvaluationService/StrategyActivationService use the same campaign/cohort/control-generation lock order and compare-and-swap. A running cohort freezes offer, strategy, activation, qualification rules, causal variables and evidence definitions. A new global version is not a live process-wide prompt pointer. Every agent call, policy decision, draft, send, negotiation, booking, checkpoint and learning decision writes exact per-action strategy/activation attribution.
+
+BookingGateway uses calendar-side-effects serialization, provider ETag/conditional identity, explicit confirmation and a durable unresolved-action lease. Availability is neither reservation nor confirmation. A stale slot requests a new bounded proposal; ambiguity never silently chooses another slot/event.
+
+OAuth preserves [BACKEND-05](05-approval-and-command-handling.md)'s one-exchange STAGE/ACTIVATE proof, 30-second bind lease, 5-second DB timeout, exact ACTIVE tuple and reference-aware GC. Calendar credentials use separately scoped identity/proof and cannot expose Gmail credentials or a combined client.
 
 ## Ordered implementation tasks
 
@@ -97,41 +86,26 @@ For Gmail: allowed eligibility decision -> exact campaign/version/`campaign_memb
 - [ ] **Implement pure domain values/transitions —** Input: ARCH-03 enums/guards/events and DB constraints. Operation: encode exhaustive pure functions with injected actor/time/IDs and typed denials. Output: deterministic decisions/event intents. Test evidence: exhaustive state/guard/property snapshots. Failure behavior: no mutation intent.
 <!-- roadmap-task id=BACKEND-01-T03 milestone=M4 depends_on=BACKEND-01-T02,ARCH-02-T01,DB-05-T03 mode=parallel locks=backend-domain -->
 - [ ] **Implement unit of work/idempotent executor —** Input: strict command envelope and expected version; implemented atomic IdempotentCommandExecutor/UnitOfWork claim-replay interface. Operation: bind strict M4 product command envelopes and expected versions to the existing DB-05 IdempotentCommandExecutor/UnitOfWork; execute the exact product atomic bundle and replay semantics without a second implementation owner. Output: implemented M4 product-command UnitOfWork/replay integration interface plus one committed command result. Test evidence: real-PostgreSQL concurrency/failure injection at every write. Failure behavior: whole transaction rollback or typed replay conflict.
-<!-- roadmap-task id=BACKEND-01-T04 milestone=M4 depends_on=BACKEND-01-T03,DB-06-T01 mode=parallel locks=backend-domain -->
-- [ ] **Implement M2/M4/M5 sole-writer authority —** Input: the fresh consolidated M2 schema plus frozen M4/M5 no-send contracts and gates. Operation: implement only the M2/M4/M5 sole-writer services and authority registry; do not duplicate the M6 policy/send/command services owned by BACKEND-03..05. Output: versioned validated-actor, sole-writer service, repository-owner, command-registry, and table/event authority contracts plus no-send product operations without provider leakage. Test evidence: table-writer/import rules and M2/M4/M5 integration cases. Failure behavior: the affected milestone is blocked at the missing owner.
+<!-- roadmap-task id=BACKEND-01-T04 milestone=M4 depends_on=BACKEND-01-T03,DB-06-T01,BACKEND-03-T03 mode=parallel locks=backend-domain -->
+- [ ] **Implement M2/M4/M5 sole-writer authority —** Input: the fresh consolidated M2 schema plus frozen M4/M5 no-send contracts and gates. Operation: implement the M2/M4 experiment/offer/metric/artifact services and shared authority registry; consume CommercialPolicyEngine for accepted offer economics, and implement only StrategyActivationService.initialize_baseline from approved configuration evidence before research; identity/qualification are explicitly owned by T07; do not duplicate the later final-effect policy/send/command services owned by BACKEND-03..05 or the booking/checkpoint/strategy implementations below. Output: versioned validated-actor, sole-writer service, repository-owner, command-registry, and table/event authority contracts plus no-send product operations, accepted deterministic offer economics and StrategyActivationService.initialize_baseline without provider leakage. Test evidence: table-writer/import rules and M2/M4/M5 integration cases. Failure behavior: the affected milestone is blocked at the missing owner.
 <!-- roadmap-task id=BACKEND-01-T05 milestone=M4 depends_on=BACKEND-01-T04,PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,OBS-03-T02 mode=parallel locks=backend-domain,provider-contracts -->
 - [ ] **Implement side-effect orchestration —** Input: committed intent/reservation and strict provider ports. Operation: call outside transaction, capture result/cost/evidence, and reconcile exact failure semantics. Output: complete audit chain. Test evidence: kill/cancel/provider status matrix. Failure behavior: visible unresolved state; no blind replay.
 <!-- roadmap-task id=BACKEND-01-T06 milestone=M5 depends_on=BACKEND-01-T05 mode=parallel locks=architecture-contracts -->
 - [ ] **Prove boundary and current-truth gates —** Input: import/call graph, OpenAPI/workflow/provider composition, repository truth. Operation: assert routes/workflows/agents/providers cannot write or decide outside their ports and planned surfaces are not claimed implemented. Output: architecture evidence. Test evidence: static graph plus integration spies. Failure behavior: release blocked.
 
-## Test strategy
 
-- **Unit `test_every_arch03_transition_has_one_owner_guard_event_and_denial`:** exact catalog.
-- **Atomicity `test_command_state_events_audit_idempotency_outbox_commit_together`:** each boundary injected.
-- **Concurrency `test_unique_and_composite_constraints_are_final_authority`:** stale/spliced rows fail.
-- **Boundary `test_routes_workflows_agents_and_providers_cannot_write_product_tables`:** import/runtime graph.
-- **Side effect `test_each_provider_effect_has_intent_result_cost_and_recovery`:** six capabilities plus Gmail.
-- **OAuth saga `test_mailbox_success_requires_exact_active_proof_and_each_pre_db_state_resumes_without_reexchange`:** six kill points and GC race.
-- **Digest `test_all_command_workflow_provider_results_reproduce_rfc8785_vectors`:** validate before upcast/use.
+<!-- roadmap-task id=BACKEND-01-T07 milestone=M5 depends_on=BACKEND-01-T06,DB-03-T02,DB-04-T04,AGENT-11-T03,AGENT-06-T03 mode=parallel locks=backend-domain,agent-artifacts -->
+- [ ] **Implement BusinessIdentityService and phased QualificationService —** Input: accepted discovery/final proposals, approved source evidence, immutable OfferPackage filters and recorded identity fixtures. Operation: accept/deduplicate identities through BusinessIdentityService; QualificationService consumes that accepted result, applies PRELIMINARY before deep research and FINAL after accepted dossier, and leaves suppression/legal/capacity/cohort admission to separate guards. Output: exact BusinessIdentityService and QualificationService interfaces with single identity/decision ownership. Test evidence: multi-source collision, unsupported person/linkage, preliminary/final phase, stale filter, costly research admission and writer-boundary tests. Failure behavior: quarantine conflicting identity, reject insufficient qualification and create no cohort member.
+<!-- roadmap-task id=BACKEND-01-T08 milestone=M6 depends_on=BACKEND-01-T07,BACKEND-05-T03,BACKEND-03-T03,PROVIDER-07-T02,DB-03-T04 mode=serial locks=calendar-side-effects,backend-domain -->
+- [ ] **Implement BookingGateway and read reconciliation —** Input: accepted qualification/buying-intent/call agreement, BookingIntent contract, ActionAuthorityScopeV1, CalendarReadPort/CalendarWritePort recorded fixtures and DB-03 booking ledger. Operation: implement intent/availability/explicit slot confirmation, separate CREATE/RESCHEDULE/CANCEL action/attempt/result transactions, fresh guards, calendar lease and exact-event read reconciliation; network remains denied for implementation proof. Output: implemented BookingGateway sole writer and AvailabilityService/BookingReconciliationService read interfaces for WF-07/PROVIDER-07. Test evidence: no-purchase call, timezone/DST/expiry/ETag/notification, duplicate callback, scope splice and every crash/replay boundary. Failure behavior: retain exact ambiguous action and pause; negative reads never retry.
+<!-- roadmap-task id=BACKEND-01-T09 milestone=M6 depends_on=BACKEND-01-T08,DB-04-T04,AGENT-09-T04 mode=parallel locks=backend-domain,agent-artifacts -->
+- [ ] **Implement CheckpointEvaluationService —** Input: exact cohort/cutoff/member set, accepted OfferPackage, frozen definitions, immutable provider/conversation/negotiation/booking/cost evidence and evaluator recommendation fixtures. Operation: close admission, freeze one CheckpointEvidenceBundle, invoke accepted evaluation through a port, apply stored five-way rules, persist decision plus unique learning trigger atomically; do not implement workflow orchestration here. Output: implemented CheckpointEvaluationService for WF-08 and next-stage eligibility. Test evidence: all four exact stage tuples, terminal CONTINUE at 1000, missing/late/ambiguous/synthetic data, duplicate trigger and crash/CAS tests. Failure behavior: INCONCLUSIVE/SAFETY_STOP as applicable, no next-cohort admission or fabricated terminal provider truth.
+<!-- roadmap-task id=BACKEND-01-T10 milestone=M6 depends_on=BACKEND-01-T09,AGENT-12-T04,AGENT-10-T06 mode=parallel locks=backend-domain,agent-artifacts -->
+- [ ] **Implement StrategyActivationService —** Input: closed checkpoint, all-agent AgentLearningProposal results, immutable offline/comparison/holdout/transfer evidence, approved baseline and stored rollback rules. Operation: persist exact PROMOTE/KEEP/ROLLBACK/INSUFFICIENT_EVIDENCE, validate global package promotion separately from per-campaign boundary activation, CAS prior activation/checkpoint/control generation, initialize future campaigns and automatically pause/close/rollback on stored deterioration. Output: implemented StrategyActivationService promotion/activation/rollback interface for WF-09 with immutable action attribution. Test evidence: all-agent completeness, weak-evidence no-mutation, protected-bound violation, cross-campaign timing, future baseline, no mid-cohort mutation and rollback/history races. Failure behavior: retain prior approved strategy and pause affected actions; no unsupported promotion or historical rewrite.
 
-## Security, privacy, compliance, idempotency, observability, and cost
 
-Authenticated actor and exact authority are explicit. Decrypted sensitive content exists only in bounded provider/application memory, never domain events/logs. Commands/providers use stable hashes/keys; external exactly-once is never claimed. Correlation spans HTTP, command, workflow, agent, provider, cost, Gmail attempt, and repair. Reservations occur before paid/reputation-bearing work; original currency plus ILS reporting evidence is retained. Retention and holds are exactly DB-06.
+## Verification, failure and acceptance
 
-## Failure, rollback, and operator recovery
+Retain service/table/event/command ownership equality, direct/transitive import and runtime spies, real-PostgreSQL atomicity/concurrency, pure commercial vectors and provider crash matrices. Prove preliminary identity/qualification ownership, full-thread redaction, canonical artifact materializers and separate per-agent snapshots, no model arithmetic, no agent Gmail/calendar writes, and no broad raw-data learning.
 
-Unknown state/event/runtime mapping, impossible composite authority, OAuth DB/secret mismatch, partial-write suspicion, provider-result disagreement, or cost overrun blocks mutation, closes applicable controls, and opens an incident. Roll back code/config, preserve immutable history, compare aggregate/events/provider/runtime, then execute typed `RecoveryCommandService`; direct SQL is forbidden. Restore into an isolated database when invariants cannot be proven.
-
-## Acceptance and retained evidence
-
-- [ ] Every product table has the DB-defined sole writer and every transition/event has one deterministic owner.
-- [ ] Commands are byte-hashed, optimistic, idempotent, atomic, and framework/runtime/provider independent.
-- [ ] Every external effect traces intent, policy, budget, execution, result/cost/audit, and recovery.
-- [ ] Agents/providers/workflows/frontend cannot decide or mutate business truth.
-- [ ] Current implemented-versus-planned truth remains explicit.
-
-Retain service/owner registry, import/call graph, transition/event snapshots, PostgreSQL concurrency/atomicity traces, provider side-effect matrices, digest fixtures, safe telemetry/cost/retention evidence, and current-truth scan.
-
-## Dependencies and next deliverable
-
-BACKEND-01 consumes ARCH/DB/WF/AGENT/provider contracts. It unlocks the exact [FastAPI contract](02-api-contracts.md), [policy engine](03-policy-engine.md), [SendGateway](04-send-gateway.md), [command/approval handlers](05-approval-and-command-handling.md), and [reporting services](06-reporting-and-query-services.md).
+An unknown command/state/producer, stale tuple/generation, unauthorized scope, missing cost/evidence or unexpected provider truth fails closed with a typed reason and exception/incident. Roll back code/configuration through versioned drain; use typed repair and positive provider evidence, never direct SQL or blind retry. A service's implementation proof uses synthetic/recorded fixtures before any separately authorized owned-resource/live gate.

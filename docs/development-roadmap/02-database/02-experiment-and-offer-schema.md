@@ -5,304 +5,53 @@
 **Milestone:** M2 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
 **Prerequisites:** exact local order `DB-02-T01 -> DB-02-T02 -> DB-02-T03 -> DB-02-T04 -> DB-02-T05`; cross-document task Inputs `DB-02-T01 <- PRODUCT-01-T03,PRODUCT-02-T01`. Descriptive source authorities/resources (not whole-document completion dependencies): [DB-01](01-core-data-model.md), [product scope](../00-product-strategy/01-product-scope.md), [success metrics](../00-product-strategy/02-success-metrics.md), and [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md)
-**Outputs:** Immutable experiment briefs, ideas, offer hypotheses, metric plans/snapshots, and operator decisions
+**Outputs:** Immutable experiment briefs, ideas, offer packages, metric plans/snapshots, and checkpoint decisions
 **Unlocks:** WF-02 experiment lifecycle, WF-03 idea validation, M4 synthetic experiment
 **Risk:** High
 **Complexity:** L
 
-## Outcome and timing
 
-This schema makes the product bet reproducible before an agent or workflow can elaborate it. Mutable experiment state stays on `experiments`; briefs, ideas, offers, metric definitions, snapshots, and decisions are immutable versioned evidence. M2 creates the structure, M3 produces typed artifacts, and M4 exercises it without outreach.
+## Outcome and current repository state
 
-## Current repository state
+All records below are planned. No product schema, offer economics, checkpoint evaluator or strategy engine is implemented. This contract replaces the preliminary offer-hypothesis schema with the accepted OfferPackage as the sole downstream commercial authority. An immutable version never changes after admission into a cohort.
 
-The roadmap defines `ExperimentBrief`, `IdeaCandidate`, `OfferHypothesis`, `MetricSnapshot`, `EvidenceBundle`, and `ExperimentDecision`, but none is implemented or persisted. No current table, migration, API, agent, workflow, or UI may be described as providing them.
+## Exact record conventions and schema
 
-## Scope and non-goals
+DB-01 UUID, UTC timestamp, integer-minor-money, canonical RFC 8785 envelope and injected clock/ID rules apply. In the record tables below, all fields are NOT NULL unless marked ?, all IDs are uuid, record sequence versions are positive integer; schema/rule/configuration version identifiers are bounded text matching the canonical VersionId contract, digests char(64) lowercase SHA-256, strings text, instants timestamptz, flags boolean, money bigint, ratios integer basis points, and structured values are strict versioned JSONB. Every table has created_at. Scalar refs expand to physical typed columns; multi-refs use the explicitly named link tables or strict PostgreSQL composite arrays whose deferred target checks validate every immutable ID/version/hash/acceptance tuple. They create no unnamed tables. No identity, monetary value or foreign key is hidden inside arbitrary JSON.
 
-In scope: exact normalized records for scope versions, idea candidates, offer hypotheses, success/kill metrics, immutable snapshots, and decisions. Non-goals: free-form editable blobs as aggregate truth, agent-authored decisions, automatic `SCALE`, billing/pricing engines, product catalog, multi-experiment portfolio optimization, or outreach activation.
+An ArtifactRef is the DB-04 composite (artifact_id,scope_kind,experiment_id?,artifact_type,artifact_version,content_hash) plus immutable acceptance_id. Experiment-local refs require the same experiment; intentionally GLOBAL strategy refs require global scope and use discriminator-aware constraints, never an unchecked nullable FK. Referencing mutable aggregate version columns is forbidden: references to history resolve an append-only version row. All immutable rows reject UPDATE/DELETE except the separate DB-06 retention role's content-redaction procedure.
 
-## Exact planned implementation surfaces
+| Table / writer | Exact fields beyond common fields | Required keys, checks and indexes |
+| --- | --- | --- |
+| experiment_briefs / ExperimentBriefCommandService | experiment_brief_id; experiment_id; brief_version; experiment_code; customer_segment; problem_hypothesis; idea_origin DISCOVERED or USER_SUPPLIED; offer_hypothesis; operator_advantage; jurisdictions_schema_version/jurisdictions; baseline_method; total_cash_cap_ils_minor; provider_cash_cap_ils_minor; operator_hours_cap numeric(8,2); max_researched_leads; max_qualified_leads; max_contacted_leads; max_concurrently_active_leads; authority_level NO_SEND/TEST_INBOX_ONLY/BOUNDED_REAL_RECIPIENTS; source_allowlist_version; conversation_booking_policy_version; strategy_baseline_ref; success_rule_schema_version/success_rule; kill_rule_schema_version/kill_rule; decision_date_condition; created_by_operator_id; content_hash; supersedes_brief_id? | PK experiment_brief_id; UQ (experiment_id,brief_version), experiment_code and (experiment_id,content_hash); experiment/operator FKs; same-experiment immediate predecessor; nonnegative ordered money/sample caps, contacted <= 1000, hours > 0; JSON schemas include exact cohort tuples and policy references; index (experiment_id,created_at) |
+| ideas / IdeaBriefMaterializer | idea_id; experiment_id; idea_version; idea_origin; source_artifact_ref IdeaBrief; user_provenance_ref?; bypass_record_hash?; content_hash; supersedes_idea_id? | PK idea_id; UQ (experiment_id,idea_version); exactly one origin per experiment; USER_SUPPLIED requires user provenance/bypass, DISCOVERED forbids bypass; input IdeaBrief is accepted before Market Research; index experiment_id |
+| offer_packages / OfferMaterializationService | offer_id; experiment_id; offer_version; idea_id/idea_version/idea_content_hash; market_research_artifact_ref MarketResearchReport; source_artifact_ref OfferPackage; target_customer; problem; solution; positioning; scope_schema_version/scope; deliverables_schema_version/deliverables; exclusions_schema_version/exclusions; proof_claim_schema_version/proof_claims; qualification_filter_version/qualification_filters; negotiation_options_version/negotiation_options; booking_policy_version/booking_constraints; valid_from; expires_at; content_hash; supersedes_offer_id? | PK offer_id; UQ (experiment_id,offer_version), (offer_id,experiment_id,offer_version,content_hash); accepted upstream and source artifacts; strict claim-to-evidence links; valid_from < expires_at; same-experiment predecessor; no upstream OfferPackage dependency; index (experiment_id,expires_at) |
+| offer_economics / OfferMaterializationService | offer_id/experiment_id/offer_version/offer_content_hash; currency char(3); base_price_minor; minimum_price_minor; contribution_margin_floor_bps; delivery_cost_minor; fixed_fee_minor; variable_fee_bps; tax_policy_version; tax_rate_bps; tax_inclusive boolean; fee_policy_version; cost_assumptions_version; fx_policy_version; rounding_version; payment_terms_version/payment_terms; valid_from; expires_at; content_hash | PK/FK offer_id to exact package tuple; base >= minimum > 0; costs >= 0; rates 0..10000; floor < 10000; currency ISO-4217; no float; engine proves an allowable base offer and retains exact cost assumptions before acceptance |
+| offer_variants / OfferMaterializationService | offer_variant_id; offer_id/experiment_id/offer_version/offer_content_hash; variant_code; variant_kind STANDARD/PILOT/SCOPE/BUNDLE; scope_version/scope; deliverables_version/deliverables; variant_price_minor; minimum_price_minor; delivery_cost_minor; permitted_discount_band_ids; payment_schedule_version/payment_schedule; timing_bounds_version/timing_bounds; content_hash | PK offer_variant_id; UQ (offer_id,variant_code); FK exact package; validated terms remain inside envelope; index offer_id; no downstream variant insertion |
+| offer_discount_bands / OfferMaterializationService | discount_band_id; offer_id; band_code; maximum_discount_bps; eligibility_rule_version/eligibility_rule; permitted_variant_ids; expires_at; content_hash | PK discount_band_id; UQ (offer_id,band_code); package/variant FKs; discount 0..10000; deterministic eligibility including stated-budget requirements; no free-form agent discount |
+| metric_definitions / MetricDefinitionCommandService | metric_definition_id; experiment_id; metric_name; definition_version; unit; direction HIGHER_IS_BETTER/LOWER_IS_BETTER/TARGET_RANGE; success_threshold numeric; kill_threshold? numeric; target_min?/target_max? numeric; sample_floor; window_start/end; query_version; rule_schema_version/rule_json; content_hash | PK; UQ (experiment_id,metric_name,definition_version); bounded windows/sample; TARGET_RANGE requires ordered target pair; immutable cohort pins definitions |
+| metric_observations / MetricObservationService | metric_observation_id; experiment_id; campaign_id; cohort_id; action_attribution_id; metric_definition_id/version/hash; observed_value numeric?; numerator?/denominator? numeric; availability AVAILABLE/UNAVAILABLE; source_event_refs; computed_at; query_version; original_currency?; original_amount_minor?; fx_rate_version?; amount_ils_minor? | PK; UQ (metric_definition_id,cohort_id,query_version,source_set_hash); source_set_hash; source-event and exact definition FKs; unavailable never zero; denominator > 0 when ratio exists; real/synthetic partition maintained |
+| metric_snapshots / MetricSnapshotService | metric_snapshot_id; experiment_id; campaign_id; cohort_id; snapshot_version; definition_set_hash; observation_cutoff_at; observation_set_hash; values_schema_version/values_json; values_hash; computed_by_rule_version | PK; UQ (cohort_id,snapshot_version), (cohort_id,definition_set_hash,observation_cutoff_at); members reference exact observations via DB-04 evidence links; values recompute exactly; index (cohort_id,created_at) |
+| experiment_decisions / CheckpointEvaluationService | experiment_decision_id; experiment_id; campaign_id; cohort_id; checkpoint_id; decision_version; supersedes_decision_id?; prior_stage_decision_id?; stage_ordinal; stage_name; stage_incremental_cap; stage_cumulative_cap; decision_kind; metric_snapshot_id/version/values_hash; evidence_bundle_ref CheckpointEvidenceBundle; rule_version; recommendation_ref?; strategy_version_id; activation_id; control_generation; command_idempotency_key; reason_codes; rationale_evidence_refs | PK; UQ (checkpoint_id,decision_version), (checkpoint_id,command_idempotency_key); exact same-cohort checkpoint/snapshot/evidence FKs; immutable correction lineage; canonical decision_kind CONTINUE/REVISE/KILL/INCONCLUSIVE/SAFETY_STOP at every stage; index (campaign_id,stage_ordinal) |
 
-Create `domain/experiments.py`, `domain/offers.py`, `domain/metrics.py`, `persistence/models/experiments.py`, repositories, and an M2 migration.
+Offer currency conversion inputs use an immutable rate observation with source, observed/effective/expiry instants, currency pair and exact decimal/rational value. No live rate lookup occurs inside CommercialPolicyEngine. Prices, tax, fees, delivery cost, rounding and contribution margin follow BACKEND-03; payment collection is outside scope.
 
-### Exact DDL-equivalent experiment contract
+## Cohort and checkpoint ownership
 
-```sql
-CREATE TABLE experiment_briefs (
-    experiment_brief_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    brief_version integer NOT NULL,
-    experiment_code text NOT NULL,
-    customer_segment text NOT NULL,
-    problem_hypothesis text NOT NULL,
-    offer_hypothesis text NOT NULL,
-    operator_advantage text NOT NULL,
-    jurisdictions_schema_version integer NOT NULL,
-    jurisdictions jsonb NOT NULL,
-    baseline_method text NOT NULL,
-    total_cash_cap_ils_minor bigint NOT NULL,
-    provider_cash_cap_ils_minor bigint NOT NULL,
-    operator_hours_cap numeric(8,2) NOT NULL,
-    max_researched_leads integer NOT NULL,
-    max_qualified_leads integer NOT NULL,
-    max_contacted_leads integer NOT NULL,
-    max_concurrently_active_leads integer NOT NULL,
-    authority_level text NOT NULL,
-    success_rule_schema_version integer NOT NULL,
-    success_rule jsonb NOT NULL,
-    kill_rule_schema_version integer NOT NULL,
-    kill_rule jsonb NOT NULL,
-    decision_date_condition text NOT NULL,
-    content_hash char(64) NOT NULL,
-    created_by_operator_id uuid NOT NULL,
-    supersedes_brief_id uuid NULL,
-    supersedes_brief_version integer NULL,
-    supersedes_brief_hash char(64) NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_experiment_briefs PRIMARY KEY (experiment_brief_id),
-    CONSTRAINT fk_experiment_briefs_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_experiment_briefs_operator FOREIGN KEY (created_by_operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_experiment_briefs_supersedes FOREIGN KEY (supersedes_brief_id, experiment_id, supersedes_brief_version, supersedes_brief_hash) REFERENCES experiment_briefs (experiment_brief_id, experiment_id, brief_version, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT uq_experiment_briefs_version UNIQUE (experiment_id, brief_version),
-    CONSTRAINT uq_experiment_briefs_authority UNIQUE (experiment_brief_id, experiment_id, brief_version, content_hash),
-    CONSTRAINT uq_experiment_briefs_code UNIQUE (experiment_code),
-    CONSTRAINT uq_experiment_briefs_hash UNIQUE (experiment_id, content_hash),
-    CONSTRAINT ck_experiment_briefs_versions CHECK (brief_version > 0 AND jurisdictions_schema_version > 0 AND success_rule_schema_version > 0 AND kill_rule_schema_version > 0),
-    CONSTRAINT ck_experiment_briefs_json CHECK (jsonb_typeof(jurisdictions) = 'array' AND jsonb_typeof(success_rule) = 'object' AND jsonb_typeof(kill_rule) = 'object'),
-    CONSTRAINT ck_experiment_briefs_caps CHECK (total_cash_cap_ils_minor >= 0 AND provider_cash_cap_ils_minor >= 0 AND provider_cash_cap_ils_minor <= total_cash_cap_ils_minor AND operator_hours_cap > 0 AND max_researched_leads >= 0 AND max_qualified_leads BETWEEN 0 AND max_researched_leads AND max_contacted_leads BETWEEN 0 AND max_qualified_leads AND max_concurrently_active_leads BETWEEN 0 AND max_contacted_leads),
-    CONSTRAINT ck_experiment_briefs_authority CHECK (authority_level IN ('NO_SEND','TEST_INBOX_ONLY','BOUNDED_REAL_RECIPIENTS')),
-    CONSTRAINT ck_experiment_briefs_hash CHECK (content_hash ~ '^[0-9a-f]{64}$' AND (supersedes_brief_hash IS NULL OR supersedes_brief_hash ~ '^[0-9a-f]{64}$')),
-    CONSTRAINT ck_experiment_briefs_supersedes CHECK ((brief_version = 1 AND supersedes_brief_id IS NULL AND supersedes_brief_version IS NULL AND supersedes_brief_hash IS NULL) OR (brief_version > 1 AND supersedes_brief_id IS NOT NULL AND supersedes_brief_version = brief_version - 1 AND supersedes_brief_hash IS NOT NULL))
-);
-CREATE INDEX ix_experiment_briefs_experiment_created ON experiment_briefs (experiment_id, created_at DESC);
+DB-03 campaign_cohorts owns stage identity and frozen membership. DB-04 checkpoints owns its close/freeze/decision pointer. experiment_decisions owns the immutable result, not another checkpoint state machine. CheckpointEvaluationService writes the result and invokes the campaign transition owner inside the same unit of work. An operator milestone review is release evidence, distinct from automatic runtime checkpoint decisions.
 
-CREATE TABLE ideas (
-    idea_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    idea_version integer NOT NULL,
-    title text NOT NULL,
-    problem_statement text NOT NULL,
-    target_customer text NOT NULL,
-    status text NOT NULL DEFAULT 'PROPOSED',
-    source_artifact_id uuid NOT NULL,
-    source_artifact_type text NOT NULL DEFAULT 'IdeaCandidate',
-    source_artifact_version bigint NOT NULL,
-    source_artifact_hash char(64) NOT NULL,
-    source_artifact_status text NOT NULL DEFAULT 'ACCEPTED',
-    content_hash char(64) NOT NULL,
-    supersedes_idea_id uuid NULL,
-    supersedes_idea_version integer NULL,
-    supersedes_idea_hash char(64) NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_ideas PRIMARY KEY (idea_id),
-    CONSTRAINT fk_ideas_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_ideas_supersedes FOREIGN KEY (supersedes_idea_id, experiment_id, supersedes_idea_version, supersedes_idea_hash) REFERENCES ideas (idea_id, experiment_id, idea_version, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT uq_ideas_version UNIQUE (experiment_id, idea_version),
-    CONSTRAINT uq_ideas_authority UNIQUE (idea_id, experiment_id, idea_version, content_hash),
-    CONSTRAINT uq_ideas_hash UNIQUE (experiment_id, content_hash),
-    CONSTRAINT ck_ideas_version CHECK (idea_version > 0),
-    CONSTRAINT ck_ideas_status CHECK (status IN ('PROPOSED','SELECTED','REJECTED','SUPERSEDED')),
-    CONSTRAINT ck_ideas_artifact CHECK (source_artifact_type = 'IdeaCandidate' AND source_artifact_version > 0 AND source_artifact_hash ~ '^[0-9a-f]{64}$' AND source_artifact_status = 'ACCEPTED'),
-    CONSTRAINT ck_ideas_hash CHECK (content_hash ~ '^[0-9a-f]{64}$' AND (supersedes_idea_hash IS NULL OR supersedes_idea_hash ~ '^[0-9a-f]{64}$')),
-    CONSTRAINT ck_ideas_supersedes CHECK ((idea_version = 1 AND supersedes_idea_id IS NULL AND supersedes_idea_version IS NULL AND supersedes_idea_hash IS NULL) OR (idea_version > 1 AND supersedes_idea_id IS NOT NULL AND supersedes_idea_version = idea_version - 1 AND supersedes_idea_hash IS NOT NULL))
-);
-CREATE UNIQUE INDEX uq_ideas_one_selected ON ideas (experiment_id) WHERE status = 'SELECTED';
-CREATE INDEX ix_ideas_experiment_status ON ideas (experiment_id, status);
+The only permitted (ordinal,increment,cumulative) tuples are (1,100,100), (2,200,300), (3,300,600), (4,400,1000). A smaller effective legal/provider/reputation/budget/configured cap can limit admission; it never changes the registered tuple. Stage > 1 requires the immediately preceding closed checkpoint's CONTINUE, same campaign and program version. Only CONTINUE at stages 1–3 makes next-stage admission eligible. At stage 4 CONTINUE is terminal and cannot create a fifth cohort. REVISE closes this version and requires a new offer/brief/cohort lineage outside an active cohort.
 
-CREATE TABLE offer_hypotheses (
-    offer_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    idea_id uuid NOT NULL,
-    idea_version integer NOT NULL,
-    idea_content_hash char(64) NOT NULL,
-    offer_version integer NOT NULL,
-    name text NOT NULL,
-    promise text NOT NULL,
-    deliverables_schema_version integer NOT NULL,
-    deliverables jsonb NOT NULL,
-    price_minor bigint NOT NULL,
-    currency char(3) NOT NULL,
-    assumptions_schema_version integer NOT NULL,
-    assumptions jsonb NOT NULL,
-    risk_reversals_schema_version integer NOT NULL,
-    risk_reversals jsonb NOT NULL,
-    status text NOT NULL DEFAULT 'PROPOSED',
-    source_artifact_id uuid NOT NULL,
-    source_artifact_type text NOT NULL DEFAULT 'OfferHypothesis',
-    source_artifact_version bigint NOT NULL,
-    source_artifact_hash char(64) NOT NULL,
-    source_artifact_status text NOT NULL DEFAULT 'ACCEPTED',
-    content_hash char(64) NOT NULL,
-    supersedes_offer_id uuid NULL,
-    supersedes_offer_version integer NULL,
-    supersedes_offer_hash char(64) NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_offer_hypotheses PRIMARY KEY (offer_id),
-    CONSTRAINT fk_offer_hypotheses_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_offer_hypotheses_idea FOREIGN KEY (idea_id, experiment_id, idea_version, idea_content_hash) REFERENCES ideas (idea_id, experiment_id, idea_version, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT fk_offer_hypotheses_supersedes FOREIGN KEY (supersedes_offer_id, experiment_id, supersedes_offer_version, supersedes_offer_hash) REFERENCES offer_hypotheses (offer_id, experiment_id, offer_version, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT uq_offer_hypotheses_version UNIQUE (experiment_id, offer_version),
-    CONSTRAINT uq_offer_hypotheses_authority UNIQUE (offer_id, experiment_id, offer_version, content_hash),
-    CONSTRAINT uq_offer_hypotheses_hash UNIQUE (experiment_id, content_hash),
-    CONSTRAINT ck_offer_hypotheses_versions CHECK (offer_version > 0 AND deliverables_schema_version > 0 AND assumptions_schema_version > 0 AND risk_reversals_schema_version > 0),
-    CONSTRAINT ck_offer_hypotheses_json CHECK (jsonb_typeof(deliverables) = 'array' AND jsonb_typeof(assumptions) = 'array' AND jsonb_typeof(risk_reversals) = 'array'),
-    CONSTRAINT ck_offer_hypotheses_price CHECK (price_minor > 0 AND currency ~ '^[A-Z]{3}$'),
-    CONSTRAINT ck_offer_hypotheses_status CHECK (status IN ('PROPOSED','VALIDATED','ACCEPTED','REJECTED','SUPERSEDED')),
-    CONSTRAINT ck_offer_hypotheses_artifact CHECK (source_artifact_type = 'OfferHypothesis' AND source_artifact_version > 0 AND source_artifact_hash ~ '^[0-9a-f]{64}$' AND source_artifact_status = 'ACCEPTED'),
-    CONSTRAINT ck_offer_hypotheses_hash CHECK (content_hash ~ '^[0-9a-f]{64}$' AND idea_content_hash ~ '^[0-9a-f]{64}$' AND (supersedes_offer_hash IS NULL OR supersedes_offer_hash ~ '^[0-9a-f]{64}$')),
-    CONSTRAINT ck_offer_hypotheses_supersedes CHECK ((offer_version = 1 AND supersedes_offer_id IS NULL AND supersedes_offer_version IS NULL AND supersedes_offer_hash IS NULL) OR (offer_version > 1 AND supersedes_offer_id IS NOT NULL AND supersedes_offer_version = offer_version - 1 AND supersedes_offer_hash IS NOT NULL))
-);
-CREATE INDEX ix_offer_hypotheses_experiment_status ON offer_hypotheses (experiment_id, status);
-CREATE INDEX ix_offer_hypotheses_idea ON offer_hypotheses (idea_id);
+## Immutability, evidence and safety
 
-CREATE TABLE metric_definitions (
-    metric_definition_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    metric_name text NOT NULL,
-    definition_version integer NOT NULL,
-    unit text NOT NULL,
-    direction text NOT NULL,
-    success_threshold numeric NOT NULL,
-    kill_threshold numeric NULL,
-    target_min numeric NULL,
-    target_max numeric NULL,
-    sample_floor integer NOT NULL,
-    window_start timestamptz NOT NULL,
-    window_end timestamptz NOT NULL,
-    query_version text NOT NULL,
-    rule_schema_version integer NOT NULL,
-    rule_json jsonb NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_metric_definitions PRIMARY KEY (metric_definition_id),
-    CONSTRAINT fk_metric_definitions_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT uq_metric_definitions_version UNIQUE (experiment_id, metric_name, definition_version),
-    CONSTRAINT uq_metric_definitions_authority UNIQUE (metric_definition_id, experiment_id, metric_name, definition_version, unit, window_start, window_end, query_version),
-    CONSTRAINT ck_metric_definitions_version CHECK (definition_version > 0 AND rule_schema_version > 0),
-    CONSTRAINT ck_metric_definitions_direction CHECK (direction IN ('HIGHER_IS_BETTER','LOWER_IS_BETTER','TARGET_RANGE')),
-    CONSTRAINT ck_metric_definitions_target CHECK ((direction <> 'TARGET_RANGE' AND target_min IS NULL AND target_max IS NULL) OR (direction = 'TARGET_RANGE' AND target_min IS NOT NULL AND target_max IS NOT NULL AND target_min <= target_max)),
-    CONSTRAINT ck_metric_definitions_sample CHECK (sample_floor >= 0),
-    CONSTRAINT ck_metric_definitions_window CHECK (window_start < window_end),
-    CONSTRAINT ck_metric_definitions_rule CHECK (jsonb_typeof(rule_json) = 'object')
-);
-CREATE INDEX ix_metric_definitions_experiment_name ON metric_definitions (experiment_id, metric_name, definition_version DESC);
+Offer Design consumes accepted IdeaBrief and MarketResearchReport and produces the sole OfferPackage; materialization validates schema/evidence/economics and never silently changes terms. Downstream drafts, negotiation and booking pin offer/variant versions and hashes. Cohort start freezes offer, strategy/activation, qualification filters, causal variables, metric definitions and evidence transforms. Any source correction produces a new version and becomes eligible only outside an active cohort.
 
-CREATE TABLE metric_observations (
-    metric_observation_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    metric_definition_id uuid NOT NULL,
-    metric_name text NOT NULL,
-    definition_version integer NOT NULL,
-    window_start timestamptz NOT NULL,
-    window_end timestamptz NOT NULL,
-    observed_value numeric NOT NULL,
-    numerator numeric NULL,
-    denominator numeric NULL,
-    unit text NOT NULL,
-    source_event_ids uuid[] NOT NULL,
-    computed_at timestamptz NOT NULL,
-    query_version text NOT NULL,
-    original_currency char(3) NULL,
-    original_amount numeric NULL,
-    fx_rate_to_ils numeric NULL,
-    fx_rate_source text NULL,
-    fx_rate_date date NULL,
-    amount_ils numeric NULL,
-    correlation_id uuid NOT NULL,
-    recorded_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_metric_observations PRIMARY KEY (metric_observation_id),
-    CONSTRAINT fk_metric_observations_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_metric_observations_definition FOREIGN KEY (metric_definition_id, experiment_id, metric_name, definition_version, unit, window_start, window_end, query_version) REFERENCES metric_definitions (metric_definition_id, experiment_id, metric_name, definition_version, unit, window_start, window_end, query_version) ON DELETE RESTRICT,
-    CONSTRAINT uq_metric_observations_source UNIQUE (metric_definition_id, query_version, source_event_ids),
-    CONSTRAINT uq_metric_observations_authority UNIQUE (metric_observation_id, experiment_id, computed_at),
-    CONSTRAINT ck_metric_observations_window CHECK (window_start < window_end),
-    CONSTRAINT ck_metric_observations_ratio CHECK ((numerator IS NULL AND denominator IS NULL) OR (numerator IS NOT NULL AND denominator > 0)),
-    CONSTRAINT ck_metric_observations_sources CHECK (cardinality(source_event_ids) > 0),
-    CONSTRAINT ck_metric_observations_currency CHECK ((original_currency IS NULL AND original_amount IS NULL AND fx_rate_to_ils IS NULL AND fx_rate_source IS NULL AND fx_rate_date IS NULL AND amount_ils IS NULL) OR (original_currency ~ '^[A-Z]{3}$' AND original_amount IS NOT NULL AND fx_rate_to_ils > 0 AND fx_rate_source IS NOT NULL AND fx_rate_date IS NOT NULL AND amount_ils IS NOT NULL))
-);
-CREATE INDEX ix_metric_observations_experiment_computed ON metric_observations (experiment_id, computed_at DESC);
-CREATE INDEX ix_metric_observations_correlation ON metric_observations (correlation_id);
-
-CREATE TABLE metric_snapshots (
-    metric_snapshot_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    snapshot_version integer NOT NULL,
-    definition_set_hash char(64) NOT NULL,
-    observation_cutoff_at timestamptz NOT NULL,
-    observation_ids uuid[] NOT NULL,
-    values_schema_version integer NOT NULL,
-    values_json jsonb NOT NULL,
-    values_hash char(64) NOT NULL,
-    computed_by_rule_version text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_metric_snapshots PRIMARY KEY (metric_snapshot_id),
-    CONSTRAINT fk_metric_snapshots_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT uq_metric_snapshots_version UNIQUE (experiment_id, snapshot_version),
-    CONSTRAINT uq_metric_snapshots_inputs UNIQUE (experiment_id, definition_set_hash, observation_cutoff_at),
-    CONSTRAINT uq_metric_snapshots_authority UNIQUE (metric_snapshot_id, experiment_id, snapshot_version, values_hash),
-    CONSTRAINT ck_metric_snapshots_version CHECK (snapshot_version > 0 AND values_schema_version > 0 AND cardinality(observation_ids) > 0),
-    CONSTRAINT ck_metric_snapshots_json CHECK (jsonb_typeof(values_json) = 'object'),
-    CONSTRAINT ck_metric_snapshots_hashes CHECK (definition_set_hash ~ '^[0-9a-f]{64}$' AND values_hash ~ '^[0-9a-f]{64}$')
-);
-CREATE INDEX ix_metric_snapshots_experiment_created ON metric_snapshots (experiment_id, created_at DESC);
-
-CREATE TABLE experiment_decisions (
-    experiment_decision_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    experiment_version bigint NOT NULL,
-    stage_ordinal integer NOT NULL,
-    stage_name text NOT NULL,
-    stage_incremental_cap integer NOT NULL,
-    stage_cumulative_cap integer NOT NULL,
-    prior_stage_decision_id uuid NULL,
-    decision_kind text NOT NULL,
-    metric_snapshot_id uuid NOT NULL,
-    metric_snapshot_version integer NOT NULL,
-    metric_snapshot_values_hash char(64) NOT NULL,
-    evidence_bundle_artifact_id uuid NOT NULL,
-    evidence_bundle_artifact_type text NOT NULL DEFAULT 'EvidenceBundle',
-    evidence_bundle_artifact_version bigint NOT NULL,
-    evidence_bundle_artifact_hash char(64) NOT NULL,
-    evidence_bundle_artifact_status text NOT NULL DEFAULT 'ACCEPTED',
-    rule_version text NOT NULL,
-    operator_id uuid NOT NULL,
-    command_idempotency_key text NOT NULL,
-    rationale text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_experiment_decisions PRIMARY KEY (experiment_decision_id),
-    CONSTRAINT fk_experiment_decisions_experiment_version FOREIGN KEY (experiment_id, experiment_version) REFERENCES experiments (experiment_id, version) ON DELETE RESTRICT,
-    CONSTRAINT fk_experiment_decisions_snapshot FOREIGN KEY (metric_snapshot_id, experiment_id, metric_snapshot_version, metric_snapshot_values_hash) REFERENCES metric_snapshots (metric_snapshot_id, experiment_id, snapshot_version, values_hash) ON DELETE RESTRICT,
-    CONSTRAINT fk_experiment_decisions_operator FOREIGN KEY (operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_experiment_decisions_prior FOREIGN KEY (prior_stage_decision_id) REFERENCES experiment_decisions (experiment_decision_id) ON DELETE RESTRICT,
-    CONSTRAINT uq_experiment_decisions_stage UNIQUE (experiment_id, experiment_version, stage_ordinal),
-    CONSTRAINT uq_experiment_decisions_command UNIQUE (operator_id, command_idempotency_key),
-    CONSTRAINT uq_experiment_decisions_authority UNIQUE (experiment_decision_id, experiment_id, experiment_version, metric_snapshot_id, metric_snapshot_version, metric_snapshot_values_hash, evidence_bundle_artifact_id, evidence_bundle_artifact_type, evidence_bundle_artifact_version, evidence_bundle_artifact_hash, evidence_bundle_artifact_status),
-    CONSTRAINT ck_experiment_decisions_stage CHECK ((stage_ordinal = 1 AND stage_name = 'STAGE_1_SIGNAL' AND stage_incremental_cap = 100 AND stage_cumulative_cap = 100 AND prior_stage_decision_id IS NULL) OR (stage_ordinal = 2 AND stage_name = 'STAGE_2_CONFIRM' AND stage_incremental_cap = 200 AND stage_cumulative_cap = 300 AND prior_stage_decision_id IS NOT NULL) OR (stage_ordinal = 3 AND stage_name = 'STAGE_3_REPEAT' AND stage_incremental_cap = 300 AND stage_cumulative_cap = 600 AND prior_stage_decision_id IS NOT NULL) OR (stage_ordinal = 4 AND stage_name = 'STAGE_4_ESTIMATE' AND stage_incremental_cap = 400 AND stage_cumulative_cap = 1000 AND prior_stage_decision_id IS NOT NULL)),
-    CONSTRAINT ck_experiment_decisions_kind CHECK ((stage_ordinal < 4 AND decision_kind IN ('CONTINUE','REVISE','KILL','INCONCLUSIVE','SAFETY_STOP')) OR (stage_ordinal = 4 AND decision_kind IN ('SCALE','REVISE','KILL','INCONCLUSIVE','SAFETY_STOP'))),
-    CONSTRAINT ck_experiment_decisions_version CHECK (experiment_version > 0 AND metric_snapshot_version > 0 AND evidence_bundle_artifact_version > 0),
-    CONSTRAINT ck_experiment_decisions_artifact CHECK (evidence_bundle_artifact_type = 'EvidenceBundle' AND evidence_bundle_artifact_hash ~ '^[0-9a-f]{64}$' AND evidence_bundle_artifact_status = 'ACCEPTED' AND metric_snapshot_values_hash ~ '^[0-9a-f]{64}$')
-);
-CREATE INDEX ix_experiment_decisions_snapshot ON experiment_decisions (metric_snapshot_id);
-```
-
-Deferred M2 foreign keys `fk_ideas_source_artifact`, `fk_offer_hypotheses_source_artifact`, and `fk_experiment_decisions_evidence_bundle` reference `artifacts(artifact_id)` after DB-04 exists. Metric observations instead reference their exact immutable `source_event_ids` catalog set and do not claim an artifact FK. `fk_experiments_active_brief` maps `experiments(experiment_id,active_brief_version)` to `experiment_briefs(experiment_id,brief_version)` and is `DEFERRABLE INITIALLY DEFERRED`. Exact statements are in DB-06.
-
-| Table | Exclusive write owner | Canonical events | Retention class / retention owner |
-| --- | --- | --- | --- |
-| `experiment_briefs` | `ExperimentBriefCommandService` | `experiment.created.v1`, `experiment.scope_approved.v1`, `experiment.revision_started.v1` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
-| `ideas` | `IdeaMaterializationService` | source artifact events plus audited selection | `BUSINESS_ACTIVE` / `RetentionCommandService` |
-| `offer_hypotheses` | `OfferMaterializationService` | source artifact events | `BUSINESS_ACTIVE` / `RetentionCommandService` |
-| `metric_definitions` | `MetricDefinitionCommandService` | audit record on version approval | `BUSINESS_ACTIVE` / `RetentionCommandService` |
-| `metric_observations` | `MetricObservationService` | source domain events referenced in `source_event_ids` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
-| `metric_snapshots` | `MetricSnapshotService` | referenced by `experiment.decision_recorded.v1` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
-| `experiment_decisions` | `ExperimentCommandService` | `experiment.decision_recorded.v1`, `experiment.state_changed.v1` | `SAFETY_LONG` / `RetentionCommandService` |
-
-JSON fields have versioned Pydantic schemas and GIN indexes only after query evidence justifies them. They cannot hold identities, state, foreign keys, money, or fields that require independent retention/deletion.
+Raw business/contact text and sensitive cost/budget spans are separately encrypted evidence under DB-06. Metrics and global learning use approved minimized transforms. Canonical hashes prove exact input lineage; hashes do not make PII anonymous.
 
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=DB-02-T01 milestone=M2 depends_on=PRODUCT-01-T03,PRODUCT-02-T01 mode=parallel locks=product-contracts,backend-domain -->
-- [ ] **Encode immutable brief and staged decision models —** Input: M0 artifact/metric contracts and PRODUCT-02 `100/200/300/400` staged rule. Operation: define complete schemas, hashes, version links, exact stage ordinal/name/increment/cumulative tuples, prior-barrier reference, and stage/final decision enums. Output: domain values and migration model. Test evidence: `test_brief_requires_every_m0_field`, `test_stage_tuple_is_exact`, prior-`CONTINUE`, and immutability tests. Failure behavior: reject incomplete, ambiguous, cross-program, or out-of-order records and block scope/stage approval.
+- [ ] **Encode immutable brief and staged decision models —** Input: M0 artifact/metric contracts and PRODUCT-02 `100/200/300/400` staged rule. Operation: define complete schemas, hashes, version links, exact stage ordinal/name/increment/cumulative tuples, prior-barrier reference, and canonical checkpoint decision enum. Output: domain values and migration model. Test evidence: `test_brief_requires_every_m0_field`, `test_stage_tuple_is_exact`, prior-`CONTINUE`, and immutability tests. Failure behavior: reject incomplete, ambiguous, cross-program, or out-of-order records and block scope/stage approval.
 <!-- roadmap-task id=DB-02-T02 milestone=M2 depends_on=DB-02-T01 mode=serial locks=database-schema,migration-head -->
 - [ ] **Migrate normalized experiment records —** Input: table contract. Operation: create tables, FKs, constraints, partial uniques, immutable triggers, and indexes. Output: empty M2 schema. Test evidence: real-PostgreSQL constraint matrix. Failure behavior: rollback entire revision.
 <!-- roadmap-task id=DB-02-T03 milestone=M2 depends_on=DB-02-T02 mode=parallel locks=database-schema,backend-domain -->
@@ -310,35 +59,13 @@ JSON fields have versioned Pydantic schemas and GIN indexes only after query evi
 <!-- roadmap-task id=DB-02-T04 milestone=M2 depends_on=DB-02-T03 mode=parallel locks=database-schema,backend-domain,telemetry-catalog -->
 - [ ] **Implement deterministic metric snapshot —** Input: frozen definition versions and cutoff. Operation: select eligible observations, compute values, hash inputs, and persist immutable snapshot. Output: reproducible decision input. Test evidence: `test_metric_snapshot_recomputes_byte_equivalent`. Failure behavior: mark insufficient evidence; do not synthesize zero.
 <!-- roadmap-task id=DB-02-T05 milestone=M2 depends_on=DB-02-T04 mode=serial locks=database-schema,backend-domain,milestone-gate -->
-- [ ] **Record operator decision atomically —** Input: `EVALUATING` experiment, snapshot, evidence bundle, rule version, idempotency key; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: validate, insert immutable decision, transition to `DECIDED`, and append event/audit/outbox; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: authoritative decision. Test evidence: command replay and two-writer race. Failure behavior: typed denial; no partial decision.
+- [ ] **Record checkpoint decision atomically —** Input: schema-level frozen checkpoint, metric snapshot, CheckpointEvidenceBundle, rule version and idempotency key; synthetic evidence only. Operation: implement append-only decision storage and uniqueness primitives; BACKEND-01-T09 later owns runtime evaluation and transitions, so this M2 task grants no next-cohort authority. Output: authoritative decision. Test evidence: command replay and two-writer race. Failure behavior: typed denial; no partial decision.
 
-## Test strategy
 
-- **Unit `test_authority_level_does_not_enable_outreach`:** stored brief authority is input, never the global gate.
-- **Migration `test_immutable_tables_reject_update_and_delete`:** only retention procedure may redact/delete eligible evidence.
-- **Property `test_content_hash_is_canonical`:** key order/timezone formatting cannot create false versions.
-- **Integration `test_decision_and_experiment_transition_commit_together`:** failure injection leaves neither alone.
-- **Contract `test_decision_kind_matches_arch03_and_openapi`:** one canonical enum.
-- **Recovery `test_revised_failed_experiment_preserves_rejected_brief`:** revision appends, never rewrites.
+## Verification, failure and acceptance
 
-## Security, privacy, compliance, idempotency, observability, and cost
+PostgreSQL constraint tests must reject every one-field offer/idea/research/experiment splice, invalid economics, skipped predecessor, duplicate checkpoint decision and out-of-order stage. Recompute metric snapshots and commercial fixtures from immutable sources. Crash each decision/state/event/audit/idempotency/outbox write; all commit or none. Verify discovered and supplied idea paths converge on the same IdeaBrief schema, all four exact stage tuples, and terminal CONTINUE at 1,000.
 
-Briefs store jurisdiction facts and legal-review references, not claims of compliance. Sensitive research belongs in evidence records with narrower retention. Command and content hashes deduplicate exact replays. Logs expose IDs/hashes, not rationale or customer text. Price and budget retain original currency; ILS reporting is a separate metric/cost projection.
+No model recommendation or metric confidence grants authority. Missing evidence/cost, unsafe state or incompatible correction fails closed to INCONCLUSIVE/SAFETY_STOP as applicable, with no next-stage admission. Preserve failed and negative evidence; rollback code and append corrections, never rewrite historical decisions. Retain schema introspection, hashes, economics vectors, transition/race/crash traces and privacy scans.
 
-## Failure, rollback, and operator recovery
-
-An invalid metric, missing source, stale artifact, or content-hash conflict blocks the transition. Roll back code, not history. Correct a brief/offer/metric through a new version and supersession link. An erroneous decision is not edited: cancel that experiment version if legally/operationally required, preserve the event chain, and start a revised experiment under an audited operator command.
-
-## Acceptance and retained evidence
-
-- [ ] Every M0 brief field has a typed column or versioned schema location.
-- [ ] Agent output can propose an idea/offer but cannot select, accept, decide, or activate outreach.
-- [ ] Metric snapshots are reproducible from frozen definitions and observations.
-- [ ] `DECIDED` has one immutable operator decision for the experiment version.
-- [ ] Versions/supersession preserve negative evidence.
-
-Retain schema snapshots, constraint output, canonical-hash vectors, snapshot recomputation, decision concurrency traces, and event payload fixtures.
-
-## Dependencies and next deliverable
-
-DB-02 depends on DB-01 and M0 product/metric definitions. It unlocks [WF-02](../03-workflows/02-experiment-lifecycle.md), [WF-03](../03-workflows/03-idea-validation-workflow.md), and M4 synthetic execution; it does not unlock outreach.
+DB-02 unlocks [WF-02](../03-workflows/02-experiment-lifecycle.md), [WF-03](../03-workflows/03-idea-validation-workflow.md), and [checkpoint evaluation](../03-workflows/08-checkpoint-evaluation-workflow.md); no schema migration enables outreach.

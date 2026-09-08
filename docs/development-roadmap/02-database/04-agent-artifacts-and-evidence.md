@@ -1,4 +1,4 @@
-# Agent Artifacts, Evidence, Provenance, and Evaluation Records
+# Agent Artifacts, Evidence, Provenance, and Evaluation, Checkpoint and Strategy Records
 
 **Document ID:** DB-04
 **Status:** Planned M2 persistence; populated from M3
@@ -10,290 +10,81 @@
 **Risk:** High
 **Complexity:** L
 
-## Outcome and timing
 
-M2 creates an immutable evidence substrate before any live model is trusted. M3 writes recorded-fixture and model outputs into it. Agents may produce `PRODUCED` artifacts only; deterministic validators or the operator control every later `ArtifactStatus`. Accepted artifacts can be referenced by transitions but never mutate state themselves.
+## Outcome and current repository state
 
-## Current repository state
+All structures are planned. M2 persists immutable evidence/artifact identities, M3 executes typed agents and recorded evaluations, and M6 adds checkpoint-triggered global learning. A model output is a proposal. Application validation, deterministic gate ownership and immutable accepted-artifact references decide whether a consumer may use it.
 
-The `agents/` package is empty and Pydantic AI is unused. There is no `AgentArtifactEnvelope`, agent run, prompt/model/tool version, evidence item, source capture, provenance graph, validation, acceptance, cost, or evaluation table. Roadmap artifact names are planned vocabulary only.
+DB-01 canonical digest and DB-02 field/type/nullability conventions apply. Every named table below has a UUID primary key, created_at timestamptz, explicit exclusive writer and DB-06 retention entry. Exact producer names, order, phases and inputs equal [PRODUCT-01](../00-product-strategy/01-product-scope.md#canonical-autonomous-sales-contract).
 
-## Scope and non-goals
+## Exact canonical registries
 
-In scope: immutable typed output, schema version, producer identity, input snapshot, citations/source captures, tool/model/prompt versions, abstention/confidence, token/cost data, deterministic validation, operator acceptance, supersession, and evaluation datasets/results. Non-goals: storing chain-of-thought, treating confidence as truth, allowing an agent to approve itself, unbounded page archives, opaque provider objects, vector storage without a benchmark, or direct agent state/provider side effects.
+| Artifact type | Allowed producer / materializer |
+| --- | --- |
+| IdeaBrief | IdeaDiscoveryAgent; IdeaBriefMaterializer only for USER_SUPPLIED with bypass provenance |
+| MarketResearchReport | MarketResearchAgent after accepted IdeaBrief |
+| OfferPackage | OfferDesignAgent after accepted IdeaBrief and MarketResearchReport |
+| LeadDiscoveryCandidate | LeadDiscoveryAgent after accepted OfferPackage |
+| LeadResearchDossier | LeadResearchAgent after accepted candidate and PRELIMINARY QualificationDecision |
+| QualificationDecision | QualificationService, phase PRELIMINARY or FINAL; discovery/final-qualification agent recommendation is not authoritative output |
+| ConversationStrategy | EmailWritingAgent, messaging objectives referencing existing offer terms |
+| EmailDraft | EmailWritingAgent after FINAL qualification and accepted conversation objectives |
+| ReplyEvaluation | ReplyEvaluationAgent |
+| NegotiationDecision | CommercialPolicyEngine through its deterministic materialization handler |
+| BookingIntent | BookingGateway |
+| CheckpointEvidenceBundle | CheckpointEvaluationService before ExperimentEvaluationAgent consumes it |
+| AgentLearningProposal | GlobalLearningEngine |
+| GlobalStrategyPackage | StrategyActivationService after protected evaluation gates |
+| StrategyActivation | StrategyActivationService at an eligible checkpoint boundary or initial experiment/cohort baseline |
 
-## Exact planned implementation surfaces
+Canonical AgentType is IDEA_DISCOVERY, MARKET_RESEARCH, OFFER_DESIGN, LEAD_DISCOVERY, LEAD_RESEARCH, LEAD_QUALIFICATION, EMAIL_WRITING, REPLY_EVALUATION, EXPERIMENT_EVALUATION, GLOBAL_LEARNING. One run may emit multiple artifact proposals, so there is no one-run/one-artifact-type CHECK. Deterministic outputs may retain a proposing_agent_run_id but the materializer remains their producer. Qualification, commercial/checkpoint decisions, and strategy activation cannot masquerade as agent writes.
 
-Create `domain/artifacts.py`, `agents/contracts.py`, `application/artifacts.py`, `persistence/models/artifacts.py`, repositories, and M2 migration tables:
+Protected compliance evidence remains a separate typed registry: CompliancePolicyV1, RecipientIdentityEvidenceV1, RecipientJurisdictionEvidenceV1, AffirmativeConsentEvidenceV1, CounselExceptionRecordV1, LegalReviewRecordV1, DisclosureSenderTemplateV1, GooglePolicyReviewV1. Its issuer/acceptance scope is counsel/operator/deterministic evidence owners only. Agents cannot author protected legal-policy evidence. ExperimentBrief, metric records, policy decisions and send/booking ledger records are product records outside the fifteen-artifact set.
 
-### Exact DDL-equivalent artifact and evidence contract
+## Exact artifact, IO and evidence tables
 
-```sql
-CREATE TABLE agent_runs (
-    agent_run_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    workflow_run_id uuid NOT NULL,
-    agent_type text NOT NULL,
-    agent_version text NOT NULL,
-    produced_artifact_type text NOT NULL,
-    prompt_version text NOT NULL,
-    model_provider text NOT NULL,
-    model_name text NOT NULL,
-    model_version text NOT NULL,
-    toolset_version text NOT NULL,
-    input_snapshot_hash char(64) NOT NULL,
-    state text NOT NULL DEFAULT 'PENDING',
-    abstained boolean NOT NULL DEFAULT false,
-    abstention_reason text NULL,
-    input_tokens integer NOT NULL DEFAULT 0,
-    output_tokens integer NOT NULL DEFAULT 0,
-    tool_call_count integer NOT NULL DEFAULT 0,
-    cost_minor bigint NOT NULL DEFAULT 0,
-    currency char(3) NOT NULL,
-    error_code text NULL,
-    correlation_id uuid NOT NULL,
-    started_at timestamptz NULL,
-    finished_at timestamptz NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_agent_runs PRIMARY KEY (agent_run_id),
-    CONSTRAINT fk_agent_runs_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_agent_runs_workflow_input FOREIGN KEY (workflow_run_id, experiment_id, input_snapshot_hash) REFERENCES workflow_runs (workflow_run_id, experiment_id, input_hash) ON DELETE RESTRICT,
-    CONSTRAINT uq_agent_runs_input UNIQUE (workflow_run_id, agent_type, input_snapshot_hash, agent_version),
-    CONSTRAINT uq_agent_runs_scope UNIQUE (agent_run_id, experiment_id),
-    CONSTRAINT uq_agent_runs_cost_authority UNIQUE (agent_run_id, experiment_id, workflow_run_id),
-    CONSTRAINT uq_agent_runs_producer_authority UNIQUE (agent_run_id, experiment_id, agent_type, agent_version, produced_artifact_type, input_snapshot_hash),
-    CONSTRAINT ck_agent_runs_type_output CHECK ((agent_type, produced_artifact_type) IN (('IDEA_DISCOVERY','IdeaCandidate'),('OFFER_DESIGN','OfferHypothesis'),('MARKET_RESEARCH','MarketEvidence'),('LEAD_RESEARCH','LeadEvidence'),('LEAD_QUALIFICATION','QualificationAssessment'),('OUTREACH_DRAFTING','OutreachDraft'),('REPLY_CLASSIFICATION','ReplyClassification'),('EXPERIMENT_EVALUATION','ExperimentDecision'))),
-    CONSTRAINT ck_agent_runs_hash CHECK (input_snapshot_hash ~ '^[0-9a-f]{64}$'),
-    CONSTRAINT ck_agent_runs_state CHECK (state IN ('PENDING','RUNNING','SUCCEEDED','FAILED')),
-    CONSTRAINT ck_agent_runs_usage CHECK (input_tokens >= 0 AND output_tokens >= 0 AND tool_call_count >= 0 AND cost_minor >= 0 AND currency ~ '^[A-Z]{3}$'),
-    CONSTRAINT ck_agent_runs_abstention CHECK ((NOT abstained AND abstention_reason IS NULL) OR (abstained AND abstention_reason IS NOT NULL)),
-    CONSTRAINT ck_agent_runs_terminal CHECK ((state IN ('SUCCEEDED','FAILED')) = (finished_at IS NOT NULL)),
-    CONSTRAINT ck_agent_runs_error CHECK (state <> 'FAILED' OR error_code IS NOT NULL)
-);
-CREATE INDEX ix_agent_runs_workflow_created ON agent_runs (workflow_run_id, created_at DESC);
-CREATE INDEX ix_agent_runs_type_state ON agent_runs (agent_type, state, created_at DESC);
-CREATE INDEX ix_agent_runs_correlation ON agent_runs (correlation_id);
-
-CREATE TABLE artifacts (
-    artifact_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    artifact_type text NOT NULL,
-    schema_version integer NOT NULL,
-    artifact_version bigint NOT NULL,
-    status text NOT NULL DEFAULT 'PRODUCED',
-    agent_run_id uuid NULL,
-    producer_agent_type text NULL,
-    producer_agent_version text NULL,
-    producer_input_snapshot_hash char(64) NULL,
-    content_json jsonb NOT NULL,
-    content_hash char(64) NOT NULL,
-    confidence numeric(8,7) NULL,
-    abstention_reason text NULL,
-    supersedes_artifact_id uuid NULL,
-    supersedes_artifact_version bigint NULL,
-    supersedes_artifact_hash char(64) NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_artifacts PRIMARY KEY (artifact_id),
-    CONSTRAINT fk_artifacts_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT fk_artifacts_agent_run FOREIGN KEY (agent_run_id, experiment_id, producer_agent_type, producer_agent_version, artifact_type, producer_input_snapshot_hash) REFERENCES agent_runs (agent_run_id, experiment_id, agent_type, agent_version, produced_artifact_type, input_snapshot_hash) ON DELETE RESTRICT,
-    CONSTRAINT fk_artifacts_supersedes FOREIGN KEY (supersedes_artifact_id, experiment_id, artifact_type, supersedes_artifact_version, supersedes_artifact_hash) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT uq_artifacts_version UNIQUE (experiment_id, artifact_type, artifact_version),
-    CONSTRAINT uq_artifacts_content UNIQUE (experiment_id, artifact_type, schema_version, content_hash),
-    CONSTRAINT uq_artifacts_authority UNIQUE (artifact_id, experiment_id, artifact_type, artifact_version, content_hash),
-    CONSTRAINT uq_artifacts_accepted_authority UNIQUE (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status),
-    CONSTRAINT ck_artifacts_versions CHECK (schema_version > 0 AND artifact_version > 0),
-    CONSTRAINT ck_artifacts_registry CHECK (artifact_type IN ('IdeaCandidate','OfferHypothesis','MarketEvidence','LeadEvidence','QualificationAssessment','OutreachDraft','ReplyClassification','ExperimentDecision','EvidenceBundle','CompliancePolicyV1','RecipientIdentityEvidenceV1','RecipientJurisdictionEvidenceV1','AffirmativeConsentEvidenceV1','CounselExceptionRecordV1','LegalReviewRecordV1','DisclosureSenderTemplateV1','GooglePolicyReviewV1')),
-    CONSTRAINT ck_artifacts_producer CHECK ((agent_run_id IS NOT NULL AND producer_agent_type IS NOT NULL AND producer_agent_version IS NOT NULL AND producer_input_snapshot_hash ~ '^[0-9a-f]{64}$' AND artifact_type IN ('IdeaCandidate','OfferHypothesis','MarketEvidence','LeadEvidence','QualificationAssessment','OutreachDraft','ReplyClassification','ExperimentDecision')) OR (agent_run_id IS NULL AND producer_agent_type IS NULL AND producer_agent_version IS NULL AND producer_input_snapshot_hash IS NULL AND artifact_type IN ('EvidenceBundle','CompliancePolicyV1','RecipientIdentityEvidenceV1','RecipientJurisdictionEvidenceV1','AffirmativeConsentEvidenceV1','CounselExceptionRecordV1','LegalReviewRecordV1','DisclosureSenderTemplateV1','GooglePolicyReviewV1'))),
-    CONSTRAINT ck_artifacts_supersedes CHECK ((artifact_version = 1 AND supersedes_artifact_id IS NULL AND supersedes_artifact_version IS NULL AND supersedes_artifact_hash IS NULL) OR (artifact_version > 1 AND supersedes_artifact_id IS NOT NULL AND supersedes_artifact_version = artifact_version - 1 AND supersedes_artifact_hash ~ '^[0-9a-f]{64}$')),
-    CONSTRAINT ck_artifacts_status CHECK (status IN ('PRODUCED','VALIDATED','REJECTED','ACCEPTED','SUPERSEDED')),
-    CONSTRAINT ck_artifacts_content CHECK (jsonb_typeof(content_json) = 'object' AND content_hash ~ '^[0-9a-f]{64}$'),
-    CONSTRAINT ck_artifacts_confidence CHECK (confidence IS NULL OR confidence BETWEEN 0 AND 1),
-    CONSTRAINT ck_artifacts_abstention CHECK (abstention_reason IS NULL OR confidence IS NULL)
-);
-CREATE INDEX ix_artifacts_experiment_type_status ON artifacts (experiment_id, artifact_type, status, artifact_version DESC);
-CREATE INDEX ix_artifacts_agent_run ON artifacts (agent_run_id) WHERE agent_run_id IS NOT NULL;
-
-CREATE TABLE evidence_items (
-    evidence_item_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    evidence_type text NOT NULL,
-    source_locator_ciphertext bytea NOT NULL,
-    citation_uri text NOT NULL,
-    citation_uri_hash char(64) NOT NULL,
-    source_policy_version text NOT NULL,
-    source_provider text NOT NULL,
-    retrieved_at timestamptz NOT NULL,
-    published_at timestamptz NULL,
-    content_hash char(64) NOT NULL,
-    capture_ref text NOT NULL,
-    mime_type text NOT NULL,
-    language text NOT NULL,
-    license_basis text NOT NULL,
-    retention_class text NOT NULL DEFAULT 'SENSITIVE_SHORT',
-    redaction_state text NOT NULL DEFAULT 'RAW_RESTRICTED',
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_evidence_items PRIMARY KEY (evidence_item_id),
-    CONSTRAINT fk_evidence_items_experiment FOREIGN KEY (experiment_id) REFERENCES experiments (experiment_id) ON DELETE RESTRICT,
-    CONSTRAINT uq_evidence_items_capture UNIQUE (source_provider, citation_uri_hash, content_hash),
-    CONSTRAINT uq_evidence_items_authority UNIQUE (evidence_item_id, experiment_id, content_hash),
-    CONSTRAINT ck_evidence_items_hash CHECK (content_hash ~ '^[0-9a-f]{64}$' AND citation_uri_hash ~ '^[0-9a-f]{64}$'),
-    CONSTRAINT ck_evidence_items_locator CHECK (octet_length(source_locator_ciphertext) >= 32),
-    CONSTRAINT ck_evidence_items_citation CHECK (citation_uri LIKE 'https://%' AND octet_length(citation_uri) BETWEEN 9 AND 2000 AND position('#' IN citation_uri) = 0 AND citation_uri !~ '[[:space:]]' AND citation_uri !~ '^https://[^/]*@' AND source_policy_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$'),
-    CONSTRAINT ck_evidence_items_retention CHECK (retention_class = 'SENSITIVE_SHORT'),
-    CONSTRAINT ck_evidence_items_redaction CHECK (redaction_state IN ('RAW_RESTRICTED','REDACTED','PURGED'))
-);
-CREATE INDEX ix_evidence_items_experiment_retrieved ON evidence_items (experiment_id, retrieved_at DESC);
-CREATE INDEX ix_evidence_items_source ON evidence_items (source_provider, citation_uri_hash);
-
-CREATE TABLE artifact_evidence_links (
-    artifact_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    artifact_type text NOT NULL,
-    artifact_version bigint NOT NULL,
-    artifact_hash char(64) NOT NULL,
-    evidence_item_id uuid NOT NULL,
-    evidence_content_hash char(64) NOT NULL,
-    claim_pointer text NOT NULL,
-    relationship text NOT NULL,
-    source_excerpt_hash char(64) NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_artifact_evidence_links PRIMARY KEY (artifact_id, evidence_item_id, claim_pointer, relationship),
-    CONSTRAINT fk_artifact_evidence_links_artifact FOREIGN KEY (artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT fk_artifact_evidence_links_evidence FOREIGN KEY (evidence_item_id, experiment_id, evidence_content_hash) REFERENCES evidence_items (evidence_item_id, experiment_id, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT ck_artifact_evidence_links_relationship CHECK (relationship IN ('SUPPORTS','CONTRADICTS','CONTEXT')),
-    CONSTRAINT ck_artifact_evidence_links_pointer CHECK (claim_pointer LIKE '/%'),
-    CONSTRAINT ck_artifact_evidence_links_hash CHECK (artifact_version > 0 AND artifact_hash ~ '^[0-9a-f]{64}$' AND evidence_content_hash ~ '^[0-9a-f]{64}$' AND (source_excerpt_hash IS NULL OR source_excerpt_hash ~ '^[0-9a-f]{64}$'))
-);
-CREATE INDEX ix_artifact_evidence_links_evidence ON artifact_evidence_links (evidence_item_id, artifact_id);
-
-CREATE TABLE artifact_validations (
-    artifact_validation_id uuid NOT NULL,
-    artifact_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    artifact_type text NOT NULL,
-    artifact_version bigint NOT NULL,
-    artifact_hash char(64) NOT NULL,
-    validator_version text NOT NULL,
-    schema_valid boolean NOT NULL,
-    provenance_valid boolean NOT NULL,
-    reason_codes text[] NOT NULL,
-    facts_hash char(64) NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_artifact_validations PRIMARY KEY (artifact_validation_id),
-    CONSTRAINT fk_artifact_validations_artifact FOREIGN KEY (artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash) ON DELETE RESTRICT,
-    CONSTRAINT uq_artifact_validations_inputs UNIQUE (artifact_id, validator_version, facts_hash),
-    CONSTRAINT uq_artifact_validations_authority UNIQUE (artifact_validation_id, artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash, validator_version, facts_hash, schema_valid, provenance_valid),
-    CONSTRAINT ck_artifact_validations_reasons CHECK ((schema_valid AND provenance_valid AND cardinality(reason_codes) = 0) OR (NOT (schema_valid AND provenance_valid) AND cardinality(reason_codes) > 0)),
-    CONSTRAINT ck_artifact_validations_hash CHECK (facts_hash ~ '^[0-9a-f]{64}$')
-);
-CREATE INDEX ix_artifact_validations_artifact_created ON artifact_validations (artifact_id, created_at DESC);
-
-CREATE TABLE artifact_acceptances (
-    artifact_acceptance_id uuid NOT NULL,
-    artifact_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    artifact_type text NOT NULL,
-    artifact_version bigint NOT NULL,
-    artifact_hash char(64) NOT NULL,
-    artifact_status text NOT NULL DEFAULT 'ACCEPTED',
-    artifact_validation_id uuid NOT NULL,
-    validator_version text NOT NULL,
-    validation_facts_hash char(64) NOT NULL,
-    validation_schema_valid boolean NOT NULL DEFAULT true,
-    validation_provenance_valid boolean NOT NULL DEFAULT true,
-    acceptance_mode text NOT NULL,
-    operator_id uuid NULL,
-    gate_version text NOT NULL,
-    scope_hash char(64) NOT NULL,
-    command_idempotency_key text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_artifact_acceptances PRIMARY KEY (artifact_acceptance_id),
-    CONSTRAINT fk_artifact_acceptances_artifact FOREIGN KEY (artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash, artifact_status) REFERENCES artifacts (artifact_id, experiment_id, artifact_type, artifact_version, content_hash, status) ON DELETE RESTRICT DEFERRABLE INITIALLY DEFERRED,
-    CONSTRAINT fk_artifact_acceptances_validation FOREIGN KEY (artifact_validation_id, artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash, validator_version, validation_facts_hash, validation_schema_valid, validation_provenance_valid) REFERENCES artifact_validations (artifact_validation_id, artifact_id, experiment_id, artifact_type, artifact_version, artifact_hash, validator_version, facts_hash, schema_valid, provenance_valid) ON DELETE RESTRICT,
-    CONSTRAINT fk_artifact_acceptances_operator FOREIGN KEY (operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
-    CONSTRAINT uq_artifact_acceptances_scope UNIQUE (artifact_id, scope_hash),
-    CONSTRAINT uq_artifact_acceptances_command UNIQUE (command_idempotency_key),
-    CONSTRAINT ck_artifact_acceptances_mode CHECK (acceptance_mode IN ('OPERATOR','DETERMINISTIC_GATE')),
-    CONSTRAINT ck_artifact_acceptances_operator CHECK ((acceptance_mode = 'OPERATOR') = (operator_id IS NOT NULL)),
-    CONSTRAINT ck_artifact_acceptances_validated CHECK (artifact_status = 'ACCEPTED' AND validation_schema_valid AND validation_provenance_valid),
-    CONSTRAINT ck_artifact_acceptances_hash CHECK (artifact_version > 0 AND artifact_hash ~ '^[0-9a-f]{64}$' AND validation_facts_hash ~ '^[0-9a-f]{64}$' AND scope_hash ~ '^[0-9a-f]{64}$')
-);
-CREATE INDEX ix_artifact_acceptances_created ON artifact_acceptances (created_at DESC);
-
-CREATE TABLE evaluation_cases (
-    evaluation_case_id uuid NOT NULL,
-    suite_name text NOT NULL,
-    suite_version text NOT NULL,
-    case_key text NOT NULL,
-    agent_type text NOT NULL,
-    input_schema_version text NOT NULL,
-    input_snapshot jsonb NOT NULL,
-    input_hash char(64) NOT NULL,
-    expected_schema_version text NOT NULL,
-    expected_snapshot jsonb NOT NULL,
-    expected_hash char(64) NOT NULL,
-    rubric_schema_version integer NOT NULL,
-    rubric_json jsonb NOT NULL,
-    sensitivity_class text NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_evaluation_cases PRIMARY KEY (evaluation_case_id),
-    CONSTRAINT uq_evaluation_cases_key UNIQUE (suite_name, suite_version, case_key),
-    CONSTRAINT uq_evaluation_cases_authority UNIQUE (evaluation_case_id, suite_name, suite_version, case_key, agent_type),
-    CONSTRAINT ck_evaluation_cases_agent_type CHECK (agent_type IN ('IDEA_DISCOVERY','OFFER_DESIGN','MARKET_RESEARCH','LEAD_RESEARCH','LEAD_QUALIFICATION','OUTREACH_DRAFTING','REPLY_CLASSIFICATION','EXPERIMENT_EVALUATION')),
-    CONSTRAINT ck_evaluation_cases_versions CHECK (input_schema_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$' AND expected_schema_version ~ '^[a-z0-9][a-z0-9._-]{0,63}$' AND rubric_schema_version > 0),
-    CONSTRAINT ck_evaluation_cases_json CHECK (jsonb_typeof(input_snapshot) = 'object' AND jsonb_typeof(expected_snapshot) = 'object' AND jsonb_typeof(rubric_json) = 'object'),
-    CONSTRAINT ck_evaluation_cases_hashes CHECK (input_hash ~ '^[0-9a-f]{64}$' AND expected_hash ~ '^[0-9a-f]{64}$'),
-    CONSTRAINT ck_evaluation_cases_sensitivity CHECK (sensitivity_class IN ('SYNTHETIC','REDACTED','RESTRICTED'))
-);
-CREATE INDEX ix_evaluation_cases_suite ON evaluation_cases (suite_name, suite_version, created_at DESC);
-
-CREATE TABLE evaluation_results (
-    evaluation_result_id uuid NOT NULL,
-    evaluation_case_id uuid NOT NULL,
-    agent_run_id uuid NOT NULL,
-    experiment_id uuid NOT NULL,
-    suite_name text NOT NULL,
-    suite_version text NOT NULL,
-    case_key text NOT NULL,
-    agent_type text NOT NULL,
-    agent_version text NOT NULL,
-    produced_artifact_type text NOT NULL,
-    agent_input_snapshot_hash char(64) NOT NULL,
-    evaluator_version text NOT NULL,
-    scores_schema_version integer NOT NULL,
-    scores_json jsonb NOT NULL,
-    scores_hash char(64) NOT NULL,
-    passed boolean NOT NULL,
-    reason_codes text[] NOT NULL,
-    created_at timestamptz NOT NULL DEFAULT statement_timestamp(),
-    CONSTRAINT pk_evaluation_results PRIMARY KEY (evaluation_result_id),
-    CONSTRAINT fk_evaluation_results_case FOREIGN KEY (evaluation_case_id, suite_name, suite_version, case_key, agent_type) REFERENCES evaluation_cases (evaluation_case_id, suite_name, suite_version, case_key, agent_type) ON DELETE RESTRICT,
-    CONSTRAINT fk_evaluation_results_agent_run FOREIGN KEY (agent_run_id, experiment_id, agent_type, agent_version, produced_artifact_type, agent_input_snapshot_hash) REFERENCES agent_runs (agent_run_id, experiment_id, agent_type, agent_version, produced_artifact_type, input_snapshot_hash) ON DELETE RESTRICT,
-    CONSTRAINT uq_evaluation_results_run UNIQUE (evaluation_case_id, agent_run_id, evaluator_version),
-    CONSTRAINT ck_evaluation_results_schema CHECK (scores_schema_version > 0 AND jsonb_typeof(scores_json) = 'object' AND scores_hash ~ '^[0-9a-f]{64}$' AND agent_input_snapshot_hash ~ '^[0-9a-f]{64}$'),
-    CONSTRAINT ck_evaluation_results_reasons CHECK ((passed AND cardinality(reason_codes) = 0) OR (NOT passed AND cardinality(reason_codes) > 0))
-);
-CREATE INDEX ix_evaluation_results_agent_passed ON evaluation_results (agent_run_id, passed);
-```
-
-`citation.uri.v1` is the only URI allowed to leave the restricted evidence boundary. Ingest first retains the raw locator only as `source_locator_ciphertext`, then constructs `citation_uri` by requiring HTTPS; canonicalizing the IDNA host, default port, dot segments, and percent encoding; dropping userinfo and every fragment; and dropping the query by default. The only query keys that may survive are the closed lowercase set `id`, `page`, and `lang`, each at most once with a public, nonempty, non-control-character value. The sanitizer rejects any key or value containing credential/session material (including `token`, `access_token`, `refresh_token`, `code`, `sig`, `signature`, `key`, `api_key`, `session`, `auth`, `email`, `x-amz-*`, `x-goog-*`, JWT structure, or a high-entropy secret-shaped value), rejects ambiguous/invalid encodings, and fails closed rather than returning the raw URI. API, events, audit, logs, metrics, reports, exports, and browser DOM receive only the sanitized `citation_uri`; fetch/replay is the only reader of the encrypted raw locator.
-
-Normative fixtures retain `https://example.com/report?id=42&page=3&lang=en` unchanged; normalize `HTTPS://EXAMPLE.COM:443/a/../report?id=42#results` to `https://example.com/report?id=42`; and reject `https://user:pass@example.com/a`, `http://example.com/a`, `https://example.com/a?token=abc`, `https://example.com/a?x-amz-signature=abc`, `https://example.com/a?redirect=https%3A%2F%2Fevil.example`, duplicate allowlisted keys, malformed percent escapes, and secret-shaped query values. Tests assert the raw locator and rejected input never appear in any public serializer or telemetry sink.
-
-`evaluation_cases.input_hash` and `expected_hash` use DB-01's canonical RFC 8785 envelope algorithm with their respective text schema versions and JSON payloads. `agent_runs.input_snapshot_hash` is not a new digest: its composite FK requires the exact verified `workflow_runs.input_hash`. `uq_agent_runs_cost_authority` additionally publishes the immutable `(agent_run_id,experiment_id,workflow_run_id)` tuple consumed by DB-05, so a cost row cannot pair an agent from W1 with W2 merely because both runs share an experiment. Evaluation fixtures include DB-01's golden vectors; schema migration validates the old digest before an in-memory upcast and writes a new immutable evaluation-case version rather than mutating bytes.
-
-| Table | Exclusive write owner | Retention class / retention owner |
+| Table / writer | Fields / required constraints and indexes |
 | --- | --- | --- |
-| `agent_runs` | `AgentRunRecordingService` | `EVALUATION_VERSIONED` / `RetentionCommandService` |
-| `artifacts` | `ArtifactCommandService`; agents may request only the `PRODUCED` insert path | `BUSINESS_ACTIVE` / `RetentionCommandService` |
-| `evidence_items` | `EvidenceIngestService` | `SENSITIVE_SHORT` / `RetentionCommandService` |
-| `artifact_evidence_links` | `ArtifactValidationService` | `BUSINESS_ACTIVE` / `RetentionCommandService` |
-| `artifact_validations` | `ArtifactValidationService` | `SAFETY_LONG` / `RetentionCommandService` |
-| `artifact_acceptances` | `ArtifactAcceptanceService` | `SAFETY_LONG` / `RetentionCommandService` |
-| `evaluation_cases` | `EvaluationSuiteCommandService` | `EVALUATION_VERSIONED` / `RetentionCommandService` |
-| `evaluation_results` | `EvaluationExecutionService` | `EVALUATION_VERSIONED` / `RetentionCommandService` |
+| agent_runs / AgentRunRecordingService | agent_run_id; experiment_id; workflow_run_id; agent_type; agent_version/configuration_manifest_hash; input_snapshot_id/input_snapshot_hash; strategy_version_id/hash; activation_id?; producer_strategy_version; cohort_id?; checkpoint_id?; control_generation; status RUNNING/SUCCEEDED/ABSTAINED/FAILED/CANCELLED; terminal_schema_version?; terminal_result_hash?; output_snapshot_id?; error_code?; started_at; finished_at?; token/tool/attempt/runtime/cost ceilings and observed counters. PK; UQ (agent_run_id,experiment_id,workflow_run_id); FK (workflow_run_id,experiment_id) only to workflow scope; output and terminal state pair checks; index (workflow_run_id,started_at). |
+| agent_io_snapshots / AgentRunRecordingService | snapshot_id; agent_run_id; direction INPUT/OUTPUT; schema_version; snapshot_ciphertext bytea; snapshot_hash; sanitization_policy_version; accepted_input_ref_set_hash; provider_ledger_hash?; captured_at; content_expiry_at; purge_receipt_id?. PK; UQ (agent_run_id,direction); same-run exact hash FK; both input and typed output immutable, including abstention/failure; encryption/redaction before model transfer; never hidden reasoning. |
+| artifact_input_snapshots / ArtifactCommandService | snapshot_id; producer_kind APPLICATION/PROTECTED_EVIDENCE; producer_id; scope_kind EXPERIMENT/GLOBAL; experiment_id?; schema_version; snapshot_ciphertext bytea; snapshot_hash; input_ref_set_hash; sanitization_policy_version; captured_at; content_expiry_at. PK; UQ (snapshot_id,snapshot_hash); immutable deterministic/protected input materialization; source refs normalized below; index (producer_id,captured_at). |
+| snapshot_input_dependencies / ArtifactValidationService | dependency_id; snapshot_kind AGENT_IO/ARTIFACT_INPUT; snapshot_id/hash; ordinal; input_role; source_record_kind; source_record_id/version/hash; source_scope_kind; source_experiment_id?; acceptance_id?; created_at. PK; UQ (snapshot_kind,snapshot_id,ordinal); deferred discriminated snapshot/source FK registry validates exact immutable tuple, accepted artifact receipt where applicable, producer-before-consumer and scope; no hidden foreign keys inside encrypted snapshots. |
+| artifacts / ArtifactCommandService | artifact_id; scope_kind EXPERIMENT/GLOBAL; experiment_id?; artifact_type; schema_version; artifact_version; producer_kind AGENT/APPLICATION/PROTECTED_EVIDENCE; producer_id; producer_strategy_version; agent_run_id?; proposing_agent_run_id?; input_snapshot_kind AGENT_IO/ARTIFACT_INPUT; input_snapshot_id; input_snapshot_hash; output_hash/content_hash; payload_ciphertext bytea; evidence_ref_set_hash; governing_mode PRODUCT/EVALUATION_ONLY/BOOTSTRAP; strategy_version_id/hash?; activation_id?; configuration_manifest_ref; disposition PRODUCED/VALIDATED/ACCEPTED/REJECTED/SUPERSEDED; supersedes_artifact_id?; created_at. PK; UQ NULLS NOT DISTINCT (artifact_id,scope_kind,experiment_id,artifact_type,artifact_version,content_hash); GLOBAL requires experiment_id NULL and only global strategy/learning types; EXPERIMENT requires experiment_id; same-scope immediate supersession; strict registry/producer guard; immutable bytes; disposition ledger below prevents mutable status from invalidating historic refs. |
+| artifact_evidence_links / ArtifactValidationService | artifact_evidence_link_id; exact ArtifactRef; evidence_id/version/hash; claim_path; relation SUPPORTS/CONTRADICTS/CONTEXT; source_span_locator; required boolean. PK; UQ (artifact_id,evidence_id,claim_path,relation); exact parent FKs and source span bounds; index evidence_id. |
+| evidence_items / EvidenceIngestService | evidence_id; experiment_id; evidence_version; source_id?; source_type; source_uri_ciphertext? bytea; source_locator_hash; captured_at/published_at?/expires_at; content_ciphertext bytea; content_hash; field_status FACT/ESTIMATE/UNKNOWN; confidence numeric(8,7); collection_scope_version; extraction_version; redaction_version; fact_schema_version/facts_ciphertext; supersedes_evidence_id?. PK; UQ (evidence_id,experiment_id,evidence_version,content_hash); source/encryption/access rules; index (experiment_id,captured_at). |
+| artifact_validations / ArtifactValidationService | validation_id; exact ArtifactRef; validator_version; facts_hash; allowed; reason_codes; evidence_link_set_hash; completed_at. PK; UQ (artifact_id,validator_version,facts_hash); immutable result; acceptance requires exact passed validation; index artifact_id. |
+| artifact_acceptances / ArtifactAcceptanceService | acceptance_id; exact ArtifactRef; validation_id; disposition ACCEPTED/REJECTED/SUPERSEDED; previous_acceptance_id?; actor_type/service_id; rule_version; reason_codes; content_hash; decided_at. PK; UQ (artifact_id,disposition,content_hash); append-only receipt. AcceptedRef adds acceptance_id, not an FK to a mutable current-status column. Fresh action gates also verify no later rejection/supersession. |
+| evaluation_cases / EvaluationSuiteCommandService | evaluation_case_id; suite_id/version/hash; agent_type; schema_version; input_snapshot_ciphertext bytea; input_hash; expected_schema_version/expected_snapshot_ciphertext/expected_hash; split TRAIN/COMPARISON/HOLDOUT/GUARDRAIL; source_checkpoint_id?; minimized_transform_version; enabled; supersedes_case_id?. PK; UQ (suite_id,version,evaluation_case_id); protected holdouts unavailable to candidate mutation; no raw production PII default. |
+| evaluation_results / EvaluationExecutionService | evaluation_result_id; evaluation_case_id/version/hash; agent_run_id; configuration_manifest_hash; output_hash; evaluator_version; score numeric; allowed; reason_codes; provider_ledger_hash; cost_minor/currency; completed_at. PK; UQ (evaluation_case_id,configuration_manifest_hash,evaluator_version,agent_run_id); delegate run/snapshot writes to recorder; index suite/configuration through exact case FK. |
 
-The agent-produced artifact registry is exactly the eight pairs enforced by `ck_agent_runs_type_output`: `IdeaCandidate`, `OfferHypothesis`, `MarketEvidence`, `LeadEvidence`, `QualificationAssessment`, `OutreachDraft`, `ReplyClassification`, and `ExperimentDecision`. `EvidenceBundle` is a deterministic application artifact. The deterministic compliance registry additionally permits only `CompliancePolicyV1`, `RecipientIdentityEvidenceV1`, `RecipientJurisdictionEvidenceV1`, `AffirmativeConsentEvidenceV1`, `CounselExceptionRecordV1`, `LegalReviewRecordV1`, `DisclosureSenderTemplateV1`, and `GooglePolicyReviewV1`; these nine deterministic types have no `agent_run_id`. `ExperimentBrief` and `MetricSnapshot` are authoritative product records in DB-02, not rows in `artifacts`. Every recipient-bound record must bind an `ACCEPTED` exact `(artifact_id,experiment_id,artifact_type,artifact_version,content_hash,status)` tuple. A business table remains authoritative when a corresponding artifact is accepted and materialized; the artifact is retained as provenance, not a competing aggregate.
+Every artifact requires input_snapshot_id/hash. Agent-produced artifacts use the exact agent_io_snapshots INPUT row; deterministic/protected producers first persist artifact_input_snapshots and normalized snapshot_input_dependencies. Outputs are typed artifacts/IO with no invented agent run. Each agent gets its own immutable INPUT snapshot, assembled only from accepted predecessor versions, complete sanitized conversation where applicable and exact configuration. agent_runs.input_snapshot_hash equals that agent snapshot's hash, never workflow_runs.input_hash. Workflow lineage validates experiment/workflow ID and explicit predecessor links; hashing different inputs to the same value or coercing all agent snapshots to workflow input is prohibited. Outputs and provider ledgers are immutable and linked to that exact run; cost_entries cannot splice another workflow's agent_run_id.
+
+Snapshots use RFC 8785 envelope hashes before encryption; readers validate decrypted bytes before exact schema dispatch. Upcasting is in-memory only; changed input starts a new run. Unknown or poisoned source content remains untrusted data, cannot supply instructions/tool names, and is redacted before any model call. Field confidence is evidence metadata, not authorization.
+
+### Global scope and baseline without circular dependencies
+
+GlobalStrategyPackage and global AgentLearningProposal have scope_kind GLOBAL and experiment_id NULL in artifacts; their source checkpoint lineage remains explicit. StrategyActivation is campaign/experiment-scoped. Canonical AcceptedRef binds artifact_id,scope_kind,experiment_id?,artifact_type,artifact_version,content_hash,acceptance_id. All child scope checks use a deferred discriminator-aware constraint, so a NULL experiment cannot bypass identity/type/version/hash validation. Experiment-local artifacts cannot be borrowed from another experiment; a GLOBAL package is intentionally consumable across experiments.
+
+Before product Idea Discovery or Market Research, StrategyActivationService.initialize_baseline records one immutable EXPERIMENT_BASELINE activation from the approved baseline package/configuration manifest. These pre-cohort calls pin that activation and have no offer/cohort yet. Initial cohort admission creates its COHORT baseline activation from the newest compatible approved package and pins offer/membership; later adoption is checkpoint-only. Isolated M3 evaluation calls instead pin signed candidate manifest plus explicit EVALUATION_ONLY and nullable activation, with no product authority. A baseline's initialization is not checkpoint-triggered learning or promotion and cannot alter a running cohort. The initial package/activation artifact uses governing_mode BOOTSTRAP, exact signed approved configuration manifest and producer_strategy_version; no agent runs and no product side effect are permitted in that mode. Its governing strategy/activation refs may be null to avoid a self-authorizing bootstrap cycle. All product-generated artifacts require their existing governing package/activation; isolated EVALUATION_ONLY artifacts require the signed candidate manifest and cannot become product authority.
+
+## Exact checkpoint, global strategy and learning tables
+
+| Table / writer | Fields / required constraints and indexes |
+| --- | --- | --- |
+| checkpoints / CheckpointEvaluationService | checkpoint_id; experiment_id; campaign_id; cohort_id; stage_ordinal; checkpoint_generation; state OPEN/CLOSING/EVIDENCE_FROZEN/EVALUATING/DECIDED; member_set_hash; cutoff_at?; offer_ref; strategy_version_id/hash; activation_id; metric_definition_set_hash; causal_variables_hash; evidence_definition_version/hash; evidence_bundle_ref?; current_decision_id?; closed_at?; control_generation. PK; UQ cohort_id; exact DB-03 CohortRef FK; version/CAS and state receipts; index (campaign_id,stage_ordinal). |
+| checkpoint_evidence_members / CheckpointEvaluationService | checkpoint_evidence_member_id; checkpoint_id; bundle_artifact_ref CheckpointEvidenceBundle; evidence_partition PRIMARY/SECONDARY/GUARDRAIL; source_campaign_id/cohort_id/checkpoint_id; source_record_kind; source_record_id/version/hash; transform_id/version/hash; safe_payload_hash; observation_cutoff_at; missing_or_unresolved_reason?; evidence_mode SYNTHETIC/OWNED_TEST/REAL. PK; UQ (checkpoint_id,evidence_partition,source_record_kind,source_record_id,transform_id); exact normalized source registry/FKs; primary must be triggering completed stage; index checkpoint_id. |
+| global_learning_runs / StrategyActivationService persistence, workflow coordinates | learning_run_id; triggering_checkpoint_id; bundle_ref; evidence_partition_hashes; applicable_agent_registry_version/hash; current_strategy_version_id; attempt; supersedes_run_id?; state PENDING/EVALUATING/DECIDED/FAILED; input_hash; completed_at?. PK; UQ (triggering_checkpoint_id,attempt); one durable initial trigger per closed checkpoint; finite retries linked, not another learning trigger. |
+| agent_learning_results / StrategyActivationService | learning_result_id; learning_run_id; agent_type; proposal_ref AgentLearningProposal; result PROMOTE/KEEP/ROLLBACK/INSUFFICIENT_EVIDENCE; current_agent_strategy_version; proposed_agent_strategy_version?; evaluation_manifest_ref; expected_metrics/confidence; reason_codes; rollback_rule_ref?; content_hash. PK; UQ (learning_run_id,agent_type); every applicable agent exactly once; KEEP/INSUFFICIENT_EVIDENCE forbids mutation; no fifth result. |
+| global_strategy_versions / StrategyActivationService | strategy_version_id; strategy_version; artifact_ref GlobalStrategyPackage; content_hash; parent_strategy_version_id?; agent_registry_version; agent_configuration_map_version/hash; protected_bounds_hash; promotion_evidence_hash; minimum_evidence_rule_version; offline_comparison_ref; holdout_ref; cross_campaign_guardrail_ref; expected_metric_schema_version/expected_metrics; confidence; rollback_rule_ref; validity_from/expires_at; promotion_status APPROVED/REJECTED; approved_at?. PK; UQ strategy_version, (strategy_version_id,content_hash); immutable package; exact all-agent map lives in normalized strategy_agent_versions rows; unknown/missing agent fails. |
+| strategy_agent_versions / StrategyActivationService | strategy_agent_version_id; strategy_version_id; agent_type; producer_strategy_version; configuration_manifest_ref; content_hash; parent_agent_version?; learning_result_id?. PK; UQ (strategy_version_id,agent_type); exact configuration/evaluation FKs; protected bound equality required. |
+| strategy_activations / StrategyActivationService | activation_id; artifact_ref StrategyActivation; activation_scope EXPERIMENT_BASELINE/COHORT; experiment_id; campaign_id?; cohort_id?; strategy_version_id/hash; prior_activation_id?; boundary_checkpoint_id?; activation_kind BASELINE/PROMOTION/ROLLBACK; expected_control_generation; expected_checkpoint_generation?; effective_at; activation_hash; reason_code. PK; partial UQ experiment_id WHERE EXPERIMENT_BASELINE, partial UQ cohort_id WHERE COHORT; baseline requires campaign/cohort/checkpoint null and BASELINE; cohort requires same-campaign exact cohort and prior/boundary refs except its initial BASELINE; append-only, no running-cohort pointer update. |
+| strategy_rollbacks / StrategyActivationService | rollback_id; triggering_checkpoint_id; affected_campaign_id; prior_activation_id; target_approved_strategy_version_id; deterioration_rule_version; observation_set_hash; compatibility_result_hash; reason_codes; action_pause_generation; closed_checkpoint_id?; rollback_activation_id?; recorded_at. PK; UQ (affected_campaign_id,prior_activation_id,deterioration_rule_version,observation_set_hash); store pending/blocked evidence without rewriting prior actions; rollback_activation_id requires closed_checkpoint_id and a closed boundary. |
+
+A checkpoint freezes completed-stage counts, delivered/unique-recipient denominators, replies, qualified commitments, negotiation outcomes/economics, bookings/show rate, cost/operator-time evidence, failures/incidents and explicit missing/synthetic/unresolved flags. Raw PII/thread bodies/calendar details are excluded. An approved EvidenceTransformV1 defines every learning field and its lineage; primary, secondary and guardrail partitions remain distinct.
+
+Checkpoint closure/decision and unique learning outbox trigger commit atomically. A late observation appends source evidence and can create a linked correction; it never mutates frozen bundles or historical decisions. Only CONTINUE permits later stage admission and never at a fifth stage. Strategy promotion is separate from activation: the triggering campaign waits for its next cohort after CONTINUE, other active campaigns wait for their own checkpoint, future campaigns use newest compatible approved version. Rollback immediately pauses affected future actions, closes the checkpoint, then activates an approved compatible prior version at the boundary. Historical action attribution stays unchanged.
+
+An approved baseline global package and EXPERIMENT_BASELINE activation must exist before first research action; the later COHORT activation must exist before first cohort action; evaluation-only isolated M3 candidate manifests use explicit non-product attribution and never counterfeit a campaign activation. Global strategy storage is operator/global scope: strategy_version_id is not constrained to a single experiment; campaign-specific activation and source evidence still have exact scope FKs.
 
 ## Ordered implementation tasks
 
@@ -306,34 +97,13 @@ The agent-produced artifact registry is exactly the eight pairs enforced by `ck_
 <!-- roadmap-task id=DB-04-T04 milestone=M3 depends_on=DB-04-T03,BACKEND-01-T01,ARCH-03-T01 mode=parallel locks=database-schema,agent-artifacts,backend-domain -->
 - [ ] **Implement validation and acceptance transitions —** Input: `PRODUCED` artifact and frozen validator/gate; implemented ArtifactCommandService PRODUCED/event interface and canonical artifact state/guard contract. Operation: implement ArtifactValidationService and authenticated ArtifactAcceptanceService: validate PRODUCED fixtures, insert links/validation records, apply the exact ARCH-03 transitions and events atomically; acceptance remains a separate authorized command. Output: implemented versioned ArtifactValidationService and ArtifactAcceptanceService interfaces plus eligible accepted fixture artifact or retained rejection. Test evidence: exhaustive artifact-state matrix and command replay. Failure behavior: no workflow eligibility.
 <!-- roadmap-task id=DB-04-T05 milestone=M3 depends_on=DB-04-T04,AGENT-10-T05 mode=parallel locks=agent-runtime,agent-artifacts,telemetry-catalog -->
-- [ ] **Gate agent promotion on evaluations —** Input: the AGENT-10 immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and eligible configuration or rejection. Operation: validate signature, identity, manifest, and registry version, then atomically persist that decision and its immutable DB registry evidence without exercising promotion authority a second time. Output: persisted immutable promotion decision and DB registry evidence. Test evidence: deterministic fixture rerun. Failure behavior: retain prior promoted version.
+- [ ] **Gate agent promotion on evaluations —** Input: the AGENT-10 immutable evaluation/configuration decision binding suite identity, PromotionManifestV1 and registry version. Operation: validate signature, identity, manifest, and registry version, then atomically persist that configuration-evaluation evidence; global package promotion/activation remains solely BACKEND-01-T10; create no second promotion owner. Output: persisted immutable promotion decision and DB registry evidence. Test evidence: deterministic fixture rerun. Failure behavior: retain prior promoted version.
 
-## Test strategy
 
-- **Unit `test_agent_can_only_produce_produced_status`:** agent code cannot select later state.
-- **Schema `test_artifact_payload_matches_registered_version`:** unknown/invalid JSON is rejected.
-- **Provenance `test_claim_requires_valid_source_link`:** missing/quarantined evidence blocks validation.
-- **Integration `test_validation_status_event_commit_atomically`:** no status/event split.
-- **Security `test_chain_of_thought_and_secrets_are_never_persisted`:** allowlist serialization and scan.
-- **Evaluation `test_promotion_requires_quality_and_cost_thresholds`:** failing either retains prior version.
+## Verification, failure and acceptance
 
-## Security, privacy, compliance, idempotency, observability, and cost
+Introspect registry equality with the canonical fifteen artifacts and ten AgentType values plus the separate protected evidence registry. Test a writer producing ConversationStrategy and EmailDraft from one run; every deterministic-materializer mismatch must fail. Validate independent per-agent input/output hashes, full predecessor lineage, immutable accepted receipts and cross-workflow cost-splice rejection.
 
-Evidence capture follows scheme/domain/type/size/time limits and treats fetched content as untrusted. Store only task inputs/outputs needed for audit, never hidden reasoning. Sensitive captures use restricted object references, redaction state, and deletion class. Idempotency uses input/config hashes. Telemetry records run/artifact/source IDs, versions, duration, usage, and cost without copying content. Provider cost is reconciled through DB-05.
+Retain exact primary/secondary/guardrail partitions, all-agent result completeness, weak-evidence KEEP/INSUFFICIENT_EVIDENCE no-mutation proof, holdout/transfer denials, concurrent checkpoint-close/promotion/campaign-start/rollback races, future initialization and no mid-cohort mutation. Crash every evidence/decision/trigger/activation commit. No partial success, unsafe fallback, raw PII learning or historical attribution rewrite is allowed. Invalid artifacts remain rejected evidence; policy/budget/provider failures remain typed.
 
-## Failure, rollback, and operator recovery
-
-Invalid schema/provenance, tool timeout, prompt injection signal, cost overrun, or unsupported source produces a rejected artifact or failed run without aggregate transition. Rollback selects the prior promoted agent/config; artifacts remain immutable. A corrected artifact is a new version linked by `supersedes_artifact_id`. Compromised evidence is quarantined, dependent acceptances revoked through audited commands, and affected transitions paused for operator review.
-
-## Acceptance and retained evidence
-
-- [ ] Agent, artifact, evidence, validation, acceptance, and evaluation records are normalized and immutable.
-- [ ] Every artifact has exact producer, schema/version, provenance, validator, consumer, and retention class.
-- [ ] Agents cannot accept artifacts, mutate aggregates, call Gmail, or gain provider credentials.
-- [ ] Quality and cost gates are reproducible from retained suites/results.
-
-Retain schema snapshots, artifact registry, constraint output, adversarial evidence fixtures, validation transition traces, redaction scans, evaluation reports, and promotion/rollback record.
-
-## Dependencies and next deliverable
-
-DB-04 depends on DB-01/02 and ARCH-02/03. It unlocks M3 agent documents and [WF-03](../03-workflows/03-idea-validation-workflow.md)/[WF-04](../03-workflows/04-lead-qualification-workflow.md); no artifact unlocks sending by itself.
+DB-06 applies encryption, per-field reader/writer/retention/deletion/backup expiry to all snapshots and evidence. Retain schemas, hashes, provider ledgers, validation receipts, evaluation reports, minimized checkpoint bundles and promotion/rollback evidence before unlocking [global learning](../03-workflows/09-global-learning-workflow.md).
