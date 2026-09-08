@@ -73,7 +73,7 @@ These metrics inform exactly `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `S
 | `positive_reply_rate` | unique positive human replies / delivered unique recipients | Demand signal; automated replies excluded |
 | `negative_or_opt_out_rate` | unique negative or opt-out replies / delivered unique recipients | Offer/targeting and reputation signal |
 | `qualified_conversation_rate` | recipients agreeing to a relevant discovery or buying conversation / delivered unique recipients | Stronger signal than generic replies |
-| `qualified_commitment_count` | unique finally qualified leads explicitly accepting the commercial next step or buying commitment with source evidence | Separates willingness to act from positive sentiment |
+| `qualified_commitment_count` | unique finally qualified leads explicitly accepting a call as the next step or a purchase proposal, with distinct CALL_NEXT_STEP/PURCHASE_PROPOSAL evidence | Separates willingness to act from positive sentiment |
 | `paid_commitment_count` | externally verified accepted paid pilot, deposit evidence, or signed purchase commitment linked to exact offer terms | Preserves stronger demand floors; the product does not collect payment |
 | `provider_cost_per_qualified_conversation_ils` | attributed provider spend in ILS / qualified conversations | Tests acquisition economics before delivery cost |
 | `operator_hours_per_experiment` | captured research, review, operations, and delivery-prep hours | Tests solopreneur viability |
@@ -93,7 +93,7 @@ These metrics inform exactly `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `S
 | `learning_promotion_rate` / `learning_rollback_rate` | promoted or rolled-back agent strategies / eligible closed-checkpoint evaluations | Exposes churn and failed promotions |
 | `cross_campaign_transfer_performance` | outcome/guardrail deltas on other campaigns after their own checkpoint activation | Detects harmful transfer |
 
-Every metric definition includes an owner, versioned query, raw denominator, exclusions, uncertainty, and failure action. Booking counts require explicit confirmation and positive reconciled provider evidence. Pending, ambiguous, cancelled, duplicate, and merely proposed bookings are excluded; rescheduling preserves booking identity. Show rate uses elapsed meetings with attendance evidence. Inferred budget and agent confidence never become observed commitments.
+Every metric definition includes an owner, versioned query, raw denominator, exclusions, uncertainty, and failure action. A qualified call agreement contributes `CALL_NEXT_STEP` commitment evidence; accepted purchase terms contribute `PURCHASE_PROPOSAL` evidence. Preserve that distinction in counts and projections: agreeing to a call never creates purchase acceptance or a paid commitment. Booking can proceed from qualified `INTERESTED`/`NEGOTIATING` prospects before purchase acceptance. Booking counts require explicit slot confirmation and positive reconciled provider evidence. Pending, ambiguous, cancelled, duplicate, and merely proposed bookings are excluded; rescheduling preserves booking identity. Show rate uses elapsed meetings with attendance evidence. Inferred budget and agent confidence never become observed commitments.
 
 Pre/post comparison freezes hypothesis, source/evidence definitions, window, eligibility, and attribution. Report sample sizes, late outcomes, selection differences, and uncertainty; incomparable cohorts cannot establish causality. `KEEP` and `INSUFFICIENT_EVIDENCE` perform no strategy mutation and remain distinct results.
 

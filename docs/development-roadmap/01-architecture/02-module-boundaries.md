@@ -82,7 +82,7 @@ The registry's supervising responsibility and its deterministic materializer may
 5. A crash between those transactions creates an ambiguous/reconcilable state, not permission to retry.
 6. Projection lag never authorizes an action; command handlers read authoritative state.
 7. Retry classification belongs to adapter/application error taxonomy, while the durable engine schedules allowed retries.
-8. Reply ingestion atomically records observation, stops cold admission, invalidates stale response/send authority, and advances its cursor. Durable suppression requires the applicable terminal signal, not merely any reply.
+8. Reply ingestion atomically records observation, stops cold admission, invalidates stale response/send authority, and advances its cursor. Rejection closes persuasion. Durable suppression requires evidence satisfying PRODUCT-01's [DurableSuppressionTriggerV1](../00-product-strategy/01-product-scope.md#rejection-and-durable-suppression-trigger); neither any reply nor an offer decline alone qualifies.
 9. Cohort admission, checkpoint closure, strategy activation, rollback and action generation use transactional compare-and-swap/locks. A running cohort cannot change its offer/strategy/qualification/causal variables/evidence definition. If deterioration requires rollback, pause affected future actions and close the checkpoint before activation.
 10. Calendar mutations serialize under the `calendar-side-effects` resource lock with idempotency and fresh availability/identity/confirmation checks. Duplicate callbacks and ambiguous writes reconcile before retries; cancellation/rescheduling cannot bypass the writer.
 
