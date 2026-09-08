@@ -81,6 +81,17 @@ class ValidationError(ValueError):
 
 
 @dataclass(frozen=True, slots=True)
+class SourceLocation:
+    source: str
+    line: int
+    task_id: str | None = None
+
+    def error(self, message: str) -> ValidationError:
+        context = f"{self.task_id}: " if self.task_id else ""
+        return ValidationError(f"{self.source}:{self.line}: {context}{message}")
+
+
+@dataclass(frozen=True, slots=True)
 class ManifestDocument:
     source: str
     milestone: str
@@ -104,6 +115,10 @@ class Task:
     verification: str
     failure_behavior: str
     acceptance_commands: tuple[str, ...]
+
+    @property
+    def location(self) -> SourceLocation:
+        return SourceLocation(self.source, self.line, self.id)
 
 
 @dataclass(frozen=True, slots=True)
@@ -315,7 +330,46 @@ def parse_manifest(root: Path) -> tuple[ManifestDocument, ...]:
         documents.append(
             ManifestDocument(f"docs/development-roadmap/{relative_path}", milestone)
         )
+    roadmap_root = root / "docs/development-roadmap"
+    eligible_paths: set[str] = set()
+    for document_path in sorted(roadmap_root.rglob("*.md")):
+        relative = document_path.relative_to(roadmap_root)
+        if (
+            len(relative.parts) < 2
+            or re.fullmatch(r"[0-9]{2}-[a-z0-9-]+", relative.parts[0]) is None
+        ):
+            continue
+        if (
+            "## Ordered implementation tasks"
+            in document_path.read_text(encoding="utf-8").splitlines()
+        ):
+            eligible_paths.add(relative.as_posix())
+    missing = sorted(eligible_paths - seen_paths)
+    extra = sorted(seen_paths - eligible_paths)
+    if missing or extra:
+        details = []
+        if missing:
+            details.append(f"missing manifest paths: {', '.join(missing)}")
+        if extra:
+            details.append(
+                "extra manifest paths (ordered section missing): " + ", ".join(extra)
+            )
+        raise SourceLocation("docs/development-roadmap/README.md", found[0] + 1).error(
+            "; ".join(details)
+        )
     return tuple(documents)
+
+
+def _line_location(source: str, lines: list[str], index: int) -> SourceLocation:
+    metadata = lines[index] if lines else ""
+    if not metadata.startswith("<!-- roadmap-task") and index > 0:
+        metadata = lines[index - 1]
+    match = (
+        re.search(r"\s+id=([^\s]+)", metadata)
+        if metadata.startswith("<!-- roadmap-task")
+        else None
+    )
+    return SourceLocation(source, index + 1, match.group(1) if match else None)
 
 
 def parse_roadmap(root: Path) -> Roadmap:
@@ -325,130 +379,164 @@ def parse_roadmap(root: Path) -> Roadmap:
     for document in documents:
         source = (root / document.source).read_text(encoding="utf-8")
         source_lines = source.splitlines()
-        id_lines = [
-            line.removeprefix("**Document ID:** ")
-            for line in source_lines
+        id_indices = [
+            index
+            for index, line in enumerate(source_lines)
             if line.startswith("**Document ID:**")
         ]
+        id_lines = [
+            source_lines[index].removeprefix("**Document ID:** ")
+            for index in id_indices
+        ]
+        id_location = SourceLocation(
+            document.source, id_indices[0] + 1 if id_indices else 1
+        )
         if len(id_lines) != 1 or _DOCUMENT_ID.fullmatch(id_lines[0]) is None:
-            raise ValidationError("invalid document ID syntax/cardinality")
+            raise id_location.error("invalid document ID syntax/cardinality")
         if id_lines[0] in seen_document_ids:
-            raise ValidationError("duplicate document ID")
+            raise id_location.error("duplicate document ID")
         seen_document_ids.add(id_lines[0])
-        start, end = _ordered_bounds(source_lines)
-        if any(
-            re.match(r"^- \[[xX]\](?: |$)", line) for line in source_lines[start:end]
-        ):
-            raise ValidationError("ordered task must be unchecked")
+        try:
+            start, end = _ordered_bounds(source_lines)
+        except ValidationError as error:
+            heading_index = next(
+                (
+                    index
+                    for index, line in enumerate(source_lines)
+                    if line == "## Ordered implementation tasks"
+                ),
+                0,
+            )
+            raise SourceLocation(document.source, heading_index + 1).error(
+                str(error)
+            ) from error
+        for index in range(start, end):
+            if re.match(r"^- \[[xX]\](?: |$)", source_lines[index]):
+                raise _line_location(document.source, source_lines, index).error(
+                    "ordered task must be unchecked"
+                )
         checkbox_lines = [
             index
             for index in range(start, end)
             if re.match(r"^- \[ \](?: |$)", source_lines[index])
         ]
-        if any(
-            index == start
-            or not source_lines[index - 1].startswith("<!-- roadmap-task ")
-            for index in checkbox_lines
-        ):
-            raise ValidationError("unchecked box requires adjacent metadata")
+        for index in checkbox_lines:
+            if index == start or not source_lines[index - 1].startswith(
+                "<!-- roadmap-task "
+            ):
+                raise _line_location(document.source, source_lines, index).error(
+                    "unchecked box requires adjacent metadata"
+                )
         for index, line in enumerate(source_lines):
             if not line.startswith("<!-- roadmap-task"):
                 continue
+            location = _line_location(document.source, source_lines, index)
             if not (start <= index < end):
-                raise ValidationError("orphan metadata outside ordered section")
+                raise location.error("orphan metadata outside ordered section")
             if index + 1 < end and source_lines[index + 1].startswith(
                 "<!-- roadmap-task"
             ):
-                raise ValidationError("duplicate metadata")
+                raise location.error("duplicate metadata")
             if index + 1 >= end or not source_lines[index + 1].startswith("- [ ] "):
-                raise ValidationError("orphan metadata")
+                raise location.error("orphan metadata")
         for index in checkbox_lines:
-            body = source_lines[index][len("- [ ]") :].removeprefix(" ")
-            title_match = re.match(r"^\*\*(.+?) —\*\*\s+", body)
-            if title_match is None:
-                raise ValidationError("invalid task title")
-            if any(marker not in body for marker in _MARKERS):
-                raise ValidationError("missing task clause marker")
-            if any(body.count(marker) > 1 for marker in _MARKERS):
-                raise ValidationError("duplicate task clause marker")
-            positions = [body.index(marker) for marker in _MARKERS]
-            if positions != sorted(positions):
-                raise ValidationError("invalid task clause order")
-            if title_match.end() != positions[0]:
-                raise ValidationError("invalid task title boundary")
-            tasks.append(
-                _make_task(
-                    source_lines[index - 1],
-                    body,
-                    id_lines[0],
-                    document.source,
-                    index + 1,
+            if _METADATA.fullmatch(source_lines[index - 1]) is None:
+                raise _line_location(document.source, source_lines, index - 1).error(
+                    "malformed task metadata"
                 )
-            )
+            try:
+                body = source_lines[index][len("- [ ]") :].removeprefix(" ")
+                title_match = re.match(r"^\*\*(.+?) —\*\*\s+", body)
+                if title_match is None:
+                    raise ValidationError("invalid task title")
+                if any(marker not in body for marker in _MARKERS):
+                    raise ValidationError("missing task clause marker")
+                if any(body.count(marker) > 1 for marker in _MARKERS):
+                    raise ValidationError("duplicate task clause marker")
+                positions = [body.index(marker) for marker in _MARKERS]
+                if positions != sorted(positions):
+                    raise ValidationError("invalid task clause order")
+                if title_match.end() != positions[0]:
+                    raise ValidationError("invalid task title boundary")
+                tasks.append(
+                    _make_task(
+                        source_lines[index - 1],
+                        body,
+                        id_lines[0],
+                        document.source,
+                        index + 1,
+                    )
+                )
+            except ValidationError as error:
+                raise _line_location(document.source, source_lines, index).error(
+                    str(error)
+                ) from error
     for task in tasks:
         match = _TASK_ID.fullmatch(task.id)
         if match is None:
-            raise ValidationError("invalid task ID syntax")
+            raise task.location.error("invalid task ID syntax")
         if match.group("prefix") != task.document_id:
-            raise ValidationError("task ID prefix does not match document ID")
+            raise task.location.error("task ID prefix does not match document ID")
     seen_task_ids: set[str] = set()
     for task in tasks:
         if task.id in seen_task_ids:
-            raise ValidationError("duplicate task ID")
+            raise task.location.error("duplicate task ID")
         seen_task_ids.add(task.id)
     counters: dict[str, int] = {}
     for task in tasks:
         counters[task.document_id] = counters.get(task.document_id, 0) + 1
         expected = f"{task.document_id}-T{counters[task.document_id]:02d}"
         if task.id != expected:
-            raise ValidationError(f"non-contiguous task ID; expected {expected}")
+            raise task.location.error(f"non-contiguous task ID; expected {expected}")
     for task in tasks:
         if task.milestone not in _MILESTONES:
-            raise ValidationError("invalid task milestone")
+            raise task.location.error("invalid task milestone")
     previous_milestone: dict[str, int] = {}
     for task in tasks:
         value = int(task.milestone[1:])
         if value < previous_milestone.get(task.document_id, -1):
-            raise ValidationError("task milestones decrease within document")
+            raise task.location.error("task milestones decrease within document")
         previous_milestone[task.document_id] = value
     for task in tasks:
         if task.id in ROOT_TASK_IDS and task.depends_on:
-            raise ValidationError("root allowlist task must use depends_on=-")
+            raise task.location.error("root allowlist task must use depends_on=-")
         if task.id not in ROOT_TASK_IDS and not task.depends_on:
-            raise ValidationError("root allowlist rejects extra root")
+            raise task.location.error("root allowlist rejects extra root")
     if not ROOT_TASK_IDS.issubset({task.id for task in tasks}):
-        raise ValidationError("root allowlist task is missing")
+        raise SourceLocation("docs/development-roadmap/README.md", 1).error(
+            "root allowlist task is missing"
+        )
     for task in tasks:
         for dependency in task.depends_on:
             if not dependency or _TASK_ID.fullmatch(dependency) is None:
-                raise ValidationError("invalid dependency token")
+                raise task.location.error("invalid dependency token")
         if len(task.depends_on) != len(set(task.depends_on)):
-            raise ValidationError("duplicate dependency")
+            raise task.location.error("duplicate dependency")
     known_ids = {task.id for task in tasks}
     tasks_by_id = {task.id: task for task in tasks}
     for task in tasks:
         if task.id in task.depends_on:
-            raise ValidationError("self dependency")
+            raise task.location.error("self dependency")
         if any(dependency not in known_ids for dependency in task.depends_on):
-            raise ValidationError("unknown dependency")
+            raise task.location.error("unknown dependency")
         if any(
             int(tasks_by_id[dependency].milestone[1:]) > int(task.milestone[1:])
             for dependency in task.depends_on
         ):
-            raise ValidationError("dependency points to future milestone")
+            raise task.location.error("dependency points to future milestone")
     for task in tasks:
         if task.mode not in {"parallel", "serial"}:
-            raise ValidationError("invalid execution mode")
+            raise task.location.error("invalid execution mode")
         if not task.locks or any(not lock for lock in task.locks):
-            raise ValidationError("task requires nonempty lock list")
+            raise task.location.error("task requires nonempty lock list")
         if any(lock not in LOCKS for lock in task.locks):
-            raise ValidationError("unknown lock")
+            raise task.location.error("unknown lock")
         if len(task.locks) != len(set(task.locks)):
-            raise ValidationError("duplicate lock")
+            raise task.location.error("duplicate lock")
         if task.mode != "serial" and any(
             lock in SERIAL_ONLY_LOCKS for lock in task.locks
         ):
-            raise ValidationError("serial-only lock requires serial mode")
+            raise task.location.error("serial-only lock requires serial mode")
     return Roadmap(documents=documents, tasks=tuple(tasks))
 
 
@@ -527,7 +615,7 @@ def topological_order(roadmap: Roadmap) -> tuple[Task, ...]:
     if len(ordered) != len(roadmap.tasks):
         remaining = {task_id for task_id, degree in indegree.items() if degree > 0}
         cycle = _cycle_path(roadmap, remaining)
-        raise ValidationError(f"dependency cycle: {' -> '.join(cycle)}")
+        raise tasks[cycle[0]].location.error(f"dependency cycle: {' -> '.join(cycle)}")
     return tuple(ordered)
 
 

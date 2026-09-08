@@ -1,4 +1,5 @@
 import os
+import subprocess
 import sys
 from dataclasses import replace
 from hashlib import sha256
@@ -179,6 +180,169 @@ def test_valid_minimal_tree_parses(tmp_path: Path) -> None:
     result = parse_roadmap(tmp_path)
 
     assert result.tasks[0].id == "PRODUCT-01-T01"
+
+
+def test_make_test_runs_roadmap_gate_first() -> None:
+    result = subprocess.run(
+        ["make", "--no-print-directory", "-n", "test"],
+        cwd=Path(__file__).resolve().parents[3],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+
+    assert result.stdout.splitlines() == [
+        "python3 scripts/validate_roadmap.py --check",
+        "cd backend && uv run pytest tests/unit -q",
+        "npm --prefix frontend test -- --run",
+    ]
+
+
+@pytest.mark.parametrize("operation", ["parse", "--check", "--write"])
+def test_omitted_leaf_manifest_row_rejects_before_artifact_replacement(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], operation: str
+) -> None:
+    roadmap = write_tree(tmp_path)
+    write_artifacts(tmp_path)
+    add_document(
+        roadmap,
+        relative="01-arch/01-system.md",
+        document_id="ARCH-01",
+        milestone="M0",
+        tasks=[("ARCH-01-T01", "PRODUCT-01-T01", "parallel", "architecture-contracts")],
+    )
+    readme = roadmap / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8").replace(
+            "| `01-arch/01-system.md` | M0 |\n", ""
+        ),
+        encoding="utf-8",
+    )
+    if operation == "--write":
+        for relative in ARTIFACT_PATHS:
+            (tmp_path / relative).write_bytes(f"preserve {relative}\n".encode())
+    before = {
+        relative: (tmp_path / relative).read_bytes() for relative in ARTIFACT_PATHS
+    }
+
+    if operation == "parse":
+        with pytest.raises(ValidationError, match="missing.*01-arch/01-system.md"):
+            parse_roadmap(tmp_path)
+    else:
+        assert main([operation], root=tmp_path) == 1
+        assert "missing" in capsys.readouterr().err
+    assert {
+        relative: (tmp_path / relative).read_bytes() for relative in ARTIFACT_PATHS
+    } == before
+
+
+def test_manifest_reports_sorted_missing_and_extra_corpus_paths(tmp_path: Path) -> None:
+    roadmap = write_tree(tmp_path)
+    for relative in ("02-extra/01-last.md", "01-extra/01-first.md"):
+        target = roadmap / relative
+        target.parent.mkdir()
+        target.write_text("## Ordered implementation tasks\n", encoding="utf-8")
+    (roadmap / "00-product/01-scope.md").write_text("# Notes\n", encoding="utf-8")
+
+    with pytest.raises(ValidationError) as error:
+        parse_manifest(tmp_path)
+
+    message = str(error.value)
+    assert "missing" in message and "extra" in message
+    assert message.index("01-extra/01-first.md") < message.index("02-extra/01-last.md")
+    assert "00-product/01-scope.md" in message
+
+
+@pytest.mark.parametrize(
+    "relative", ["00-product/notes.md", "00-product/nested/extra.md"]
+)
+def test_corpus_discovery_covers_task_sections_below_numbered_top_directory(
+    tmp_path: Path, relative: str
+) -> None:
+    roadmap = write_tree(tmp_path)
+    document = roadmap / relative
+    document.parent.mkdir(parents=True, exist_ok=True)
+    document.write_text("## Ordered implementation tasks\n", encoding="utf-8")
+
+    with pytest.raises(ValidationError, match="missing manifest paths") as error:
+        parse_manifest(tmp_path)
+
+    assert relative in str(error.value)
+
+
+def test_corpus_discovery_ignores_reference_docs_and_generated_artifacts(
+    tmp_path: Path,
+) -> None:
+    roadmap = write_tree(tmp_path)
+    for relative, content in (
+        ("00-product/02-notes.md", "# Notes\n"),
+        ("reference/01-example.md", "## Ordered implementation tasks\n"),
+        ("EXECUTION_ORDER.md", "## Ordered implementation tasks\n"),
+    ):
+        document = roadmap / relative
+        document.parent.mkdir(parents=True, exist_ok=True)
+        document.write_text(content, encoding="utf-8")
+
+    assert len(parse_manifest(tmp_path)) == 1
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "line", "task_id", "reason"),
+    [
+        ("**Document ID:** PRODUCT-01", "**Document ID:** bad", 3, None, "document ID"),
+        ("milestone=M0", "milestone=MX", 8, "PRODUCT-01-T01", "task milestone"),
+        ("mode=parallel", "mode=bad", 8, "PRODUCT-01-T01", "execution mode"),
+        ("locks=product-contracts", "locks=bad", 8, "PRODUCT-01-T01", "unknown lock"),
+        (" locks=", " extra=", 7, "PRODUCT-01-T01", "malformed task metadata"),
+        (
+            "id=PRODUCT-01-T01 milestone=M0",
+            "milestone=M0 id=PRODUCT-01-T01",
+            7,
+            "PRODUCT-01-T01",
+            "malformed task metadata",
+        ),
+        ("Input:", "Inputs:", 8, "PRODUCT-01-T01", "task clause"),
+        (
+            "Test evidence: review.",
+            "Test evidence: Command:",
+            8,
+            "PRODUCT-01-T01",
+            "singular Command",
+        ),
+    ],
+)
+def test_source_diagnostics_preserve_location_and_task_context(
+    tmp_path: Path, old: str, new: str, line: int, task_id: str | None, reason: str
+) -> None:
+    roadmap = write_tree(tmp_path)
+    document = roadmap / "00-product/01-scope.md"
+    document.write_text(
+        document.read_text(encoding="utf-8").replace(old, new), encoding="utf-8"
+    )
+
+    with pytest.raises(ValidationError, match=reason) as error:
+        parse_roadmap(tmp_path)
+
+    assert f"docs/development-roadmap/00-product/01-scope.md:{line}:" in str(
+        error.value
+    )
+    if task_id is not None:
+        assert task_id in str(error.value)
+    assert str(tmp_path) not in str(error.value)
+
+
+@pytest.mark.parametrize("depends", ["UNKNOWN-01-T01", "PRODUCT-01-T02"])
+def test_dependency_diagnostics_preserve_consumer_source_context(
+    tmp_path: Path, depends: str
+) -> None:
+    roadmap = write_tree(tmp_path)
+    append_second(roadmap, depends=depends)
+
+    with pytest.raises(ValidationError, match="dependency") as error:
+        parse_roadmap(tmp_path)
+
+    assert "docs/development-roadmap/00-product/01-scope.md:11:" in str(error.value)
+    assert "PRODUCT-01-T02" in str(error.value)
 
 
 @pytest.mark.parametrize("count", [0, 2])
@@ -1011,8 +1175,10 @@ def test_same_milestone_cycle_reports_concrete_path(tmp_path: Path) -> None:
     with pytest.raises(
         ValidationError,
         match=r"cycle: ARCH-01-T01 -> ARCH-01-T02 -> ARCH-01-T01",
-    ):
+    ) as error:
         topological_order(parsed)
+
+    assert "docs/development-roadmap/01-arch/01-system.md:8:" in str(error.value)
 
 
 def test_topological_order_uses_stable_milestone_manifest_task_tie_breaks(

@@ -23,7 +23,7 @@ typecheck:
 	cd backend && uv run pyright
 	npm --prefix frontend run typecheck
 
-test:
+test: roadmap
 	cd backend && uv run pytest tests/unit -q
 	npm --prefix frontend test -- --run
 
