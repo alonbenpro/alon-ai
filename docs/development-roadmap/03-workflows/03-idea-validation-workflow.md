@@ -1,87 +1,78 @@
-# Idea Validation and Offer-Evidence Workflow
+# Idea, Market Research, and Offer Workflow
 
 **Document ID:** WF-03
-**Status:** Planned no-send workflow
+**Status:** Planned finite workflow; no implementation exists
 **Milestone:** M4 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `WF-03-T01 -> WF-03-T02 -> WF-03-T03 -> WF-03-T04 -> WF-03-T05`; cross-document task Inputs `WF-03-T01 <- AGENT-10-T05,DB-02-T03,DB-02-T04,PRODUCT-02-T01; WF-03-T02 <- PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,OBS-03-T02,BACKEND-01-T01,DB-04-T04; WF-03-T03 <- DB-04-T04,BACKEND-01-T04,AGENT-02-T03,AGENT-03-T03,AGENT-04-T03; WF-03-T04 <- WF-02-T03`. Descriptive source authorities/resources (not whole-document completion dependencies): [WF-02](02-experiment-lifecycle.md), DB-02/DB-04/DB-05, and promoted M3 idea/offer/research agents plus recorded provider fixtures
-**Outputs:** Accepted idea, offer hypothesis, market evidence, metric/evidence bundle, and `READY_FOR_LEADS` experiment state
-**Unlocks:** Synthetic M4 gate and WF-04 lead qualification
-**Risk:** High
+**Prerequisites:** exact local order `WF-03-T01 -> WF-03-T02 -> WF-03-T03 -> WF-03-T04 -> WF-03-T05`; cross-document task Inputs `WF-03-T01 <- AGENT-10-T05,DB-02-T03,DB-02-T04,PRODUCT-02-T01; WF-03-T02 <- PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,OBS-03-T02,BACKEND-01-T01,DB-04-T04; WF-03-T03 <- DB-04-T04,BACKEND-01-T04,AGENT-02-T03,AGENT-03-T03,AGENT-04-T03; WF-03-T04 <- WF-02-T03`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
+**Outputs:** Finite typed inputs/results, immutable artifact/state handoffs, idempotency and recovery evidence
+**Unlocks:** WF-04 discovery and final qualification
+**Risk:** Critical
 **Complexity:** L
 
 ## Outcome and timing
 
-M4 turns one approved brief into operator-reviewable idea/offer/evidence artifacts without discovering contacts or sending email. Weak evidence stops the workflow; Gmail is not used to compensate for an unvalidated offer.
+Both discovered and user-supplied ideas produce the same accepted IdeaBrief. Market Research always runs next, then Offer Design consumes both upstream artifacts. M4 verifies the complete no-send path using synthetic/recorded evidence.
 
-## Current repository state
+## Current repository state and planned surfaces
 
-No product schema, agent implementation, model/search/page adapter, fixture evaluation, evidence capture, or workflow exists. The frontend headline is not evidence that idea validation works. All agents/providers named here are later M3 prerequisites.
+No product workflow, persistent artifact/aggregate or provider implementation described here exists. Plan `backend/src/alon_ai/workflows/idea_validation.py` and application-owned command interfaces, fixture/contract tests and durable recovery simulations. Workflows never mutate ORM rows, call concrete adapters or own Gmail/calendar credentials.
 
-## Scope and non-goals
+## Exact workflow contract
 
-In scope: frozen brief input, typed idea/offer/market-evidence agent runs, bounded provider calls, provenance/validation, operator/deterministic acceptance, reproducible metric/evidence bundle, and finite completion/failure. Non-goals: lead/contact discovery, Gmail, autonomous selection/decision, unrestricted web crawl, uncited market claims, looping until a model agrees, or mutable artifacts.
+### Ordered artifact transactions
 
-## Exact planned implementation surfaces
+| Step | Inputs | Result / deterministic guard |
+| --- | --- | --- |
+| freeze scope | ExperimentBrief/version/hash, source/economic bounds, baseline strategy activation | immutable workflow input; reject missing/broad scope |
+| resolve idea origin | Exactly DISCOVERED or USER_SUPPLIED | agent creates IdeaBrief or IdeaBriefMaterializer creates the same shape with user provenance/bypass record |
+| accept IdeaBrief | Produced brief and provenance | deterministic validation/acceptance; no manual selection requirement |
+| research market | Accepted IdeaBrief ID/version/hash | MarketResearchReport with source/time/citation/unknown/contradiction evidence |
+| accept research | Produced report and captured evidence | missing or conflicting required evidence blocks Offer Design |
+| design offer | Accepted IdeaBrief AND MarketResearchReport, pre-run economics | complete OfferPackage; deterministic evidence/economics/qualification/negotiation-bound checks |
+| finish | All three accepted artifact refs and output hashes | RESEARCHING -> READY_FOR_LEADS; bounded result snapshot and canonical events |
 
-Create `workflows/idea_validation.py` and application commands in `application/artifacts.py`/`experiments.py`. Runtime ID follows WF-02 with stage `IDEA_VALIDATION`. Queue `alon-ai-research-v1` starts at global concurrency `2`, worker concurrency `2`; model/search provider rate limits are separate pinned queues or adapter quotas and budget reservations still gate every paid call. Workflow step keys are `workflow:{run_id}:step:{idea|offer|research|bundle}:v1`.
+OfferPackage never supplies input upstream. This workflow creates only IdeaBrief, MarketResearchReport and OfferPackage from the canonical registry. ExperimentBrief, metric records and runtime recommendations remain product/run records outside the fifteen-artifact registry.
 
-Exact product tables touched through application commands are `experiments`, `experiment_briefs`, `metric_definitions`, `workflow_runs`, `agent_runs`, `artifacts`, `artifact_validations`, `artifact_acceptances`, `ideas`, `offer_hypotheses`, `evidence_items`, `artifact_evidence_links`, `budget_reservations`, `cost_entries`, `command_idempotency`, `domain_events`, `audit_events`, and `outbox_messages`.
+Application ArtifactCommandService, ArtifactValidationService, ArtifactAcceptanceService, IdeaBriefMaterializer and the experiment service own their writes. Agent cost reservations/recording/evidence ingestion are separate owned commands. Each accepted artifact retains exact source refs, producer strategy/activation, its own input snapshot and output hash.
 
-### Ordered flow and data/event reconciliation
+### Durability and bounded execution
 
-| Step | Reads | Application writes/constraints | Events/failure |
-| --- | --- | --- | --- |
-| freeze input/start | `experiments(RESEARCHING)`, active `experiment_briefs`, `metric_definitions`, `workflow_runs` | text `input_schema_version`, bounded JSONB payload, and lowercase SHA-256 of DB-01's UTF-8 RFC 8785 envelope; command/event/audit/outbox bundle | existing WF-02 start events; byte/vector/schema mismatch or stale version fails closed |
-| generate idea candidates | brief snapshot, budget | `agent_runs`; `artifacts(ArtifactStatus=PRODUCED,type=IdeaCandidate)`; cost/reservation | `artifact.produced.v1`; typed failure closes run |
-| validate/select idea | candidate artifact/evidence | `artifact_validations`, accepted artifact, materialized `ideas` version | validated/rejected/accepted events; deterministic/operator selection audit |
-| design offer | selected idea + brief + accepted evidence | agent run, `OfferHypothesis` artifact, validations/acceptance, `offer_hypotheses` | artifact events; invalid claim/provenance blocks |
-| capture market evidence | offer/brief, bounded providers | `evidence_items`, links, `MarketEvidence` artifact, provider cost | artifact events; unsafe/missing source rejects |
-| build evidence bundle | accepted versions, metric rules | `EvidenceBundle` artifact and links, optional metric observations/snapshot | artifact events; insufficient evidence is explicit |
-| complete/fail | all required accepted artifacts and run | WF-02 terminal run + `experiments` update + transaction safety tables | `workflow.run_completed.v1` + `experiment.state_changed.v1` to `READY_FOR_LEADS`, or workflow/experiment failure events |
+Queue `alon-ai-research-v1` starts at concurrency 2. Keys `workflow:{run_id}:step:{idea|research|offer}:v1` bind origin, expected accepted input refs and configuration. The origin choice is immutable for the experiment version; duplicate USER_SUPPLIED submits return the same materialized brief. No workflow retry may switch origin, skip research or reuse an incompatible offer.
 
-Agents can create `PRODUCED` rows only. Deterministic validators verify typed schema, provenance completeness, source safety, budget/cost, and cross-artifact version consistency. Operator selection/acceptance is an idempotent command. No step reads provider secrets from an artifact or stores opaque SDK objects.
+Stop before and after every paid provider/agent boundary. Persist/recover each accepted result before starting its consumer. Missing evidence, exceeded budget, cancellation or stale input ends/pauses the finite run; a rejected artifact cannot drive the next step. Revision creates new immutable inputs and invalidates later artifacts; an active cohort cannot mutate.
 
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=WF-03-T01 milestone=M4 depends_on=AGENT-10-T05,DB-02-T03,DB-02-T04,PRODUCT-02-T01 mode=parallel locks=workflow-runtime -->
-- [ ] **Freeze M4 fixture/input contract —** Input: approved brief/metric versions and M3 promoted configs. Operation: encode the DB-01 RFC 8785 version/payload envelope, reproduce its golden SHA-256 vectors independently, and verify before every resumed step. Output: stable run input snapshot. Test evidence: `test_resume_rejects_changed_brief_hash_schema_type_or_json_null_without_new_run`. Failure behavior: fail run; operator revises/restarts explicitly.
+- [ ] **Freeze origin and input contracts —** Input: canonical IdeaBrief and accepted scope. Operation: implement DISCOVERED/USER_SUPPLIED discriminated origin with one validated shape. Output: immutable input/origin contract. Test evidence: origin exclusivity, duplicate bypass and provenance checks. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-03-T02 milestone=M4 depends_on=WF-03-T01,PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,OBS-03-T02,BACKEND-01-T01,DB-04-T04 mode=parallel locks=workflow-runtime,backend-domain,agent-artifacts -->
-- [ ] **Implement typed artifact steps —** Input: frozen refs/read-only provider ports/budget; implemented recording/artifact, reservation/cost and validation service interfaces. Operation: run each promoted agent once per command key and persist envelope/artifact/cost. Output: produced candidates/evidence. Test evidence: recorded fixture, schema, timeout, retry, and cost tests. Failure behavior: bounded retry only for classified no-side-effect provider failures.
+- [ ] **Implement idea then research —** Input: typed origin, IdeaBriefMaterializer and source fixtures. Operation: accept IdeaBrief and pass its exact version/hash into Market Research. Output: accepted IdeaBrief and MarketResearchReport handoff. Test evidence: bypass equivalence, missing idea, stale source and injection cases. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-03-T03 milestone=M4 depends_on=WF-03-T02,DB-04-T04,BACKEND-01-T04,AGENT-02-T03,AGENT-03-T03,AGENT-04-T03 mode=parallel locks=workflow-runtime,backend-domain,agent-artifacts -->
-- [ ] **Implement validation/acceptance/materialization —** Input: specialist-produced artifact and source links, DB-04 versioned artifact-validation/acceptance service interface, and BACKEND-01 no-send sole-writer service contracts. Operation: validate and accept/reject, then materialize normalized idea/offer under expected version. Output: authoritative product records with provenance. Test evidence: adversarial citation and concurrency tests. Failure behavior: retain rejection; do not transition.
+- [ ] **Implement authoritative offer handoff —** Input: both accepted upstream artifacts and frozen economics. Operation: validate and accept complete OfferPackage, then persist terminal readiness. Output: accepted commercial package and READY_FOR_LEADS. Test evidence: reversed order, incomplete economics and downstream authority denial. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-03-T04 milestone=M4 depends_on=WF-03-T03,WF-02-T03 mode=parallel locks=workflow-runtime -->
-- [ ] **Complete evidence bundle and stage —** Input: all accepted required artifacts/metrics and the WF-02 versioned atomic completion-handler interface. Operation: build immutable bundle, recheck versions, and invoke WF-02 completion. Output: `READY_FOR_LEADS`. Test evidence: end-to-end synthetic fixture and restart at every step. Failure behavior: `FAILED` with closed ARCH-03 exits.
+- [ ] **Prove crash and cancel recovery —** Input: stored step outputs and workflow versions. Operation: inject failures before/after every model/evidence/acceptance/transition boundary. Output: finite recovery traces. Test evidence: no repeated paid call, double materialization or stale consumer. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-03-T05 milestone=M4 depends_on=WF-03-T04 mode=serial locks=workflow-runtime,milestone-gate -->
-- [ ] **Prove no-send boundary —** Input: full M4 composition/import graph; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: assert no Gmail/send port is registered or reachable; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: complete versioned finite WF-03 workflow contract plus signed M4 no-send evidence. Test evidence: `test_m4_workflow_has_no_gmail_or_sendgateway_edge`. Failure behavior: M4 blocked.
+- [ ] **Retain the synthetic M4 gate —** Input: complete discovered/bypass scenarios. Operation: verify artifact lineage, costs, evidence and zero write capability. Output: M4 gate bundle. Test evidence: both origins complete exactly idea -> research -> offer. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 
 ## Test strategy
 
-- **Contract `test_every_agent_output_matches_registered_artifact_schema`:** typed envelope/version.
-- **Provenance `test_offer_claims_link_to_captured_evidence_or_abstain`:** no invented certainty.
-- **Recovery `test_kill_after_each_artifact_commit_does_not_duplicate_agent_call_or_version`:** command replay.
-- **Integration `test_accepted_artifacts_and_ready_for_leads_transition_are_consistent`:** gate recheck.
-- **Adversarial `test_untrusted_page_cannot_instruct_agent_or_workflow_to_send_or_mutate`:** tool/authority isolation.
-- **Cost `test_provider_budget_exhaustion_fails_before_call`:** reservation first.
+Contract tests cover exact accepted-artifact version/hash lineage and state ownership. Real isolated PostgreSQL tests inject failure before/after each aggregate/artifact/event/audit/outbox/idempotency transaction. Recorded providers and owned-resource gates cover duplicate/out-of-order delivery, cancellation, stale generation and ambiguity. Required scenarios appear per task; no fake/synthetic evidence counts as real demand.
 
-## Security, privacy, compliance, idempotency, observability, and cost
+## Safety, privacy, compliance, observability and cost
 
-Fetchers enforce URL/domain/type/size/time rules and treat content as untrusted. Store citations/capture hashes and minimal content under DB-04 retention. Step/config/input hashes prevent duplicate calls. Traces include safe artifact/evidence IDs and versions, provider duration/usage/cost, validation reasons, and abstention; no chain-of-thought, secrets, or unnecessary source content is logged.
+Every run pins schema/configuration, producer strategy, GlobalStrategyPackage/StrategyActivation, deadline and finite attempt/tool/token/cost ceilings. Application services reserve paid-call budgets before execution and reconcile all usage. Retention follows DB-06 per record/field purpose and sensitivity; minimized evidence is required before learning reuse.
 
-## Failure, rollback, and operator recovery
+Telemetry includes safe IDs, hashes, versions, counts, durations, outcomes and costs. It excludes raw recipients, message/calendar content, sensitive budget spans, credentials and hidden reasoning. Source and email content are untrusted data; deterministic legal/provider/suppression/commercial gates and scoped write ports remain mandatory.
 
-Provider, schema, provenance, cost, or quality failure stops at the affected step; accepted earlier artifacts remain immutable evidence but do not force completion. Roll back to prior promoted agent/provider config by starting a new run with an explicit version. Correct outputs through superseding artifacts. Exhausted/nonretryable run failure follows ARCH-03 retry/revise/cancel, never an immortal loop.
+## Failure, rollback, recovery and acceptance
 
-## Acceptance and retained evidence
+Pause closes admission before acknowledgement and retains the exact resume target, accepted inputs, counters/capacity and control generation. Cancel drains only provably uncalled work; uncertain external outcomes remain quarantined with durable evidence. Terminal runs never resume. A valid failed-stage retry creates a new linked finite run; changed inputs create superseding artifacts outside active cohorts.
 
-- [ ] One synthetic approved brief produces accepted typed idea, offer, market evidence, and evidence bundle.
-- [ ] Every step read/write maps to DB-02/04/05 and every stage event maps to ARCH-03.
-- [ ] Provider calls are bounded, idempotent where possible, costed, and provenance-complete.
-- [ ] Agents cannot accept/materialize/transition/send.
-- [ ] The entire M4 path has no Gmail authority.
+- [ ] Every boundary has a named deterministic owner and accepted version/hash input.
+- [ ] No workflow has direct Gmail/calendar write authority or routine per-message approval.
+- [ ] Every replay, pause, terminal stop and ambiguous outcome has a finite coordinator outcome with no blind retry.
+- [ ] Cohort and strategy boundaries preserve capacity, immutable evidence and historical attribution.
+- [ ] Required contract/recovery/gate evidence is retained before later product use.
 
-Retain fixture/config hashes, artifact/evidence schemas, evaluation promotion refs, source captures/hashes, restart traces, cost ledger, no-send import proof, and synthetic run bundle.
-
-## Dependencies and next deliverable
-
-WF-03 depends on WF-02, M2 persistence, and M3 promotion gates. It unlocks [WF-04 lead qualification](04-lead-qualification-workflow.md); it does not unlock outreach.
+Retain schema/transition snapshots, command/artifact/activation lineage, source/provider fixture hashes, full crash matrices, safe audit/event traces, cost reconciliation and gate results.

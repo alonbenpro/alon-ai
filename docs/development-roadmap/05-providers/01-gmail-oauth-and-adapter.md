@@ -12,7 +12,7 @@
 
 ## Outcome and timing
 
-M6 connects one operator-owned Gmail account without giving credentials or send authority to agents, workflows, the frontend, or generic application services. `SendGateway` is the only production caller of the send-only `GmailProvider`; reconciliation and history use the separate read-only port in PROVIDER-02. The adapter translates one already-authorized immutable attempt into one Gmail `users.messages.send` call and returns evidence. It never decides recipient, policy, approval, budget, suppression, retry, or state.
+M6 connects one operator-owned Gmail account without giving credentials or send authority to agents, workflows, the frontend, or generic application services. `SendGateway` is the only production caller of the send-only `GmailWritePort`; reconciliation and history use the separate read-only port in PROVIDER-02. The adapter translates one already-authorized immutable attempt into one Gmail `users.messages.send` call and returns evidence. It never decides recipient, policy, action authorization, budget, suppression, retry, or state.
 
 The isolated M1 harness may use a disposable composition of the same wire behavior against owned aliases. That does not install a product mailbox or satisfy M6. Product outreach stays disabled until both M1 and M6 pass, and passing gates grants no campaign, recipient, or spend authority.
 
@@ -65,19 +65,25 @@ Google's server-side flow supplies offline refresh tokens and requires recovery 
 
 ### Send-only port and immutable authority
 
-`GmailProvider.send(request: GmailSendRequestV1) -> GmailSendResultV1` is the only Python method allowed to issue `users.messages.send`. PROVIDER-02's `GmailMailboxReadProvider` cannot send. The request is strict/frozen/extra-forbid and contains exactly:
+`GmailWritePort.send(request: GmailSendRequestV1) -> GmailSendResultV1` is the only Python method allowed to issue `users.messages.send`. PROVIDER-02's `GmailReadPort` cannot send. The request is strict/frozen/extra-forbid and contains exactly:
 
 ```text
 schema_version="gmail.send.request.v1"; provider_call_id; send_attempt_id;
 send_intent_id; experiment_id; campaign_id; campaign_version; campaign_member_id;
-lead_id; message_id; mailbox_id; approval_id; policy_decision_id; policy_scope="SEND";
+lead_id; message_id; mailbox_id; action_authorization_id; policy_decision_id; policy_scope="SEND";
+cohort_id; cohort_ordinal; checkpoint_generation; control_generation;
+conversation_id; conversation_version; thread_snapshot_hash;
+offer_package_id; offer_package_version; offer_package_hash;
+global_strategy_package_id; global_strategy_package_version; strategy_activation_id;
+conversation_strategy_id; conversation_strategy_hash; email_draft_id; email_draft_hash;
+action_content_hash; action_expires_at; provider_thread_id; in_reply_to_rfc_id; reference_rfc_ids;
 policy_version; scope_hash; policy_facts_hash; policy_allowed=true;
 rate_reservation_id; rate_policy_version; rate_window_start; rate_slot_number;
 rate_concurrency_lease_token; rate_consumed_at;
 idempotency_key; rfc_message_id; mime_sha256; mime_bytes; timeout_ms.
 ```
 
-`campaign_version` is positive; IDs are UUIDv4; hashes are lowercase 64-hex; `timeout_ms` is `1..30_000` with deterministic default `15_000`. `provider_call_id` and `send_attempt_id` are distinct identities and are never required to equal one another. `mime_bytes` exists only in process memory and is excluded from repr/log/trace serialization. The locked `campaign_member_id` byte-matches `campaign_members(campaign_member_id,campaign_id,campaign_version,lead_id)`. Approval/eligibility basis fields byte-match the intent; `policy_*` fields are exclusively the fresh final SEND decision copied from `send_attempts`, never the eligibility decision; rate fields, immutable concurrency token, and non-null consumption timestamp byte-match that attempt's consumed `send_rate_reservations` row; all remaining identity through `rfc_message_id` matches DB-03 composites. Eligibility and final SEND share `scope_hash` but need not and normally do not share facts hashes. After the call, `GmailResultCaptureService` adds immutable `(provider_result_id,send_attempt_id,provider_call_id,provider='GMAIL')` under the attempt's `(send_attempt_id,mailbox_id,rfc_message_id)`, completing the exact experiment/campaign-version/member/lead/message/mailbox/approval/policy/scope/intent/attempt/call/result chain. The adapter rejects mismatch before credential access.
+`campaign_version` is positive; IDs are UUIDv4; hashes are lowercase 64-hex; `timeout_ms` is `1..30_000` with deterministic default `15_000`. `provider_call_id` and `send_attempt_id` are distinct identities and are never required to equal one another. `mime_bytes` exists only in process memory and is excluded from repr/log/trace serialization. The locked `campaign_member_id` byte-matches `campaign_members(campaign_member_id,campaign_id,campaign_version,lead_id)`. ActionAuthorityScopeV1 fields byte-match the intent; `policy_*` fields are exclusively the fresh final SEND decision copied from `send_attempts`, never the eligibility decision; rate fields, immutable concurrency token, and non-null consumption timestamp byte-match that attempt's consumed `send_rate_reservations` row; all remaining identity through `rfc_message_id` matches DB-03 composites. Action authorization and final SEND share `scope_hash` but need not and normally do not share facts hashes. After the call, `GmailResultCaptureService` adds immutable `(provider_result_id,send_attempt_id,provider_call_id,provider='GMAIL')` under the attempt's `(send_attempt_id,mailbox_id,rfc_message_id)`, completing the exact experiment/campaign-version/member/lead/message/mailbox/action-authorization/policy/scope/intent/attempt/call/result chain. The adapter rejects mismatch before credential access.
 
 The fresh `policy_decision_id/policy_version/scope_hash/policy_facts_hash/policy_allowed=true` is the provider boundary's only compliance authority. The adapter revalidates its exact allowed `SEND` composite FK but never receives recipient identity/jurisdiction/consent/legal-review/disclosure/Google-review/observation facts or reason text. Provider fixtures pair the request with the restricted policy fixture: one complete current allow and one zero-call fixture for each dedicated compliance/signal denial. A denial, unknown code, stale decision or recipient hash in request/OpenAPI/log fixture fails before credential lookup.
 
@@ -112,36 +118,7 @@ Modes are `LIVE_CAPTURE` and `RECORDED_FIXTURE`. Live mode requires M6 compositi
 
 Safe telemetry: request/correlation/call/intent/attempt/mailbox IDs, provider request ID, state, duration, status/error code, response size, quota headers, and fingerprint. Forbidden: Authorization headers, tokens, raw MIME, subject/body, address, Google error text, or full response. Gmail send has no direct API fee entry, but usage and operational cost remain recorded with zero provider amount when applicable.
 
-```python
-GmailSendRequestV1(
-    schema_version="gmail.send.request.v1",
-    provider_call_id=UUID("8a0e6e0b-f4b1-4cd7-8cf1-2a75d5edb75d"),
-    send_attempt_id=UUID("9b85bc7c-cf60-45a9-9925-6c8b82b88e0d"),
-    send_intent_id=UUID("6c582e3f-bc90-41f5-82e8-cf70c95c5655"),
-    experiment_id=UUID("7dd7a7b3-5d57-4ae8-b1d9-49307050d7b8"),
-    campaign_id=UUID("a5dfb772-bb41-4988-8cbd-962dd0803c07"), campaign_version=1,
-    campaign_member_id=UUID("03157284-c5c8-4d87-a4d9-cb41777cab5f"),
-    lead_id=UUID("041a8a85-23a2-455c-a1f8-67e038b3fc45"),
-    message_id=UUID("e924022b-0639-4cb1-9d86-cd49c166d42a"),
-    mailbox_id=UUID("f64e645f-9be6-471a-a998-3f28bcbe5d5a"),
-    approval_id=UUID("bb50b06e-dafa-4b1f-84de-81f67252bed2"),
-    policy_decision_id=UUID("74e403e1-3645-4f5e-b87e-f617255e4ca8"),
-    policy_scope="SEND", policy_version="send-policy.v1",
-    scope_hash="1111111111111111111111111111111111111111111111111111111111111111",
-    policy_facts_hash="2222222222222222222222222222222222222222222222222222222222222222",
-    policy_allowed=True,
-    rate_reservation_id=UUID("fe88cb7a-876f-4c99-8c7c-10c52403dbb2"),
-    rate_policy_version="mailbox-rate.v1",
-    rate_window_start=datetime.fromisoformat("2026-08-28T00:00:00+00:00"), rate_slot_number=0,
-    rate_concurrency_lease_token="dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
-    rate_consumed_at=datetime.fromisoformat("2026-08-28T00:00:01+00:00"),
-    idempotency_key="send-intent-1",
-    rfc_message_id="<send-1@test.invalid>",
-    mime_sha256="a7a75fb7a7be061112e331a1fc3d0acf7145463a3487aa66190f2586f13a401c",
-    mime_bytes=b"From: sender@test.invalid\r\nTo: recipient@test.invalid\r\nSubject: Controlled test\r\nMessage-ID: <send-1@test.invalid>\r\nMIME-Version: 1.0\r\nContent-Type: text/plain; charset=\"utf-8\"\r\n\r\nControlled M6 test.\r\n",
-    timeout_ms=15000,
-)
-```
+The signed request fixture binds every field in the exact request list, including cohort/conversation, canonical accepted artifacts, action scope and governing strategy activation. Initial messages require null provider_thread_id/in_reply_to_rfc_id and an empty reference_rfc_ids tuple; response fixtures require exact authorized existing thread and RFC reply-chain references. All IDs are UUIDv4 except provider/RFC identities, versions use the declared schema/version types, ordinal is 1..4, generations are nonnegative integers, and action expiry is aware UTC. Result fixtures use the same immutable call/attempt/mailbox/RFC identity; the example below illustrates an unknown result.
 
 ```json
 {
@@ -158,6 +135,14 @@ GmailSendRequestV1(
   "finished_at": "2026-08-28T00:00:15Z"
 }
 ```
+
+### Autonomous conversation context
+
+The accepted EmailDraft and ConversationStrategy come from the writer, which has no send capability. GmailWritePort receives only a deterministic immutable SendGateway attempt, including action_authorization_id and ActionAuthorityScopeV1/content hash, OfferPackage ID/version/hash, GlobalStrategyPackage version, StrategyActivation ID, conversation/thread version/hash, cohort/member and generation. The complete send request field list above includes this context; fixture construction must populate every required field and reject absent or placeholder governing references before credentials.
+
+Initial and response messages use the same gateway. The request preserves authorized thread and RFC reply references; a newer inbound observation invalidates stale response authority. The adapter has no suppression or conversation-policy authority; current application policy controls negotiation. Any current suppression, terminal conversation, expired objective/offer/strategy scope or kill switch denies a new attempt.
+
+Only SendGateway may receive GmailWritePort; GmailReadPort is separately composed for complete thread sync and Sent reconciliation. The foundation GmailProvider name in current-state prose is historical and grants no combined capability in the planned product.
 
 ## Ordered implementation tasks
 

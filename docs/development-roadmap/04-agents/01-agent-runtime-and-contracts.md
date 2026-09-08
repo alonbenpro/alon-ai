@@ -6,7 +6,7 @@
 **Owner:** Solo operator
 **Prerequisites:** exact local order `AGENT-01-T01 -> AGENT-01-T02 -> AGENT-01-T03 -> AGENT-01-T04 -> AGENT-01-T05`; cross-document task Inputs `AGENT-01-T01 <- DB-01-T02,DB-04-T02; AGENT-01-T02 <- AGENT-10-T01; AGENT-01-T03 <- OBS-03-T02; AGENT-01-T04 <- BACKEND-01-T01,DB-04-T04,OBS-03-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [DB-01](../02-database/01-core-data-model.md), [DB-04](../02-database/04-agent-artifacts-and-evidence.md), [DB-05](../02-database/05-audit-events-and-idempotency.md), and accepted M1 runtime evidence
 **Outputs:** Versioned Pydantic execution models, dependency/tool authority boundary, reproducible hashes, provider-use ledger, failure taxonomy, finite-run rules, and persistence/event map
-**Unlocks:** AGENT-02 through AGENT-10 and M3 offline promotion
+**Unlocks:** All ten specialist contracts, including AGENT-11 Lead Discovery and AGENT-12 Global Learning, and shared AGENT-10 evaluation
 **Risk:** Critical
 **Complexity:** L
 
@@ -28,7 +28,7 @@ Non-goals: LangChain, LangGraph, Restate, Prefect, model-selected tools outside 
 
 ## Exact planned implementation surfaces
 
-Create `backend/src/alon_ai/agents/contracts.py`, `agents/dependencies.py`, `agents/execution.py`, `agents/registry.py`, `agents/errors.py`, `agents/telemetry.py`, and tests under `backend/tests/unit/agents/` and `backend/tests/contract/agents/`. Agent-specific modules are named in AGENT-02 through AGENT-09. Task 4 must implement provider protocols/adapters matching the capability semantics below; it may reconcile Python protocol names, but cannot silently widen a capability.
+Create `backend/src/alon_ai/agents/contracts.py`, `agents/dependencies.py`, `agents/execution.py`, `agents/registry.py`, `agents/errors.py`, `agents/telemetry.py`, and tests under `backend/tests/unit/agents/` and `backend/tests/contract/agents/`. Agent-specific modules are named in the ten specialist documents (AGENT-02..09, AGENT-11 and AGENT-12). provider roadmap must implement provider protocols/adapters matching the capability semantics below; it may reconcile Python protocol names, but cannot silently widen a capability.
 
 The existing persistence targets remain exact: DB-04 `agent_runs`, `artifacts`, `evidence_items`, `artifact_evidence_links`, `artifact_validations`, `artifact_acceptances`, `evaluation_cases`, and `evaluation_results`; DB-01 `workflow_runs`; and DB-05 `cost_entries`, `domain_events`, `audit_events`, and `outbox_messages`. This segment adds no alias table.
 
@@ -116,13 +116,15 @@ AbstentionT = TypeVar("AbstentionT", bound=StrictAgentModel)
 
 class AgentType(StrEnum):
     IDEA_DISCOVERY = "IDEA_DISCOVERY"
-    OFFER_DESIGN = "OFFER_DESIGN"
     MARKET_RESEARCH = "MARKET_RESEARCH"
+    OFFER_DESIGN = "OFFER_DESIGN"
+    LEAD_DISCOVERY = "LEAD_DISCOVERY"
     LEAD_RESEARCH = "LEAD_RESEARCH"
     LEAD_QUALIFICATION = "LEAD_QUALIFICATION"
-    OUTREACH_DRAFTING = "OUTREACH_DRAFTING"
-    REPLY_CLASSIFICATION = "REPLY_CLASSIFICATION"
+    EMAIL_WRITING = "EMAIL_WRITING"
+    REPLY_EVALUATION = "REPLY_EVALUATION"
     EXPERIMENT_EVALUATION = "EXPERIMENT_EVALUATION"
+    GLOBAL_LEARNING = "GLOBAL_LEARNING"
 
 class AgentErrorCode(StrEnum):
     INPUT_INVALID = "INPUT_INVALID"
@@ -188,6 +190,12 @@ class AgentExecutionEnvelopeV1(StrictAgentModel, Generic[PayloadT]):
     workflow_input_schema_version: VersionId
     workflow_input_hash: Sha256Hex
     input_pointer: JsonPointer
+    input_snapshot_id: Uuid4
+    input_snapshot_hash: Sha256Hex
+    producer_strategy_version: VersionId
+    global_strategy_package_id: Uuid4
+    global_strategy_package_version: VersionId
+    strategy_activation_id: Uuid4
     correlation_id: Uuid4
     causation_id: Uuid4
     configuration: AgentConfigurationRefV1
@@ -201,7 +209,7 @@ class ProviderUseLedgerEntryV1(StrictAgentModel):
     provider: VersionId
     capability: Literal[
         "model.complete_structured", "evidence.read", "search.query",
-        "page.extract", "business.search", "business.details"
+        "page.extract", "business.search", "business.details", "lead.discover"
     ]
     operation_version: VersionId
     request_hash: Sha256Hex
@@ -274,23 +282,33 @@ type AgentTerminalResultV1[
     Field(discriminator="outcome"),
 ]
 ```
-Every specialist binds its exact success and abstention schemas into `AgentTerminalResultV1[Success, Abstention]`; therefore every execution returns exactly one discriminated `SUCCESS`, `ABSTAIN`, or `FAILED` branch with the exact configuration, aggregate usage, and per-call provider ledger. The execution service rejects a branch/configuration mismatch or ledger totals that do not equal `AgentUsageV1`. `AgentFailureArtifactV1` remains a typed execution failure record, not a DB-04 product `artifacts` row. `AgentRunRecordingService` persists its safe fields to the failed `agent_runs` record. Only if a deterministic application handler fails the owning workflow does it also emit `workflow.run_failed.v1`; otherwise it records safe audit/trace evidence without inventing an agent-failure event. A specialist abstention schema records the allowed reason and supporting evidence; the application records `agent_runs.abstained=true` and may store the specialist's immutable `PRODUCED` abstention artifact with DB confidence `NULL`, but it cannot become accepted workflow evidence without normal validation.
+Every specialist binds its exact success and abstention schemas into `AgentTerminalResultV1[Success, Abstention]`; therefore every execution returns exactly one discriminated `SUCCESS`, `ABSTAIN`, or `FAILED` branch with the exact configuration, aggregate usage, and per-call provider ledger. The execution service rejects a branch/configuration mismatch or ledger totals that do not equal `AgentUsageV1`. `AgentFailureArtifactV1` remains a typed execution failure record, not a DB-04 product `artifacts` row. `AgentRunRecordingService` persists its safe fields to the failed `agent_runs` record. Only if a deterministic application handler fails the owning workflow does it also emit `workflow.run_failed.v1`; otherwise it records safe audit/trace evidence without inventing an agent-failure event. A specialist abstention schema records the allowed reason and supporting evidence; the application records `agent_runs.abstained=true` and confidence `NULL`; the abstention remains an execution record and creates no extra product artifact type.
+
+The success branch's `artifact` field is the specialist's typed execution payload. For EmailWritingAgent that payload contains separate canonical ConversationStrategy and EmailDraft envelopes; for gate-backed specialists it contains typed recommendations rather than fabricated authoritative artifacts. Persistence dispatches only the registered canonical envelopes to their proper owners. The wrapper and recommendation types are not additional product artifacts.
 
 ### Canonical digest and version rules
 
 Every digest uses DB-01's exact algorithm: lowercase SHA-256 over UTF-8 RFC 8785 canonical JSON for `{"schema_version":<string>,"payload":<json>}`. Duplicate keys, invalid Unicode, non-I-JSON numbers, NaN, and infinities are rejected before canonicalization.
 
-- `workflow_input_hash` is recomputed from `workflow_runs.input_schema_version/input_snapshot`; `agent_runs.input_snapshot_hash` copies that exact verified hash. It is never an independently invented agent hash.
-- The envelope's `input_pointer` selects the specialist payload within the already verified workflow snapshot. The request is rejected if the selected payload is not byte-equivalent to the decoded `payload`.
+- `workflow_input_hash` verifies the immutable parent workflow snapshot. Each invocation separately freezes its own typed input snapshot ID/hash, including accepted upstream artifact references, governing strategy version and activation. Different agent input snapshots are not required to equal the workflow snapshot or each other.
+- `input_pointer` identifies the parent workflow step context. The agent input hash is recomputed over its exact schema/payload and referenced context; altered accepted refs, phase, version or hash reject execution. A later response invocation has a new snapshot binding the complete current thread and accepted reply objective.
 - Product artifact digest schema strings are `artifact.<artifact_type>.v1`; registry entry `v1 -> artifacts.schema_version=1` is exact. `content_hash` covers only the registered product artifact content, not runtime usage.
 - Prompt, configuration, provider request/response, usage, score, and fixture hashes use schema strings `agent.prompt.v1`, `agent.config.v1`, `provider.request.v1`, `provider.response.v1`, `provider.usage.v1`, `evaluation.scores.v1`, and the suite's exact input/expected schema versions.
 - Any prompt/model/tool/input/output/post-validator change creates a new `AgentConfigurationRefV1` and immutable evaluation comparison. Upcasters validate old bytes first and transform only in memory.
 
+### Canonical artifact and deterministic materializer registry
+
+The exact registry and authority are [PRODUCT-01's fifteen artifacts](../00-product-strategy/01-product-scope.md#canonical-autonomous-sales-contract): IdeaBrief, MarketResearchReport, OfferPackage, LeadDiscoveryCandidate, LeadResearchDossier, QualificationDecision, ConversationStrategy, EmailDraft, ReplyEvaluation, NegotiationDecision, BookingIntent, CheckpointEvidenceBundle, AgentLearningProposal, GlobalStrategyPackage and StrategyActivation. QualificationDecision has PRELIMINARY or FINAL phase. Runtime recommendations/abstention/failure records do not add artifact names.
+
+Each canonical artifact envelope carries immutable ID, schema version, producer, producer strategy version, input snapshot ID/hash, output hash, evidence refs, created timestamp, disposition and supersession linkage. Every call/action pins the applicable OfferPackage, GlobalStrategyPackage and StrategyActivation; initial upstream work pins baseline activation before an offer exists. No nonexistent offer reference is fabricated for Idea Discovery or Market Research.
+
+IdeaBriefMaterializer produces the USER_SUPPLIED bypass shape; QualificationService materializes phased decisions; CommercialPolicyEngine materializes NegotiationDecision; BookingGateway owns BookingIntent; CheckpointEvaluationService freezes CheckpointEvidenceBundle before evaluation; StrategyActivationService owns approved GlobalStrategyPackage and StrategyActivation. Agents supply typed proposals to these owners and cannot mutate their records. EmailWritingAgent owns ConversationStrategy/EmailDraft but never sends. ReplyEvaluationAgent supplies exact objectives to the writer only after deterministic checks.
+
 ### Dependency injection and tool authority
 
-`AgentDependenciesV1` contains only `RunContext`, `CancellationSignal`, `UTCClock`, `EvidenceReadPort`, and the exact read-only capability ports selected by the specialist. It never contains a SQLAlchemy session, repository/unit of work, command service, Gmail DTO/port, `SendGateway`, policy/approval/control/budget/suppression service, OAuth/API credential, or unrestricted HTTP client.
+`AgentDependenciesV1` contains only `RunContext`, `CancellationSignal`, `UTCClock`, `EvidenceReadPort`, and the exact read-only capability ports selected by the specialist. It never contains a SQLAlchemy session, repository/unit of work, command service, Gmail/calendar write DTO/port, `SendGateway`/`BookingGateway`, policy/approval/control/budget/suppression service, OAuth/API credential, or unrestricted HTTP client.
 
-Capability semantics are consumer requirements for Task 4:
+Capability semantics are consumer requirements for provider roadmap:
 
 | Capability | Required semantics | Forbidden widening |
 | --- | --- | --- |
@@ -300,12 +318,13 @@ Capability semantics are consumer requirements for Task 4:
 | `page.extract` | HTTPS capture by approved URI/ref with scheme/domain/type/size/time limits | browser actions, login, forms, scripts, credential use |
 | `business.search` | bounded business candidates with source identity facts | personal-contact discovery or unbounded result pages |
 | `business.details` | business-level public facts and provenance for one candidate | personal data guessing, mailbox/contact enrichment, auto-merge |
+| `lead.discover` | bounded source-specific candidate observations through approved LeadDiscoveryProvider, with query/filter/source/terms/evidence versions | unrestricted crawling, unapproved social sources, invented identities or acceptance authority |
 
 The execution service registers only named Pydantic AI tools for the selected `toolset_version`. Unknown tool name, capability, or argument fails before a provider call. Tool results are untrusted Pydantic inputs and cannot inject instructions, add tools, change ceilings, or grant authority.
 
 ### Exact provider capability wire and fixture contracts
 
-Task 4 must implement byte-compatible equivalents of these six strict request/response/fixture families. It may rename Python methods only; capability literals, field semantics, schema strings, canonical hashes, timeout ceilings, errors, evidence/usage fields, and read-only authority are frozen.
+Provider owners implement byte-compatible equivalents of the following six strict request/response/fixture families. The seventh family, `lead.discover`, is defined in [PROVIDER-08](../05-providers/08-lead-discovery-provider.md); it uses the same strict unions, ledger, evidence and hash rules. It may rename Python methods only; capability literals, field semantics, schema strings, canonical hashes, timeout ceilings, errors, evidence/usage fields, and read-only authority are frozen.
 
 ```python
 RequestT = TypeVar("RequestT", bound=StrictAgentModel)
@@ -617,7 +636,7 @@ class CapabilityFixtureV1(StrictAgentModel, Generic[RequestT, ResultT]):
     fixture_id: Uuid4
     capability: Literal[
         "model.complete_structured", "evidence.read", "search.query",
-        "page.extract", "business.search", "business.details"
+        "page.extract", "business.search", "business.details", "lead.discover"
     ]
     request: RequestT
     request_hash: Sha256Hex
@@ -655,18 +674,18 @@ class BusinessDetailsFixtureV1(CapabilityFixtureV1[BusinessDetailsRequestV1, Bus
 | `business.search` | `8_000/20_000 ms` | same tool/budget errors as search | candidate-set hash and business/evidence identities; no contacts |
 | `business.details` | `6_000/15_000 ms` | same tool/budget errors as search plus `EVIDENCE_CONFLICT` | exact business identity, requested fact keys and evidence IDs/hashes |
 
-Each required request `timeout_ms` field encodes the `[1,max]` bound in its Pydantic schema; the table default is selected by deterministic dependency composition but never widens the typed maximum. Each `*ResultV1` is an exact `result_type`-discriminated union. `SUCCESS` requires the capability-specific typed `payload`, its literal `payload_schema_version`, and `payload_hash`, computed with the DB-01 RFC 8785/SHA-256 envelope over that exact payload; no success payload/hash is optional. `FAILURE` has no payload/hash fields, carries only that capability’s typed `AgentErrorCode` allowlist, and its provider outcome must match failure, timeout, or cancellation. Strict extra-forbid plus the union discriminator rejects success fields on failures, failure fields on successes, and cross-capability results. `ProviderUseLedgerEntryV1` must byte-match the request/result hashes, failure code, and `ProviderResultMetaV1`; fixture validation recomputes all three DB-01 envelopes. Task 4 cannot substitute provider-native strings for the shared taxonomy, return opaque SDK objects, omit cost/usage, or expose mutation/credential authority.
+Each required request `timeout_ms` field encodes the `[1,max]` bound in its Pydantic schema; the table default is selected by deterministic dependency composition but never widens the typed maximum. Each `*ResultV1` is an exact `result_type`-discriminated union. `SUCCESS` requires the capability-specific typed `payload`, its literal `payload_schema_version`, and `payload_hash`, computed with the DB-01 RFC 8785/SHA-256 envelope over that exact payload; no success payload/hash is optional. `FAILURE` has no payload/hash fields, carries only that capability’s typed `AgentErrorCode` allowlist, and its provider outcome must match failure, timeout, or cancellation. Strict extra-forbid plus the union discriminator rejects success fields on failures, failure fields on successes, and cross-capability results. `ProviderUseLedgerEntryV1` must byte-match the request/result hashes, failure code, and `ProviderResultMetaV1`; fixture validation recomputes all three DB-01 envelopes. provider roadmap cannot substitute provider-native strings for the shared taxonomy, return opaque SDK objects, omit cost/usage, or expose mutation/credential authority.
 
 ### Exact error taxonomy and finite execution
 
-The single `AgentErrorCode` enum in the shared model block is normative for execution, capability responses, fixtures, ledgers, failure artifacts, persistence reason codes, and Task 4 adapters. Provider-native error strings are mapped at the adapter boundary and retained only as restricted fingerprints; they never replace the enum.
+The single `AgentErrorCode` enum in the shared model block is normative for execution, capability responses, fixtures, ledgers, failure artifacts, persistence reason codes, and provider roadmap adapters. Provider-native error strings are mapped at the adapter boundary and retained only as restricted fingerprints; they never replace the enum.
 
 
 Only `DEPENDENCY_UNAVAILABLE`, `TOOL_TIMEOUT`, and `MODEL_TIMEOUT` may be `BOUNDED_RETRY`, and only when no paid/provider result was accepted, the workflow's remaining attempt/time/cost budget allows it, and the same command key/config/input is retained. Maximum model requests is `1` by default and `3` only where the specialist document explicitly allows schema-repair attempts. Cancellation is checked before a model/tool call, after each call, and before persistence; provider adapters receive the earlier of run deadline or their shorter operation deadline. Timeout/cancellation never creates an accepted partial artifact.
 
 ### Deterministic post-validation and persistence/event map
 
-The agent process returns an in-memory Pydantic result. Deterministic `AgentExecutionService` then checks exact schema/config identity and execution authority: product composition requires current promotion; isolated M3 candidate capture instead requires the signed code-bound evaluation-only manifest, reservation and disabled product/non-model authority, and that same context must fail product composition before credential access, digest/pointer equality, evidence existence/hash/redaction, citation pointers/cardinality, no forbidden fields/authority language, ceilings versus ledger, and product-specific invariants. It does not accept artifacts.
+The agent process returns an in-memory Pydantic result. Deterministic `AgentExecutionService` then checks exact schema/config identity and execution authority: product composition requires current promotion; isolated M3 candidate capture instead requires the signed code-bound evaluation-only manifest, reservation and disabled product/non-model authority, and that same context must fail product composition before credential access, verified per-agent snapshot and parent-context lineage, evidence existence/hash/redaction, citation pointers/cardinality, no forbidden fields/authority language, ceilings versus ledger, and product-specific invariants. It does not accept artifacts.
 
 Ownership follows DB-04 exactly. `AgentRunRecordingService` alone starts/closes `agent_runs` and reconciles aggregate usage. `EvidenceIngestService` alone stores `evidence_items`. `ArtifactCommandService` inserts only the immutable `artifacts(status=PRODUCED)` row and its atomic `artifact.produced.v1`; it never writes `artifact_evidence_links` or `artifact_validations`. In a later validation command, `ArtifactValidationService` verifies the produced artifact and captured evidence, writes every `artifact_evidence_links` row plus `artifact_validations`, then atomically records `VALIDATED` or `REJECTED` and emits `artifact.validated.v1` or `artifact.rejected.v1`. `ProviderCostReconciliationService` owns `cost_entries`. `ArtifactAcceptanceService` or an authenticated operator alone writes `artifact_acceptances`, `ACCEPTED`, and `artifact.accepted.v1`. Agents are never `actor_type` in `domain_events`/`audit_events`.
 
@@ -697,20 +716,20 @@ Each provider ledger item maps to one idempotent `cost_entries` row (`provider`,
 - **Ownership `test_artifact_command_service_cannot_write_evidence_links_or_validations`:** DB-04 owner boundaries and atomic validator link/validation/event transaction.
 - **Run ownership `test_agent_run_recording_service_is_the_only_agent_runs_writer_including_evaluations`:** static imports/service spies and start/close failure injection prove every runtime/evaluation caller delegates and never writes the table.
 - **Terminal union `test_every_specialist_result_is_exactly_success_abstain_or_failed`:** discriminator, config, usage, ledger, and branch payload reconcile.
-- **Capability contracts `test_six_provider_result_unions_are_wire_exact_and_reject_invalid_branches`:** for all six families, construct success/failure and reject missing payload/hash/schema identity, extra or opposite-branch fields, illegal capability error, mismatched discriminator/outcome, and `timeout_ms=0`/one above the typed maximum; also prove fixture/request/result/ledger digest parity.
+- **Capability contracts `test_seven_provider_result_unions_are_wire_exact_and_reject_invalid_branches`:** for all seven families (including PROVIDER-08 lead.discover), construct success/failure and reject missing payload/hash/schema identity, extra or opposite-branch fields, illegal capability error, mismatched discriminator/outcome, and `timeout_ms=0`/one above the typed maximum; also prove fixture/request/result/ledger digest parity.
 - **Security `test_agent_telemetry_and_failure_artifact_exclude_chain_of_thought_secrets_and_pii`:** allowlist scan.
 
 ## Security, privacy, compliance, idempotency, observability, and cost
 
 Prompts and tools treat every source as hostile data, never instructions. Restricted captures are read only when the specialist's declared scope permits and are not copied into telemetry. Correlation uses `experiment_id`, `workflow_run_id`, `agent_run_id`, `artifact_id`, `provider_call_id`, `correlation_id`, and `causation_id`; content, recipient addresses, credentials, and hidden reasoning are excluded. Metrics include run count/outcome/error, duration, tool/model counts, token usage, provider currency cost and ILS projection, evidence/citation counts, post-validation reasons, abstention, and promoted configuration hash.
 
-The workflow reserves cost before execution. The runtime stops before a call that could cross any ceiling, then reconciles every ledger row through `ProviderCostReconciliationService`. The same verified workflow input/config/agent type unique prevents duplicate run creation; per-provider idempotency is Task 4's responsibility and never substitutes for application command replay.
+The workflow reserves cost before execution. The runtime stops before a call that could cross any ceiling, then reconciles every ledger row through `ProviderCostReconciliationService`. The same workflow step plus verified per-agent input/config/agent type identity prevents duplicate run creation; per-provider idempotency is provider roadmap's responsibility and never substitutes for application command replay.
 
 Retention follows DB-04/05/06 exactly: `agent_runs`, `evaluation_cases`, and `evaluation_results` are `EVALUATION_VERSIONED`; `artifacts` and `artifact_evidence_links` are `BUSINESS_ACTIVE`; `evidence_items` are `SENSITIVE_SHORT`; `artifact_validations`, `artifact_acceptances`, `cost_entries`, `domain_events`, `audit_events`, and `outbox_messages` are `SAFETY_LONG`; `RetentionCommandService` owns every purge/redaction.
 
 ## Failure, rollback, and operator recovery
 
-Unknown schema/config, digest mismatch, authority leak, invalid provenance, impossible ledger total, or persistence disagreement blocks the artifact and opens an incident when safety/reproducibility is uncertain. Retry is workflow-owned and bounded by the taxonomy above. Rollback selects the prior promoted configuration for new runs; existing runs/artifacts/evaluations remain immutable. Operators compare workflow input, agent run, provider ledger, `cost_entries`, `artifact_evidence_links`, and events, then use audited recovery commands rather than SQL edits.
+Unknown schema/config, digest mismatch, authority leak, invalid provenance, impossible ledger total, or persistence disagreement blocks the artifact and opens an incident when safety/reproducibility is uncertain. Retry is workflow-owned and bounded by the taxonomy above. Rollback is requested under the stored deterioration rule, pauses affected future actions and, for a running cohort, waits for its closed checkpoint before StrategyActivationService installs the prior compatible approved package. M3 evaluation verifies this against fixtures; no local pointer change may mutate an active cohort or historical attribution. Operators compare workflow input, agent run, provider ledger, `cost_entries`, `artifact_evidence_links`, and events, then use audited recovery commands rather than SQL edits.
 
 ## Acceptance and retained evidence
 
@@ -725,4 +744,4 @@ Retain contract/schema snapshots, prompt/config/tool manifests and hashes, DB-01
 
 ## Dependencies and next deliverable
 
-AGENT-01 depends on M2's planned artifact/evidence/event schema and accepted finite runtime. It unlocks [AGENT-02](02-idea-discovery-agent.md) through [AGENT-09](09-experiment-evaluation-agent.md); none is promoted until [AGENT-10](10-agent-evals-and-versioning.md) passes.
+AGENT-01 depends on M2's planned artifact/evidence/event schema and accepted finite runtime. It unlocks all ten specialists through [Global Learning](11-global-learning-engine.md); none is promoted until [AGENT-10](12-agent-evals-and-versioning.md) passes.

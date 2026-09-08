@@ -12,7 +12,7 @@
 
 ## Outcome and timing
 
-Agents may read one immutable accepted/captured evidence item or request one bounded HTTPS extraction. They cannot fetch arbitrary networks, follow instructions in content, log in, click, submit forms, execute scripts, or receive raw restricted data without explicit scope. The application returns Task 3's exact typed unions only after evidence/capture integrity is established.
+Agents may read one immutable accepted/captured evidence item or request one bounded HTTPS extraction. They cannot fetch arbitrary networks, follow instructions in content, log in, click, submit forms, execute scripts, or receive raw restricted data without explicit scope. The application returns AGENT-01's exact typed unions only after evidence/capture integrity is established.
 
 ## Current repository state
 
@@ -20,7 +20,7 @@ DB-04 tables and services are planned but absent; there is no fetch/extraction l
 
 ## Scope and non-goals
 
-In scope: two exact capability families, local immutable evidence access, public HTTPS GET, DNS/redirect controls, MIME/size/time limits, deterministic text extraction/hash, prompt-injection signal, redaction, fixtures, and cost/telemetry. Non-goals: general browser automation, JavaScript rendering, authentication/cookies, robots/terms bypass, file/upload protocols, recursive crawl, attachments, personal/contact extraction, or content directly becoming trusted/accepted.
+In scope: two exact capability families, local immutable evidence access, public HTTPS GET, DNS/redirect controls, MIME/size/time limits, deterministic text extraction/hash, prompt-injection signal, redaction, fixtures, and cost/telemetry. Non-goals: general browser automation, JavaScript rendering, authentication/cookies, robots/terms bypass, file/upload protocols, recursive crawl, attachments, bulk personal/contact harvesting, guessing identities/linkages, or content directly becoming trusted/accepted.
 
 ## Exact planned implementation surfaces
 
@@ -97,10 +97,14 @@ Fixtures cover DNS rebinding, IPv4/IPv6 encodings, metadata endpoints, userinfo,
 
 Agents cannot access the HTTP/object-store client, credentials, repositories, command services, Gmail/`SendGateway`, or mutation/policy/approval/budget/suppression authority.
 
+### Canonical research and source-field scope
+
+MarketResearchReport, LeadResearchDossier, CheckpointEvidenceBundle and AgentLearningProposal consume captured evidence only by accepted ID/version/hash and permitted scope. A reviewed public source may support a named business owner/decision-maker or role only under an explicit source/field/privacy policy and matching business-person linkage evidence. Extraction never guesses contacts or treats any scraped person as a lead. The deterministic provider field allowlist/redaction policy is server-owned and pinned to source/terms version; agent arguments cannot widen it. FACT/ESTIMATE/UNKNOWN labels and source time/confidence remain with downstream fields. Global learning gets only approved minimized evidence from closed checkpoints.
+
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=PROVIDER-05-T01 milestone=M3 depends_on=AGENT-01-T01,DB-01-T01 mode=parallel locks=provider-contracts -->
-- [ ] **Implement exact evidence/page contracts —** Input: Task 3 families and DB-01 canonicalizer. Operation: preserve fields/literals/unions/timeouts/error allowlists/hash/fixture/ledger semantics. Output: two read-only ports. Test evidence: `test_evidence_and_page_wire_parity_with_agent01`. Failure behavior: reject before storage/network.
+- [ ] **Implement exact evidence/page contracts —** Input: AGENT-01 families and DB-01 canonicalizer. Operation: preserve fields/literals/unions/timeouts/error allowlists/hash/fixture/ledger semantics. Output: two read-only ports. Test evidence: `test_evidence_and_page_wire_parity_with_agent01`. Failure behavior: reject before storage/network.
 <!-- roadmap-task id=PROVIDER-05-T02 milestone=M3 depends_on=PROVIDER-05-T01 mode=parallel locks=provider-contracts -->
 - [ ] **Implement scoped evidence reader —** Input: strict request and immutable capture. Operation: verify identity/hash/redaction/scope/size and return allowlisted payload. Output: exact success/failure. Test evidence: missing/purged/restricted/corrupt/cancel matrix. Failure behavior: no content leakage.
 <!-- roadmap-task id=PROVIDER-05-T03 milestone=M3 depends_on=PROVIDER-05-T02,OBS-03-T02,DB-04-T03 mode=parallel locks=provider-contracts,backend-domain,agent-artifacts -->
@@ -129,7 +133,7 @@ Disable fetch on any SSRF escape, parser compromise, unexplained hash drift, con
 
 ## Acceptance and retained evidence
 
-- [ ] Both Task 3 capability families are byte/semantic exact, including error/time/hash/fixture/ledger rules.
+- [ ] Both AGENT-01 capability families are byte/semantic exact, including error/time/hash/fixture/ledger rules.
 - [ ] Fetch cannot reach internal networks, unsafe redirects/MIME/content, credentials, or browser actions.
 - [ ] Every page success has one DB-04 evidence identity and reproducible raw/text/payload hashes.
 - [ ] All source text/spans are NFC/code-point normalized before typed construction.
@@ -139,4 +143,4 @@ Retain schema/digest vectors, SSRF/DNS/redirect/MIME/parser fixtures, Unicode/sp
 
 ## Dependencies and next deliverable
 
-PROVIDER-05 depends on DB-04/05 and Task 3 contracts. It unlocks evidence-backed M3 suites and M4/M5 capture, but only deterministic validation/acceptance services may make captures workflow-eligible.
+PROVIDER-05 depends on DB-04/05 and AGENT-01 contracts. It unlocks evidence-backed M3 suites and M4/M5 capture, but only deterministic validation/acceptance services may make captures workflow-eligible.

@@ -1,96 +1,79 @@
-# Finite Experiment Lifecycle Coordination
+# Finite Autonomous Experiment Lifecycle
 
 **Document ID:** WF-02
-**Status:** Planned product workflow; no implementation exists
+**Status:** Planned finite workflow; no implementation exists
 **Milestone:** M4, M6 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `WF-02-T01 -> WF-02-T02 -> WF-02-T03 -> WF-02-T04 -> WF-02-T05`; cross-document task Inputs `WF-02-T01 <- BACKEND-01-T04,AGENT-10-T05,PROVIDER-03-T06,PROVIDER-04-T05,PROVIDER-05-T05,WF-01-T05,WF-00-T04; WF-02-T05 <- BACKEND-05-T01,WF-06-T03`. Descriptive source authorities/resources (not whole-document completion dependencies): M1 runtime accepted, M2 [DB-01](../02-database/01-core-data-model.md) through [DB-06](../02-database/06-migrations-seeding-and-retention.md), M3 promoted agent/provider contracts, and [ARCH-03 experiment state machine](../01-architecture/03-domain-events-and-state-machines.md#experiment-state-machine)
-**Outputs:** Finite per-stage workflow identity, queue/control semantics, exact experiment/run transitions, and evidence handoffs
-**Unlocks:** WF-03 idea validation, WF-04 lead qualification, WF-05 outreach/reply, and M7 controls
-**Risk:** High
+**Prerequisites:** exact local order `WF-02-T01 -> WF-02-T02 -> WF-02-T03 -> WF-02-T04 -> WF-02-T05`; cross-document task Inputs `WF-02-T01 <- BACKEND-01-T04,AGENT-10-T05,PROVIDER-03-T06,PROVIDER-04-T05,PROVIDER-05-T05,WF-01-T05,WF-00-T04; WF-02-T05 <- BACKEND-05-T01,WF-06-T03`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
+**Outputs:** Finite typed inputs/results, immutable artifact/state handoffs, idempotency and recovery evidence
+**Unlocks:** WF-03 idea/research/offer, WF-04 leads, WF-05 conversation and WF-07..09 booking/checkpoint/learning
+**Risk:** Critical
 **Complexity:** L
 
 ## Outcome and timing
 
-The product does not run one immortal “experiment agent.” Each active experiment stage is a finite durable run with frozen inputs, workflow version, attempt/time/cost bounds, explicit terminal result, and canonical application transition. The experiment aggregate outlives runs; a failed-stage retry creates a new `workflow_run_id`.
+Each experiment stage is a finite durable run. Application services own product transitions; workflows pass immutable IDs/versions/hashes and idempotent commands. The experiment outlives its runs; a failed-stage retry creates a new workflow_run_id. Runtime artifact/state dependencies enforce the sequence even when per-lead stages execute concurrently.
 
-M9 adds a finite staged-validation aggregate beneath the experiment: `STAGE_1_SIGNAL(100)`, `STAGE_2_CONFIRM(200)`, `STAGE_3_REPEAT(300)`, then `STAGE_4_ESTIMATE(400)`, with cumulative maxima `100/300/600/1,000`. Each stage terminates in a signed barrier. Only `CONTINUE` from Stages 1-3 creates the next run; every other outcome closes later admission. Pause/recovery restores the exact ordinal, immutable membership hash, observation cutoff, and remaining incremental/cumulative capacity without replaying admission.
+## Current repository state and planned surfaces
 
-## Current repository state
+No product workflow, persistent artifact/aggregate or provider implementation described here exists. Plan `backend/src/alon_ai/workflows/experiment_lifecycle.py` and application-owned command interfaces, fixture/contract tests and durable recovery simulations. Workflows never mutate ORM rows, call concrete adapters or own Gmail/calendar credentials.
 
-There is no product experiment, transition service, workflow runtime adapter, DBOS workflow, queue, application unit of work, workflow projection, or stage command. The current worker only waits for termination. Every capability below is planned after M1-M3 evidence.
+## Exact workflow contract
 
-## Scope and non-goals
+### Stage and authority map
 
-In scope: starting/ending research, lead, outreach, and evaluation stages; run identity; per-experiment exclusion; finite child workflow invocation; canonical state/event ownership; bounded failure; pause/cancel hooks; and correlation. Non-goals: a daemon per experiment, a workflow deciding business state, automatic `SCALE`, bypassing artifact gates, product send authority, or resuming a terminal failed run.
+| Finite stage | Required input/provider | Completion and deterministic owner |
+| --- | --- | --- |
+| IDEA_VALIDATION | ExperimentBrief; optional IdeaDiscoveryAgent or IdeaBriefMaterializer | accepted IdeaBrief -> MarketResearchReport -> OfferPackage; ExperimentCommandService moves RESEARCHING -> READY_FOR_LEADS |
+| LEAD_QUALIFICATION | Accepted OfferPackage; approved discovery | candidate -> PRELIMINARY QualificationDecision -> dossier -> FINAL QualificationDecision; readiness is preparation only |
+| OUTREACH_AND_REPLY | Frozen cohort, accepted draft/strategy/final qualification and current authority | SendGateway, complete thread ingestion, bounded reply/objective/negotiation/writer/send loop; closed sample/window enters EVALUATING |
+| BOOKING | Qualified buying intent and CALL_NEXT_STEP agreement | BookingGateway requires exact slot confirmation and reconciled provider event; purchase acceptance is optional |
+| CHECKPOINT_EVALUATION | Closed-stage admission/cutoff and immutable evidence | CheckpointEvaluationService freezes CheckpointEvidenceBundle and records one exact result |
+| GLOBAL_LEARNING | Closed checkpoint and frozen bundle | GlobalLearningEngine proposes; StrategyActivationService promotes/activates only at eligible boundaries |
 
-## Exact planned implementation surfaces
+The campaign program is STAGE_1_SIGNAL(100), STAGE_2_CONFIRM(200), STAGE_3_REPEAT(300), STAGE_4_ESTIMATE(400); cumulative maxima are 100/300/600/1,000. Unique membership, offer, strategy/activation, qualification, causal variables and evidence definitions freeze before each cohort starts. Only CONTINUE at stages 1-3 can make the next cohort eligible. Final CONTINUE closes positively with no fifth cohort; REVISE, KILL, INCONCLUSIVE and SAFETY_STOP cannot open more admission.
 
-Create `application/experiments.py`, `workflows/experiment_lifecycle.py`, DBOS runtime registration/composition, and contract/recovery tests. Runtime workflow ID is `experiment:{experiment_id}:{stage}:v{workflow_version}:run:{workflow_run_id}`. Queue `alon-ai-experiment-v1` starts at global concurrency `2`, worker concurrency `2`, no start-rate limiter; configuration is pinned/evidenced per release. The database partial unique `uq_workflow_runs_active_experiment_type` on `(experiment_id,workflow_type)` for `PENDING/RUNNING/PAUSE_REQUESTED/PAUSED/CANCEL_REQUESTED` prevents overlapping same-stage runs.
+Normal artifact acceptance, in-envelope sends/replies/negotiations/bookings and checkpoint decisions do not wait for per-message approval. Unsafe/stale/ambiguous/out-of-envelope inputs pause into exceptions. Source/legal/provider/launch authority, current budget/rate/capacity and kill switches still gate each action.
 
-The coordinator accepts IDs/versions only; it loads no live ORM object across steps. Every step invokes an idempotent application command with key `workflow:{workflow_run_id}:step:{step_name}:v{step_version}`.
+### Durable identity and transition rules
 
-Every stage producer constructs the DB-01 envelope `{"schema_version":<string>,"payload":<json>}`, RFC-8785-canonicalizes it to UTF-8, and stores the lowercase SHA-256 with the exact text version/payload. Every resume/child consumer recomputes and validates before decoding or upcasting. Only a successful run writes the result triplet; cancellation/failure keeps it SQL NULL. A validator migration verifies old bytes first and transforms only in memory; changed schema/payload starts a new run. WF-03, WF-04, WF-05, and WF-06 use the DB-01 golden vectors.
+Runtime ID: `experiment:{experiment_id}:{stage}:v{workflow_version}:run:{workflow_run_id}`; command key: `workflow:{workflow_run_id}:step:{step}:v{step_version}`. Queue `alon-ai-experiment-v1` starts at global/worker concurrency 2. Partial unique active-run constraints exclude overlapping same-stage runs. Per-lead work has distinct business/member identity and finite caps.
 
-### Stage and transition contract
+Store DB-01 RFC 8785 schema/payload hashes for workflow inputs/results; each agent has its own input snapshot with accepted upstream references. Replaying an existing step verifies its stored result and never redoes accepted paid calls. Success records bounded result/version/hash atomically with run completion, domain/audit/outbox and command result. Failed/cancelled runs have no successful result triplet.
 
-| Stage run | Start guard/transition | Completion transition | Failure transition/evidence |
-| --- | --- | --- | --- |
-| `IDEA_VALIDATION` | operator `StartResearch`; `READY_FOR_RESEARCH -> RESEARCHING`; create run and emit `workflow.run_started.v1` plus `experiment.state_changed.v1` atomically | accepted required artifacts; `RESEARCHING -> READY_FOR_LEADS`; `workflow.run_completed.v1` plus `experiment.state_changed.v1` | `RESEARCHING -> FAILED`; `experiment.failed.v1` and `workflow.run_failed.v1` with retry taxonomy |
-| `LEAD_QUALIFICATION` | `StartLeadQualification`; `READY_FOR_LEADS -> QUALIFYING_LEADS`; same start events | lead/sample/evidence gate; `QUALIFYING_LEADS -> READY_FOR_OUTREACH`; completion/state events | `QUALIFYING_LEADS -> FAILED`; canonical failure events |
-| `OUTREACH_AND_REPLY` | M6 authority/active campaign; `READY_FOR_OUTREACH -> OUTREACH_ACTIVE`; same start/state events | sample/window closed and all sends terminal/reconciled; `OUTREACH_ACTIVE -> EVALUATING`; completion/state events | only after all in-flight outcomes are terminal/reconciled: `OUTREACH_ACTIVE -> FAILED`; canonical failure events |
-| `EXPERIMENT_EVALUATION` | `READY_FOR_OUTREACH` no-send decision or closed outreach; enter/remain `EVALUATING`; create run/start event | operator command records immutable decision; `EVALUATING -> DECIDED`; `experiment.decision_recorded.v1`, state change, and run completion | evaluation can pause; unrecoverable run failure emits `workflow.run_failed.v1` and operator chooses retry/revise/cancel under ARCH-03 |
-
-### Exact table read/write map
-
-| Command/step | Authoritative reads | Atomic writes/constraints | Events |
-| --- | --- | --- | --- |
-| start stage | `experiments`, active brief/artifact/metric/campaign gates, `system_controls` where relevant, active `workflow_runs` | update `experiments.version/state`; insert `workflow_runs`; `command_idempotency`, `domain_events`, `audit_events`, `outbox_messages`; active-run partial unique | `workflow.run_started.v1`, `experiment.state_changed.v1` |
-| child artifact/lead work | immutable IDs decoded only after RFC 8785 envelope verification of `workflow_runs.input_schema_version/input_snapshot/input_hash`; repositories in WF-03/WF-04 | their agent/artifact/evidence/lead tables via application commands; `agent_runs` composite workflow/input-digest FK; command key uniques | artifact/lead catalog events |
-| complete stage | run row, experiment expected version, exact acceptance/gate records | atomically store bounded `result_snapshot/result_schema_version/result_hash`, update run terminal + experiment state, and write event/audit/outbox/idempotency | `workflow.run_completed.v1` carries result schema/hash; `experiment.state_changed.v1` |
-| fail stage | run/error taxonomy/current experiment | update run `FAILED`; update experiment `FAILED` with failure fields; same transactional safety tables | `workflow.run_failed.v1`, `experiment.failed.v1`, `experiment.state_changed.v1` |
+ARCH-03 owns every transition, including FAILED exits and PAUSED resume target. READY_FOR_OUTREACH grants no sending permission. Stage closure stops admission and drains actions; unresolved Gmail/calendar writes remain quarantined/paused, never falsely terminal. Checkpoint decision and activation CAS bind cohort/control generation so a stale timer cannot reopen a stage.
 
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=WF-02-T01 milestone=M4 depends_on=BACKEND-01-T04,AGENT-10-T05,PROVIDER-03-T06,PROVIDER-04-T05,PROVIDER-05-T05,WF-01-T05,WF-00-T04 mode=parallel locks=workflow-runtime -->
-- [ ] **Implement stage command service —** Input: expected experiment version, stage, frozen prerequisites, command key; signed SelectedRuntimeDecisionV1 selecting DBOS only on acceptance or Temporal only after the identical mandatory fallback suite passed. Operation: apply ARCH-03 transition and atomically create canonical run/events. Output: authoritative run ID/state. Test evidence: exhaustive start guard and duplicate-command tests. Failure behavior: typed denial; no run.
+- [ ] **Encode finite stage registry —** Input: canonical states/accepted runtime. Operation: freeze stage input/result schemas, per-stage dependency guards and run IDs. Output: registry and typed transitions. Test evidence: provider-before-consumer and missing-artifact failures. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-02-T02 milestone=M4 depends_on=WF-02-T01 mode=parallel locks=workflow-runtime -->
-- [ ] **Implement finite coordinator —** Input: run/experiment/version IDs. Operation: call the named child workflow/application commands, wait only on durable runtime primitives, and terminate with typed result/error. Output: finite stage result. Test evidence: success/failure/restart/version replay. Failure behavior: sanitized failure report; no direct aggregate write.
+- [ ] **Implement idempotent start and completion —** Input: versioned command/run fixtures. Operation: atomically commit run/aggregate/events/audit/outbox and stored replay results. Output: finite lifecycle coordinator. Test evidence: duplicate start, transaction crash and hash-splice matrix. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-02-T03 milestone=M4 depends_on=WF-02-T02 mode=parallel locks=workflow-runtime -->
-- [ ] **Implement completion/failure handlers —** Input: child result and expected state/version. Operation: revalidate evidence, close run, transition aggregate, and emit exact events atomically. Output: versioned atomic completion-handler interface plus next canonical state. Test evidence: injected conflict/evidence-revocation/atomicity cases. Failure behavior: run enters operator-visible `FAILED` or result-awaiting-repair; never guess.
+- [ ] **Implement failure and resume guards —** Input: ARCH-03 transition matrix. Operation: retain pause targets and retry limits; create new failed-stage runs and reject terminal restart. Output: closed recovery mapping. Test evidence: all legal/illegal exits and stale generation cases. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-02-T04 milestone=M4 depends_on=WF-02-T03 mode=parallel locks=workflow-runtime -->
-- [ ] **Enforce active-run exclusion and budgets —** Input: concurrent starts and run caps. Operation: rely on partial unique plus budget reservation before paid work. Output: at most one active same-stage run and bounded cost/time. Test evidence: real-PostgreSQL race and exhaustion tests. Failure behavior: reject second run/call.
+- [ ] **Verify no-send lifecycle —** Input: synthetic accepted artifact fixtures. Operation: execute idea and lead stage handoffs without write ports. Output: M4 coordinator evidence. Test evidence: finite completion/cancellation and zero Gmail/calendar access. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-02-T05 milestone=M6 depends_on=WF-02-T04,BACKEND-05-T01,WF-06-T03 mode=parallel locks=workflow-runtime -->
-- [ ] **Wire pause/cancel/recovery —** Input: the BACKEND-05 authenticated control command plus WF-06 exact ARCH-03 state/event transition result. Operation: invoke WF-06 cooperative/runtime control and recheck guards on resume. Output: complete versioned finite WF-02 workflow contract plus canonical run/experiment states. Test evidence: restart during each control boundary. Failure behavior: fail closed; outreach dequeue remains stopped.
+- [ ] **Bind conversation/checkpoint controls —** Input: current product control and cohort fixtures. Operation: close admission, persist stage/checkpoint identity and require boundary eligibility for continuation. Output: M6 lifecycle control contract. Test evidence: pause/replay/ceiling/final-CONTINUE tests. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 
 ## Test strategy
 
-- **Unit `test_stage_transition_table_matches_arch03`:** exact states/owners/events.
-- **Concurrency `test_same_experiment_stage_cannot_have_two_active_runs`:** partial unique is the last defense.
-- **Integration `test_start_and_finish_bundle_is_atomic`:** state/run/event/audit/idempotency/outbox.
-- **Digest `test_all_stage_inputs_and_results_match_rfc8785_sha256_vectors`:** independent encoders, null/result state, and schema upcast rules.
-- **Recovery `test_stage_restarts_from_durable_step_without_repeating_accepted_artifact`:** replay command results.
-- **Contract `test_workflow_cannot_mutate_repository_or_provider_directly`:** import/call boundary.
-- **Cost `test_stage_stops_before_paid_step_when_reservation_fails`:** no negative budget.
+Contract tests cover exact accepted-artifact version/hash lineage and state ownership. Real isolated PostgreSQL tests inject failure before/after each aggregate/artifact/event/audit/outbox/idempotency transaction. Recorded providers and owned-resource gates cover duplicate/out-of-order delivery, cancellation, stale generation and ambiguity. Required scenarios appear per task; no fake/synthetic evidence counts as real demand.
 
-## Security, privacy, compliance, idempotency, observability, and cost
+## Safety, privacy, compliance, observability and cost
 
-Only authenticated application commands create/control runs. Workflow inputs contain stable IDs/hashes, not credentials or full sensitive content. Each step has a deterministic command key. Trace fields include experiment/run/runtime/workflow/step/version/correlation IDs, safe outcome/retry codes, duration, queue wait, and reserved/reconciled cost. An agent result never becomes a transition without deterministic validation.
+Every run pins schema/configuration, producer strategy, GlobalStrategyPackage/StrategyActivation, deadline and finite attempt/tool/token/cost ceilings. Application services reserve paid-call budgets before execution and reconcile all usage. Retention follows DB-06 per record/field purpose and sensitivity; minimized evidence is required before learning reuse.
 
-## Failure, rollback, and operator recovery
+Telemetry includes safe IDs, hashes, versions, counts, durations, outcomes and costs. It excludes raw recipients, message/calendar content, sensitive budget spans, credentials and hidden reasoning. Source and email content are untrusted data; deterministic legal/provider/suppression/commercial gates and scoped write ports remain mandatory.
 
-Stop/dequeue controls remain independent of workflow code. A bad workflow version drains or uses the M1-proven patch/version strategy; incompatible in-flight runs never execute new order silently. A terminal failed run is retained; an allowed `RetryExperimentStage` creates a new run and increments retry count. Unknown state/version/evidence opens an incident and blocks mutation.
+## Failure, rollback, recovery and acceptance
 
-## Acceptance and retained evidence
+Pause closes admission before acknowledgement and retains the exact resume target, accepted inputs, counters/capacity and control generation. Cancel drains only provably uncalled work; uncertain external outcomes remain quarantined with durable evidence. Terminal runs never resume. A valid failed-stage retry creates a new linked finite run; changed inputs create superseding artifacts outside active cohorts.
 
-- [ ] Every stage is finite, bounded, versioned, correlated, and terminal.
-- [ ] Every read/write maps to exact M2 tables/constraints and every transition/event matches ARCH-03.
-- [ ] Application command service, never runtime/agent/provider, owns aggregate state.
-- [ ] Same-stage concurrency and command replay cannot duplicate work.
-- [ ] Outreach stage is impossible without the M1/M6 authority rules.
+- [ ] Every boundary has a named deterministic owner and accepted version/hash input.
+- [ ] No workflow has direct Gmail/calendar write authority or routine per-message approval.
+- [ ] Every replay, pause, terminal stop and ambiguous outcome has a finite coordinator outcome with no blind retry.
+- [ ] Cohort and strategy boundaries preserve capacity, immutable evidence and historical attribution.
+- [ ] Required contract/recovery/gate evidence is retained before later product use.
 
-Retain transition/guard snapshot, queue config, import rules, PostgreSQL races, restart/version/control traces, event fixtures, and cost-cap evidence.
-
-## Dependencies and next deliverable
-
-WF-02 depends on accepted runtime, complete M2 persistence, and promoted M3 contracts. It unlocks [WF-03](03-idea-validation-workflow.md), then [WF-04](04-lead-qualification-workflow.md), and only after M6 prerequisites [WF-05](05-outreach-and-reply-workflow.md).
+Retain schema/transition snapshots, command/artifact/activation lineage, source/provider fixture hashes, full crash matrices, safe audit/event traces, cost reconciliation and gate results.

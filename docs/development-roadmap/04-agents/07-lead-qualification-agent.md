@@ -1,47 +1,46 @@
-# Idea Discovery Agent
+# Final Lead Qualification Agent
 
-**Document ID:** AGENT-02
+**Document ID:** AGENT-06
 **Status:** Planned M3 specialist; no implementation exists
 **Milestone:** M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `AGENT-02-T01 -> AGENT-02-T02 -> AGENT-02-T03 -> AGENT-02-T04`; cross-document task Inputs `AGENT-02-T01 <- DB-02-T01,DB-04-T01,AGENT-10-T01,AGENT-01-T01; AGENT-02-T02 <- AGENT-01-T02; AGENT-02-T03 <- AGENT-01-T04,BACKEND-01-T01,DB-04-T04,OBS-03-T02; AGENT-02-T04 <- AGENT-10-T03,AGENT-10-T04`. Source authorities: [canonical product contract](../00-product-strategy/01-product-scope.md#canonical-autonomous-sales-contract), [module boundaries](../01-architecture/02-module-boundaries.md), [runtime](01-agent-runtime-and-contracts.md), and [shared evaluation](12-agent-evals-and-versioning.md).
-**Outputs:** IdeaBrief
-**Unlocks:** [Market Research](03-market-research-agent.md)
+**Prerequisites:** exact local order `AGENT-06-T01 -> AGENT-06-T02 -> AGENT-06-T03 -> AGENT-06-T04`; cross-document task Inputs `AGENT-06-T01 <- AGENT-03-T01,AGENT-05-T01,AGENT-10-T01,AGENT-01-T01,DB-03-T03; AGENT-06-T02 <- AGENT-01-T02; AGENT-06-T03 <- AGENT-01-T04,BACKEND-01-T01,DB-04-T04,OBS-03-T02; AGENT-06-T04 <- AGENT-10-T03,AGENT-10-T04`. Source authorities: [canonical product contract](../00-product-strategy/01-product-scope.md#canonical-autonomous-sales-contract), [module boundaries](../01-architecture/02-module-boundaries.md), [runtime](01-agent-runtime-and-contracts.md), and [shared evaluation](12-agent-evals-and-versioning.md).
+**Outputs:** final QualificationDecision (materialized by QualificationService)
+**Unlocks:** [Email Writing](08-email-writing-agent.md)
 **Risk:** Critical
 **Complexity:** L
 
 ## Outcome and timing
 
-Returns one bounded IdeaBrief. Deterministic materialization/acceptance completes the discovered path without routine operator selection. In the USER_SUPPLIED path, IdeaBriefMaterializer validates the same immutable IdeaBrief shape, stores user provenance and bypass reason, and does not call this agent. Both paths must enter Market Research. No downstream offer, research report, identity or price may be invented to fill missing scope.
+Reapplies the immutable OfferPackage filters to the accepted dossier. The agent returns a typed recommendation inside its execution result; QualificationService alone materializes QualificationDecision. Required FAIL/UNKNOWN prevents qualification. Identity, suppression, legal-policy, capacity and cohort admission are separate deterministic checks. A QUALIFIED lead has no send authority. No independent qualification rubric, price filter or mid-cohort correction may be invented.
 
 Filename order is presentation. Stable Document ID/task prefixes survive renames; accepted artifact references and deterministic state guards enforce runtime order. M3 implements this contract against signed fixtures; product runtime and live authority belong to later workflow/provider gates.
 
 ## Current repository state and implementation surfaces
 
-This agent, its canonical artifacts, prompt, validator, fixtures and promotion do not exist today. Plan `backend/src/alon_ai/agents/idea_discovery.py`, `agents/prompts/idea_discovery/v1.md`, a deterministic post-validator and `backend/tests/fixtures/evals/idea_discovery/v1/`. Services own persistence and transitions.
+This agent, its canonical artifacts, prompt, validator, fixtures and promotion do not exist today. Plan `backend/src/alon_ai/agents/lead_qualification.py`, `agents/prompts/lead_qualification/v1.md`, a deterministic post-validator and `backend/tests/fixtures/evals/lead_qualification/v1/`. Services own persistence and transitions.
 
 ## Exact input/output contract
 
-Input: Frozen ExperimentBrief version/hash, operator advantage, target/problem constraints, approved evidence references and baseline strategy activation. No OfferPackage is accepted upstream.
+Input: Accepted OfferPackage and LeadResearchDossier IDs/versions/hashes; frozen qualification-filter version, identity/evidence references and governing strategy activation.
 
 All inputs use AGENT-01 strict/frozen extra-forbid schemas. Every canonical output carries immutable artifact ID, schema version, producer, producer strategy version, its own input snapshot ID/hash, output hash, evidence refs, created timestamp, disposition and supersession linkage. Every consumer pins accepted upstream versions/hashes, governing GlobalStrategyPackage and StrategyActivation. Workflow correlation does not force independent agent snapshots to share a hash.
 
 | Field group | Required content and validator rule |
 | --- | --- |
-| origin | Exactly DISCOVERED for this agent; experiment has one origin |
-| customer/problem/solution | One bounded target customer, observable problem and solution hypothesis |
-| operator fit | Relevant capability, constraints and evidence; no invented track record |
-| assumptions | At least two falsifiable assumptions and one disconfirming signal |
-| claims | INPUT_FACT, EXTERNAL_FACT or HYPOTHESIS; facts cite matching evidence, hypotheses remain uncertainty |
-| provenance | ExperimentBrief reference, evidence refs, source time and unknowns |
+| phase | Exactly FINAL; PRELIMINARY is never accepted as this output |
+| lineage | Governing OfferPackage/filter version and LeadResearchDossier refs |
+| findings | One PASS/FAIL/UNKNOWN assessment for every immutable required/optional filter with evidence and reasons |
+| recommendation | QUALIFY or REJECT; confidence is advisory and never overrides a required failure or unknown |
+| decision | QualificationService records phase, result, deterministic reasons, input refs and gate version |
 
 The specialist execution result is a strict `SUCCESS|ABSTAIN|FAILED` union with configuration, usage and per-call ledger on every branch. Agent-owned canonical outputs can only begin as `PRODUCED`; gate-owned outputs remain execution proposals until their named deterministic materializer accepts them. Execution recommendations, abstentions and failures are run records, not additional artifact registry names. Every success payload has advisory confidence as Decimal 0..1 with at most three fractional digits; abstention/failure confidence is null. Abstention reasons are exactly INSUFFICIENT_INPUT, INSUFFICIENT_EVIDENCE, EVIDENCE_CONFLICT or UNSAFE_INPUT, with safe details and input evidence refs, and no accepted partial output. AGENT-01 owns execution-failure codes. Confidence cannot grant authority.
 
 ## Dependencies, tools, evidence and ceilings
 
-Allowed capabilities: evidence.read <=2; no search, page or discovery capability. Structured model access is bounded by the runtime. Every other capability, provider credential, ORM/repository, application mutation command, Gmail/calendar write port, workflow launch and dynamic subagent tool is forbidden.
+Allowed capabilities: evidence.read <=2; no source search or enrichment. Structured model access is bounded by the runtime. Every other capability, provider credential, ORM/repository, application mutation command, Gmail/calendar write port, workflow launch and dynamic subagent tool is forbidden.
 
-Exact maximum execution ceilings: 45 seconds; 6,000 input / 1,800 output tokens; 2 tool calls; 2 model requests (second only schema repair); 20 USD minor. The earlier of per-capability deadline and remaining run deadline wins. Composition reserves cost before calls; checks cancellation before and after calls and before persistence; reconciles each provider ledger entry with usage/cost. The optional second model request can repair schema only and cannot retry until a preferred decision appears.
+Exact maximum execution ceilings: 45 seconds; 8,000 input / 1,500 output tokens; 2 tool calls; 2 model requests (second only schema repair); 15 USD minor. The earlier of per-capability deadline and remaining run deadline wins. Composition reserves cost before calls; checks cancellation before and after calls and before persistence; reconciles each provider ledger entry with usage/cost. The optional second model request can repair schema only and cannot retry until a preferred decision appears.
 
 Evidence/source text is untrusted data. Validators check source authorization, field-level facts/estimates/unknowns, evidence ID/hash/span, current accepted inputs, strategy attribution, exact allowed enums, numeric/identity rules and absence of authority leakage. Missing required facts cannot be guessed.
 
@@ -53,18 +52,18 @@ Rejected outputs cannot drive consumers. A safe retry is finite under AGENT-01 t
 
 ## Ordered implementation tasks
 
-<!-- roadmap-task id=AGENT-02-T01 milestone=M3 depends_on=DB-02-T01,DB-04-T01,AGENT-10-T01,AGENT-01-T01 mode=parallel locks=agent-runtime -->
+<!-- roadmap-task id=AGENT-06-T01 milestone=M3 depends_on=AGENT-03-T01,AGENT-05-T01,AGENT-10-T01,AGENT-01-T01,DB-03-T03 mode=parallel locks=agent-runtime -->
 - [ ] **Encode exact schemas and immutable configuration —** Input: canonical upstream artifact contracts and signed shared fixture templates. Operation: implement typed inputs, output/proposal schemas, prompt/configuration hashes and phase/authority rules. Output: importable contract and schema registry entry. Test evidence: strict schema, hash/version and missing-provider-input cases. Failure behavior: reject before model access.
-<!-- roadmap-task id=AGENT-02-T02 milestone=M3 depends_on=AGENT-02-T01,AGENT-01-T02 mode=parallel locks=agent-runtime -->
+<!-- roadmap-task id=AGENT-06-T02 milestone=M3 depends_on=AGENT-06-T01,AGENT-01-T02 mode=parallel locks=agent-runtime -->
 - [ ] **Implement bounded specialist execution —** Input: verified runtime envelope and exact scoped capabilities. Operation: enforce the declared ceilings, cancellation and hostile-evidence handling with fake/recorded tools. Output: SUCCESS, ABSTAIN or FAILED with immutable lineage/ledger. Test evidence: tool denial, timeout, cancellation and all numeric boundary cases. Failure behavior: no accepted partial output or side effect.
-<!-- roadmap-task id=AGENT-02-T03 milestone=M3 depends_on=AGENT-02-T02,AGENT-01-T04,BACKEND-01-T01,DB-04-T04,OBS-03-T02 mode=parallel locks=agent-artifacts,backend-domain -->
-- [ ] **Validate and connect the deterministic handoff —** Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows. Operation: enforce the specialist rules and delegate each owned write; use fixture-backed domain gate interfaces without depending on later runtime evidence. Output: tested immutable specialist implementation/configuration identity and handoff. Test evidence: idea_bypass_shape_and_provenance; missing_scope_abstains; evidence_fact_hypothesis_separation; offer_input_is_forbidden. Failure behavior: reject unsafe output and preserve prior accepted versions.
-<!-- roadmap-task id=AGENT-02-T04 milestone=M3 depends_on=AGENT-02-T03,AGENT-10-T03,AGENT-10-T04 mode=serial locks=agent-runtime,agent-artifacts -->
+<!-- roadmap-task id=AGENT-06-T03 milestone=M3 depends_on=AGENT-06-T02,AGENT-01-T04,BACKEND-01-T01,DB-04-T04,OBS-03-T02 mode=parallel locks=agent-artifacts,backend-domain -->
+- [ ] **Validate and connect the deterministic handoff —** Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows. Operation: enforce the specialist rules and delegate each owned write; use fixture-backed domain gate interfaces without depending on later runtime evidence. Output: tested immutable specialist implementation/configuration identity and handoff. Test evidence: final_phase_and_offer_filter_exactness; required_unknown_or_failure_cannot_qualify; estimate_cannot_satisfy_fact_condition; qualification_does_not_authorize_send. Failure behavior: reject unsafe output and preserve prior accepted versions.
+<!-- roadmap-task id=AGENT-06-T04 milestone=M3 depends_on=AGENT-06-T03,AGENT-10-T03,AGENT-10-T04 mode=serial locks=agent-runtime,agent-artifacts -->
 - [ ] **Gate specialist acceptance with shared evaluation —** Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite. Operation: independently verify every repetition, hard rule, quality/cost/latency/regression threshold and immutable configuration hash. Output: specialist acceptance evidence for shared promotion; no second promotion writer. Test evidence: missing capture, fixture drift, hard failure and threshold-edge rejection. Failure behavior: candidate remains ineligible.
 
 ## Test strategy and retained evidence
 
-Required focused cases: `idea_bypass_shape_and_provenance`, `missing_scope_abstains`, `evidence_fact_hypothesis_separation`, `offer_input_is_forbidden`. Retain exact input/output schemas, provider and artifact hash vectors, fixtures, adversarial results, all three per-case captures, per-repetition scores, cost/latency/quality gates, authority graph and replay traces. Suite counts/allocations and numeric thresholds are owned by AGENT-10; a discrepancy blocks promotion.
+Required focused cases: `final_phase_and_offer_filter_exactness`, `required_unknown_or_failure_cannot_qualify`, `estimate_cannot_satisfy_fact_condition`, `qualification_does_not_authorize_send`. Retain exact input/output schemas, provider and artifact hash vectors, fixtures, adversarial results, all three per-case captures, per-repetition scores, cost/latency/quality gates, authority graph and replay traces. Suite counts/allocations and numeric thresholds are owned by AGENT-10; a discrepancy blocks promotion.
 
 ## Safety, privacy, observability and acceptance
 

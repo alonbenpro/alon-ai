@@ -6,7 +6,7 @@
 **Owner:** Solo operator
 **Prerequisites:** exact local order `PROVIDER-03-T01 -> PROVIDER-03-T02 -> PROVIDER-03-T03 -> PROVIDER-03-T04 -> PROVIDER-03-T05 -> PROVIDER-03-T06`; cross-document task Inputs `PROVIDER-03-T01 <- AGENT-01-T01,DB-01-T01; PROVIDER-03-T05 <- AGENT-10-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01 exact capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), DB-01 digest rules, DB-04/05 ledgers, and promoted configuration gates
 **Outputs:** Byte-exact `model.complete_structured` protocol, OpenAI Responses adapter, typed failures, live-capture/fixture modes, cost and replacement contract
-**Unlocks:** Offline candidate capture and AGENT-02 through AGENT-09 promotion
+**Unlocks:** Offline candidate capture and all ten specialist promotions including Lead Discovery and Global Learning
 **Risk:** High
 **Complexity:** L
 
@@ -20,7 +20,7 @@ Pydantic AI/Pydantic Evals dependencies are locked but unused. There is no model
 
 ## Scope and non-goals
 
-In scope: exact Task 3 wire family, deterministic method mapping, model/prompt/schema translation, deadlines/cancellation, provider errors, usage/cost, fixtures, data minimization, quotas, and replacement. Non-goals: provider-native tools, web/file/code/computer tools, conversations, hidden follow-up loops, background responses, free-form output, model-selected models, agent credentials, policy/business decisions, or automatic artifact acceptance.
+In scope: exact AGENT-01 wire family, deterministic method mapping, model/prompt/schema translation, deadlines/cancellation, provider errors, usage/cost, fixtures, data minimization, quotas, and replacement. Non-goals: provider-native tools, web/file/code/computer tools, conversations, hidden follow-up loops, background responses, free-form output, model-selected models, agent credentials, policy/business decisions, or automatic artifact acceptance.
 
 ## Exact planned implementation surfaces
 
@@ -98,6 +98,8 @@ The fixture contains the exact strict request and result; `response_hash` is pre
 
 Agents receive only `StructuredModelProvider`, never the API key/client, and cannot choose policy/approval/budget/suppression, mutate state, call Gmail/`SendGateway`, or turn model text into authority. Telemetry contains safe run/call/request/config/model-version hashes, status/error, duration, tokens, and currency cost—not prompts, inputs, outputs, evidence content, keys, or hidden reasoning.
 
+The configuration registry covers IdeaBrief, MarketResearchReport, OfferPackage, LeadDiscoveryCandidate, LeadResearchDossier, phased qualification proposals, ConversationStrategy/EmailDraft, ReplyEvaluation/negotiation proposals, checkpoint recommendations and AgentLearningProposal. Deterministic services materialize their canonical gate-owned outputs. Each call binds its own input snapshot/hash, governing producer strategy and GlobalStrategyPackage/StrategyActivation. Model access never creates a provider send/calendar capability or a second strategy-learning mechanism.
+
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=PROVIDER-03-T01 milestone=M3 depends_on=AGENT-01-T01,DB-01-T01 mode=parallel locks=provider-contracts -->
@@ -132,7 +134,7 @@ Disable the adapter on key leak, schema drift, impossible usage, unknown output 
 
 ## Acceptance and retained evidence
 
-- [ ] Task 3 request/success/failure/fixture bytes, schema literals, hashes, error allowlist, timeout, ledger, and cancellation semantics are exact.
+- [ ] AGENT-01 request/success/failure/fixture bytes, schema literals, hashes, error allowlist, timeout, ledger, and cancellation semantics are exact.
 - [ ] One live call cannot become a hidden loop or gain tools/state/send authority.
 - [ ] OpenAI translation, usage/cost, refusal/incomplete handling, and safe telemetry are explicit and fixture-proven.
 - [ ] Recorded mode is zero-network and provider replacement cannot widen capability semantics.

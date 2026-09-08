@@ -4,7 +4,7 @@
 **Status:** Planned M3 provider; no search client, capture service, fixture, or credential exists today
 **Milestone:** M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `PROVIDER-04-T01 -> PROVIDER-04-T02 -> PROVIDER-04-T03 -> PROVIDER-04-T04 -> PROVIDER-04-T05`; cross-document task Inputs `PROVIDER-04-T01 <- AGENT-01-T01,DB-01-T01; PROVIDER-04-T03 <- OBS-03-T02,DB-04-T03`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01 capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), [DB-04](../02-database/04-agent-artifacts-and-evidence.md), and [AGENT-04](../04-agents/04-market-research-agent.md)
+**Prerequisites:** exact local order `PROVIDER-04-T01 -> PROVIDER-04-T02 -> PROVIDER-04-T03 -> PROVIDER-04-T04 -> PROVIDER-04-T05`; cross-document task Inputs `PROVIDER-04-T01 <- AGENT-01-T01,DB-01-T01; PROVIDER-04-T03 <- OBS-03-T02,DB-04-T03`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01 capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), [DB-04](../02-database/04-agent-artifacts-and-evidence.md), and [AGENT-04](../04-agents/03-market-research-agent.md)
 **Outputs:** Byte-exact `search.query` capability, Brave Web Search adapter, evidence ingestion handoff, fixtures, quotas, and replacement seam
 **Unlocks:** Recorded M3 market-research evaluations and M4 evidence capture
 **Risk:** High
@@ -12,7 +12,7 @@
 
 ## Outcome and timing
 
-One bounded allowlisted query returns only captured result metadata and DB-04 evidence identities. Brave Web Search is the initial live raw provider; the agent sees only the frozen Task 3 capability union and never the subscription token, provider response, arbitrary browser, or mutable search session.
+One bounded allowlisted query returns only captured result metadata and DB-04 evidence identities. Brave Web Search is the initial live raw provider; the agent sees only the frozen AGENT-01 capability union and never the subscription token, provider response, arbitrary browser, or mutable search session.
 
 ## Current repository state
 
@@ -34,9 +34,9 @@ No extra field, alias literal, optional success payload/hash, or opaque provider
 
 ### Raw provider translation and evidence construction
 
-The Brave adapter calls `GET https://api.search.brave.com/res/v1/web/search` with `X-Subscription-Token` held only in composition, `q`, `count=max_results`, `safesearch=strict`, and pinned country/search/UI language from the operation version. Brave documents the endpoint/token and a query maximum of 400 characters/50 words: [Web Search API reference](https://api-dashboard.search.brave.com/api-reference/web/search/get). A valid Task 3 request that cannot fit that vendor subset returns `TOOL_RESULT_INVALID` before credential use; the provider-neutral contract is not narrowed.
+The Brave adapter calls `GET https://api.search.brave.com/res/v1/web/search` with `X-Subscription-Token` held only in composition, `q`, `count=max_results`, `safesearch=strict`, and pinned country/search/UI language from the operation version. Brave documents the endpoint/token and a query maximum of 400 characters/50 words: [Web Search API reference](https://api-dashboard.search.brave.com/api-reference/web/search/get). A valid AGENT-01 request that cannot fit that vendor subset returns `TOOL_RESULT_INVALID` before credential use; the provider-neutral contract is not narrowed.
 
-The raw response is untrusted. Pass each raw locator through DB-04 `CitationUriPolicyV1`: require HTTPS, validate domain/IDNA/port/redirect policy, reject userinfo/sensitive/signed/PII/credential query material, and construct only the canonical sanitized `citation_uri`; block wins. The raw locator is handed directly to restricted evidence ingestion for encryption and never enters an agent/provider result, log, event, or fixture. Normalize title/snippet to NFC, trim, enforce Task 3 lengths, discard unsupported/duplicate results, and preserve provider order among eligible results. If this or a replacement provider supplies byte offsets, normalize the referenced source to NFC and convert them to zero-based half-open Unicode code-point indexes before any typed construction; raw byte offsets never escape. Zero eligible results is a successful empty tuple, not fabricated failure.
+The raw response is untrusted. Pass each raw locator through DB-04 `CitationUriPolicyV1`: require HTTPS, validate domain/IDNA/port/redirect policy, reject userinfo/sensitive/signed/PII/credential query material, and construct only the canonical sanitized `citation_uri`; block wins. The raw locator is handed directly to restricted evidence ingestion for encryption and never enters an agent/provider result, log, event, or fixture. Normalize title/snippet to NFC, trim, enforce AGENT-01 lengths, discard unsupported/duplicate results, and preserve provider order among eligible results. If this or a replacement provider supplies byte offsets, normalize the referenced source to NFC and convert them to zero-based half-open Unicode code-point indexes before any typed construction; raw byte offsets never escape. Zero eligible results is a successful empty tuple, not fabricated failure.
 
 `SearchCapabilityService` submits each eligible item to `EvidenceIngestService` with source provider `brave.web-search.v1`, retrieval time, restricted raw locator, sanitized citation, source-policy version, restricted capture ref, MIME/language, content hash, and `SENSITIVE_SHORT`. Only after all returned items have valid persisted evidence IDs/hashes does it build `SearchResultItemV1` with `citation_uri`. If any item cannot be captured, discard that item; if the provider result itself is structurally untrustworthy, return failure. The agent never receives raw response fields.
 
@@ -94,10 +94,12 @@ A replacement adapter must pass the exact union/schema/hash/timeout/error/ledger
 
 Agents receive the capability port, never provider credentials/client. Search cannot mutate state, accept evidence, decide policy/approval/budget/suppression, or call Gmail/`SendGateway`.
 
+Market Research consumes accepted IdeaBrief and produces MarketResearchReport before Offer Design. This market search port does not accept an OfferPackage as upstream research authority or substitute for the approved multi-source LeadDiscoveryProvider in [PROVIDER-08](08-lead-discovery-provider.md).
+
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=PROVIDER-04-T01 milestone=M3 depends_on=AGENT-01-T01,DB-01-T01 mode=parallel locks=provider-contracts -->
-- [ ] **Implement exact capability service —** Input: Task 3 models and DB-01 canonicalizer. Operation: preserve schemas/fields/hashes/timeout/error allowlist and method mapping. Output: `MarketSearchPort`. Test evidence: `test_search_capability_wire_and_fixture_are_agent01_exact`. Failure behavior: reject before call.
+- [ ] **Implement exact capability service —** Input: AGENT-01 models and DB-01 canonicalizer. Operation: preserve schemas/fields/hashes/timeout/error allowlist and method mapping. Output: `MarketSearchPort`. Test evidence: `test_search_capability_wire_and_fixture_are_agent01_exact`. Failure behavior: reject before call.
 <!-- roadmap-task id=PROVIDER-04-T02 milestone=M3 depends_on=PROVIDER-04-T01 mode=parallel locks=provider-contracts -->
 - [ ] **Implement Brave raw adapter and filters —** Input: validated request/credential/operation policy. Operation: reserve limiter, call once, normalize/filter/dedupe strict metadata. Output: bounded raw items or typed error. Test evidence: HTTP/domain/Unicode/status matrix. Failure behavior: no unsafe item escapes.
 <!-- roadmap-task id=PROVIDER-04-T03 milestone=M3 depends_on=PROVIDER-04-T02,OBS-03-T02,DB-04-T03 mode=parallel locks=provider-contracts,backend-domain,agent-artifacts -->
@@ -126,7 +128,7 @@ Disable search on key leak, unsafe URI escape, schema drift, unexplained billing
 
 ## Acceptance and retained evidence
 
-- [ ] `search.query` request/result/fixture/hash/error/timeout/ledger semantics are byte-exact with Task 3.
+- [ ] `search.query` request/result/fixture/hash/error/timeout/ledger semantics are byte-exact with AGENT-01.
 - [ ] All successful items have DB-04 evidence IDs/hashes and pass strict allow/block/HTTPS rules.
 - [ ] Live and fixture modes are explicit; fixture replay is zero-network.
 - [ ] Provider credentials/objects and mutation/contact/send authority are unreachable.
