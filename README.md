@@ -1,6 +1,6 @@
 # Alon AI
 
-Alon AI is being built as a durable, auditable workflow for discovering service ideas, validating them with evidence, qualifying prospects, sending Gmail outreach, synchronizing replies, and deciding whether to scale, revise, or stop an experiment.
+Alon AI is planned as a bounded autonomous sales-validation system for one operator: discover or accept an idea, research its market, design an authoritative offer, discover and qualify businesses, conduct evidence-backed email conversations and negotiation, book explicitly confirmed calls, evaluate cohort checkpoints, and improve versioned global agent strategies.
 
 ## Foundation status
 
@@ -10,7 +10,9 @@ It **does not send production outreach**, implement a Gmail adapter or OAuth, ru
 
 The authoritative [M0-M9 development roadmap](docs/development-roadmap/README.md) now documents the complete planned sequence and its audited blockers. It is planning evidence, not proof that the planned product, launch gates, deployment, legal authority, or real experiment exists.
 
-The planned real-demand test is one staged program: 100 new delivered recipients, then 200, then 300, then 400, for a maximum of 1,000 unique recipients. Each stage requires a signed evidence barrier before the next begins; safety, legal/provider limits, suppression, deliverability, and economics may stop it earlier. Agent research makes an offer worth testing but never substitutes for replies, qualified conversations, or paid commitments.
+The planned real-demand test is one staged program: 100 new delivered recipients, then 200, then 300, then 400, for cumulative checkpoints at 100, 300, 600, and 1,000 unique recipients. Every checkpoint records exactly `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`; only `CONTINUE` can make the next registered cohort eligible. At 1,000 it is a positive terminal result, never a fifth cohort. Safety, legal/provider limits, suppression, deliverability, and economics may stop the program earlier. Research establishes test-worthiness; observed replies, qualified commitments, and confirmed bookings establish demand evidence.
+
+The [approved autonomous design](docs/superpowers/specs/2026-09-08-autonomous-sales-validation-roadmap-design.md) and [canonical sales contract](docs/development-roadmap/00-product-strategy/01-product-scope.md#canonical-autonomous-sales-contract) govern the roadmap. `OfferPackage` is the sole downstream commercial authority. Routine actions inside its accepted envelope proceed through deterministic authorization; ambiguous, unsafe, stale, and out-of-envelope cases enter the exception queue. `GlobalStrategyPackage` versions activate only at eligible checkpoints and never mutate a running cohort.
 
 ## Architecture
 
@@ -98,9 +100,11 @@ On 2026-08-28, immutable [GitHub Actions run 33179438858](https://github.com/alo
 
 CI has four jobs: `security` checks tracked filenames and high-signal credential material without printing values; `backend` provisions PostgreSQL 18, migrates it, and runs the real readiness integration test; `frontend` regenerates the contract and rejects generated drift; `containers` validates Compose, builds the images, migrates a disposable database, starts the full stack, checks service health and HTTP endpoints, verifies the worker remains running as a non-root user with outreach disabled, and always destroys the stack and its volumes.
 
-## Automatic Gmail sending design
+## Autonomous conversations and booking design
 
-Automatic Gmail sending is a planned product capability, but agents cannot call Gmail directly. Agents will produce typed artifacts. Deterministic code will create a send intent with an idempotency key, enforce suppression/jurisdiction/campaign/budget/rate-limit/kill-switch policies, and then route eligible work through a `SendGateway` to a `GmailProvider`.
+Automatic Gmail sending is a planned product capability. Agents produce typed artifacts; `ActionAuthorizationService` binds each action to its offer, strategy activation, recipient/thread, cohort, commercial result, policy facts, expiry, and control generation. `CommercialPolicyEngine` calculates price, discount, scope, payment, and margin eligibility deterministically. `SendGateway` alone invokes the Gmail write port after fresh suppression, jurisdiction, conversation, capacity, evidence, budget, rate, and kill-switch checks. Gmail history and Sent reconciliation use a separate read port.
+
+Every inbound reply atomically stops the cold sequence. Positive replies, questions, and genuine objections may enter a bounded response loop; opt-out, complaint, applicable rejection, bounce, and legal signals create the appropriate durable suppression. The writer never invents claims, budgets, proof, or commercial terms. A separate calendar read port provides bounded timezone-aware availability; only `BookingGateway` can create, reschedule, or cancel an event after explicit slot confirmation and a fresh deterministic recheck. Google Calendar is the first planned adapter.
 
 The eventual implementation must commit a stable idempotency key and outbound-attempt ledger before the provider call, capture Gmail message/thread identifiers and provider evidence, and expose an ambiguous state. A possibly accepted Gmail write is permanently quarantined as `AMBIGUOUS`/`RECONCILING` until exactly one authorized Sent observation proves it sent; zero search/history results never prove non-send and never permit a retry or replacement intent. Retry is possible only after an explicit provider rejection or local pre-write proof that bytes never left the process. Today this repository supplies only the guarded contracts and an `ALON_AI_OUTREACH_ENABLED=false` default. It does not send real email.
 
@@ -108,7 +112,7 @@ The eventual implementation must commit a stable idempotency key and outbound-at
 
 - PostgreSQL readiness is a real connection check; liveness alone does not prove database health.
 - Secrets, OAuth tokens, and provider credentials do not belong in Git or `.env.example`.
-- An agent must never receive direct Gmail authority.
+- An agent must never receive Gmail or calendar write authority; `SendGateway` and `BookingGateway` are the sole respective writers.
 - Every external side effect needs a deterministic policy decision, idempotency key, audit trail, and reconciliation strategy.
 - No claims of deployment, users, billing, production metrics, compliance coverage, or send volume are made by this foundation.
 

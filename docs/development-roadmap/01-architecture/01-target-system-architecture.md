@@ -43,10 +43,21 @@ flowchart TB
     PROVIDERPORTS --> MODEL["Model/search/extraction/enrichment adapters"]
     APP --> SEND["SendGateway"]
     SEND --> POLICY
-    SEND --> GMAILPORT["GmailProvider port"]
-    GMAILPORT --> GMAIL["Gmail API"]
-    GMAIL --> RECON["Sent reconciliation and history sync"]
-    RECON --> APP
+    SEND --> GMAILWRITE["GmailWritePort: send only"]
+    GMAILWRITE --> GMAIL["Gmail API"]
+    APP --> GMAILREAD["GmailReadPort: history, threads, Sent evidence"]
+    GMAILREAD --> GMAIL
+    APP --> BOOK["BookingGateway"]
+    BOOK --> CALWRITE["CalendarWritePort: create/reschedule/cancel"]
+    CALWRITE --> CAL["Calendar provider"]
+    APP --> CALREAD["CalendarReadPort: bounded availability/event evidence"]
+    CALREAD --> CAL
+    APP --> COMMERCIAL["CommercialPolicyEngine: pure offer-bound calculations"]
+    APP --> AUTH["ActionAuthorizationService"]
+    AUTH --> POLICY
+    AUTH --> COMMERCIAL
+    APP --> CHECKPOINT["CheckpointEvaluationService"]
+    CHECKPOINT --> ACTIVATION["StrategyActivationService: checkpoint-only"]
     API --> OBS["Logs, metrics, traces, alerts"]
     WORKER --> OBS
 ```
@@ -55,17 +66,23 @@ flowchart TB
 
 | Component | Owns | Must not own | First needed |
 | --- | --- | --- | --- |
-| Next.js dashboard | operator rendering, accessible interactions, generated API client, local presentation state | business rules, provider credentials, direct database/Gmail calls, a second backend | current readiness; M7 product control |
+| Next.js dashboard | operator rendering, accessible interactions, generated API client, local presentation state | business rules, provider credentials, direct database/provider writes, a second backend | current readiness; M7 product control |
 | FastAPI API | authentication boundary, OpenAPI, idempotent commands, read projections, composition | durable long-running work, provider-specific business logic | current health; M4 product API |
 | Worker | DBOS workflow runner, queues/schedules, background sync composition | alternate domain rules or unbounded loops | current idle boundary; M1/M4 execution |
 | Domain | identifiers, immutable values, invariants, transition specifications, event intents | SQLAlchemy sessions, HTTP, workflow SDK, provider SDK, logging globals | M2 |
 | Application | commands, queries, transaction boundaries, gateway orchestration, deterministic state changes | framework-specific request objects or model-authored authority | M2-M4 |
 | Policies | versioned deterministic allow/deny decisions and reason codes | provider calls or state mutation | current protocol; M6 implementation |
-| DBOS workflows | finite durable sequencing, queues, schedules, timers, retries, compensation/recovery commands | policy invention, direct Gmail calls, immortal agent loops | M1 acceptance; M4 product flows |
-| Pydantic AI agents | typed immutable advisory artifacts with model/tool boundaries, provenance, evaluation, and cost | business state transitions, Gmail/send tools, unrestricted credentials | M1 typed acceptance fixture; M3 agent promotion |
+| DBOS workflows | finite durable sequencing, queues, schedules, timers, retries, compensation/recovery commands | policy invention, direct Gmail/calendar writes, immortal agent loops | M1 acceptance; M4 product flows |
+| Pydantic AI agents | typed immutable advisory artifacts with model/tool boundaries, provenance, evaluation, and cost | business state transitions, Gmail/calendar write tools, unrestricted credentials | M1 typed acceptance fixture; M3 agent promotion |
 | Persistence adapters | PostgreSQL mappings, repositories, outbox/audit/idempotency transactions | business decisions | M2 |
 | Provider adapters | typed translation, timeout/error taxonomy, external request/response evidence | cross-provider orchestration or policy decisions | M3/M6 |
-| `SendGateway` | last-mile outreach-enabled check, policy recheck, durable intent/attempt protocol, sole Gmail invocation path | content generation or direct model control | current minimal contract; M6 full path |
+| `SendGateway` | fresh action/policy/control recheck, durable intent/attempt and ambiguity protocol, sole Gmail write invocation | content generation or direct model control | current minimal contract; M6 full path |
+| `CommercialPolicyEngine` | pure calculations from accepted `OfferPackage`, cost/FX/rounding versions and budget assertions; authoritative `NegotiationDecision` | model-authored prices, new terms, below-floor economics, network calls | M3 offline vectors; M6 policy composition |
+| `ActionAuthorizationService` | immutable `ActionAuthorityScopeV1`, evidence and version bindings, fresh deterministic action admission | accepting a proposal as permission or bypassing provider/control gates | M2 contracts; M6 send/booking composition |
+| `QualificationService` | preliminary/final decisions from proposals and offer filters; independent identity, suppression, legal and cohort admission checks | fabricated identities or agent-overridden admission | M3 fixtures; M5 workflow |
+| `BookingGateway` | qualified intent, explicit confirmation, timezone/availability recheck, sole calendar write path, idempotency/reconciliation | interpreting ambiguous agreement as confirmation; model calendar writes | M3 recorded port; M6 test calendar |
+| `CheckpointEvaluationService` | close stage admission, freeze `CheckpointEvidenceBundle`, validate evaluation recommendation, commit exact result and next-stage eligibility | adding a fifth cohort, approving on missing evidence, confusing engineering fixtures with demand | M2 contract; M7 simulation; M9 real evidence |
+| `StrategyActivationService` | guarded `GlobalStrategyPackage` promotion, checkpoint-only `StrategyActivation`, monitoring/rollback with immutable lineage | mid-cohort mutation, rewriting historical attribution, changing safety/commercial bounds | M3 offline evaluation; M7 simulation |
 | Observability | safe correlation, metrics, traces, alerts, cost/evaluation outputs | source-of-truth state or secrets/PII copies | current request logs; M6-M8 expansion |
 
 ## Authoritative data flow
@@ -79,18 +96,30 @@ flowchart TB
 5. Deterministic application code validates artifact eligibility, records the artifact, and performs any allowed transition.
 6. Query services build projections from PostgreSQL. The dashboard never infers business success from a pending HTTP call.
 
+### Runtime artifact and commercial flow
+
+Runtime order and exact artifacts come from [PRODUCT-01](../00-product-strategy/01-product-scope.md#canonical-autonomous-sales-contract). Idea Discovery or deterministic user-idea materialization supplies `IdeaBrief`; Market Research supplies `MarketResearchReport`; Offer Design consumes both and supplies the sole commercial `OfferPackage`. No offer output feeds either upstream stage. Discovery/prequalification precedes costly research; final qualification reuses immutable offer filters. Writer, reply evaluator, and booking consume accepted evidence and governing versions.
+
+Agent proposals remain advisory until deterministic schema, provenance, evidence, commercial, and policy checks accept them. No operator action is required for ordinary in-envelope drafts, responses, negotiations, bookings, checkpoint transitions, or strategy activation that satisfies its stored promotion/boundary rule. Protected legal decisions, unsafe/stale/ambiguous actions, out-of-envelope proposals, incidents, and recovery remain explicit exceptions.
+
 ### External side-effect flow
 
-1. Deterministic code commits immutable `SendIntent` and outbound `SendAttempt` ledger records with a unique idempotency key and exact artifact/recipient/campaign versions before any provider call.
-2. Policy evaluation records all facts, rule codes, policy version, and allow/deny outcome.
-3. Queue admission reserves budget/rate capacity and records an audit event.
-4. Immediately before Gmail, `SendGateway` rechecks outreach mode, suppression, approval, jurisdiction configuration, campaign/experiment state, budget, rate limit, and intent status.
-5. The Gmail adapter sends a stable RFC message identifier and returns Gmail message/thread identifiers when known.
-6. The attempt commits `SENT`; a timeout/crash instead leaves or marks `AMBIGUOUS`.
-7. Reconciliation resolves ambiguity only from one positive authorized Gmail Sent match. Zero/multiple/conflicting candidates retain permanent quarantine; retry/replacement is forbidden unless explicit rejection or local pre-write proof establishes that Gmail could not have received bytes.
-8. Gmail history sync advances its cursor only in the same transaction as recorded provider observations and emits reply/bounce events.
+1. `ActionAuthorizationService` materializes immutable `ActionAuthorityScopeV1` binding action kind/content, recipient/thread, campaign/cohort/member, accepted offer, global strategy and activation, policy facts/rules, commercial result, expiry, and control generation.
+2. Application code commits an immutable intent, idempotency identity, exact rendered content/recipient bindings, and budget/rate reservation before provider work; each provider attempt is durable before its call.
+3. Immediately before Gmail, `SendGateway` checks suppression/unsubscribe/complaint/bounce/frequency, recipient/thread, campaign/cohort/stage/capacity, conversation/round limits, accepted offer/strategy/activation, claims and freshness, jurisdiction/provider/legal policy, budget/rate/cost, duplicates/stale/superseded work, commercial limits, checkpoint/control generation, and every global/campaign/mailbox/provider/conversation kill switch.
+4. The Gmail write adapter sends the stable RFC message identity. Positive provider IDs/evidence commit `SENT`; timeout/crash leaves `AMBIGUOUS`/`RECONCILING`. Only one authorized positive Sent match resolves uncertain acceptance. Zero/multiple/conflicting candidates remain quarantined indefinitely; retry/replacement needs explicit rejection or local pre-write proof that bytes never left.
+5. Gmail history/read sync commits observations, bounded complete thread state, cold-sequence stop, and cursor atomically. Any reply stops the cold sequence; only applicable opt-out/complaint/rejection/bounce/legal signals create durable suppression. Eligible positive/questions/objections enter the finite response loop after deterministic evaluation.
+6. `CommercialPolicyEngine` calculates allowed scope/pilot/discount/timing/bundle/payment choices against the immutable offer. Only evidenced `STATED` budget satisfies a stated-budget rule. The writer consumes exact approved reply objectives and proposals; all limits apply again to its response.
+7. Calendar reads return bounded timezone-labelled slots. `BookingGateway` requires qualified buying intent and explicit slot confirmation, revalidates identity/availability/offer/conversation, then commits the action intent/attempt and alone invokes event create/reschedule/cancel. Idempotency, provider conflict, attendee notification behavior, DST and ambiguous-outcome reconciliation are explicit.
+8. Every action, policy decision, draft, send, negotiation, booking, checkpoint and learning evaluation retains exact offer/strategy/activation and input/output hashes. Model/search/source calls also reserve costs, bound time/retries, capture provenance, and redact sensitive inputs.
 
-Every external model/search/extraction/enrichment call follows the same general intent, timeout, cost, provenance, and audit discipline, but only Gmail has reputation-bearing send authority.
+### Checkpoint and strategy flow
+
+At each exact cumulative checkpoint `100/300/600/1,000`, `CheckpointEvaluationService` freezes the completed stage's evidence, validates the evaluation agent's recommendation, and records exactly `CONTINUE|REVISE|KILL|INCONCLUSIVE|SAFETY_STOP`. Only `CONTINUE` makes the next registered `100/200/300/400` incremental cohort eligible after all deterministic checks; final `CONTINUE` cannot exceed 1,000.
+
+Global Learning consumes only closed checkpoint evidence. Triggering campaign/stage evidence is primary, similar campaigns secondary, and relevant history/failures/incidents guardrails. Every applicable agent produces `PROMOTE|KEEP|ROLLBACK|INSUFFICIENT_EVIDENCE`; retaining results do not mutate. `StrategyActivationService` requires lineage, minimum evidence, offline baseline comparison, protected holdouts, cross-campaign guardrails, expected metrics/confidence, and rollback conditions before promotion.
+
+The triggering campaign waits for its next cohort boundary after `CONTINUE`; other active campaigns wait for their own next checkpoint; future campaigns start on the newest approved global version. A running cohort freezes offer/strategy/qualification/causal variables/evidence definitions. Deterioration automatically initiates rollback for future actions under the stored rule; if necessary, pause and close the affected checkpoint before activation. Conversation memory is operational state. Immutable safety/legal/suppression/source/commercial bounds cannot be learned away.
 
 ## Persistence boundaries and the M1/M2 ruling
 
@@ -111,7 +140,7 @@ The runtime interface planned at the application boundary exposes finite start, 
 
 ## Deployment and trust boundaries
 
-The M8 target is one private operator deployment: TLS ingress/private access -> frontend and API; worker and PostgreSQL are not public; backups are encrypted off-host; secrets and OAuth tokens are injected from a protected store; operator access is strongly authenticated; logs/metrics avoid message bodies, secrets, and unnecessary recipient data. API and worker may share one image/package but run separately and can be stopped independently. The only recipient-facing Internet surface is a later M9 exception of exactly two scanner-safe unsubscribe operations; it is disabled/unpublished before M9, partitioned from the 64 private-deployment operations by route/WAF/rate policy, and never exposes health/operator/Gmail/product routes or creates a webhook surface.
+The M8 target is one private operator deployment: TLS ingress/private access -> frontend and API; worker and PostgreSQL are not public; backups are encrypted off-host; secrets and OAuth tokens are injected from a protected store; operator access is strongly authenticated; logs/metrics avoid message bodies, secrets, and unnecessary recipient data. API and worker may share one image/package but run separately and can be stopped independently. The only recipient-facing Internet surface is a later M9 exception of exactly two scanner-safe unsubscribe operations; it is disabled/unpublished before M9, partitioned from the private operator operation inventory by route/WAF/rate policy, and never exposes health/operator/Gmail/product routes or creates a webhook surface.
 
 This is not a claim that the current Compose file satisfies production security, backup, monitoring, or availability requirements.
 
@@ -136,7 +165,7 @@ Current `alon_ai/domain/sending.py` imports policy and provider types, which is 
 <!-- roadmap-task id=ARCH-01-T04 milestone=M5 depends_on=ARCH-01-T03,WF-03-T05,WF-04-T05,PROVIDER-06-T03,WF-00-T04 mode=serial locks=architecture-contracts,workflow-runtime,agent-artifacts,backend-domain,milestone-gate -->
 - [ ] **Adjudicate the M4/M5 no-send architecture —** Input: M3-promoted artifacts, the signed selected-runtime decision, complete WF-03 M4 no-send evidence, the complete WF-04 M5 finite-workflow contract, and reproducible enrichment evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: retain WF-03's independently gated M4 evidence, then compose and adjudicate the M5 lead-discovery/qualification slice without Gmail authority; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: signed M5 architecture record that references distinct retained M4 and M5 no-send evidence. Test evidence: complete synthetic M4 and M5 runs, restart, provenance, cost, state, and zero-send assertions. Failure behavior: remain at the last passing no-send gate and do not enable Gmail.
 <!-- roadmap-task id=ARCH-01-T05 milestone=M7 depends_on=ARCH-01-T04,BACKEND-03-T03,PROVIDER-01-T03,DB-03-T06,WF-01-T01,TEST-04-T06,BACKEND-02-T05,FRONTEND-03-T05,FRONTEND-04-T04,FRONTEND-05-T05,FRONTEND-06-T04,FRONTEND-07-T04,FRONTEND-08-T04,FRONTEND-09-T04,FRONTEND-01-T05,FRONTEND-03-T03 mode=serial locks=architecture-contracts,gmail-side-effects,openapi-contract,frontend-client,security-runtime,milestone-gate -->
-- [ ] **Adjudicate the M6/M7 private-operator architecture —** Input: signed M6 owned-inbox evidence, DB-05 policy authority, ACTIVE mailbox credential, lossless history sync, isolated-inbox evidence, the exact disabled-public 64+2 manifest/client, and completed private operator UI surfaces; complete authenticated frontend foundation and integrated control-center report/control surface; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: retain the independently gated M6 send/reconcile/control bundle, then compose and adjudicate the M7 private authenticated API, generated client, reports, approvals, messages, recovery, and administration surfaces without public ingress; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: signed M7 private-operator architecture gate referencing distinct retained M6 and M7 evidence. Test evidence: Gmail authority, generated-client drift, session, accessibility, exhaustive-state, recovery, and browser-journey suites. Failure behavior: keep product outreach false; M7 and later deployment remain blocked.
+- [ ] **Adjudicate the M6/M7 private-operator architecture —** Input: signed M6 owned-inbox evidence, DB-05 policy authority, ACTIVE mailbox credential, lossless history sync, isolated-inbox evidence, the exact private operator/public-unsubscribe manifest/client, and completed private operator UI surfaces; complete authenticated frontend foundation and integrated control-center report/control surface; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: retain the independently gated M6 send/reconcile/control bundle, then compose and adjudicate the M7 private authenticated API, generated client, reports, action authorization/exceptions, complete conversations, negotiation, booking, checkpoint/global-learning evidence, recovery, and administration surfaces without public ingress; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: signed M7 private-operator architecture gate referencing distinct retained M6 and M7 evidence. Test evidence: Gmail authority, generated-client drift, session, accessibility, exhaustive-state, recovery, and browser-journey suites. Failure behavior: keep product outreach false; M7 and later deployment remain blocked.
 <!-- roadmap-task id=ARCH-01-T06 milestone=M8 depends_on=ARCH-01-T05,INFRA-03-T07,INFRA-04-T06,INFRA-05-T07,OBS-05-T03 mode=serial locks=architecture-contracts,compose-topology,backup-restore,live-environment,milestone-gate -->
 - [ ] **Prove private operations —** Input: complete private product; measured private deployment/load-rehearsal limits, clean restore evidence, current monitoring readiness and implemented full incident recovery services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: deploy, monitor, back up, restore, and exercise incidents; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: M8 evidence. Test evidence: fresh-server restore and incident drills. Failure behavior: block M9.
 
@@ -146,6 +175,9 @@ Current `alon_ai/domain/sending.py` imports policy and provider types, which is 
 - **Contract `test_openapi_generated_client_has_no_drift`:** FastAPI remains API truth.
 - **Integration `test_command_state_event_outbox_commit_atomically`:** product state and durable command evidence cannot diverge.
 - **Recovery `test_each_side_effect_has_ambiguity_reconciliation`:** kill after provider acceptance does not cause blind retry.
+- **Contract `test_only_gateways_own_provider_write_ports`:** agents, workflows, routes and generic adapters cannot bypass SendGateway or BookingGateway.
+- **Commercial `test_authoritative_offer_has_no_upstream_dependency`:** research precedes offer and only accepted package terms drive downstream calculations.
+- **Learning `test_checkpoint_activation_and_rollback_preserve_frozen_cohorts`:** closed evidence, weak-evidence retention, cross-campaign boundaries and historical attribution are enforced.
 - **Security `test_public_surface_excludes_worker_database_and_credentials`:** deployment topology and probes expose only approved ingress.
 - **E2E `test_operator_controls_complete_experiment`:** one operator can create, inspect, pause, resume, cancel, and decide without database edits.
 
@@ -155,7 +187,7 @@ Authority flows inward from authenticated commands and outward through narrow po
 
 ## Failure, rollback, and recovery
 
-Every provider can be disabled independently. Outreach has a global fail-closed control. Agent/model/prompt/provider versions roll back by selecting a previously promoted immutable version. Workflow changes require in-flight compatibility or drain/cancel/restart procedures. Schema changes use forward-safe migrations and tested restore. Mandatory DBOS-to-Temporal migration preserves application ports and canonical product state; M1 spike records are discarded after export.
+Every provider can be disabled independently. Outreach has a global fail-closed control. Provider/adapter releases roll back through tested composition and recovery. Agent strategies roll back through `StrategyActivationService` and the checkpoint-only activation rules; historic actions retain their original governing versions. Workflow changes require in-flight compatibility or drain/cancel/restart procedures. Schema changes use forward-safe migrations and tested restore. Mandatory DBOS-to-Temporal migration preserves application ports and canonical product state; M1 spike records are discarded after export.
 
 ## Acceptance and retained evidence
 

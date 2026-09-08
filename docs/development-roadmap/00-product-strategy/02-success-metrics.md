@@ -12,7 +12,7 @@
 
 ## Outcome and timing
 
-This file prevents attractive demos and noisy outreach counts from masquerading as validation. M0 defines how every later gate is measured. The first experiment optimizes for learning per unit of operator attention while holding safety constraints at zero tolerance.
+This file prevents attractive demos and noisy outreach counts from masquerading as validation. M0 defines how every later gate is measured. The experiment measures qualified prospects, truthful conversations, qualified commitments, confirmed bookings, and useful global strategy changes per unit of cost and operator attention. Safety retains zero tolerance.
 
 ## Current repository state
 
@@ -29,7 +29,7 @@ The foundation has health responses, request duration logs, a worker-ready event
 
 ## Canonical metric record
 
-Every `MetricObservation` must contain `metric_name`, `definition_version`, `experiment_id`, `window_start`, `window_end`, `numerator`, `denominator`, `unit`, `source_event_ids`, `computed_at`, and `query_version`. Currency observations additionally contain `original_currency`, `original_amount`, `fx_rate_to_ils`, `fx_rate_source`, `fx_rate_date`, and `amount_ils`. Never silently mix provider currencies.
+Every `MetricObservation` must contain `metric_name`, `definition_version`, `experiment_id`, `window_start`, `window_end`, `numerator`, `denominator`, `unit`, `source_event_ids`, `computed_at`, and `query_version`, `campaign_id`, `cohort_id`, `stage_ordinal`, governing `offer_package_id/version/hash`, applicable `agent_id`, `producer_strategy_version`, `global_strategy_package_id/version`, and `strategy_activation_id`. Attribution is stored at action level and never inferred from the currently active strategy. Currency observations additionally contain `original_currency`, `original_amount`, `fx_rate_to_ils`, `fx_rate_source`, `fx_rate_date`, and `amount_ils`. Never silently mix provider currencies.
 
 ## Milestone hard gates
 
@@ -49,7 +49,10 @@ Every `MetricObservation` must contain `metric_name`, `definition_version`, `exp
 | M4 completion | one synthetic experiment reaches `READY_FOR_LEADS` with all required artifacts and zero outreach calls | workflow/event/artifact bundle | block M5 |
 | M5 qualification | provenance coverage = `100%`; duplicate eligible leads = `0`; precision for `QUALIFIED` >= `0.80` on at least 50 labeled fixtures | labeled fixture report and dedupe query | revise criteria/model; block M6 |
 | M6 send safety | test messages outside approved recipients = `0`; suppression violations = `0`; budget/rate-limit violations = `0`; unresolved ambiguous sends = `0` | test-inbox and audit reconciliation bundle | global kill switch; block M7 |
-| M6 reply sync | expected test replies linked to the right thread and experiment = `100%`; cursor replay loss = `0` | Gmail history fixture and replay log | disable sync/send workflow |
+| M6 reply sync | correct thread/experiment linkage = `100%`; cursor replay loss = `0`; every reply stops cold sequence; false durable suppression of eligible replies = `0` | Gmail thread/replay evidence | disable affected conversation/send workflow |
+| M6 negotiation | unauthorized terms/claims or below-floor price/margin actions = `0`; inferred budget accepted as stated = `0` | deterministic commercial vectors and simulated objections | stop action; open exception/incident |
+| M6 booking | unconfirmed, duplicate, wrong-recipient/timezone, or post-stop event writes = `0`; blind retries = `0` | test calendar, DST, conflict, reschedule/cancel and replay evidence | disable booking writes and reconcile |
+| M7 checkpoint learning | applicable agents evaluated = `100%`; weak-evidence mutation, unguarded promotion, mid-cohort activation and history rewriting = `0` | checkpoint/global-learning simulation and cross-campaign rollback fixtures | block promotion/activation and pause affected actions |
 | M7 operability | complete synthetic experiment controllable without database/CLI edits; undisclosed error states = `0` in the E2E script | browser video/screenshots, event history, accessibility report | block M8 |
 | M8 recovery | encrypted backup restores on a fresh target and integrity checks pass; critical alerts exercised = `100%` | restore manifest and incident drill | block M9 |
 | M9 bounded authority | sends, spend, active leads, and provider calls never exceed pre-registered caps | policy and cost queries | stop experiment immediately |
@@ -60,21 +63,39 @@ Only the isolated disposable M1 harness may send before M6, and only to operator
 
 ## Product-learning metrics
 
-These metrics inform `SCALE`, `REVISE`, `KILL`, or `INCONCLUSIVE`; they never override hard safety gates.
+These metrics inform exactly `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`; they never override hard safety gates.
 
 | Metric | Definition | Decision use |
 | --- | --- | --- |
 | `evidence_qualified_lead_rate` | leads passing deterministic evidence completeness and qualification / unique researched businesses | Shows whether the segment can be targeted economically |
-| `operator_review_minutes_per_qualified_lead` | review minutes / approved qualified leads | Tests whether automation saves attention |
+| `operator_minutes_per_qualified_lead` | configuration/exception/recovery minutes / finally qualified leads | Measures attention saved without requiring routine review |
 | `delivered_message_rate` | sent messages without bounce indication / reconciled sent messages | Separates deliverability failure from offer failure |
 | `positive_reply_rate` | unique positive human replies / delivered unique recipients | Demand signal; automated replies excluded |
 | `negative_or_opt_out_rate` | unique negative or opt-out replies / delivered unique recipients | Offer/targeting and reputation signal |
 | `qualified_conversation_rate` | recipients agreeing to a relevant discovery or buying conversation / delivered unique recipients | Stronger signal than generic replies |
-| `paid_commitment_count` | explicit paid pilot, deposit, or signed purchase commitment | Strongest initial demand evidence |
+| `qualified_commitment_count` | unique finally qualified leads explicitly accepting the commercial next step or buying commitment with source evidence | Separates willingness to act from positive sentiment |
+| `paid_commitment_count` | externally verified accepted paid pilot, deposit evidence, or signed purchase commitment linked to exact offer terms | Preserves stronger demand floors; the product does not collect payment |
 | `provider_cost_per_qualified_conversation_ils` | attributed provider spend in ILS / qualified conversations | Tests acquisition economics before delivery cost |
 | `operator_hours_per_experiment` | captured research, review, operations, and delivery-prep hours | Tests solopreneur viability |
 | `projected_contribution_margin_ils` | price less direct delivery labor at registered hourly cost, provider cost, and variable expenses | Prevents revenue-only decisions |
 | `decision_latency_hours` | experiment activation to decision-ready evidence, excluding pre-registered reply window | Measures learning speed without rewarding premature decisions |
+| `discovery_yield` / `discovery_duplicate_rate` | unique accepted candidates / source candidates; duplicates / source candidates | Detects weak sources and repeated reach |
+| `research_coverage` / `research_factual_accuracy` | evidenced required facts / required facts; independently correct assertions / checked assertions | Gates research reliability |
+| `preliminary_qualification_yield` / `final_qualification_precision` | preliminary passes / unique candidates; true qualified fixtures / final-qualified fixtures | Separates inexpensive admission from final quality |
+| `personalization_evidence_coverage` | supported personalization claims / material personalization claims | Blocks fabricated familiarity and proof |
+| `bounce_rate` / `complaint_rate` / `human_reply_rate` | unique bounced, complaining, or human-replying recipients / corresponding unique reconciled-send or delivered population | Owns deliverability/reputation/response stops |
+| `objection_category_count` / `objection_resolution_rate` | finite redacted category counts; evidenced resolved objections / eligible objections | Improves truthful response objectives |
+| `negotiation_outcome_count` / `negotiation_discount_rate` | finite accepted/rejected/expired/exception counts; accepted discount / offer base price | Measures bounded negotiation outcomes |
+| `negotiated_contribution_margin` / `negotiated_scope_change_count` | exact margin using cost/FX/rounding versions; accepted approved scope variants | Enforces offer economics |
+| `booking_rate` / `show_rate` | unique confirmed reconciled bookings / qualified commitments; evidenced attendees / elapsed eligible bookings | Separates confirmation, creation and attendance |
+| `cost_per_qualified_lead_ils` / `cost_per_qualified_commitment_ils` / `cost_per_booking_ils` | attributed provider plus registered operator cost / unique final-qualified leads, qualified commitments, or confirmed bookings | Tests complete acquisition economics |
+| `strategy_pre_post_performance` | comparable frozen-cohort outcomes and uncertainty before/after activation | Detects improvement and deterioration |
+| `learning_promotion_rate` / `learning_rollback_rate` | promoted or rolled-back agent strategies / eligible closed-checkpoint evaluations | Exposes churn and failed promotions |
+| `cross_campaign_transfer_performance` | outcome/guardrail deltas on other campaigns after their own checkpoint activation | Detects harmful transfer |
+
+Every metric definition includes an owner, versioned query, raw denominator, exclusions, uncertainty, and failure action. Booking counts require explicit confirmation and positive reconciled provider evidence. Pending, ambiguous, cancelled, duplicate, and merely proposed bookings are excluded; rescheduling preserves booking identity. Show rate uses elapsed meetings with attendance evidence. Inferred budget and agent confidence never become observed commitments.
+
+Pre/post comparison freezes hypothesis, source/evidence definitions, window, eligibility, and attribution. Report sample sizes, late outcomes, selection differences, and uncertainty; incomparable cohorts cannot establish causality. `KEEP` and `INSUFFICIENT_EVIDENCE` perform no strategy mutation and remain distinct results.
 
 ## M0 baseline
 
@@ -93,12 +114,11 @@ Before M9, the operator freezes one immutable `100/200/300/400` incremental coho
 | `STAGE_3_REPEAT` | `300` | `600` | cumulative at least `12` positive human replies, `4` qualified conversations, and `1` verified paid commitment |
 | `STAGE_4_ESTIMATE` | `400` | `1,000` | cumulative at least `20` positive human replies, `8` qualified conversations, `2` verified paid commitments, and projected contribution margin `> 0` |
 
-A pre-registered rule may be stricter, never weaker. Every continuation also requires deliverability `>=0.90`, zero complaints, zero unresolved ambiguous sends, all safety gates green, and no registered economic kill. Stages 1-3 end in exactly `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`; only a signed `CONTINUE` opens the next cohort. Stage 4 ends in exactly `SCALE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`.
+A pre-registered rule may be stricter, never weaker. Every continuation also requires deliverability `>=0.90`, zero complaints, zero unresolved ambiguous sends, all safety gates green, and no registered economic kill. Every stage ends in exactly `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`. `CheckpointEvaluationService` records the immutable authenticated decision after deterministic evidence, safety, metric, cost, and capacity checks; in-envelope transitions do not await an operator signature per checkpoint. Only `CONTINUE` makes the next registered cohort eligible. At Stage 4 it is a positive terminal checkpoint and cannot admit a fifth cohort or exceed 1,000.
 
-| Decision | Exact effect | Required operator action |
+| Decision | Exact effect | Required deterministic action |
 | --- | --- | --- |
-| `CONTINUE` | the current Stage 1-3 demand floor and every safety/economic gate pass | admit only the next immutable cohort; do not claim final validation |
-| `SCALE` | Stage 4 reaches its final demand floor and every safety/economic gate remains green | perform delivery-feasibility review; any further scale is a separately approved experiment |
+| `CONTINUE` | the current stage demand floor and every safety/economic gate pass | at Stages 1-3 make only the next immutable cohort eligible after fresh checks; at Stage 4 close positively with no further admission |
 | `REVISE` | evidence identifies one correctable segment, offer, message, price, or delivery hypothesis | close this program version, change exactly one major hypothesis, and create a new version |
 | `KILL` | the registered demand or contribution-margin kill fires | close the experiment and retain reusable evidence |
 | `INCONCLUSIVE` | a stage window or eligible denominator ends without another decision | do not open the next stage or claim validation; require a separately justified experiment |
@@ -112,9 +132,9 @@ In scope: milestone exit evidence, offline quality/cost promotion, raw funnel co
 
 ## Exact implementation surfaces
 
-Planned records are the frozen DB catalog names `metric_definitions`, `metric_observations`, `metric_snapshots`, `cost_entries`, and `experiment_decisions`; signed `OperatorTimeEvidenceV1` remains non-product release/experiment evidence through PRODUCT-01's existing evidence path. Planned deterministic reporting is BACKEND-06's `getExperimentOverviewReport`, `getExperimentFunnelReport`, and `getExperimentCostReport`; the authoritative decision command is BACKEND-02/05 `recordExperimentDecision`. Their exact paths are the frozen BACKEND-02 rows. The consumer is FRONTEND-01's existing experiment detail route and its overview/funnel/cost/decision modules—there are no standalone metric, cost, or decision pages or generic nested endpoints.
+The database roadmap owns metric definitions/observations/snapshots, cost entries, checkpoint decisions/evidence, and action-level strategy/activation references. Signed `OperatorTimeEvidenceV1` remains non-product evidence. Backend reporting exposes discovery → qualification → conversation → negotiation → commitment → booking → checkpoint → learning through server-authoritative dashboard projections.
 
-These records, operations, and consumers are planned and absent from the current repository. Any alias not present in the frozen catalogs fails the M0 vocabulary gate.
+`CheckpointEvaluationService` owns checkpoint decisions; `StrategyActivationService` owns promotion, activation, and rollback after guarded evaluation. Agents recommend. API/route/table catalogs must include these surfaces atomically without stale fixed counts. These implementations remain planned.
 
 ## Ordered implementation tasks
 
@@ -123,9 +143,9 @@ These records, operations, and consumers are planned and absent from the current
 <!-- roadmap-task id=PRODUCT-02-T02 milestone=M0 depends_on=PRODUCT-02-T01 mode=parallel locks=product-contracts -->
 - [ ] **Capture baseline evidence —** Input: manual records or zero-history declaration. Operation: record scope-matched counts, time, spend, source, and confidence. Output: baseline bundle. Test evidence: completeness query and operator signature. Failure behavior: prohibit improvement claims when evidence is absent.
 <!-- roadmap-task id=PRODUCT-02-T03 milestone=M3 depends_on=PRODUCT-02-T02,DB-05-T05 mode=parallel locks=backend-domain,telemetry-catalog -->
-- [ ] **Implement gate queries in milestone order —** Input: event/audit/cost records introduced from M2 onward. Operation: compute raw counts and derived rates deterministically. Output: versioned `MetricObservation` rows. Test evidence: golden datasets including zero denominators, duplicates, late replies, bounces, and FX conversion. Failure behavior: return unavailable with reason; never coerce missing data to zero.
+- [ ] **Implement gate queries in milestone order —** Input: event/audit/cost records introduced from M2 onward. Operation: compute raw counts and derived rates deterministically. Output: versioned `MetricObservation` rows. Test evidence: golden datasets including zero denominators, duplicates, late replies, bounces, FX conversion, negotiated margins, cancelled/rescheduled bookings, and cross-campaign strategy attribution. Failure behavior: return unavailable with reason; never coerce missing data to zero.
 <!-- roadmap-task id=PRODUCT-02-T04 milestone=M9 depends_on=PRODUCT-02-T03,SEC-01-T05 mode=serial locks=product-contracts,compliance-policy,milestone-gate -->
-- [ ] **Pre-register the staged M9 decision —** Input: safety gates, exact `100/200/300/400` increments, `100/300/600/1,000` cumulative maxima, stage reply windows, subsegment allocation, price, delivery-cost assumptions, and the default-or-stricter demand floors; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: freeze one versioned rule before contacting a real recipient, require a signed `CONTINUE` before each later cohort, and retain the final `SCALE|REVISE|KILL|INCONCLUSIVE|SAFETY_STOP` decision. Output: signed staged decision-rule version. Test evidence: audit query proves it predates the first send intent and boundary/race fixtures prove no later-stage admission without the prior signed `CONTINUE`. Failure behavior: block real-recipient authority or the next cohort.
+- [ ] **Pre-register the staged M9 decision —** Input: safety gates, exact `100/200/300/400` increments, `100/300/600/1,000` cumulative maxima, stage reply windows, subsegment allocation, price, delivery-cost assumptions, and the default-or-stricter demand floors; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: freeze one versioned rule before contacting a real recipient, require an authoritative `CONTINUE` before each later cohort, and retain the exact `CONTINUE|REVISE|KILL|INCONCLUSIVE|SAFETY_STOP` decision at every checkpoint. Output: signed staged decision-rule version. Test evidence: audit query proves it predates the first send intent and boundary/race fixtures prove no later-stage admission without the prior authoritative `CONTINUE`. Failure behavior: block real-recipient authority or the next cohort.
 
 ## Test strategy
 
@@ -136,11 +156,11 @@ These records, operations, and consumers are planned and absent from the current
 - **Recovery `test_late_reply_recomputes_snapshot_without_rewriting_history`:** a new snapshot supersedes the earlier one.
 - **Contract `test_hard_gate_cannot_be_overridden_by_demand_metric`:** safety failure yields stopped status even with positive replies.
 - **Contract `test_staged_rule_uses_exact_incremental_and_cumulative_caps`:** `100/200/300/400` maps only to `100/300/600/1,000` and rejects legacy or ambiguous schedules.
-- **Concurrency `test_only_signed_continue_can_admit_the_next_unique_cohort`:** duplicate identities, stale barriers, and concurrent final-slot admissions fail closed.
+- **Concurrency `test_only_authoritative_continue_can_admit_the_next_unique_cohort`:** duplicate identities, stale barriers, and concurrent final-slot admissions fail closed.
 
 ## Safety, privacy, compliance, idempotency, observability, and cost
 
-Metric computation uses identifiers and derived facts; dashboard projections redact message content and personal data unless the operator opens the underlying authorized record. Recomputations are idempotent by `(experiment_id, definition_version, window_end, query_version)`. Every observation links to source event IDs. Provider cost budgets fail closed when usage is missing or delayed. Outreach-law interpretations are never encoded as a conversion metric.
+Metric storage retains exact safe ID/version attribution; telemetry uses bounded low-cardinality dimensions and excludes recipient identities, message bodies, calendar descriptions, credentials, and sensitive inferred attributes. Metric computation uses identifiers and derived facts; dashboard projections redact message content and personal data unless the operator opens the underlying authorized record. Recomputations are idempotent by `(experiment_id, cohort_id, definition_version, window_end, query_version, attribution_snapshot_hash)`. Every observation links to source event IDs. Provider cost budgets fail closed when usage is missing or delayed. Outreach-law interpretations are never encoded as a conversion metric.
 
 ## Failure, rollback, and recovery
 
@@ -150,7 +170,9 @@ If a query version is wrong, mark its observations superseded, deploy a correcte
 
 - [ ] Every milestone gate has an exact threshold, query owner, evidence source, and failure action.
 - [ ] Safety metrics have zero-tolerance thresholds and cannot be traded for business results.
-- [ ] The real-experiment rule can return `INCONCLUSIVE`.
+- [ ] Every checkpoint uses the exact five-result set; terminal `CONTINUE` cannot exceed 1,000.
+- [ ] Negotiation, booking, and learning have evidence-backed denominators and exact strategy/cohort attribution.
+- [ ] Weak evidence cannot promote a strategy; rollback preserves history.
 - [ ] Cost includes ILS-normalized provider spend and operator time without losing original amounts.
 
 Retain metric definitions, labeled evaluation datasets, query versions, raw counts, cost and time ledgers, gate snapshots, and signed decisions. Passing this definition unlocks [risk and kill criteria](03-risk-register-and-kill-criteria.md), not M1 by itself.

@@ -12,7 +12,7 @@
 
 ## Outcome
 
-This index turns the Alon AI foundation into an evidence-gated route to one controlled real experiment. The folders are organized by subsystem so a solo operator can find material quickly. They are not the implementation order. Implementation follows the vertical M0-M9 gates below, and every subsystem checklist must identify the gate it serves.
+This index plans a bounded autonomous sales-validation system: idea discovery or user idea → market research → offer design → lead discovery/prequalification → deep research → final qualification → email writing → deterministic sending → reply evaluation/negotiation → booking → checkpoint evaluation → global learning. The folders are organized by subsystem so a solo operator can find material quickly. They are not the implementation order. Implementation follows the vertical M0-M9 gates below, and every subsystem checklist must identify the gate it serves.
 
 The hard constraint is reputational safety: no later feature, attractive demo, or sunk cost excuses skipping an earlier exit gate. The product is for one Israeli solo operator first. Teams, billing, general-purpose public APIs, and generalized platform work are distractions until a real experiment produces recorded evidence worth scaling. The only bounded exception is the exact scanner-safe GET/explicit-POST unsubscribe pair, disabled and unpublished until the M9 real-recipient/legal/suppression/ingress gate; it does not make the operator product public.
 
@@ -29,7 +29,7 @@ As of 2026-08-29, the repository implements a small foundation:
 - a Next.js readiness page using generated OpenAPI types; and
 - Docker Compose and CI foundation checks.
 
-The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail history sync, product data, agents, provider adapters, operator authentication, experiment controls, public unsubscribe routes/ingress, backups, private deployment, production monitoring, real users, or real sends. Every reference below to those capabilities describes planned work until its milestone retains passing evidence. The roadmap now contains the full 77-file M0-M9 documentation manifest. The final-review documentation contradictions are closed by the register below, but every named implementation evidence gate remains explicitly open; documentation completeness is not implementation readiness.
+The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail history sync, product data, agents, provider adapters, operator authentication, experiment controls, public unsubscribe routes/ingress, backups, private deployment, production monitoring, real users, or real sends. Every reference below to those capabilities describes planned work until its milestone retains passing evidence. The authoritative [autonomous design](../superpowers/specs/2026-09-08-autonomous-sales-validation-roadmap-design.md) and [canonical PRODUCT-01 contract](00-product-strategy/01-product-scope.md#canonical-autonomous-sales-contract) replace the former staged assistant authority. Every implementation evidence gate remains open; documentation completeness is not implementation readiness.
 
 ## How to execute this roadmap
 
@@ -51,12 +51,12 @@ M1 may create only the smallest disposable schema needed to run DBOS production 
 | M1 | DBOS is proven safe enough for the product through a Gmail production-acceptance spike | Crash tests prove no uncontrolled duplicate sends; any disqualifying failure forces migration to Temporal before workflow product work continues |
 | M2 | Core PostgreSQL schema, event history, idempotency, and state machines exist | Migrations, constraints, audit events, and restore tests pass |
 | M3 | Provider contracts and typed agents work offline with recorded evaluations | Versioned fixtures beat defined quality and cost thresholds |
-| M4 | Idea, offer, and market-evidence workflow produces operator-reviewable artifacts | One synthetic experiment completes without outreach |
+| M4 | Idea → market research → authoritative offer workflow produces validated artifacts | One synthetic experiment completes without outreach |
 | M5 | Lead discovery and qualification produce evidence-backed, deduplicated prospects | Qualification evaluation and provenance gates pass |
-| M6 | Operator-owned inboxes prove controlled Gmail sending, reconciliation, and reply sync | Kill/restart tests, suppression, rate limits, and audit evidence pass |
-| M7 | The dashboard supports experiment control, approvals, funnel analysis, and decisions | Operator can run and diagnose a complete controlled experiment |
+| M6 | Owned-inbox conversations, simulated negotiation, and test-calendar booking prove controlled side effects | Kill/restart, ambiguity, suppression, commercial boundaries, booking confirmation, rate limits, and audit evidence pass |
+| M7 | Dashboard covers offers, conversation/negotiation/booking, checkpoint/global-learning evidence, strategy controls, and exceptions | Full synthetic campaign and checkpoint/cross-campaign learning simulation are inspectable and stoppable |
 | M8 | Private deployment, monitoring, encrypted backups, and restore drills are proven | Fresh-server restore and incident exercises pass |
-| M9 | One policy-eligible real experiment runs for one offer/campaign/mailbox/policy set through exact `100/200/300/400` new-recipient stages and `100/300/600/1,000` cumulative maxima | Every stage closes behind a signed barrier; only `CONTINUE` opens the next cohort, safety always overrides demand, and Stage 4 records `SCALE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP` |
+| M9 | One policy-eligible real experiment runs for one offer/campaign/mailbox/policy set through exact `100/200/300/400` new-recipient stages and `100/300/600/1,000` cumulative maxima | Every checkpoint records `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`; only `CONTINUE` makes the next registered cohort eligible, and at Stage 4 it is terminal with no fifth cohort |
 
 No later milestone may be used to justify skipping an earlier exit gate.
 
@@ -85,9 +85,9 @@ flowchart LR
 | Operate privately | M8 | Can one operator privately deploy, observe, roll back and restore the exact system with current AWS-witness and incident evidence? | Keep controls/public off and return to the failed release/recovery gate. |
 | Learn through staged real cohorts | M9 | Does one `100/200/300/400` incremental, 1,000-maximum experiment retain every legal/recipient/public-ingress/send/signal/cost fact and earn each continuation from observed evidence? | Stop sending and later admission, suppress/reconcile, preserve the exact public pair in `SUPPRESSION_ONLY` while healthy or execute `DISABLED_UNSAFE`, and return to the failed gate; underpowered evidence is `INCONCLUSIVE`. |
 
-M1 and M6 are engineering safety gates. M8 is a separate infrastructure/recovery gate. M9 adds legal, recipient-specific affirmative-consent, campaign, mailbox, disclosure, Google-policy and scanner-safe public-ingress evidence. Every applicable gate is necessary and no gate, control, approval, agent promotion, release or autonomy level is sufficient by itself to authorize a final `SEND`.
+M1 and M6 are engineering safety gates. M8 is a separate infrastructure/recovery gate. M9 adds applicable jurisdiction/recipient legal-policy evidence, campaign/mailbox/offer authority, truthful disclosure, provider-policy and scanner-safe public-ingress evidence. Every applicable gate is necessary and no gate, control, action authorization, agent promotion, release or autonomy level is sufficient by itself to authorize a final `SEND`.
 
-M9 is a staged demand program, not one bulk blast. Stage 1 admits 100 new unique delivered recipients, Stage 2 adds 200, Stage 3 adds 300, and Stage 4 adds 400, for cumulative maxima of 100, 300, 600, and 1,000. A signed `CONTINUE` is mandatory between stages, recipient identities cannot be reused, and the smaller applicable provider/legal/reputation limit always wins. Agent research establishes test-worthiness, not market validation.
+M9 is a staged demand program, not one bulk blast. Stage 1 admits 100 new unique delivered recipients, Stage 2 adds 200, Stage 3 adds 300, and Stage 4 adds 400, for cumulative maxima of 100, 300, 600, and 1,000. An authoritative deterministic `CONTINUE` is mandatory between stages, recipient identities cannot be reused, and the smaller applicable provider/legal/reputation limit always wins. Agent research establishes test-worthiness, not market validation.
 
 ## Selected agent and durable-workflow stack
 
@@ -97,7 +97,9 @@ Alon AI selects Pydantic AI plus DBOS on PostgreSQL. This is an architecture dec
 - DBOS owns finite durable workflows, queues, schedules, retries, timers, and crash recovery.
 - PostgreSQL remains the product system of record and the DBOS persistence dependency, with product and workflow ownership kept explicit.
 - Deterministic domain and policy code owns state transitions, budgets, suppression, authorization, and every externally visible side effect.
-- `SendGateway` remains the only application path to `GmailProvider`; agents and workflows cannot bypass it.
+- `SendGateway` is the sole Gmail writer and `BookingGateway` is the sole calendar writer; agents and workflows cannot bypass them. Gmail/calendar read ports are separate.
+- `OfferPackage` is the sole downstream commercial authority, calculated and checked by `CommercialPolicyEngine`; `ActionAuthorizationService` binds exact action versions and fresh policy state.
+- `CheckpointEvaluationService` owns checkpoint results and `StrategyActivationService` owns guarded global promotion/activation/rollback. A running cohort cannot change strategy or causal variables.
 
 | Component | Layer | Initial-stack status and rationale |
 | --- | --- | --- |
@@ -141,14 +143,14 @@ The milestone column indicates the first gate that needs the file; later gates m
 | File | First gate | Depends on / unlocks |
 | --- | --- | --- |
 | `04-agents/01-agent-runtime-and-contracts.md` | M3 | Consumes artifact records; defines agent envelope |
-| `04-agents/02-idea-discovery-agent.md` | M3 | Produces typed idea candidates |
-| `04-agents/03-offer-design-agent.md` | M3 | Produces typed offer hypotheses |
-| `04-agents/04-market-research-agent.md` | M3 | Produces cited market evidence |
-| `04-agents/05-lead-research-agent.md` | M3 | Produces evidence-backed prospect research |
-| `04-agents/06-lead-qualification-agent.md` | M3 | Produces scored qualification artifacts |
-| `04-agents/07-outreach-drafting-agent.md` | M3 | Produces drafts without send authority |
-| `04-agents/08-reply-classification-agent.md` | M3 | Produces reply classification artifacts |
-| `04-agents/09-experiment-evaluation-agent.md` | M3 | Produces decision recommendation artifacts |
+| `04-agents/02-idea-discovery-agent.md` | M3 | Produces IdeaBrief or records the equivalent user-idea materialization |
+| `04-agents/03-offer-design-agent.md` | M3 | Produces authoritative OfferPackage after market research |
+| `04-agents/04-market-research-agent.md` | M3 | Produces MarketResearchReport before offer design |
+| `04-agents/05-lead-research-agent.md` | M3 | Produces LeadResearchDossier after preliminary qualification |
+| `04-agents/06-lead-qualification-agent.md` | M3 | Produces final phased QualificationDecision through deterministic gates |
+| `04-agents/07-outreach-drafting-agent.md` | M3 | Produces ConversationStrategy and EmailDraft without send authority |
+| `04-agents/08-reply-classification-agent.md` | M3 | Produces ReplyEvaluation and bounded negotiation proposals |
+| `04-agents/09-experiment-evaluation-agent.md` | M3 | Recommends checkpoint results from frozen evidence |
 | `04-agents/10-agent-evals-and-versioning.md` | M3 | Gates all agent promotion and rollback |
 | `05-providers/03-model-provider.md` | M3 | Replaceable model boundary and recorded fixtures |
 | `05-providers/04-search-provider.md` | M3 | Replaceable search boundary and provenance |
@@ -170,7 +172,7 @@ The milestone column indicates the first gate that needs the file; later gates m
 | `03-workflows/06-pause-cancel-resume-and-recovery.md` | M6 | Operator interruption and recovery semantics |
 | `06-backend/03-policy-engine.md` | M6 | Deterministic suppression, budget, and rate controls |
 | `06-backend/04-send-gateway.md` | M6 | Sole application path to Gmail |
-| `06-backend/05-approval-and-command-handling.md` | M6 | Idempotent operator commands and approvals |
+| `06-backend/05-approval-and-command-handling.md` | M6 | Idempotent action authorization, exception and protected operator commands |
 | `08-security-and-compliance/03-secrets-and-oauth-token-security.md` | M1 | Protects Gmail credentials |
 | `08-security-and-compliance/04-outreach-compliance.md` | M6 | Jurisdiction/configuration gate before any send |
 | `08-security-and-compliance/05-suppression-budgets-and-kill-switch.md` | M6 | Fail-closed global and campaign controls |
@@ -183,7 +185,7 @@ The milestone column indicates the first gate that needs the file; later gates m
 | `07-frontend/03-experiment-control-center.md` | M4 | Pause/cancel/resume and state visibility |
 | `07-frontend/04-evidence-and-agent-artifacts.md` | M7 | Provenance and review UI |
 | `07-frontend/05-lead-and-campaign-management.md` | M7 | Qualification and suppression UI |
-| `07-frontend/06-approval-inbox.md` | M7 | Approval decisions and authority visibility |
+| `07-frontend/06-approval-inbox.md` | M7 | Exception/incident queue and deterministic action-authority visibility |
 | `07-frontend/07-message-and-reply-timeline.md` | M7 | Reconciliation and reply diagnosis |
 | `07-frontend/08-cost-funnel-and-decision-analytics.md` | M7 | Evidence-based decision view |
 | `07-frontend/09-error-recovery-and-accessibility.md` | M7 | Recovery, keyboard, and assistive-technology flows |
@@ -216,14 +218,24 @@ The milestone column indicates the first gate that needs the file; later gates m
 
 ## Launch promotion ladder
 
-| Promotion phase | Entry boundary | Execution envelope | Exit and downstream limit |
-| --- | --- | --- | --- |
-| M6 test-inbox pilot | passing M0-M5/M1 plus exact M6 offline contracts, one isolated project/mailbox and four-to-five operator-controlled aliases for the frozen distinct-pair allocation | exact ten-ID/two-lane catalog: nine `T7-GMAIL-LIVE`/`GMAIL_OWNED_ALIAS` IDs produce 13 live provider calls, 13 unique `SENT` messages and two zero-call live outcomes; one `T7-GMAIL-OFFLINE`/`GMAIL_RECORDED` ID produces recorded conclusive-rejection `FAILED` evidence with zero live call/delivery/Sent reconciliation/retry; live calls span at least three cap-safe windows, at most 5 messages per rolling 24 hours and 20 total; no skip/substitution/follow-up | signed M6 technical record only on exact ordered set/lane/count/outcome equality; no recipient/legal authority |
-| M8 controlled internal stack | current M0-M7, signed release/private target, real AWS S3 `eu-central-1` acceptance, backup/restore/alert/DR entry | seven complete unchanged 24-hour windows, at least 20 and at most 40 synthetic/internal runs; zero Gmail sends, real recipients and public operations | signed M8 operational record; only M9 entry assembly becomes eligible |
-| M9 staged real experiment | current M1/M6/M8 plus one offer/campaign/mailbox/legal-policy set, exact `100/200/300/400` new-recipient cohorts, `100/300/600/1,000` cumulative maxima and exact 64-private/2-public evidence | only a signed `CONTINUE` opens the next cohort; stage/cumulative/provider/legal/reputation caps and recipient uniqueness are enforced at final SEND; abort commits product/send/worker authority off but preserves healthy opt-out obligations in exact `SUPPRESSION_ONLY` | signed stage barriers and final decision; unsafe public/suppression processing uses `DISABLED_UNSAFE`, cohort-wide canonical suppression, alternate channel and `IR-12`; no automatic scaling or cap increase |
-| earned autonomy | pre-signed chronological `[start_at,end_at)`/minimum-`N` cohort query, representative slice, eligible-input/admission rule and exact immutable bindings | finite `EA0_OPERATOR_STARTED` through `EA3_INTERNAL_WORKFLOW_SCHEDULED`; every admitted attempt remains in the denominator; applicable provenance is 100%; only research, typed artifacts, deterministic evaluation and no-send WF-02/03/04 scheduling | capability-specific internal eligibility; one post-admission provenance/evidence-integrity failure demotes immediately to EA0/new version/new cohort; every Gmail/approval/control/legal/credential/delete/restore/public action remains forbidden |
+| Phase | Evidence required | Limit |
+| --- | --- | --- |
+| 1. Synthetic agent pipeline | all fifteen artifact contracts, provider-before-consumer order, provenance, quality/cost and no-send assertions | no real demand or external write authority |
+| 2. Recorded provider fixtures | model/source/Gmail/calendar contracts, error/timeout classification, dedupe, crash/replay and reconciliation | fixtures do not establish live-provider or recipient authority |
+| 3. Owned test-inbox conversations | isolated M1/M6 resources; exact immutable pilot cases/caps; cold-stop versus suppression, finite reply loop and send safety | owned-alias technical evidence only |
+| 4. Simulated objections and negotiation | deterministic min-price/margin/discount/scope/terms vectors, budget truth, unsupported-claim and loop-limit failures | no real commercial commitment |
+| 5. Test calendar bookings | explicit confirmation, timezone/DST, availability/conflict, idempotent create/reschedule/cancel and ambiguity recovery | isolated test calendar only |
+| 6. Checkpoint and global-learning simulation | closed evidence, per-agent results, protected holdouts, cross-campaign checkpoint activation, no mid-cohort mutation, rollback/attribution | no real demand; M7/M8 control and recovery evidence still required |
+| 7. Tightly controlled real campaign | current M1/M6/M8 plus complete provider/security/legal-policy/deliverability/recipient/recovery/M9 evidence and frozen offer/source/budget envelope | exact increments `100/200/300/400`, cumulative `100/300/600/1,000`, smaller legal/provider/reputation/budget limits win |
+| 8. Earned autonomous sending and negotiation | all earlier phases and retained representative real-action quality/safety evidence, capability-specific evaluation, bounded commercial and booking policy | routine in-envelope actions and checkpoint transitions proceed deterministically; exceptions/incidents remain operator-controlled |
 
-Every phase uses signed immutable entry/exit evidence, exact caps, immediate abort and demotion, rollback, retained artifacts and a fresh re-entry record. M9 abort never blindly removes the only recipient opt-out mechanism: exact `ACTIVE|SUPPRESSION_ONLY|DISABLED_UNSAFE` route truth and counsel-defined retirement obligations apply. Test/internal resources never become consent, legal, real-user or real-recipient evidence.
+The first six phases cannot count as real demand evidence. Signed immutable launch entry/exit records, exact pilot fixtures, immediate abort/demotion, rollback, and fresh re-entry evidence remain mandatory. M8 separately requires the private deployment, real AWS backup/witness, fresh-target restore and incident evidence. The no-send internal stack rehearsal cannot replace the isolated inbox/calendar tests.
+
+Any reply atomically stops its cold sequence. Positive replies, questions, and genuine objections can enter the bounded response loop; durable suppression follows actual opt-out/complaint/applicable rejection/bounce/legal signals. Booking requires qualified buying intent and explicit timezone-aware slot confirmation. No normal draft, response, negotiation, checkpoint transition, or booking requires per-message approval.
+
+Every closed checkpoint freezes a `CheckpointEvidenceBundle`. Global Learning evaluates each applicable agent with exactly `PROMOTE|KEEP|ROLLBACK|INSUFFICIENT_EVIDENCE`; the retaining outcomes `KEEP` and `INSUFFICIENT_EVIDENCE` do not mutate strategies. The triggering campaign adopts an approved `GlobalStrategyPackage` only at its next cohort boundary after `CONTINUE`; other active campaigns wait for their own checkpoints; future campaigns use the newest approved version. Rollback affects future actions and preserves history. Safety/commercial/source/legal bounds cannot be learned away.
+
+M9 abort preserves healthy recipient opt-out obligations in `SUPPRESSION_ONLY`; unsafe public/suppression processing follows `DISABLED_UNSAFE`, cohort suppression, alternate channel, and the incident runbook. Test/internal resources never become consent, legal, real-user, or real-recipient evidence.
 
 ## Planned dependency rules
 
@@ -231,8 +243,8 @@ Every phase uses signed immutable entry/exit evidence, exact caps, immediate abo
 - PostgreSQL is the application system of record.
 - API and worker remain separate processes from one modular Python package.
 - Agents produce typed, versioned artifacts; deterministic code owns state transitions and external side effects.
-- Agents never call Gmail directly.
-- `SendGateway` is the only application path to `GmailProvider`.
+- Agents never call Gmail or calendar write ports directly.
+- `SendGateway` is the sole Gmail writer; `BookingGateway` is the sole calendar writer.
 - Every external side effect has an idempotency key, policy decision, audit record, timeout, and reconciliation strategy.
 - Outreach defaults off and fails closed.
 - Provider integrations remain replaceable.
@@ -250,7 +262,7 @@ Every phase uses signed immutable entry/exit evidence, exact caps, immediate abo
 | Microservices, Kubernetes, Kafka, Redis/Celery, or generalized event platforms | After M8 telemetry proves the modular monolith is constrained | Measured scaling or isolation failure |
 | Vector database or generalized knowledge platform | After retrieval evaluations beat simpler PostgreSQL/text approaches | Versioned benchmark and cost justification |
 | Autonomous agent loops or direct agent side effects | Never under this roadmap | Finite runs and deterministic authority are permanent boundaries |
-| Automated outreach follow-ups, automatic cap ramps, autonomous campaign approval or experiment scaling | Never under this roadmap | Every real message and authority increase remains a separate operator/legal/deterministic decision |
+| Unbounded follow-ups, automatic cap increases, unregistered campaigns, or commercial/safety changes by learning | Never under this roadmap | Finite in-envelope conversations are allowed only through current deterministic authority and retained launch evidence |
 | Broad enrichment-provider portfolio | After M5 cannot meet qualification gates with primary evidence | Recorded failure trace and replacement scorecard |
 | Polished marketing site or public sign-up | After M9 supports a repeatable value proposition | Real experiment evidence and an operational support plan |
 
@@ -278,49 +290,21 @@ Files may link to repeated global constraints here, but task-specific requiremen
 - [ ] **When a planned name changes —** Input: approved architecture decision. Operation: change the canonical name across all roadmap files and contracts. Output: one consistent vocabulary. Test evidence: repository-wide exact-name scan. Failure behavior: reject the rename until all consumers are identified.
 - [ ] **Before any production-readiness claim —** Input: M8/M9 evidence. Operation: compare the claim to retained restore, incident, send, and experiment artifacts. Output: scoped claim with evidence links. Test evidence: independent evidence-manifest review. Failure behavior: use planned or unproven language.
 
-## Final-review contract closure and remaining evidence gates
+## Migration authority and remaining evidence gates
 
-The consolidated final correction wave addressed the original review's 18 documentation findings without claiming that the planned product exists. A later executable scoped review rejected the prior blanket closure because residual authority gaps remained; the original register below is current only together with the exceptional residual register that follows it:
+The [approved design](../superpowers/specs/2026-09-08-autonomous-sales-validation-roadmap-design.md) and [implementation plan](../superpowers/plans/2026-09-08-autonomous-sales-validation-roadmap-rewrite.md) replace the former staged-validation spec/plan. Historical review counts and catalog sizes do not constrain the new system. The authoritative artifact set, responsibility order, result sets, cohort caps, commercial ownership, gateway ownership, and checkpoint-only strategy activation are serialized once in PRODUCT-01; downstream exact inventories must match them atomically.
 
-1. M0 consumes the frozen 46-product-table, 66-operation, command, event, service, route, report, agent-artifact, and compliance-artifact catalogs; `OperatorTimeEvidenceV1` is signed non-product evidence and adds no table or operation.
-2. The first M9 experiment is immutable at 5 sends per rolling 24 hours and 10 total; final SEND applies the minimum of every applicable signed ceiling.
-3. A possibly accepted Gmail write remains quarantined without a time limit until positive authorized Sent evidence resolves it; absence never proves non-send, and only explicit rejection or local pre-write proof can admit another attempt.
-4. Public unsubscribe is exactly BACKEND-02's FastAPI-owned scanner-safe GET HTML plus explicit-action POST, not a public Next.js route; the operation total remains 64 private plus 2 public.
-5. The product catalog remains 46 tables, with composite and set-based provenance enforcement across experiment, artifact type/version, workflow/run, campaign/member/lead, evidence/decision, and cost boundaries.
-6. Task 7 has exactly 24 distinct nonrecursive handlers, an absolute arbitrary-cwd-safe runner, content digests, `${10}`-style positional parameters, one final child exec, and closed target/exit semantics.
-7. `system_controls` has the exact `OPERATOR|SYSTEM` actor union: only an operator can enable; a system actor may only disable with the exact actor ID, reason, and evidence.
-8. Approval is manual-only and requires the existing `getApproval` operation's step-up, `no-store`, nontelemetry sensitive preview plus a fresh materialization-bound receipt; no automatic approval edge exists.
-9. Campaign creation uses an immutable experiment-scoped `ALL_CURRENTLY_ELIGIBLE` snapshot, exact query/count/hash, cap, and all-or-nothing drift/overflow checks; there is no pre-campaign lead-selection route.
-10. Signed `retention.policy.v1` fixes 30-day operational session detail, separately minimized `SAFETY_LONG` auth audit, 24-hour purge review, 72-hour resolution/escalation, 14 daily plus 4 weekly backup chains, a 35-day absolute personal-data recoverability ceiling, 90-day unsubscribe tokens, and at least 97 days of key overlap.
-11. OBS-02 retains exactly 39 metric names, imports finite versioned value domains, forbids version/high-cardinality labels, and mechanically derives a maximum of 2,906 series.
-12. `security_runtime` is a separate exact two-table operational schema with DDL, CAS/lease lifecycle, roles/ACLs, migrations, retention, restore, and negative fixtures; it is not part of the 46-table product set.
-13. Incident trigger/alert/severity/runbook identity is immutable, and PostgreSQL enforces exact route and repair/resolution applicability, including non-waivable residual risks.
-14. Raw source locators are restricted and encrypted; public citations strip fragments, userinfo, and query strings by default and admit only closed safe query keys after secret/PII-pattern rejection.
-15. The architecture diagram separates agent tool/provider ports from deterministic application-service persistence ownership.
-16. `MarketEvidenceArtifactV1.evidence_gaps` accepts the canonical empty tuple and rejects empty members, duplicates, and more than ten entries.
-17. The enrichment interpolation defect is removed while the validator still rejects unresolved placeholders.
-18. FRONTEND-07's exhaustive test names the exact thirteen-state `MessageState` set without changing that set.
+Stable `Document ID` and task prefixes are retained where possible when user-facing agent filenames move into canonical sequence. Runtime artifact dependencies and implementation-task ancestry determine order; filename numbers do not. Shared evaluation infrastructure is implemented before specialist acceptance, without a feedback dependency from real M9 learning to M3 implementation.
 
-### Exceptional residual closure
+Unchanged safeguards remain implementation blockers: isolated disposable M1 schema, mandatory Temporal fallback after any disqualifying DBOS failure, durable Gmail ambiguity quarantine until positive authorized Sent evidence, suppression and cap/budget races, private authenticated controls, provider/credential isolation, encrypted minimized evidence, bounded public unsubscribe authority, tested backup/restore, and auditable recovery. Booking and strategy activation add corresponding side-effect, privacy, concurrency, and rollback evidence gates.
 
-The authorized exceptional repair closes only the residual documentation-contract defects proven against commit `fbfe25e0`; it does not close implementation, provider, deployment, legal, recipient, or live-evidence gates:
+No document check implements product tables, agents, workflows, auth, adapters, metrics, calendar writes, backup policy, deployment, legal authority, or a real campaign. The historical foundation CI record is scoped to that baseline. Current product/DBOS/Gmail/calendar/AWS/VPS/restore/M8/M9 evidence remains absent until its owning milestone retains passing evidence.
 
-1. DB-04/05 now exposes and consumes exact agent/experiment/workflow cost authority. The closed provenance shapes also bind Gmail cost to the same distinct provider call, send attempt and provider result, and forbid duplicate workflow/send allocation. Rollback fixtures retain the accepted W2/A1 splice and analogous missing-workflow, cross-attempt-result, send-plus-workflow, and call-ID mutations with their named `23503|23514` targets.
-2. Campaign supersession is a deferrable same-campaign/same-experiment composite reference to generated `campaign_version-1`; self, future, skipped, cross-campaign, and cross-experiment rows are permanent named-FK negatives.
-3. `IncidentRouteV1` publishes exactly 18 immutable `(severity,trigger_code,alert_id,runbook_id)` rows in OBS-05/OBS-02/DB-01. The formerly accepted `INFO + SEND_AUTHORITY_VIOLATION + ALERT_SEND_AUTHORITY_VIOLATION + IR-01` row and all 72 wrong-severity permutations target `ck_incidents_route_tuple`/`23514`; notification escalation is a separate projection.
-4. `security_runtime` remains exactly two tables. Complete OIDC request binding is immutable; prior session handles arise only from a genuine current-handle rotation and cannot be fabricated/replaced/slid; API direct table writes are denied and exactly eight owned, fixed-search-path security-definer functions expose transition-specific CAS writes. INFRA-03 leaves provider credential lease/CAS metadata in the managed secret-store contract, not a third auth table.
-5. TEST-03/04 invoke only the manifest-bound physical absolute runner from every required cwd; no relative runner invocation remains and the 24-command/handler catalog is unchanged.
-6. `MetricAttributeRegistryV1` now enumerates every finite literal and tuple domain, including the single honest service, eight session actions, seven provider operation classes, four cost states and 14 Gmail boundaries. Imports name exact enumerated catalogs and fail on set drift. The same 39 names mechanically derive 2,906 series; the unchanged number is a consequence of the explicit sets, not padding.
-7. Hold precedence is limited to eligible live product/restricted records. It cannot extend auth detail, token/key maximums, or the 35-day recoverable-personal-data ceiling; INFRA-04 and LAUNCH-05 now cite the already-signed canonical matrix instead of calling session retention unresolved.
-8. The rollback-only product/security/ACL fixtures and exact-set validators are retained as implementation acceptance inputs. PostgreSQL compilation of planned SQL or passing document validators is evidence about this roadmap only; no Alembic migration, auth runtime, metric exporter, command runner, incident router, secret adapter, backup policy, or production service is thereby implemented.
-
-Each item remains an implementation evidence gate: passing documentation scans or compiling planned DDL grants no deployment, provider, legal, recipient, campaign, control, or send authority. The ignored historical Task 6 report contains superseded counts and is not canonical evidence. Fresh local PostgreSQL compilation validates the documented schemas only; it does not implement migrations or replace the unchanged-foundation CI record. The 2026-08-29 maintenance advisory baseline remains explicitly `INCOMPLETE`, and real DBOS/Gmail/AWS/VPS/backup/restore/M8/M9 evidence remains absent until its owning milestone command exits successfully with signed artifacts.
-
-Graphify post-commit/post-checkout hooks are installed locally, but merge-driver registration remains partial because the tracked `.gitattributes` rule is absent. This repository-navigation limitation is not product evidence and does not relax any gate.
+Graphify state remains local/ignored. Its documentation-aware incremental refresh is required after roadmap changes; structural post-commit hooks alone do not establish semantic documentation freshness.
 
 ## Verification and acceptance
 
-The index is structurally acceptable when all 77 approved task paths appear exactly once in the manifest, M0-M9 appear in strict order, all relative links resolve, the M1/M2 schema boundary is explicit, M1 is isolated-test-inbox-only, M1/M6/M8/M9 gates remain independently necessary, Pydantic AI and DBOS remain the selected initial stack, Temporal remains mandatory after any of the eight disqualifying M1 failures, and later task files use this vocabulary without inventing a competing gate. Structural acceptance does not close the audited blocker register or prove any planned product capability.
+The index is structurally acceptable when all approved task paths appear exactly once in the manifest, M0-M9 appear in strict order, all relative links resolve, the M1/M2 schema boundary is explicit, M1 is isolated-test-inbox-only, M1/M6/M8/M9 gates remain independently necessary, Pydantic AI and DBOS remain the selected initial stack, Temporal remains mandatory after any of the eight disqualifying M1 failures, and later task files use this vocabulary without inventing a competing gate. Structural acceptance does not close implementation evidence gates or prove any planned product capability.
 
 Evidence to retain: manifest command output, placeholder scan, link scan, milestone-order check, current/future truth scan, and `git diff --check` output.
 
