@@ -14,6 +14,8 @@
 
 Every paid or reputation-bearing action is allowed or denied by deterministic, versioned rules over a frozen fact set. The engine records what it evaluated and why; it never calls providers or mutates business aggregates. Approval is one fact, not an override. Suppression, disabled controls, missing gates, authority mismatch, budget, and unresolved ambiguity always fail closed.
 
+M9 final-SEND facts include validation stage, canonical increment, cumulative maximum, immutable membership hash, experiment-wide recipient uniqueness, remaining stage/cumulative capacity, and the immediately prior signed `CONTINUE` for stages above one. Rules reject immediate 1,000-recipient admission, caller-chosen counts, cross-stage reuse, stale barriers, allocation drift, and any effective counsel/provider/live ceiling lower than the planned cohort.
+
 ## Current repository state
 
 `PolicyDecision(allowed,reason)` and the `SendPolicy.evaluate(SendRequest)` protocol exist only to guard the foundation `SendGateway`. There is no rule registry, persisted `policy_decisions`, fact/scope hashing, suppression/budget/rate implementation, legal configuration, gate evidence, or product policy. The current protocol is not the target M6 contract.

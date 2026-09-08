@@ -14,6 +14,8 @@
 
 M6 proves the complete product-shaped Gmail loop against operator-owned inboxes: draft/approve, intent, queue, last-mile policy, send, ambiguous reconciliation, history cursor, reply, classification, pause/cancel/restart, suppression, and audit. During the pilot, `TEST_INBOX_SENDING` may be enabled for an exact owned-alias allowlist while `PRODUCT_OUTREACH` remains `false`. Only after the retained M6 gate passes can an authenticated later command consider product outreach, and that command still requires M1, recipient/campaign authority, and every deterministic gate.
 
+The later M9 composition consumes PRODUCT-02's staged rule without changing this M6 proof: final admission binds one of the exact `100/200/300/400` increments, its `100/300/600/1,000` cumulative ceiling, unique experiment-recipient membership, and the prior signed `CONTINUE` for stages above one. Queue prefetch may not cross a barrier. Replies, suppression, ambiguity, disable, budget, or policy stops close all provably unsent stage work and prevent later-stage admission.
+
 ## Current repository state
 
 There is no product table/workflow, Gmail OAuth/adapter/history sync, policy/suppression/budget implementation, approval, UI control, or send. The minimal `SendGateway` contract has no durable ledger or provider. No current behavior satisfies M6.

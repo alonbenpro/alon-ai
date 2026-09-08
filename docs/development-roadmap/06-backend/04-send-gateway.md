@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+For the staged M9 program, the gateway receives already committed stage authority only. Immediately before credential access it rechecks the exact current cohort, unique member binding, remaining incremental and cumulative capacity, prior `CONTINUE`, suppression, approval, policy, rate, and controls. It cannot admit a member, choose a stage size, or continue after a barrier; any uncertainty produces zero provider calls.
+
 One queued immutable send intent can cause at most one provider invocation per numbered attempt, through one application service. The gateway rechecks current authority, commits the attempt before the network, calls Gmail once outside a transaction, and records direct acceptance, conclusive failure, or ambiguity. An unknown outcome is quarantined and reconciled; it is never retried as a generic exception. Product outreach remains disabled until both M1 and M6 pass; passing either or both grants no automatic campaign, recipient, or spend authority.
 
 ## Current repository state

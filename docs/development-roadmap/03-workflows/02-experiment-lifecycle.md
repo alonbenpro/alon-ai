@@ -14,6 +14,8 @@
 
 The product does not run one immortal “experiment agent.” Each active experiment stage is a finite durable run with frozen inputs, workflow version, attempt/time/cost bounds, explicit terminal result, and canonical application transition. The experiment aggregate outlives runs; a failed-stage retry creates a new `workflow_run_id`.
 
+M9 adds a finite staged-validation aggregate beneath the experiment: `STAGE_1_SIGNAL(100)`, `STAGE_2_CONFIRM(200)`, `STAGE_3_REPEAT(300)`, then `STAGE_4_ESTIMATE(400)`, with cumulative maxima `100/300/600/1,000`. Each stage terminates in a signed barrier. Only `CONTINUE` from Stages 1-3 creates the next run; every other outcome closes later admission. Pause/recovery restores the exact ordinal, immutable membership hash, observation cutoff, and remaining incremental/cumulative capacity without replaying admission.
+
 ## Current repository state
 
 There is no product experiment, transition service, workflow runtime adapter, DBOS workflow, queue, application unit of work, workflow projection, or stage command. The current worker only waits for termination. Every capability below is planned after M1-M3 evidence.

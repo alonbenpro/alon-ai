@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+The M9 rule preview is fixed and read-only: four new-recipient cohorts `100/200/300/400`, cumulative `100/300/600/1,000`, one observation window and signed barrier per stage, and the PRODUCT-02 demand floors. The operator may make a rule stricter or accept a lower legal/provider ceiling but cannot weaken it, reorder stages, enter arbitrary counts, or request all 1,000 immediately.
+
 At `/experiments/new`, the operator can define one narrow, falsifiable `ExperimentBrief`, review the exact frozen server payload, create a `DRAFT` experiment, and then explicitly approve scope from its detail page. Creation defines bounds; it never starts research, outreach, provider work, spend, or sending. Revision is a separate immutable brief version and is legal only through `reviseExperiment` under the BACKEND-05/ARCH-03 guards.
 
 ## Current repository state

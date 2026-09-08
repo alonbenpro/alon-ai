@@ -250,6 +250,11 @@ CREATE TABLE experiment_decisions (
     experiment_decision_id uuid NOT NULL,
     experiment_id uuid NOT NULL,
     experiment_version bigint NOT NULL,
+    stage_ordinal integer NOT NULL,
+    stage_name text NOT NULL,
+    stage_incremental_cap integer NOT NULL,
+    stage_cumulative_cap integer NOT NULL,
+    prior_stage_decision_id uuid NULL,
     decision_kind text NOT NULL,
     metric_snapshot_id uuid NOT NULL,
     metric_snapshot_version integer NOT NULL,
@@ -268,10 +273,12 @@ CREATE TABLE experiment_decisions (
     CONSTRAINT fk_experiment_decisions_experiment_version FOREIGN KEY (experiment_id, experiment_version) REFERENCES experiments (experiment_id, version) ON DELETE RESTRICT,
     CONSTRAINT fk_experiment_decisions_snapshot FOREIGN KEY (metric_snapshot_id, experiment_id, metric_snapshot_version, metric_snapshot_values_hash) REFERENCES metric_snapshots (metric_snapshot_id, experiment_id, snapshot_version, values_hash) ON DELETE RESTRICT,
     CONSTRAINT fk_experiment_decisions_operator FOREIGN KEY (operator_id) REFERENCES operators (operator_id) ON DELETE RESTRICT,
-    CONSTRAINT uq_experiment_decisions_version UNIQUE (experiment_id, experiment_version),
+    CONSTRAINT fk_experiment_decisions_prior FOREIGN KEY (prior_stage_decision_id) REFERENCES experiment_decisions (experiment_decision_id) ON DELETE RESTRICT,
+    CONSTRAINT uq_experiment_decisions_stage UNIQUE (experiment_id, experiment_version, stage_ordinal),
     CONSTRAINT uq_experiment_decisions_command UNIQUE (operator_id, command_idempotency_key),
     CONSTRAINT uq_experiment_decisions_authority UNIQUE (experiment_decision_id, experiment_id, experiment_version, metric_snapshot_id, metric_snapshot_version, metric_snapshot_values_hash, evidence_bundle_artifact_id, evidence_bundle_artifact_type, evidence_bundle_artifact_version, evidence_bundle_artifact_hash, evidence_bundle_artifact_status),
-    CONSTRAINT ck_experiment_decisions_kind CHECK (decision_kind IN ('SCALE','REVISE','KILL','INCONCLUSIVE')),
+    CONSTRAINT ck_experiment_decisions_stage CHECK ((stage_ordinal = 1 AND stage_name = 'STAGE_1_SIGNAL' AND stage_incremental_cap = 100 AND stage_cumulative_cap = 100 AND prior_stage_decision_id IS NULL) OR (stage_ordinal = 2 AND stage_name = 'STAGE_2_CONFIRM' AND stage_incremental_cap = 200 AND stage_cumulative_cap = 300 AND prior_stage_decision_id IS NOT NULL) OR (stage_ordinal = 3 AND stage_name = 'STAGE_3_REPEAT' AND stage_incremental_cap = 300 AND stage_cumulative_cap = 600 AND prior_stage_decision_id IS NOT NULL) OR (stage_ordinal = 4 AND stage_name = 'STAGE_4_ESTIMATE' AND stage_incremental_cap = 400 AND stage_cumulative_cap = 1000 AND prior_stage_decision_id IS NOT NULL)),
+    CONSTRAINT ck_experiment_decisions_kind CHECK ((stage_ordinal < 4 AND decision_kind IN ('CONTINUE','REVISE','KILL','INCONCLUSIVE','SAFETY_STOP')) OR (stage_ordinal = 4 AND decision_kind IN ('SCALE','REVISE','KILL','INCONCLUSIVE','SAFETY_STOP'))),
     CONSTRAINT ck_experiment_decisions_version CHECK (experiment_version > 0 AND metric_snapshot_version > 0 AND evidence_bundle_artifact_version > 0),
     CONSTRAINT ck_experiment_decisions_artifact CHECK (evidence_bundle_artifact_type = 'EvidenceBundle' AND evidence_bundle_artifact_hash ~ '^[0-9a-f]{64}$' AND evidence_bundle_artifact_status = 'ACCEPTED' AND metric_snapshot_values_hash ~ '^[0-9a-f]{64}$')
 );
@@ -295,7 +302,7 @@ JSON fields have versioned Pydantic schemas and GIN indexes only after query evi
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=DB-02-T01 milestone=M2 depends_on=PRODUCT-01-T03,PRODUCT-02-T01 mode=parallel locks=product-contracts,backend-domain -->
-- [ ] **Encode immutable brief and decision models —** Input: M0 artifact/metric contracts. Operation: define complete schemas, hashes, version links, and canonical decision enum. Output: domain values and migration model. Test evidence: `test_brief_requires_every_m0_field` and immutability tests. Failure behavior: reject incomplete record and block scope approval.
+- [ ] **Encode immutable brief and staged decision models —** Input: M0 artifact/metric contracts and PRODUCT-02 `100/200/300/400` staged rule. Operation: define complete schemas, hashes, version links, exact stage ordinal/name/increment/cumulative tuples, prior-barrier reference, and stage/final decision enums. Output: domain values and migration model. Test evidence: `test_brief_requires_every_m0_field`, `test_stage_tuple_is_exact`, prior-`CONTINUE`, and immutability tests. Failure behavior: reject incomplete, ambiguous, cross-program, or out-of-order records and block scope/stage approval.
 <!-- roadmap-task id=DB-02-T02 milestone=M2 depends_on=DB-02-T01 mode=serial locks=database-schema,migration-head -->
 - [ ] **Migrate normalized experiment records —** Input: table contract. Operation: create tables, FKs, constraints, partial uniques, immutable triggers, and indexes. Output: empty M2 schema. Test evidence: real-PostgreSQL constraint matrix. Failure behavior: rollback entire revision.
 <!-- roadmap-task id=DB-02-T03 milestone=M2 depends_on=DB-02-T02 mode=parallel locks=database-schema,backend-domain -->

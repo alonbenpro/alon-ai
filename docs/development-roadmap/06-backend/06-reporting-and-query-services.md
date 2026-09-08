@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+M9 reports expose stage and cumulative truth separately: admitted, attempted, reconciled delivered, bounced, complained, opted out, replied, positively replied, qualified conversations, paid commitments, spend, operator time, and contribution margin. Every snapshot binds stage ordinal, increment, cumulative maximum, membership hash, observation cutoff, query version, and late-event policy. Reports never add stage denominators together twice or infer `CONTINUE|SCALE` from incomplete evidence.
+
 One operator can answer what state an experiment is in, why, what was spent, what evidence/providers contributed, which approvals or ambiguities need action, and whether funnel/decision rules have enough data. Reports are deterministic read models over authoritative product tables and immutable events. They never infer provider delivery, mutate state, hide unresolved records, or become a second source of truth.
 
 ## Current repository state

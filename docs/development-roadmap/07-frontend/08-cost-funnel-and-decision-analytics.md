@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+The funnel renders every stage as a separate cohort and the full program as a deduplicated cumulative view. It displays raw denominators for delivery, positive reply, qualified conversation, paid commitment, provider cost, operator time, and contribution margin; excluded/late/duplicate observations remain visible as reasons, not silently dropped. Stage 1-3 may display `CONTINUE`; only Stage 4 may display a `SCALE` candidate.
+
 At `/experiments/[experimentId]`, the report panels can answer what happened, which exact records counted, what was spent, what remains reserved/discrepant, whether data is complete/fresh, and which immutable metric snapshot/evidence/rule supports an operator decision. Global provider operations render inside `/recovery`. Every number and decision input comes from a server projection; the browser formats but does not calculate authoritative funnel, conversion, cost, ILS, policy, or decision results.
 
 ## Current repository state
@@ -57,7 +59,7 @@ Charts use semantic SVG/canvas only as a visual companion. Each has a visible ti
 
 ### Immutable decision action
 
-The `DecisionEvidence` panel uses server-returned metric snapshot ID/version/hash, evidence bundle refs, rule/query version, complete/warnings/as-of, counts/denominators, and existing decision status. Before enabling confirmation, it calls `getArtifact` for every evidence-bundle artifact and displays the exact returned accepted status/version/content hash beside the decision request; missing, stale, rejected, superseded, or mismatched evidence blocks the action without calculating acceptance. It does not run PRODUCT-02 thresholds. `recordExperimentDecision` uses `RecordExperimentDecisionRequestV1 -> ResourceResponseV1`, mutation `['experiment',id,'record-decision']`, one key, latest experiment `If-Match`, and exact `SCALE/REVISE/KILL/INCONCLUSIVE` enum plus generated snapshot/evidence/rule/reason fields.
+The `DecisionEvidence` panel uses server-returned stage ordinal, metric snapshot ID/version/hash, evidence bundle refs, rule/query version, complete/warnings/as-of, counts/denominators, and existing barrier/decision status. Before enabling confirmation, it calls `getArtifact` for every evidence-bundle artifact and displays the exact returned accepted status/version/content hash beside the decision request; missing, stale, rejected, superseded, or mismatched evidence blocks the action without calculating acceptance. It does not run PRODUCT-02 thresholds. `recordExperimentDecision` uses the generated `RecordStageBarrierRequestV1|RecordFinalExperimentDecisionRequestV1 -> ResourceResponseV1` union, mutation `['experiment',id,'record-decision']`, one key, latest experiment `If-Match`, and the stage-correct enum plus generated snapshot/evidence/rule/reason fields.
 
 The confirmation repeats immutable inputs and warns: a decision does not create another experiment, change a control, allocate budget, contact a recipient, or scale automatically. Require typing the decision kind. Pending disables repeat paths. On 201, invalidate experiment/list/overview/funnel/cost/timeline and render returned immutable decision. Conflict/stale report refetches everything and requires new confirmation.
 

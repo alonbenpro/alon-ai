@@ -12,7 +12,7 @@
 
 ## Outcome and timing
 
-M5 produces a small evidence-backed prospect set without sending. `QUALIFIED` and experiment `READY_FOR_OUTREACH` mean preparation passed only. They do not override suppression, compliance facts, approvals, budgets, M1/M6 gates, global/test-inbox controls, or `SendGateway`.
+M5 produces an evidence-backed, deduplicated prospect pool large enough to supply the next registered cohort plus its bounded reserve without sending. It may prepare candidates for the full staged program, but `QUALIFIED` and experiment `READY_FOR_OUTREACH` mean preparation passed only. They do not assign a stage, override suppression/compliance/approvals/budgets, open a barrier, or create `SendGateway` authority.
 
 ## Current repository state
 
@@ -45,7 +45,7 @@ Identity conflict never overwrites/merges. A corrected evidence/criteria version
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=WF-04-T01 milestone=M5 depends_on=WF-03-T05,DB-02-T03,WF-03-T03 mode=parallel locks=workflow-runtime -->
-- [ ] **Freeze criteria and candidate bounds —** Input: experiment/offer versions and WF-03 authoritative product records with provenance supplying the evidence versions, source/provider allowlist, sample/time/cost caps. Operation: store the exact text schema version/payload and SHA-256 of DB-01's UTF-8 RFC 8785 envelope; verify the golden vectors. Output: reproducible M5 manifest. Test evidence: drift/overscope/schema-type/encoding rejection. Failure behavior: no discovery call.
+- [ ] **Freeze criteria and candidate bounds —** Input: experiment/offer versions and WF-03 authoritative product records with provenance supplying the evidence versions, source/provider allowlist, `100/200/300/400` staged demand, bounded reserve, and time/cost caps. Operation: store the exact text schema version/payload and SHA-256 of DB-01's UTF-8 RFC 8785 envelope; require cross-stage dedupe and preserve subsegment allocation without assigning SEND authority. Output: reproducible M5 manifest capable of supplying the next stage. Test evidence: drift/overscope/schema-type/encoding, duplicate identity, and insufficient-next-cohort rejection. Failure behavior: no discovery call or weaker criteria.
 <!-- roadmap-task id=WF-04-T02 milestone=M5 depends_on=WF-04-T01,PROVIDER-06-T02 mode=parallel locks=workflow-runtime -->
 - [ ] **Implement deterministic business identity —** Input: normalized domain/name/country/source facts. Operation: derive identity key, insert/upsert under unique constraints, and quarantine conflicts. Output: one business/lead or visible conflict. Test evidence: normalization vectors and concurrent duplicates. Failure behavior: no auto-merge/qualification.
 <!-- roadmap-task id=WF-04-T03 milestone=M5 depends_on=WF-04-T02,PROVIDER-06-T01,PROVIDER-06-T03,PROVIDER-05-T01,AGENT-05-T03 mode=parallel locks=workflow-runtime -->
@@ -53,7 +53,7 @@ Identity conflict never overwrites/merges. A corrected evidence/criteria version
 <!-- roadmap-task id=WF-04-T04 milestone=M5 depends_on=WF-04-T03,AGENT-06-T03,BACKEND-01-T04 mode=parallel locks=workflow-runtime -->
 - [ ] **Implement qualification gate —** Input: frozen criteria + accepted evidence + typed assessment; AGENT-06 typed assessment and frozen specialist qualification contract; implemented LeadQualificationService and tested qualification-artifact/weighted-gate handoff contract. Operation: compute deterministic completeness/score result, insert immutable assessment, and apply exact transition/event. Output: qualified/disqualified reasoned state. Test evidence: labeled evaluation and threshold boundary tests. Failure behavior: disqualify or retain pending with explicit error; never default qualify.
 <!-- roadmap-task id=WF-04-T05 milestone=M5 depends_on=WF-04-T04,WF-02-T03 mode=serial locks=workflow-runtime,milestone-gate -->
-- [ ] **Complete M5 and prove no-send —** Input: bounded sample, all conflicts/tasks terminal, and the WF-02 versioned atomic completion-handler interface; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: produce gate evidence and invoke WF-02 completion; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: complete versioned finite WF-04 workflow contract plus `READY_FOR_OUTREACH` preparation state. Test evidence: synthetic E2E, restart, suppression, and import/call graph. Failure behavior: M5 blocked; no M6 workflow start.
+- [ ] **Complete M5 and prove no-send —** Input: bounded qualified pool, cross-stage identity proof, all conflicts/tasks terminal, and the WF-02 versioned atomic completion-handler interface; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: produce gate evidence and invoke WF-02 completion; retain this gate's signed decision review while granting only preparation for later stage admission. Output: complete versioned finite WF-04 workflow contract plus `READY_FOR_OUTREACH` preparation state. Test evidence: synthetic E2E, restart, suppression, cross-stage dedupe, and import/call graph. Failure behavior: M5 blocked; no M6 workflow start or cohort authority.
 
 ## Test strategy
 

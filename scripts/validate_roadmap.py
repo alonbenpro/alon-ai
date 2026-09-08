@@ -17,6 +17,8 @@ from pathlib import Path
 
 _PATH = re.compile(r"(?:[0-9]{2}-[a-z0-9-]+/)+[0-9]{2}-[a-z0-9-]+\.md")
 ROOT_TASK_IDS = frozenset({"PRODUCT-01-T01"})
+STAGED_LEAD_SCHEDULE = (100, 200, 300, 400)
+STAGED_LEAD_CUMULATIVE = (100, 300, 600, 1000)
 LOCKS = frozenset(
     {
         "roadmap-root",
@@ -141,6 +143,45 @@ class Wave:
     milestone: str
     assignments: tuple[WaveAssignment, ...]
     newly_unlocked: tuple[str, ...]
+
+
+def validate_staged_lead_contract(root: Path) -> None:
+    roadmap_root = root / "docs" / "development-roadmap"
+    authorities = (
+        roadmap_root / "00-product-strategy" / "02-success-metrics.md",
+        roadmap_root / "12-launch-and-operations" / "03-first-real-experiment.md",
+    )
+    if not all(path.is_file() for path in authorities):
+        return
+
+    forbidden = (
+        "at most ten recipients",
+        "one-to-ten",
+        "10-total",
+        "11th recipient",
+        "50 delivered unique recipients",
+    )
+    active_paths = [path for path in (roadmap_root / "README.md",) if path.is_file()]
+    active_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))
+    for path in active_paths:
+        relative = path.relative_to(roadmap_root).as_posix()
+        for line_number, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if any(legacy in line for legacy in forbidden):
+                raise SourceLocation(relative, line_number).error(
+                    "legacy staged-lead rule is forbidden"
+                )
+
+    required = ("100/200/300/400", "100/300/600/1,000", "CONTINUE")
+    for path in authorities:
+        text = path.read_text(encoding="utf-8")
+        relative = path.relative_to(roadmap_root).as_posix()
+        for token in required:
+            if token not in text:
+                raise SourceLocation(relative, 1).error(
+                    f"staged-lead authority is missing {token!r}"
+                )
 
 
 def _logical_cells(line: str) -> list[str]:
@@ -376,6 +417,7 @@ def _line_location(source: str, lines: list[str], index: int) -> SourceLocation:
 
 
 def parse_roadmap(root: Path) -> Roadmap:
+    validate_staged_lead_contract(root)
     documents = parse_manifest(root)
     tasks: list[Task] = []
     seen_document_ids: set[str] = set()

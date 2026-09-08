@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+Staged-validation telemetry adds safe stage ordinal, canonical increment, cumulative maximum, admitted/delivered counts, remaining capacity, barrier kind, and rule version—never recipient identity. Separate alerts fire for stage overrun, cumulative `1,000` overrun, cross-stage reuse, missing/stale prior `CONTINUE`, admission during observation, and immediate-1,000 attempts. Each alert disables new admission and follows the existing send-safety incident path.
+
 Alon can answer five questions without querying raw personal data: is the private service usable; are workflows/agents/providers healthy and bounded; is any send/control/suppression/ambiguity invariant at risk; are costs complete and within budget; and can incidents/backups/recovery be trusted. Alerts are actionable for one operator, not a noisy imitation of a large SRE team.
 
 The implementation follows OpenTelemetry [metric](https://opentelemetry.io/docs/specs/semconv/general/metrics/) and [trace](https://opentelemetry.io/docs/specs/semconv/general/trace/) semantics as applicable, accessed 2026-08-29. Custom metrics use an `alon_ai.` namespace and documented units/labels.

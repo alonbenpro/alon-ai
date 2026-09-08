@@ -14,6 +14,8 @@
 
 Every Gmail credential and send outcome is classified, durably captured, mailbox-bound, reconciled, suppressible, and operator-visible. Agents/workflows/routes never call Gmail; only deterministic policy plus `SendGateway` reaches `GmailProvider.send`. Any possible provider acceptance enters ambiguity and is never blindly retried.
 
+The M9 extension repeats the final-slot and crash matrix at stage boundaries `100`, `300`, `600`, and `1,000`. Provider spies prove that concurrent contenders cannot create call 101/301/601/1001, a recipient from an earlier stage produces zero call, and any ambiguous attempt consumes/quarantines its capacity until positive reconciliation rather than opening a replacement slot.
+
 ## Current repository state
 
 No Google project configuration, Gmail OAuth flow, versioned secret object, mailbox row, Gmail adapter, Sent search/history cursor, MIME capture, product send ledger, suppression transaction, test-inbox pilot, or provider evidence exists. `ALON_AI_OUTREACH_ENABLED=false` and unit spies around the minimal gateway are foundation guards only.

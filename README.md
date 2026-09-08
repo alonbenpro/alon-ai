@@ -10,6 +10,8 @@ It **does not send production outreach**, implement a Gmail adapter or OAuth, ru
 
 The authoritative [M0-M9 development roadmap](docs/development-roadmap/README.md) now documents the complete planned sequence and its audited blockers. It is planning evidence, not proof that the planned product, launch gates, deployment, legal authority, or real experiment exists.
 
+The planned real-demand test is one staged program: 100 new delivered recipients, then 200, then 300, then 400, for a maximum of 1,000 unique recipients. Each stage requires a signed evidence barrier before the next begins; safety, legal/provider limits, suppression, deliverability, and economics may stop it earlier. Agent research makes an offer worth testing but never substitutes for replies, qualified conversations, or paid commitments.
+
 ## Architecture
 
 ```mermaid

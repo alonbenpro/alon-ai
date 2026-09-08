@@ -14,6 +14,8 @@
 
 One operator can stop new expensive/reputation-bearing work quickly, see what is still in flight, and recover without direct SQL. Pause is reversible and retains `paused_from_state`; cancel is terminal for the run/experiment version where ARCH-03 says so; retry of a failed experiment stage creates a new run. Neither pause nor cancel pretends an ambiguous Gmail call did not happen.
 
+For M9 staged validation, recovery also retains the stage ordinal, exact increment/cumulative tuple, admitted-membership hash, delivered count, remaining capacity, prior barrier reference, and observation cutoff. Restart can resume only the same admitted stage. It cannot recalculate membership, reopen a terminal barrier, move a recipient between cohorts, or interpret `REVISE|KILL|INCONCLUSIVE|SAFETY_STOP` as `CONTINUE`.
+
 ## Current repository state
 
 There is no authentication, product control table, workflow run, DBOS workflow/control adapter, pause/resume/cancel API, kill switch, incident, reconciliation, recovery UI, or repair command. Process termination is the only current worker stop behavior and carries no product state.

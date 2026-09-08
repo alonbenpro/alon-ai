@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+Approval remains recipient/message/version-specific inside each validation stage. A signed barrier is not approval, and approval is not stage admission. `RecordExperimentDecision` records the stage/final discriminated union; the existing `StartOutreachAndReply` command derives the next ordinal from the immutable PRODUCT-02 rule and expected versions. It may open only Stage 1 or the next ordinal after `CONTINUE`, creates no send intent, and atomically rejects duplicate identities or capacity races.
+
 Every operator/workflow/system mutation enters through one registered strict command handler. The handler authenticates authority supplied by the API/workflow boundary, claims an exact command key/hash, executes one sole-writer service transaction, and returns a stored result. Approvals authorize only one immutable message/campaign/mailbox/policy scope until expiry/revocation/consumption; they never override suppression or current policy.
 
 ## Current repository state

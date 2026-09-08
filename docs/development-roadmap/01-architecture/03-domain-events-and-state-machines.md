@@ -193,7 +193,7 @@ Canonical `ApprovalState`: `PENDING`, `APPROVED`, `DENIED`, `EXPIRED`, `REVOKED`
 
 Canonical `WorkflowRunState`: `PENDING`, `RUNNING`, `PAUSE_REQUESTED`, `PAUSED`, `CANCEL_REQUESTED`, `CANCELLED`, `SUCCEEDED`, `FAILED`. Engine-native states map into these application states. A run is finite, has a max attempts/time/cost policy, and never owns aggregate truth. `CANCELLED`, `SUCCEEDED`, and `FAILED` are terminal for that run; an allowed experiment retry always creates a new `workflow_run_id`.
 
-Canonical `ExperimentDecisionKind`: `SCALE`, `REVISE`, `KILL`, `INCONCLUSIVE`. The decision is immutable and links to the metric snapshot, evidence bundle, rule version, and operator command. `SCALE` authorizes no new experiment or spend by itself.
+Canonical `StageBarrierKind` for Stages 1-3 is `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`. Canonical final `ExperimentDecisionKind` for Stage 4 is `SCALE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`. Both records are immutable and link stage ordinal, metric snapshot, evidence bundle, rule version, prior barrier where applicable, and operator/system command. The advisory evaluation-agent artifact remains limited to `SCALE|REVISE|KILL|INCONCLUSIVE`; deterministic safety authority records `SAFETY_STOP`. Neither `CONTINUE` nor `SCALE` authorizes a provider call, arbitrary cap, new experiment, or spend by itself.
 
 ## Domain-event catalog
 
@@ -212,7 +212,7 @@ Event type suffix `.v1` is part of the canonical name. Later incompatible payloa
 | `experiment.paused.v1` | `paused_from_state`, `reason_code` | pause commits |
 | `experiment.resumed.v1` | `resume_to_state`, `reason_code` | resume commits after guard recheck |
 | `experiment.cancelled.v1` | `reason_code` | terminal cancellation commits |
-| `experiment.decision_recorded.v1` | `decision_kind`, `metric_snapshot_id`, `rule_version` | operator decision commits |
+| `experiment.decision_recorded.v1` | `stage_ordinal`, `stage_name`, `stage_incremental_cap`, `stage_cumulative_cap`, `prior_stage_decision_id`, `decision_kind`, `metric_snapshot_id`, `rule_version` | signed stage barrier or final operator decision commits |
 | `workflow.run_started.v1` | `workflow_run_id`, `workflow_type`, `workflow_version` | finite run starts |
 | `workflow.run_paused.v1` | `workflow_run_id`, `reason_code` | engine/application confirms pause |
 | `workflow.run_cancelled.v1` | `workflow_run_id`, `reason_code` | cancellation reaches terminal state |

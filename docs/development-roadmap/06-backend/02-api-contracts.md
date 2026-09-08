@@ -14,6 +14,8 @@
 
 FastAPI is the only business HTTP backend and OpenAPI source. Routes validate/authenticate/translate, call one application command or query service, and return its authoritative result; they contain no domain rules or provider SDK calls. Next.js renders the generated client and never proxies secrets, writes PostgreSQL, or becomes a second backend.
 
+The M9 private contract exposes server-owned stage state through the existing experiment/campaign/report surfaces without expanding the frozen route manifest. Existing `recordExperimentDecision` accepts a generated discriminated stage-barrier/final-decision request; existing `startOutreachAndReply` accepts only the server-derived current stage and prior barrier reference, never caller-selected counts. Responses return the canonical next `100|200|300|400` increment and `100|300|600|1,000` cumulative maximum. A missing/stale/non-`CONTINUE` barrier, reused identity, or cap race is 409/412 with zero admission or provider call.
+
 ## Current repository state
 
 The app currently exposes unauthenticated `/health/live` and database-backed `/health/ready`, request correlation/logging, and CORS. There are no product schemas/routes, public unsubscribe routes, authentication, idempotency middleware, OAuth callback, reports, controls, agents, workflows, providers, WAF route partition, or generated product client. The current health API remains unchanged until explicitly versioned.

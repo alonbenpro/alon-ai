@@ -82,18 +82,29 @@ The operator records either a manual baseline for the same product job or `zero-
 
 M9 compares the automated run to the baseline only where definitions and scope match. No percentage-improvement claim is allowed when the baseline is zero-history or reconstructed.
 
-## First-real-experiment decision rule
+## Staged first-real-experiment decision rule
 
-Before M9, the operator registers a sample cap and one of these decision conditions. Default condition: `50` delivered unique recipients and a `14`-day reply window after the last delivery. A smaller lawful/reputational cap is allowed, but the demand result remains `INCONCLUSIVE` unless the strong-positive condition occurs.
+Before M9, the operator freezes one immutable `100/200/300/400` incremental cohort program with `100/300/600/1,000` cumulative maxima and a separate observation window after each stage. These are new unique delivered recipients per stage, never cumulative batch sizes. The same business, person, normalized recipient identity, or suppression identity cannot be counted in multiple stages of one experiment version. The `1,000` value is a hard ceiling, not a requirement to exhaust the reachable market.
 
-| Decision | Exact condition after all hard gates remain green | Required operator action |
+| Stage | New delivered recipients | Cumulative maximum | Default demand floor after the complete observation window |
+| --- | ---: | ---: | --- |
+| `STAGE_1_SIGNAL` | `100` | `100` | at least `3` positive human replies or at least `1` qualified conversation |
+| `STAGE_2_CONFIRM` | `200` | `300` | cumulative at least `6` positive human replies and `2` qualified conversations, or at least `1` verified paid commitment |
+| `STAGE_3_REPEAT` | `300` | `600` | cumulative at least `12` positive human replies, `4` qualified conversations, and `1` verified paid commitment |
+| `STAGE_4_ESTIMATE` | `400` | `1,000` | cumulative at least `20` positive human replies, `8` qualified conversations, `2` verified paid commitments, and projected contribution margin `> 0` |
+
+A pre-registered rule may be stricter, never weaker. Every continuation also requires deliverability `>=0.90`, zero complaints, zero unresolved ambiguous sends, all safety gates green, and no registered economic kill. Stages 1-3 end in exactly `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`; only a signed `CONTINUE` opens the next cohort. Stage 4 ends in exactly `SCALE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`.
+
+| Decision | Exact effect | Required operator action |
 | --- | --- | --- |
-| `SCALE` candidate | at least `5` positive replies, at least `2` qualified conversations, and at least `1` explicit paid commitment within the cap | perform delivery feasibility review; scaling is a separate approved experiment |
-| `REVISE` | some positive signal exists but no paid commitment, or evidence shows a specific correctable segment/offer/delivery defect | change exactly one major hypothesis and create a new brief version |
-| `KILL` | `0` positive replies after `50` delivered recipients and the reply window, with deliverability >= `0.90`; or projected contribution margin <= `0` at the tested price | close the experiment and record reusable evidence |
-| `INCONCLUSIVE` | cap/window ends without meeting another condition, including underpowered samples or deliverability < `0.90` | do not claim validation; decide whether a tightly scoped follow-up is affordable |
+| `CONTINUE` | the current Stage 1-3 demand floor and every safety/economic gate pass | admit only the next immutable cohort; do not claim final validation |
+| `SCALE` | Stage 4 reaches its final demand floor and every safety/economic gate remains green | perform delivery-feasibility review; any further scale is a separately approved experiment |
+| `REVISE` | evidence identifies one correctable segment, offer, message, price, or delivery hypothesis | close this program version, change exactly one major hypothesis, and create a new version |
+| `KILL` | the registered demand or contribution-margin kill fires | close the experiment and retain reusable evidence |
+| `INCONCLUSIVE` | a stage window or eligible denominator ends without another decision | do not open the next stage or claim validation; require a separately justified experiment |
+| `SAFETY_STOP` | any PRODUCT-03, compliance, suppression, provider-ambiguity, budget, credential, audit, telemetry, backup, bounce, or complaint trigger fires | stop immediately regardless of demand and execute the owning recovery/incident contract |
 
-Any safety kill trigger in PRODUCT-03 overrides this table and stops activity regardless of demand.
+Agent research, citations, contradiction checks, confidence, and offline evaluation establish only that an idea is test-worthy. They never substitute for observed delivered-recipient, conversation, or paid-commitment evidence. Any safety kill trigger in PRODUCT-03 overrides this table and stops activity regardless of demand.
 
 ## Scope and non-goals
 
@@ -108,13 +119,13 @@ These records, operations, and consumers are planned and absent from the current
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=PRODUCT-02-T01 milestone=M0 depends_on=PRODUCT-01-T02 mode=parallel locks=product-contracts -->
-- [ ] **Register metric definitions —** Input: this file and the approved `ExperimentBrief`. Operation: create versioned definitions with exact numerator, denominator, exclusions, owner, query version, and decision action. Output: immutable metric registry. Test evidence: schema and duplicate-name/version tests. Failure behavior: refuse observations for unknown definitions.
+- [ ] **Register metric and staged-decision definitions —** Input: this file and the approved `ExperimentBrief`. Operation: create versioned metric definitions plus the canonical stage names, `100/200/300/400` increments, `100/300/600/1,000` cumulative maxima, default demand floors, barrier enums, exact numerator/denominator exclusions, owner, query version, and decision action. Output: immutable metric registry and `StagedValidationRuleV1` contract for M2 consumers. Test evidence: schema, tuple/set equality, demand-floor boundary, and duplicate-name/version tests. Failure behavior: refuse unknown metrics, ambiguous schedules, weaker thresholds, or observations for unknown definitions.
 <!-- roadmap-task id=PRODUCT-02-T02 milestone=M0 depends_on=PRODUCT-02-T01 mode=parallel locks=product-contracts -->
 - [ ] **Capture baseline evidence —** Input: manual records or zero-history declaration. Operation: record scope-matched counts, time, spend, source, and confidence. Output: baseline bundle. Test evidence: completeness query and operator signature. Failure behavior: prohibit improvement claims when evidence is absent.
 <!-- roadmap-task id=PRODUCT-02-T03 milestone=M3 depends_on=PRODUCT-02-T02,DB-05-T05 mode=parallel locks=backend-domain,telemetry-catalog -->
 - [ ] **Implement gate queries in milestone order —** Input: event/audit/cost records introduced from M2 onward. Operation: compute raw counts and derived rates deterministically. Output: versioned `MetricObservation` rows. Test evidence: golden datasets including zero denominators, duplicates, late replies, bounces, and FX conversion. Failure behavior: return unavailable with reason; never coerce missing data to zero.
 <!-- roadmap-task id=PRODUCT-02-T04 milestone=M9 depends_on=PRODUCT-02-T03,SEC-01-T05 mode=serial locks=product-contracts,compliance-policy,milestone-gate -->
-- [ ] **Pre-register the M9 decision —** Input: safety gates, sample cap, reply window, price, delivery-cost assumptions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: freeze the rule before contacting a real recipient; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: signed decision-rule version. Test evidence: audit query proves it predates the first send intent. Failure behavior: block real-recipient authority.
+- [ ] **Pre-register the staged M9 decision —** Input: safety gates, exact `100/200/300/400` increments, `100/300/600/1,000` cumulative maxima, stage reply windows, subsegment allocation, price, delivery-cost assumptions, and the default-or-stricter demand floors; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: freeze one versioned rule before contacting a real recipient, require a signed `CONTINUE` before each later cohort, and retain the final `SCALE|REVISE|KILL|INCONCLUSIVE|SAFETY_STOP` decision. Output: signed staged decision-rule version. Test evidence: audit query proves it predates the first send intent and boundary/race fixtures prove no later-stage admission without the prior signed `CONTINUE`. Failure behavior: block real-recipient authority or the next cohort.
 
 ## Test strategy
 
@@ -124,6 +135,8 @@ These records, operations, and consumers are planned and absent from the current
 - **Integration `test_decision_rule_uses_reconciled_delivery_and_unique_recipients`:** retries and duplicate provider observations do not inflate the funnel.
 - **Recovery `test_late_reply_recomputes_snapshot_without_rewriting_history`:** a new snapshot supersedes the earlier one.
 - **Contract `test_hard_gate_cannot_be_overridden_by_demand_metric`:** safety failure yields stopped status even with positive replies.
+- **Contract `test_staged_rule_uses_exact_incremental_and_cumulative_caps`:** `100/200/300/400` maps only to `100/300/600/1,000` and rejects legacy or ambiguous schedules.
+- **Concurrency `test_only_signed_continue_can_admit_the_next_unique_cohort`:** duplicate identities, stale barriers, and concurrent final-slot admissions fail closed.
 
 ## Safety, privacy, compliance, idempotency, observability, and cost
 

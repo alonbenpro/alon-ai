@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+Each approval displays validation stage, immutable recipient/campaign/message binding, applicable stage/cumulative capacity, policy evidence, and whether the observation barrier permits activity. Batch selection cannot turn approval into admission or bypass per-message authority; any reply/suppression/safety stop invalidates pending approvals before a later provider call.
+
 The operator can review one immutable approval scope, see whether its original eligibility and current authority facts remain valid, and approve, deny, or revoke it with exact reason and expected-state semantics. The screen makes the crucial distinction unavoidable: `APPROVAL_ELIGIBILITY` allows creation/decision of a bounded approval; the later fresh final `SEND` policy is a new server decision over current mutable facts, and only `SendGateway` may call Gmail.
 
 ## Current repository state

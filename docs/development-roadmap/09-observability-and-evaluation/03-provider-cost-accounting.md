@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+Every M9 cost entry carries experiment version and validation-stage attribution. Reservations are bounded independently for the next `100|200|300|400` cohort and cumulatively for the `1,000` ceiling; unused capacity never becomes another stage's silent budget. Barrier snapshots report stage and cumulative provider spend, operator time, cost per positive reply/conversation/paid commitment, and projected contribution margin before continuation.
+
 Every paid provider call reserves a conservative maximum before network access and reconciles exactly once to a DB-05 `cost_entries` row using the provider's original currency and immutable usage/pricing evidence. ILS is a separate reporting projection with dated source evidence; it never replaces original-currency truth or silently mixes amounts. Unknown cost or missing FX evidence keeps reservations held, blocks further paid work at the bound, and becomes visible.
 
 The FX source is the Bank of Israel [representative exchange-rate service](https://www.boi.org.il/en/economic-roles/financial-markets/exchange-rates/) and [series/API extraction guidance](https://www.boi.org.il/information/bank-paymnts/guide/api-guide/), accessed 2026-08-29. The Bank states representative rates are indicative and not legally binding; Alon AI uses them only as a documented product reporting policy. Counsel/accountant decides accounting/tax books and any different statutory rate.

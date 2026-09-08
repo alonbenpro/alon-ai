@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+The M9 contract matrix proves exact stage tuples `(1,100,100)`, `(2,200,300)`, `(3,300,600)`, `(4,400,1000)`; rejects legacy ten/50-recipient rules and caller-selected schedules; and exercises `99/100`, `199/200`, `299/300`, `399/400`, and `999/1,000` boundaries. Integration fixtures prove experiment-wide recipient uniqueness, immutable subsegment allocation, prior-barrier binding, and zero writes/provider calls for stale or non-`CONTINUE` admission.
+
 Byte-level contracts, named PostgreSQL invariants, sole-writer transactions, and HTTP/provider partitions fail before orchestration or browser work can consume them. Tests use canonical upstream manifests as authority and compare independent fixtures by exact set equality; they do not maintain a weaker alias contract.
 
 ## Current repository state

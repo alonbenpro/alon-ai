@@ -14,6 +14,8 @@
 
 One operator can create, inspect, approve, pause, cancel, reconcile, repair, revoke, restore context, and make a decision using only server-authoritative generated contracts, with keyboard/screen-reader/responsive behavior and no secret/PII exposure. Browser success never implies a command completed until the returned receipt/projection says so.
 
+The staged M9 journey shows `100 -> 100`, `200 -> 300`, `300 -> 600`, and `400 -> 1,000`; incremental/cumulative funnel evidence; observation-window status; and the signed barrier. Browser tests prove the next-stage control is inaccessible for missing/stale/non-`CONTINUE` decisions, double clicks replay one command, safety stop removes the action immediately, and no UI path offers an immediate-1,000 admission.
+
 ## Current repository state
 
 Next.js currently has a readiness page, TanStack Query, generated health client types, Testing Library/Vitest and a production build. There are no product routes, OIDC session UI, Gmail OAuth flow, approval/recovery dashboards, Playwright dependency, axe runner, responsive screenshots, public unsubscribe page, or browser E2E CI lane.

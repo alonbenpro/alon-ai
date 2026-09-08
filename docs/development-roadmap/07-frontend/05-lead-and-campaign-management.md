@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+Campaign membership views group qualified leads by immutable validation stage and show unassigned reserve separately. They identify duplicate/conflicting identities without exposing restricted hashes, prevent drag/drop or bulk actions from moving recipients between cohorts, and display remaining stage/cumulative capacity from the server projection rather than browser arithmetic.
+
 The operator can create one immutable campaign version from the server's complete currently-eligible experiment snapshot, inspect that frozen membership, commit its separate readiness transition, see exact member/lead/message and suppression/conflict facts, manage versioned suppression entries, and activate/pause/resume/cancel through the generated client. There is no lead preselection or subset picker. Qualification and campaign readiness never imply send authority; suppression is always visible and wins over qualification/approval.
 
 ## Current repository state

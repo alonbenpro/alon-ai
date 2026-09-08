@@ -43,6 +43,90 @@ ROOT_META = "<!-- roadmap-task id=PRODUCT-01-T01 milestone=M0 depends_on=- mode=
 ROOT_BOX = "- [ ] **Capture scope —** Input: brief. Operation: freeze. Output: contract. Test evidence: review. Failure behavior: block."
 
 
+def test_staged_lead_schedule_constants_are_exact() -> None:
+    assert _validator.STAGED_LEAD_SCHEDULE == (100, 200, 300, 400)
+    assert _validator.STAGED_LEAD_CUMULATIVE == (100, 300, 600, 1000)
+
+
+def test_active_roadmap_uses_only_staged_thousand_lead_contract() -> None:
+    repository_root = Path(__file__).resolve().parents[3]
+    roadmap_root = repository_root / "docs" / "development-roadmap"
+    active_paths = [roadmap_root / "README.md"]
+    active_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))
+    active_text = "\n".join(path.read_text(encoding="utf-8") for path in active_paths)
+
+    for forbidden in (
+        "at most ten recipients",
+        "one-to-ten",
+        "10-total",
+        "11th recipient",
+        "50 delivered unique recipients",
+    ):
+        assert forbidden not in active_text
+
+    assert "100/200/300/400" in active_text
+    assert "100/300/600/1,000" in active_text
+
+
+def test_staged_lead_source_validator_accepts_exact_authorities(
+    tmp_path: Path,
+) -> None:
+    product = (
+        tmp_path
+        / "docs"
+        / "development-roadmap"
+        / "00-product-strategy"
+        / "02-success-metrics.md"
+    )
+    launch = (
+        tmp_path
+        / "docs"
+        / "development-roadmap"
+        / "12-launch-and-operations"
+        / "03-first-real-experiment.md"
+    )
+    product.parent.mkdir(parents=True)
+    launch.parent.mkdir(parents=True)
+    contract = "100/200/300/400 and 100/300/600/1,000 with signed CONTINUE"
+    product.write_text(contract, encoding="utf-8")
+    launch.write_text(contract, encoding="utf-8")
+
+    _validator.validate_staged_lead_contract(tmp_path)
+
+
+def test_staged_lead_source_validator_rejects_legacy_rule_with_location(
+    tmp_path: Path,
+) -> None:
+    product = (
+        tmp_path
+        / "docs"
+        / "development-roadmap"
+        / "00-product-strategy"
+        / "02-success-metrics.md"
+    )
+    launch = (
+        tmp_path
+        / "docs"
+        / "development-roadmap"
+        / "12-launch-and-operations"
+        / "03-first-real-experiment.md"
+    )
+    product.parent.mkdir(parents=True)
+    launch.parent.mkdir(parents=True)
+    contract = "100/200/300/400 and 100/300/600/1,000 with signed CONTINUE"
+    product.write_text(contract, encoding="utf-8")
+    launch.write_text(
+        f"{contract}\nat most ten recipients\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValidationError,
+        match=r"12-launch-and-operations/03-first-real-experiment\.md:2: .*legacy staged-lead rule",
+    ):
+        _validator.validate_staged_lead_contract(tmp_path)
+
+
 def write_tree(tmp_path: Path) -> Path:
     roadmap = tmp_path / "docs" / "development-roadmap"
     document = roadmap / "00-product" / "01-scope.md"
@@ -2130,5 +2214,5 @@ def test_real_repository_source_graph_matches_reviewed_contract() -> None:
     assert max(len(wave.assignments) for wave in waves) == 3
     assert len(cross_document_dependency_pairs) == 810
     assert graph_fingerprint(roadmap) == (
-        "afbf82d566136548f0cb3f5a0407758aab17bbf07d26ff2656d6224a5a132abe"
+        "8962eea55212f5c50dcce29ccbdbfbe1b35200ddab922cc25c75924fae469127"
     )

@@ -12,6 +12,8 @@
 
 ## Outcome and timing
 
+Staged-validation recovery kills the process before/after membership claim, final capacity reservation, send intent, provider ambiguity, observation close, barrier commit, and next-stage admission. Every replay retains the exact stage/membership hash, never exceeds incremental or cumulative capacity, never reuses a recipient, and never opens Stage 2-4 unless the immediately prior decision is durably signed `CONTINUE`.
+
 Every finite workflow and control/recovery boundary survives hard process termination, duplicate delivery, replay, version change, cancellation, database failure, and operator retry without hidden state, immortal loops, external-effect replay, or direct SQL. DBOS remains eligible only after all eight M1 criteria pass across K0-K8; any canonical disqualifier immediately makes Temporal mandatory before M2 workflow work.
 
 ## Current repository state

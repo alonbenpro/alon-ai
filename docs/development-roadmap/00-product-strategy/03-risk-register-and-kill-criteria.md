@@ -44,6 +44,9 @@ The existing guard is useful but insufficient: a Boolean environment flag cannot
 | R14 | backup exists but cannot restore | Critical | encrypted automated backup plus fresh-target restore drill | restore or integrity check fails | block M9/deployment promotion, repair and repeat drill |
 | R15 | dashboard hides stale or failed state | High | freshness markers, immutable history, no optimistic success for external actions | UI disagrees with event/system-of-record query | stop affected commands, expose degraded status, recover from backend evidence |
 | R16 | architecture scope creep delays learning | High | vertical gates and explicit non-goals | work item cannot name the next gate/evidence it serves | delete or park the work item; return to critical path |
+| R17 | later cohort opens without sufficient evidence | High | immutable four-stage rule and signed barrier before admission | any Stage 2-4 member is admitted without the immediately prior signed `CONTINUE` | stop admission/sending, close the stage as `SAFETY_STOP`, reconcile all affected work, open an incident |
+| R18 | recipient is reused across stages or caps race | Critical | unique experiment-version recipient identity plus serializable stage/cumulative admission | duplicate identity, stage increment exceeded, or cumulative count above `1,000` | engage global kill switch, reconcile attempts, preserve evidence, require root-cause review before a new version |
+| R19 | experiment changes multiple causal variables mid-program | High | immutable offer/campaign/allocation and versioned one-hypothesis revision | promise, price, CTA, segment allocation, or decision rule drifts after first exposure | close as `REVISE`; never compare or pool the contaminated cohorts |
 
 ## Immediate global kill triggers
 
@@ -57,6 +60,8 @@ Any trigger below sets planned `system_control.outreach_mode = DISABLED`, blocks
 - applicable jurisdiction or provider-policy requirements are unresolved for queued recipients;
 - authoritative spend cannot be determined or a hard budget cap is exceeded; or
 - monitoring required to observe sends, policy decisions, and reconciliation is unavailable.
+- a stage admits above its exact `100/200/300/400` increment, cumulative delivery exceeds `1,000`, or a recipient identity is reused across stages; or
+- any later cohort is admitted without the immediately prior signed `CONTINUE` barrier.
 
 In M1, the equivalent stop is implemented in the disposable isolated harness rather than a product control table; it may send only to operator-owned test inboxes. This does not authorize an M1 product schema or product outreach. Product outreach remains disabled until both M1 and M6 evidence gates pass.
 
@@ -79,16 +84,16 @@ Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconcili
 
 | Scope | Trigger | Decision |
 | --- | --- | --- |
-| Idea/offer | `0` positive replies after `50` delivered unique recipients and the full reply window, with deliverability >= `0.90` | `KILL` the hypothesis |
+| Idea/offer | Stage 1 closes with `0` positive replies and `0` qualified conversations after `100` unique delivered recipients and the full window, with deliverability `>=0.90` | `KILL` or `REVISE` only when evidence names one correctable hypothesis; never open Stage 2 automatically |
 | Economics | projected contribution margin <= `0` at the tested price after measured delivery effort | `KILL` or redesign before any scale claim |
-| Segment access | fewer than `20` evidence-qualified lawful contacts can be found without weakening criteria | `PARK` the channel/segment; do not buy a broad list |
+| Segment access | the next fixed cohort cannot be filled with new evidence-qualified policy-eligible recipients without weakening criteria or reusing an identity | `INCONCLUSIVE` or `PARK` the channel/segment; do not buy a broad list |
 | Research quality | M3 unsupported-claim or citation gate fails after two materially different prompt/model approaches | `PARK` automation and use a deterministic/manual step if still economical |
 | Qualification | precision remains below `0.80` on at least 50 labeled fixtures after two criterion revisions | `PARK` automated qualification; do not proceed to sending |
 | Operator load | review/recovery effort exceeds the registered operator-hours cap in two consecutive synthetic runs | simplify or `PARK`; adding agents is not the default response |
 | Strategy churn | three consecutive `REVISE` decisions produce no paid commitment or stronger demand evidence | `KILL` or explicitly re-baseline as a new hypothesis |
 | Compliance uncertainty | qualified advice or provider rules do not support the proposed contact method/jurisdiction | `KILL` that route regardless of commercial upside |
 
-Counts are deduplicated and derived from reconciled records. Smaller lawful samples may produce `INCONCLUSIVE`, not a fabricated pass.
+Counts are deduplicated and derived from reconciled records. The fixed staged authority is `100/200/300/400` new recipients and `100/300/600/1,000` cumulative maximum; a smaller lawful sample produces `INCONCLUSIVE`, not a fabricated pass, and the `1,000` ceiling is never a quota.
 
 ## Scope and non-goals
 

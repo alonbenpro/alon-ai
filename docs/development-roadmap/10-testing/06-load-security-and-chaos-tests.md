@@ -14,6 +14,8 @@
 
 The smallest private topology has a measured safe operating envelope and fails closed under overload, dependency loss, malicious input, telemetry blindness, secret/PII canaries, and operator error. Tests prove deterministic limits; they do not chase vanity throughput. Public testing exposes exactly two M9-gated unsubscribe operations and proves scanners/abuse cannot mutate via GET, enumerate a recipient, or reach the private API.
 
+The staged-admission chaos suite races at `99/100`, `199/200`, `299/300`, `399/400`, and cumulative `999/1,000`; injects DB/runtime loss around barrier commits; replays stale `CONTINUE`; and attempts duplicate identity, allocation drift, lower-counsel-cap bypass, and immediate-1,000 admission. Every case must preserve the smaller applicable ceiling, produce zero excess provider calls, and stop new admission when authoritative truth is unavailable.
+
 ## Current repository state
 
 There is no load generator, WAF/proxy manifest, rate limiter implementation, security corpus, dependency-fault proxy, disk/clock/network chaos harness, SBOM/provenance gate, telemetry sink, recipient-hash enumeration test, public ingress, backup/restore fault suite, or measured capacity/SLO result. Current secret scan, non-root containers, loopback Compose ports and outreach-off defaults are useful foundation controls only.
