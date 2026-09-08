@@ -50,7 +50,9 @@ Create application/{experiments,offers,identities,qualification,conversations,co
 | EvaluationSuiteCommandService / EvaluationExecutionService | evaluation_cases / evaluation_results; delegate run/IO writes, no global activation authority |
 | ExceptionCommandService / SensitivePreviewService | exception_cases and bounded resolution / purpose-scoped operator inspection only |
 | UnitOfWork / AuditRecorder / IdempotentCommandExecutor | domain_events/outbox / audit_events/action_attributions / command_idempotency; command atomicity |
-| named internal consumer / ProviderCostReconciliationService / RecoveryCommandService / RetentionCommandService | outbox_deliveries with business commit / cost_entries / repair_actions / all policy-versioned purge/redaction |
+| OutboxDeliveryReceiptService / ProviderCostReconciliationService / RecoveryCommandService / RetentionCommandService | outbox_deliveries with business commit / cost_entries / repair_actions / all policy-versioned purge/redaction |
+
+AgentInputMaterializer is a read-only input projection coordinator, not a table writer or model authority. It receives only the exact table/field grants in [data.inventory.rules.v1](../08-security-and-compliance/data-inventory-rules.v1.json), applies the named transform and typed consumer schema, and delegates snapshot persistence to AgentRunRecordingService/ArtifactCommandService. It cannot enable provider access or give GlobalLearningEngine raw thread/PII access. OutboxDeliveryReceiptService records only the allowlisted consumer/event receipt inside the consumer's existing UnitOfWork; it cannot commit independently or perform the consumer's business writes.
 
 If multiple owners touch an aggregate, legal transitions are disjoint in one canonical transition contract. One coordinator invokes each designated writer within its unit of work; it does not acquire arbitrary table mutation authority. Agent type/strategy recommendations are never DB-05 actor authority.
 

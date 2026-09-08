@@ -1,0 +1,2330 @@
+{
+  "schema_version": "data.inventory.rules.v1",
+  "source_schema_documents": [
+    "../02-database/01-core-data-model.md",
+    "../02-database/02-experiment-and-offer-schema.md",
+    "../02-database/03-leads-campaigns-and-messages.md",
+    "../02-database/04-agent-artifacts-and-evidence.md",
+    "../02-database/05-audit-events-and-idempotency.md"
+  ],
+  "table_manifest": "../02-database/06-migrations-seeding-and-retention.md",
+  "resolution_algorithm": "EXACT_TABLE_THEN_FIRST_FIELD_RULE_THEN_EXACT_TRANSFORM_INTERSECTION",
+  "unknown_table": "REJECT_SCHEMA",
+  "unknown_field": "APPLY_RESTRICTED_CONTENT_FALLBACK_AND_REQUIRE_SCHEMA_MANIFEST_HASH_MATCH",
+  "duration_authority": "retention.policy.v1 in 06-data-privacy-and-retention.md#exact-retention-policy-overlay",
+  "retention": {
+    "BUSINESS_ACTIVE": {
+      "trigger": "TRANSITIVE_SCOPE_TERMINAL",
+      "maximum": {
+        "calendar_months": 12
+      }
+    },
+    "SAFETY_LONG": {
+      "trigger": "LAST_TERMINAL_OR_RECONCILED_REFERENCE_EVENT",
+      "maximum": {
+        "calendar_months": 24
+      }
+    },
+    "SENSITIVE_SHORT": {
+      "trigger": "TRANSITIVE_SCOPE_TERMINAL",
+      "maximum": {
+        "days": 30
+      }
+    },
+    "RAW_EVIDENCE_CAPTURE": {
+      "trigger": "MAX(ACCEPTED_OR_REJECTED_AT,TRANSITIVE_SCOPE_TERMINAL)",
+      "maximum": {
+        "days": 30
+      },
+      "unused_failed": {
+        "trigger": "CAPTURE_FAILED_AT",
+        "maximum": {
+          "days": 7
+        }
+      }
+    },
+    "EVALUATION_VERSIONED": {
+      "trigger": "PROMOTED_CONFIGURATION_RETIRED_AT",
+      "maximum": {
+        "calendar_months": 12
+      },
+      "unused_sensitive": {
+        "trigger": "SUPERSEDED_OR_UNUSED_AT",
+        "maximum": {
+          "days": 30
+        }
+      }
+    },
+    "AUTH_RUNTIME_DETAIL": {
+      "flow": {
+        "trigger": "FLOW_EXPIRED_AT",
+        "maximum": {
+          "hours": 24
+        }
+      },
+      "session": {
+        "trigger": "SESSION_TERMINATED_AT",
+        "maximum": {
+          "days": 30
+        }
+      }
+    },
+    "RUNTIME_ENGINE": {
+      "trigger": "APPLICATION_TERMINAL_AND_RECONCILED_AT",
+      "maximum": {
+        "days": 30
+      }
+    },
+    "LOG_RECORD": {
+      "trigger": "RECORDED_AT",
+      "maximum": {
+        "days": 30
+      }
+    },
+    "TRACE_SPAN": {
+      "trigger": "RECORDED_AT",
+      "maximum": {
+        "days": 7
+      }
+    },
+    "METRIC_SAMPLE": {
+      "trigger": "RECORDED_AT",
+      "maximum": {
+        "calendar_months": 13
+      }
+    },
+    "PUBLIC_UNSUBSCRIBE_TOKEN": {
+      "trigger": "ISSUED_AT",
+      "maximum": {
+        "days": 90
+      },
+      "earlier_bound": "SIGNED_RECIPIENT_OBLIGATION_END"
+    },
+    "PUBLIC_UNSUBSCRIBE_KEY_RING": {
+      "trigger": "LAST_ISSUANCE_AT",
+      "minimum_verification_overlap": {
+        "days": 97
+      }
+    },
+    "OPERATIONAL_BACKUP_CHAINS": {
+      "daily_chains": 14,
+      "weekly_chains": 4,
+      "absolute_recoverability_max_days": 35,
+      "hold_extension": false
+    }
+  },
+  "shared_field_axes": {
+    "storage_encryption": "TLS_IN_TRANSIT_AND_ENCRYPTED_DATABASE_VOLUME_WAL_SNAPSHOTS_BACKUPS",
+    "normal_write": "EXACT_TABLE_CREATE_WRITER_OR_LISTED_MUTABLE_FIELD_ARM; IMMUTABLE_COLUMNS_REJECT_UPDATE",
+    "retention_write": "RetentionCommandService.REDACT_OR_PURGE_ONLY_AFTER_ELIGIBILITY",
+    "purpose_constraint": "TABLE_PURPOSE_ONLY; NO_REPURPOSING",
+    "query_access": "NAMED_TABLE_QUERY_READER_INTERSECT_FIELD_PROFILE_INTERSECT_BACKEND_02_DTO_ALLOWLIST",
+    "model_access": "DENY_RAW; ONLY_EXACT_TRANSFORM_GRANTS_TO_DECLARED_CONSUMERS",
+    "telemetry_access": "DENY_RAW; ONLY_BOUNDED_AGGREGATES_WITH_NO_PERSON_OR_ACTION_IDENTIFIER_LABEL",
+    "deletion_order": "PAYLOAD_COPIES_THEN_TOMBSTONE_THEN_FK_LEAVES; SCC_REFERENCE_ROWS_WAIT_UNTIL_ALL_DEPENDENTS_EXPIRE",
+    "backup_expiry": "OPERATIONAL_BACKUP_CHAINS:14_DAILY+4_WEEKLY;ABSOLUTE_35_DAYS;NO_HOLD_EXTENSION",
+    "holds": "LEGAL>INCIDENT>UNRESOLVED_PROVIDER>ACTIONABLE_SUPPRESSION>RIGHTS_DISPUTE>DECISION_GATE>DEPENDENCY;REQUIRED_FIELD_ONLY",
+    "hold_authorization": "EXISTING_SIGNED_HOLD_TARGET_AND_FIELD_PATHS_ONLY;NOT_INFERRED_BY_MODEL_OR_RETENTION_JOB",
+    "hold_review": "24_HOURS_OWNER_REVIEW;72_HOURS_RESOLUTION_OR_ESCALATION;MISSED_SLA_CLOSES_AFFECTED_CONTROLS",
+    "restore": "REPLAY_ALL_TOMBSTONES_BEFORE_READINESS;REVOKE_SESSIONS;ALL_EFFECT_CONTROLS_FALSE;NO_PAYLOAD_RESURRECTION",
+    "field_duration_rule": "CONTENT/LOOKUP/SECRET_FIELD_USES_SHORTEST_APPLICABLE_PAYLOAD_OR_TABLE_PROFILE;SAFE_METADATA_USES_TABLE_PROFILE;NONEXTENDABLE_OVERLAYS_ALWAYS_WIN",
+    "calendar_month_rule": "UTC_CALENDAR_MONTH_ADDITION;CLAMP_INVALID_DAY_TO_MONTH_END;NO_30_DAY_APPROXIMATION",
+    "scope_terminal_rule": "MAX_TERMINAL_TIMESTAMP_OVER_ALL_EXISTING_TRANSITIVE_REFERENCES;ANY_NONTERMINAL_OR_UNRESOLVED_REFERENCE_RETURNS_NOT_ELIGIBLE;UNREFERENCED_CAPTURE_USES_OWN_TERMINAL_STATE",
+    "minimum_after_payload_deletion": "ONLY_PERMITTED_ID_HASH_ENUM_TIME_LINEAGE;LOOKUP_HASH_ONLY_FOR_EXISTING_ACTIONABLE_SUPPRESSION_HOLD;NEVER_RECONSTRUCT_BODY",
+    "source": "EXACT_ROW_OR_TRANSITIVE_EVIDENCE_SOURCE_ADAPTER_SCOPE_TERMS_VERSION_HASH;LOCAL_DETERMINISTIC_RECORD_USES_CREATE_WRITER_AND_COMMAND_SCHEMA_HASH;MISSING_PROVIDER_LINEAGE_DENIES_USE",
+    "hold_owner": "RetentionCommandService_EXECUTES_ONLY_SIGNED_AUTHENTICATED_OPERATOR_HOLD;INCIDENT_EVIDENCE_FROM_IncidentCommandService;LEGAL_HOLD_REQUIRES_COUNSEL_REFERENCE",
+    "secret_maxima": "SEC02_AUTH_RUNTIME_DETAIL_AND_SEC03_PROVIDER_SECRET_LIFECYCLES_ARE_NONEXTENDABLE;NO_PRODUCT_RAW_SECRET;NO_BACKUP_OF_EXTERNAL_SECRET_OBJECT_WITHOUT_SAME_EXPIRY",
+    "mutable_writer_arm_rule": "INSERT_DIRECTION_SELECTS_EXACT_OWNER;UPDATE_FIELD_OWNER_LIST_INTERSECTS_CANONICAL_COMMAND_STATE_TRANSITION_IN_DB01_DB03_BACKEND01_BACKEND04;NO_OTHER_COLUMNS_OR_COMMANDS;MULTIPLE_APPLICABLE_ARMS_REJECT"
+  },
+  "field_rules": [
+    {
+      "id": "FORBIDDEN_PRODUCT_SECRET",
+      "leaf_regex": "^(access_token|refresh_token|authorization_code|client_secret|raw_token|private_key|secret_key|session_handle|flow_handle|pkce_verifier)$",
+      "profile": "FORBIDDEN"
+    },
+    {
+      "id": "RESTRICTED_LOOKUP",
+      "leaf_regex": "^(recipient_hash|recipient_address_hash|lookup_hash|identity_key|source_locator_hash|flow_handle_digest|current_handle_digest|previous_handle_digest|subject_hash)$",
+      "profile": "LOOKUP"
+    },
+    {
+      "id": "CREDENTIAL_BINDING",
+      "leaf_regex": "^(credential_.*|granted_scope_hash|provider_account_hash|oauth_flow_id|key_generation|key_version|nonce_digest|state_digest|claim_token_hash)$",
+      "profile": "CREDENTIAL_METADATA"
+    },
+    {
+      "id": "ENCRYPTED_SECRET",
+      "leaf_regex": "^(.*token.*|.*pkce.*|.*secret.*|.*code.*)_ciphertext$",
+      "profile": "ENCRYPTED_SECRET"
+    },
+    {
+      "id": "ENCRYPTED_CONTENT",
+      "leaf_regex": "^.*_ciphertext$",
+      "profile": "ENCRYPTED_CONTENT"
+    },
+    {
+      "id": "STRUCTURED_CONTAINER",
+      "type_in": [
+        "json",
+        "jsonb",
+        "array",
+        "composite"
+      ],
+      "profile": "PER_LEAF_CONTAINER"
+    },
+    {
+      "id": "COMMERCIAL_AMOUNT",
+      "leaf_regex": "^.*(price|cost|budget|margin|discount|fee|tax|fx_rate|amount|currency|payment|contribution|_minor|_bps).*$",
+      "profile": "COMMERCIAL"
+    },
+    {
+      "id": "METADATA_REFERENCE",
+      "leaf_regex": "^([a-z0-9_]*_(id|ids|ref|refs|hash|version|generation)|id|version|content_hash|input_hash|output_hash|result_hash)$",
+      "profile": "REFERENCE"
+    },
+    {
+      "id": "BOUNDED_STATE_OR_TIME",
+      "leaf_regex": "^([a-z0-9_]*_(at|count|cap|limit|ordinal|number|seconds)|state|status|phase|scope_kind|direction|kind|action_kind|context_kind|origin|assertion_kind|allowed|enabled|active|reason_code|reason_codes|confidence|score|field_status|evidence_mode|availability|complete|retryable)$",
+      "profile": "STATE_TIME",
+      "type_in": [
+        "enum",
+        "boolean",
+        "bool",
+        "integer",
+        "int",
+        "bigint",
+        "smallint",
+        "numeric",
+        "decimal",
+        "timestamp",
+        "timestamptz",
+        "date",
+        "duration",
+        "probability"
+      ],
+      "match": "ALL_PRESENT_PREDICATES"
+    },
+    {
+      "id": "RESTRICTED_CONTENT_FALLBACK",
+      "match_all": true,
+      "profile": "CONTENT"
+    }
+  ],
+  "profiles": {
+    "FORBIDDEN": {
+      "sensitivity": "SECRET",
+      "encryption": "DO_NOT_PERSIST_PRODUCT_FIELD",
+      "redaction": "REJECT_BEFORE_WRITE",
+      "raw_readers": [],
+      "query": "DENY",
+      "model": "DENY",
+      "telemetry": "DENY",
+      "retention": "FORBIDDEN"
+    },
+    "LOOKUP": {
+      "sensitivity": "PSEUDONYMOUS_ENUMERABLE",
+      "encryption": "SHARED_STORAGE_ENCRYPTION",
+      "redaction": "NEVER_SERIALIZE;USE_EXISTING_OPAQUE_TARGET_REF",
+      "raw_readers": "TABLE_INTERNAL_READERS_EXCEPT_QUERY_ROLES",
+      "query": "DENY",
+      "model": "DENY",
+      "telemetry": "DENY",
+      "retention": "SENSITIVE_SHORT_OR_REQUIRED_SUPPRESSION_HOLD"
+    },
+    "CREDENTIAL_METADATA": {
+      "sensitivity": "RESTRICTED_CREDENTIAL_BINDING",
+      "encryption": "SHARED_STORAGE_ENCRYPTION",
+      "redaction": "OPAQUE_CONFIGURED_ALIAS_AND_STATUS_ONLY",
+      "raw_readers": "TABLE_INTERNAL_READERS",
+      "query": "STATUS_ONLY;NO_HASH_OR_HANDLE",
+      "model": "DENY",
+      "telemetry": "BOUNDED_STATUS_AGGREGATE_ONLY",
+      "retention": "TABLE_CLASS"
+    },
+    "ENCRYPTED_SECRET": {
+      "sensitivity": "SECRET",
+      "encryption": "PURPOSE_SPECIFIC_OBJECT_DEK_AND_AUTHENTICATED_AAD_PLUS_SHARED_STORAGE",
+      "redaction": "NEVER_DECRYPT_OUTSIDE_SCOPED_CREDENTIAL_OWNER",
+      "raw_readers": "TABLE_CREATE_WRITER_ONLY",
+      "query": "DENY",
+      "model": "DENY",
+      "telemetry": "DENY",
+      "retention": "NONEXTENDABLE_SECRET_OBJECT_POLICY"
+    },
+    "ENCRYPTED_CONTENT": {
+      "sensitivity": "RESTRICTED_PERSONAL_CONTENT",
+      "encryption": "PERSONAL_DATA_OBJECT_DEK_AND_AUTHENTICATED_AAD_PLUS_SHARED_STORAGE",
+      "redaction": "EXACT_NAMED_TRANSFORM_OR_STEP_UP_EXCEPTION_ONLY",
+      "raw_readers": "TABLE_INTERNAL_READERS_EXCEPT_QUERY_ROLES",
+      "query": "TRANSFORM_OUTPUT_ONLY",
+      "model": "EXACT_TRANSFORM_ONLY",
+      "telemetry": "DENY",
+      "retention": "PAYLOAD_PROFILE"
+    },
+    "PER_LEAF_CONTAINER": {
+      "sensitivity": "PER_LEAF_NO_WHOLE_CONTAINER_GRANT",
+      "encryption": "SHARED_STORAGE_ENCRYPTION;ENVELOPE_WHEN_DECLARED_CIPHERTEXT",
+      "redaction": "RESOLVE_EACH_LEAF;UNKNOWN_LEAF_CONTENT_FALLBACK;NO_WHOLE_BLOB_RELEASE",
+      "raw_readers": "TABLE_INTERNAL_READERS",
+      "query": "PER_ALLOWED_LEAF_ONLY",
+      "model": "EXACT_TRANSFORM_ONLY",
+      "telemetry": "PER_BOUNDED_AGGREGATE_ONLY",
+      "retention": "SHORTEST_CHILD_PAYLOAD_PROFILE"
+    },
+    "COMMERCIAL": {
+      "sensitivity": "RESTRICTED_COMMERCIAL",
+      "encryption": "SHARED_STORAGE_ENCRYPTION",
+      "redaction": "SERVER_CALCULATED_VALUES;NO_RAW_BUDGET_SPANS",
+      "raw_readers": "TABLE_INTERNAL_READERS",
+      "query": "DECLARED_DTO_FIELD_ONLY",
+      "model": "EXACT_OFFER_TERMS_TRANSFORM_ONLY;NO_INFERRED_BUDGET",
+      "telemetry": "COHORT_AGGREGATE_ONLY",
+      "retention": "TABLE_CLASS_UNLESS_BUDGET_OR_CONTENT"
+    },
+    "REFERENCE": {
+      "sensitivity": "RESTRICTED_METADATA",
+      "encryption": "SHARED_STORAGE_ENCRYPTION",
+      "redaction": "OPAQUE_ID_OR_NONRECIPIENT_HASH_ONLY",
+      "raw_readers": "TABLE_INTERNAL_READERS",
+      "query": "DECLARED_DTO_FIELD_ONLY",
+      "model": "DENY_DIRECT;TYPED_ARTIFACT_LINEAGE_ONLY",
+      "telemetry": "RESTRICTED_AUDIT_ONLY;NO_IDENTIFIER_METRIC_LABEL",
+      "retention": "TABLE_CLASS"
+    },
+    "STATE_TIME": {
+      "sensitivity": "RESTRICTED_METADATA",
+      "encryption": "SHARED_STORAGE_ENCRYPTION",
+      "redaction": "BOUNDED_SCHEMA_VALUE_ONLY",
+      "raw_readers": "TABLE_INTERNAL_READERS",
+      "query": "DECLARED_DTO_FIELD_ONLY",
+      "model": "EXACT_TRANSFORM_ONLY",
+      "telemetry": "BOUNDED_AGGREGATE_ONLY",
+      "retention": "TABLE_CLASS"
+    },
+    "CONTENT": {
+      "sensitivity": "RESTRICTED_PERSONAL_CONTENT",
+      "encryption": "SHARED_STORAGE_ENCRYPTION;FIELD_ENVELOPE_WHERE_CIPHERTEXT_DECLARED",
+      "redaction": "MASK_WHOLE_VALUE_UNLESS_EXACT_TRANSFORM_OR_STEP_UP_EXCEPTION",
+      "raw_readers": "TABLE_INTERNAL_READERS_EXCEPT_QUERY_ROLES",
+      "query": "DENY_RAW",
+      "model": "DENY_UNLESS_EXACT_TRANSFORM",
+      "telemetry": "DENY",
+      "retention": "PAYLOAD_PROFILE"
+    }
+  },
+  "transforms": [
+    {
+      "id": "OFFER_TERMS_V1",
+      "selectors": {
+        "offer_packages": [
+          "target_customer",
+          "problem",
+          "solution",
+          "positioning",
+          "scope",
+          "deliverables",
+          "exclusions",
+          "proof_claims",
+          "qualification_filters",
+          "negotiation_options",
+          "booking_constraints"
+        ],
+        "offer_economics": [
+          "currency",
+          "base_price_minor",
+          "payment_terms"
+        ],
+        "offer_variants": [
+          "scope",
+          "deliverables",
+          "variant_price_minor",
+          "payment_schedule",
+          "timing_bounds"
+        ],
+        "negotiation_decisions": [
+          "currency",
+          "net_price_minor",
+          "gross_price_minor",
+          "scope_hash",
+          "allowed",
+          "reason_codes"
+        ]
+      },
+      "consumers": [
+        "EmailWritingAgent",
+        "ReplyEvaluationAgent",
+        "LeadDiscoveryAgent",
+        "LeadResearchAgent",
+        "LeadQualificationAgent"
+      ],
+      "projection": "ONLY_ACCEPTED_PACKAGE_OR_DECISION_FIELDS;EXACT_CLAIM_EVIDENCE;STRIP_CONTACT_AND_SENSITIVE_INFERENCE;NO_PRICING_CALCULATION"
+    },
+    {
+      "id": "BUSINESS_EVIDENCE_V1",
+      "selectors": {
+        "evidence_items": [
+          "content_ciphertext",
+          "facts_ciphertext"
+        ],
+        "businesses": [
+          "canonical_name",
+          "canonical_domain"
+        ],
+        "lead_discovery_candidates": [
+          "preliminary_facts",
+          "unknown_fields"
+        ]
+      },
+      "consumers": [
+        "MarketResearchAgent",
+        "OfferDesignAgent",
+        "LeadDiscoveryAgent",
+        "LeadResearchAgent",
+        "LeadQualificationAgent"
+      ],
+      "projection": "APPROVED_SOURCE_SCOPE_AND_KNOWN_BUSINESS_FACT_FIELDS_ONLY;REDACT_KNOWN_CONTACT_VALUES_EMAIL_PHONE_AND_SENSITIVE_TRAIT_SPANS;UNKNOWN_OR_CONFLICT_STAYS_UNKNOWN;UNTRUSTED_CONTENT_NEVER_INSTRUCTIONS"
+    },
+    {
+      "id": "SANITIZED_THREAD_V1",
+      "selectors": {
+        "conversation_messages": [
+          "sanitized_body_ciphertext",
+          "subject_ciphertext"
+        ],
+        "conversations": [
+          "state",
+          "message_count",
+          "reply_round_count",
+          "deadline_at"
+        ]
+      },
+      "consumers": [
+        "EmailWritingAgent",
+        "ReplyEvaluationAgent"
+      ],
+      "projection": "PRESERVE_ORDER_AND_ALL_REDACTED_MESSAGES;MASK_RAW_CONTACT_IDENTIFIERS_SECRETS_PRIVATE_CALENDAR_AND_SENSITIVE_TRAIT_SPANS;NO_RAW_BODY_COLUMN_ACCESS"
+    },
+    {
+      "id": "CHECKPOINT_LEARNING_V1",
+      "selectors": {
+        "checkpoint_evidence_members": [
+          "safe_payload_hash",
+          "evidence_partition",
+          "evidence_mode",
+          "missing_or_unresolved_reason"
+        ],
+        "metric_snapshots": [
+          "values_json"
+        ],
+        "agent_learning_results": [
+          "result",
+          "reason_codes",
+          "confidence"
+        ]
+      },
+      "consumers": [
+        "ExperimentEvaluationAgent",
+        "GlobalLearningEngine"
+      ],
+      "projection": "FROZEN_COHORT_STATISTICS_AND_BOUNDED_REASON_CATEGORIES_ONLY;MINIMUM_CELL_5;REMOVE_FREE_TEXT_PERSON_CONTACT_LOOKUP_BODY_SLOT_ATTENDEE_AND_SENSITIVE_BUDGET_FIELDS;KEEP_PRIMARY_SECONDARY_GUARDRAIL_SEPARATE"
+    },
+    {
+      "id": "TYPED_ARTIFACT_INPUT_V1",
+      "selectors": {
+        "artifacts": [
+          "payload_ciphertext"
+        ],
+        "agent_io_snapshots": [
+          "snapshot_ciphertext"
+        ],
+        "artifact_input_snapshots": [
+          "snapshot_ciphertext"
+        ]
+      },
+      "consumers": [
+        "IdeaDiscoveryAgent",
+        "MarketResearchAgent",
+        "OfferDesignAgent",
+        "LeadDiscoveryAgent",
+        "LeadResearchAgent",
+        "LeadQualificationAgent",
+        "EmailWritingAgent",
+        "ReplyEvaluationAgent",
+        "ExperimentEvaluationAgent",
+        "GlobalLearningEngine"
+      ],
+      "projection": "ACCEPTED_CANONICAL_INPUT_SCHEMA_AND_PRODUCER_BEFORE_CONSUMER_MAP;RECURSIVELY_APPLY_THE_OTHER_EXACT_TRANSFORMS_TO_EVERY_SOURCE_DEPENDENCY;NO_NEW_FIELD_GRANT;GLOBAL_AGENTS_ONLY_CHECKPOINT_LEARNING_V1;EVALUATION_HOLDOUT_ONLY_EVALUATIONEXECUTIONSERVICE_SELECTED_CASE"
+    }
+  ],
+  "table_policies": {
+    "operators": {
+      "create_writer": "AuthenticationCommandService",
+      "purpose": "AUTHENTICATE_OPERATOR",
+      "internal_readers": [
+        "AuthenticationCommandService",
+        "OperatorSessionService",
+        "ControlCommandService",
+        "ActionAuthorizationService"
+      ],
+      "query_readers": [],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "AuthenticationCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "experiments": {
+      "create_writer": "ExperimentCommandService",
+      "purpose": "EXPERIMENT_BOUNDS",
+      "internal_readers": [
+        "ExperimentCommandService",
+        "ExperimentBriefCommandService",
+        "CampaignCommandService",
+        "CheckpointEvaluationService",
+        "ActionAuthorizationService"
+      ],
+      "query_readers": [
+        "ExperimentOverviewQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ExperimentCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "experiment_briefs": {
+      "create_writer": "ExperimentBriefCommandService",
+      "purpose": "EXPERIMENT_BOUNDS",
+      "internal_readers": [
+        "ExperimentBriefCommandService",
+        "ExperimentCommandService",
+        "CampaignCommandService",
+        "CheckpointEvaluationService",
+        "ActionAuthorizationService"
+      ],
+      "query_readers": [
+        "ExperimentOverviewQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ExperimentBriefCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "workflow_runs": {
+      "create_writer": "WorkflowRunProjectionService",
+      "purpose": "FINITE_RUN_RECOVERY",
+      "internal_readers": [
+        "WorkflowRunProjectionService",
+        "IdempotentCommandExecutor",
+        "AgentRunRecordingService",
+        "RecoveryCommandService",
+        "CheckpointEvaluationService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService",
+        "ExperimentOverviewQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "WorkflowRunProjectionService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "system_controls": {
+      "create_writer": "ControlCommandService",
+      "purpose": "EFFECT_KILL_CONTROL",
+      "internal_readers": [
+        "ControlCommandService",
+        "ActionAuthorizationService",
+        "PolicyEvaluationService",
+        "SendGateway",
+        "BookingGateway",
+        "StrategyActivationService"
+      ],
+      "query_readers": [
+        "ActionAuthorizationQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ControlCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "action_controls": {
+      "create_writer": "ControlCommandService",
+      "purpose": "EFFECT_KILL_CONTROL",
+      "internal_readers": [
+        "ControlCommandService",
+        "ActionAuthorizationService",
+        "PolicyEvaluationService",
+        "SendGateway",
+        "BookingGateway",
+        "StrategyActivationService"
+      ],
+      "query_readers": [
+        "ActionAuthorizationQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ControlCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "budget_accounts": {
+      "create_writer": "BudgetService",
+      "purpose": "SPEND_RESERVATION",
+      "internal_readers": [
+        "BudgetService",
+        "PolicyEvaluationService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "ProviderCostReconciliationService"
+      ],
+      "query_readers": [
+        "ExperimentCostQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BudgetService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "budget_reservations": {
+      "create_writer": "BudgetService",
+      "purpose": "SPEND_RESERVATION",
+      "internal_readers": [
+        "BudgetService",
+        "PolicyEvaluationService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "ProviderCostReconciliationService"
+      ],
+      "query_readers": [
+        "ExperimentCostQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BudgetService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "incidents": {
+      "create_writer": "IncidentCommandService",
+      "purpose": "INCIDENT_RECOVERY",
+      "internal_readers": [
+        "IncidentCommandService",
+        "RecoveryCommandService",
+        "ControlCommandService",
+        "CheckpointEvaluationService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService",
+        "ExceptionQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "IncidentCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "ideas": {
+      "create_writer": "IdeaBriefMaterializer",
+      "purpose": "IDEA_PROVENANCE",
+      "internal_readers": [
+        "IdeaBriefMaterializer",
+        "OfferMaterializationService",
+        "ArtifactValidationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "OfferQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "IdeaBriefMaterializer",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "offer_packages": {
+      "create_writer": "OfferMaterializationService",
+      "purpose": "COMMERCIAL_ENVELOPE",
+      "internal_readers": [
+        "OfferMaterializationService",
+        "CommercialDecisionService",
+        "ArtifactValidationService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "OfferQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "OfferMaterializationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "offer_economics": {
+      "create_writer": "OfferMaterializationService",
+      "purpose": "COMMERCIAL_ENVELOPE",
+      "internal_readers": [
+        "OfferMaterializationService",
+        "CommercialDecisionService",
+        "ArtifactValidationService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "OfferQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "OfferMaterializationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "offer_variants": {
+      "create_writer": "OfferMaterializationService",
+      "purpose": "COMMERCIAL_ENVELOPE",
+      "internal_readers": [
+        "OfferMaterializationService",
+        "CommercialDecisionService",
+        "ArtifactValidationService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "OfferQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "OfferMaterializationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "offer_discount_bands": {
+      "create_writer": "OfferMaterializationService",
+      "purpose": "COMMERCIAL_ENVELOPE",
+      "internal_readers": [
+        "OfferMaterializationService",
+        "CommercialDecisionService",
+        "ArtifactValidationService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "OfferQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "OfferMaterializationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "metric_definitions": {
+      "create_writer": "MetricDefinitionCommandService",
+      "purpose": "MEASURE_REGISTERED_OUTCOMES",
+      "internal_readers": [
+        "MetricDefinitionCommandService",
+        "MetricObservationService",
+        "MetricSnapshotService",
+        "CheckpointEvaluationService"
+      ],
+      "query_readers": [
+        "ExperimentFunnelQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "MetricDefinitionCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "metric_observations": {
+      "create_writer": "MetricObservationService",
+      "purpose": "MEASURE_REGISTERED_OUTCOMES",
+      "internal_readers": [
+        "MetricObservationService",
+        "MetricSnapshotService",
+        "CheckpointEvaluationService"
+      ],
+      "query_readers": [
+        "ExperimentFunnelQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "MetricObservationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "metric_snapshots": {
+      "create_writer": "MetricSnapshotService",
+      "purpose": "FROZEN_CHECKPOINT_METRICS",
+      "internal_readers": [
+        "MetricSnapshotService",
+        "CheckpointEvaluationService",
+        "StrategyActivationService"
+      ],
+      "query_readers": [
+        "CheckpointQueryService",
+        "ExperimentFunnelQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "MetricSnapshotService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "experiment_decisions": {
+      "create_writer": "CheckpointEvaluationService",
+      "purpose": "CHECKPOINT_DECISION",
+      "internal_readers": [
+        "CheckpointEvaluationService",
+        "CampaignAdmissionService",
+        "StrategyActivationService"
+      ],
+      "query_readers": [
+        "CheckpointQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "CheckpointEvaluationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "businesses": {
+      "create_writer": "BusinessIdentityService",
+      "purpose": "EVIDENCED_BUSINESS_IDENTITY",
+      "internal_readers": [
+        "BusinessIdentityService",
+        "RecipientLookupKeyService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "LeadQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BusinessIdentityService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "people": {
+      "create_writer": "BusinessIdentityService",
+      "purpose": "EVIDENCED_BUSINESS_IDENTITY",
+      "internal_readers": [
+        "BusinessIdentityService",
+        "RecipientLookupKeyService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "LeadQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BusinessIdentityService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "contact_identities": {
+      "create_writer": "BusinessIdentityService",
+      "purpose": "EVIDENCED_BUSINESS_IDENTITY",
+      "internal_readers": [
+        "BusinessIdentityService",
+        "RecipientLookupKeyService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "LeadQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BusinessIdentityService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "business_identity_results": {
+      "create_writer": "BusinessIdentityService",
+      "purpose": "EVIDENCED_BUSINESS_IDENTITY",
+      "internal_readers": [
+        "BusinessIdentityService",
+        "RecipientLookupKeyService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "LeadQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BusinessIdentityService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "lead_sources": {
+      "create_writer": "EvidenceIngestService",
+      "purpose": "SOURCE_EVIDENCE",
+      "internal_readers": [
+        "EvidenceIngestService",
+        "BusinessIdentityService",
+        "ArtifactValidationService",
+        "QualificationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "LeadQueryService",
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "EvidenceIngestService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "payload_retention_override": "RAW_EVIDENCE_CAPTURE"
+    },
+    "evidence_items": {
+      "create_writer": "EvidenceIngestService",
+      "purpose": "SOURCE_EVIDENCE",
+      "internal_readers": [
+        "EvidenceIngestService",
+        "BusinessIdentityService",
+        "ArtifactValidationService",
+        "QualificationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "LeadQueryService",
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "EvidenceIngestService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "payload_retention_override": "RAW_EVIDENCE_CAPTURE"
+    },
+    "lead_discovery_candidates": {
+      "create_writer": "DiscoveryCandidateService",
+      "purpose": "APPROVED_SOURCE_DISCOVERY",
+      "internal_readers": [
+        "DiscoveryCandidateService",
+        "BusinessIdentityService",
+        "QualificationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "LeadQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "DiscoveryCandidateService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "leads": {
+      "create_writer": "LeadCommandService",
+      "purpose": "PHASED_QUALIFICATION_STATE",
+      "internal_readers": [
+        "LeadCommandService",
+        "QualificationService",
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "RecipientSignalSuppressionService"
+      ],
+      "query_readers": [
+        "LeadQueryService",
+        "ExperimentFunnelQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "LeadCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "lead_assessments": {
+      "create_writer": "QualificationService",
+      "purpose": "PHASED_QUALIFICATION_EVIDENCE",
+      "internal_readers": [
+        "QualificationService",
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "BookingGateway",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "LeadQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "QualificationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "campaigns": {
+      "create_writer": "CampaignCommandService",
+      "purpose": "CAMPAIGN_VERSION_BOUNDS",
+      "internal_readers": [
+        "CampaignCommandService",
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "CheckpointEvaluationService",
+        "StrategyActivationService"
+      ],
+      "query_readers": [
+        "CampaignQueryService",
+        "ExperimentOverviewQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "CampaignCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "campaign_cohorts": {
+      "create_writer": "CampaignAdmissionService",
+      "purpose": "FROZEN_COHORT_MEMBERSHIP",
+      "internal_readers": [
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "ConversationService",
+        "CheckpointEvaluationService",
+        "StrategyActivationService",
+        "RecipientLookupKeyService"
+      ],
+      "query_readers": [
+        "CampaignQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "CampaignAdmissionService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "mutable_writer_arms": {
+        "CampaignAdmissionService": [
+          "state",
+          "control_generation"
+        ],
+        "CheckpointEvaluationService": [
+          "state",
+          "checkpoint_generation",
+          "control_generation",
+          "closed_at"
+        ]
+      }
+    },
+    "campaign_members": {
+      "create_writer": "CampaignAdmissionService",
+      "purpose": "FROZEN_COHORT_MEMBERSHIP",
+      "internal_readers": [
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "ConversationService",
+        "CheckpointEvaluationService",
+        "StrategyActivationService",
+        "RecipientLookupKeyService"
+      ],
+      "query_readers": [
+        "CampaignQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "CampaignAdmissionService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "gmail_mailboxes": {
+      "create_writer": "GmailMailboxCommandService",
+      "purpose": "GMAIL_CREDENTIAL_BINDING",
+      "internal_readers": [
+        "GmailMailboxCommandService",
+        "GmailCredentialConsistencyService",
+        "GmailOAuthSagaService",
+        "SendGateway",
+        "GmailHistorySyncService"
+      ],
+      "query_readers": [
+        "ProviderOperationsQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "GmailMailboxCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "outreach_messages": {
+      "create_writer": "MessageCommandService",
+      "purpose": "EXACT_OUTBOUND_CONTENT",
+      "internal_readers": [
+        "MessageCommandService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "SendRecoveryService",
+        "ConversationService",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "ConversationQueryService",
+        "ActionAuthorizationQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "MessageCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "mutable_writer_arms": {
+        "MessageCommandService": [
+          "state",
+          "version",
+          "updated_at"
+        ],
+        "SendGateway": [
+          "state",
+          "version",
+          "updated_at"
+        ],
+        "SendRecoveryService": [
+          "state",
+          "version",
+          "updated_at"
+        ]
+      }
+    },
+    "action_authorizations": {
+      "create_writer": "ActionAuthorizationService",
+      "purpose": "EXACT_SINGLE_EFFECT_AUTHORITY",
+      "internal_readers": [
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "PolicyEvaluationService",
+        "RecoveryCommandService"
+      ],
+      "query_readers": [
+        "ActionAuthorizationQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ActionAuthorizationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "action_authorization_consumptions": {
+      "create_writer": "ActionAuthorizationService",
+      "purpose": "EXACT_SINGLE_EFFECT_AUTHORITY",
+      "internal_readers": [
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "PolicyEvaluationService",
+        "RecoveryCommandService"
+      ],
+      "query_readers": [
+        "ActionAuthorizationQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ActionAuthorizationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "suppression_entries": {
+      "create_writer": "SuppressionCommandService",
+      "purpose": "PREVENT_FORBIDDEN_RECONTACT",
+      "internal_readers": [
+        "SuppressionCommandService",
+        "SuppressionQueryService",
+        "RecipientLookupKeyService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "RecipientSignalSuppressionService"
+      ],
+      "query_readers": [
+        "SuppressionQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "SuppressionCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "send_intents": {
+      "create_writer": "SendGateway",
+      "purpose": "GMAIL_EFFECT_RECOVERY",
+      "internal_readers": [
+        "SendGateway",
+        "SendRecoveryService",
+        "PolicyEvaluationService",
+        "ActionAuthorizationService",
+        "GmailResultCaptureService",
+        "ProviderCostReconciliationService",
+        "RecipientSignalSuppressionService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService",
+        "ActionAuthorizationQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "SendGateway",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "mutable_writer_arms": {
+        "SendGateway": [
+          "attempt_count",
+          "open_for_attempt",
+          "cancelled_at",
+          "cancellation_reason"
+        ],
+        "SendRecoveryService": [
+          "attempt_count"
+        ]
+      }
+    },
+    "send_attempts": {
+      "create_writer": "SendGateway",
+      "purpose": "GMAIL_EFFECT_RECOVERY",
+      "internal_readers": [
+        "SendGateway",
+        "SendRecoveryService",
+        "PolicyEvaluationService",
+        "ActionAuthorizationService",
+        "GmailResultCaptureService",
+        "ProviderCostReconciliationService",
+        "RecipientSignalSuppressionService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService",
+        "ActionAuthorizationQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "SendGateway",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "mutable_writer_arms": {
+        "SendGateway": [
+          "state",
+          "completed_at",
+          "error_code",
+          "error_fingerprint",
+          "retry_class"
+        ],
+        "SendRecoveryService": [
+          "state",
+          "completed_at",
+          "error_code",
+          "error_fingerprint",
+          "retry_class",
+          "reconciliation_strategy_version"
+        ]
+      }
+    },
+    "send_rate_reservations": {
+      "create_writer": "SendRateReservationService",
+      "purpose": "MAILBOX_CONCURRENCY_LIMIT",
+      "internal_readers": [
+        "SendRateReservationService",
+        "SendGateway",
+        "SendRecoveryService",
+        "PolicyEvaluationService"
+      ],
+      "query_readers": [
+        "ProviderOperationsQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "SendRateReservationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "provider_results": {
+      "create_writer": "GmailResultCaptureService",
+      "purpose": "GMAIL_PROVIDER_TRUTH",
+      "internal_readers": [
+        "GmailResultCaptureService",
+        "SendGateway",
+        "SendRecoveryService",
+        "ProviderCostReconciliationService",
+        "CheckpointEvaluationService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService",
+        "ProviderOperationsQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "GmailResultCaptureService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "provider_observations": {
+      "create_writer": "GmailObservationService",
+      "purpose": "GMAIL_OBSERVED_SIGNAL",
+      "internal_readers": [
+        "GmailObservationService",
+        "GmailReplySyncService",
+        "GmailHistorySyncService",
+        "SendRecoveryService",
+        "RecipientSignalSuppressionService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService",
+        "ProviderOperationsQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "GmailObservationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "replies": {
+      "create_writer": "GmailReplySyncService",
+      "purpose": "FULL_ORDERED_CONVERSATION",
+      "internal_readers": [
+        "GmailReplySyncService",
+        "ConversationService",
+        "RecipientSignalSuppressionService",
+        "AgentInputMaterializer",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "ConversationQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "GmailReplySyncService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "conversation_messages": {
+      "create_writer": "GmailReplySyncService",
+      "purpose": "FULL_ORDERED_CONVERSATION",
+      "internal_readers": [
+        "GmailReplySyncService",
+        "ConversationService",
+        "RecipientSignalSuppressionService",
+        "AgentInputMaterializer",
+        "SensitivePreviewService",
+        "MessageCommandService"
+      ],
+      "query_readers": [
+        "ConversationQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "DENY_IMMUTABLE",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "insert_writer_arms": {
+        "INBOUND": "GmailReplySyncService",
+        "OUTBOUND_POSITIVELY_ACCEPTED": "MessageCommandService"
+      }
+    },
+    "gmail_history_cursors": {
+      "create_writer": "GmailHistorySyncService",
+      "purpose": "LOSSLESS_GMAIL_CURSOR",
+      "internal_readers": [
+        "GmailHistorySyncService",
+        "RecoveryCommandService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "GmailHistorySyncService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "conversations": {
+      "create_writer": "ConversationService",
+      "purpose": "BOUNDED_CONVERSATION_CONTEXT",
+      "internal_readers": [
+        "ConversationService",
+        "CommercialDecisionService",
+        "ActionAuthorizationService",
+        "BookingGateway",
+        "AgentInputMaterializer",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "ConversationQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ConversationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "budget_assertions": {
+      "create_writer": "ConversationService",
+      "purpose": "BOUNDED_CONVERSATION_CONTEXT",
+      "internal_readers": [
+        "ConversationService",
+        "CommercialDecisionService",
+        "ActionAuthorizationService",
+        "BookingGateway",
+        "AgentInputMaterializer",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "ConversationQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ConversationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "negotiation_proposals": {
+      "create_writer": "ConversationService",
+      "purpose": "BOUNDED_CONVERSATION_CONTEXT",
+      "internal_readers": [
+        "ConversationService",
+        "CommercialDecisionService",
+        "ActionAuthorizationService",
+        "BookingGateway",
+        "AgentInputMaterializer",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "ConversationQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ConversationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "negotiation_decisions": {
+      "create_writer": "CommercialDecisionService",
+      "purpose": "DETERMINISTIC_COMMERCIAL_RESULT",
+      "internal_readers": [
+        "CommercialDecisionService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "AgentInputMaterializer",
+        "CheckpointEvaluationService"
+      ],
+      "query_readers": [
+        "ConversationQueryService",
+        "CheckpointQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "CommercialDecisionService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "calendar_accounts": {
+      "create_writer": "CalendarAccountService",
+      "purpose": "CALENDAR_CREDENTIAL_BINDING",
+      "internal_readers": [
+        "CalendarAccountService",
+        "AvailabilityService",
+        "CalendarObservationService",
+        "BookingGateway"
+      ],
+      "query_readers": [
+        "BookingQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "CalendarAccountService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "booking_intents": {
+      "create_writer": "BookingGateway",
+      "purpose": "CONFIRMED_BOOKING_RECOVERY",
+      "internal_readers": [
+        "BookingGateway",
+        "AvailabilityService",
+        "BookingReconciliationService",
+        "CalendarObservationService",
+        "ActionAuthorizationService",
+        "ConversationService",
+        "ProviderCostReconciliationService",
+        "CheckpointEvaluationService",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "BookingQueryService",
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BookingGateway",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "booking_slot_sets": {
+      "create_writer": "BookingGateway",
+      "purpose": "CONFIRMED_BOOKING_RECOVERY",
+      "internal_readers": [
+        "BookingGateway",
+        "AvailabilityService",
+        "BookingReconciliationService",
+        "CalendarObservationService",
+        "ActionAuthorizationService",
+        "ConversationService",
+        "ProviderCostReconciliationService",
+        "CheckpointEvaluationService",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "BookingQueryService",
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BookingGateway",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "booking_slots": {
+      "create_writer": "BookingGateway",
+      "purpose": "CONFIRMED_BOOKING_RECOVERY",
+      "internal_readers": [
+        "BookingGateway",
+        "AvailabilityService",
+        "BookingReconciliationService",
+        "CalendarObservationService",
+        "ActionAuthorizationService",
+        "ConversationService",
+        "ProviderCostReconciliationService",
+        "CheckpointEvaluationService",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "BookingQueryService",
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BookingGateway",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "booking_confirmations": {
+      "create_writer": "BookingGateway",
+      "purpose": "CONFIRMED_BOOKING_RECOVERY",
+      "internal_readers": [
+        "BookingGateway",
+        "AvailabilityService",
+        "BookingReconciliationService",
+        "CalendarObservationService",
+        "ActionAuthorizationService",
+        "ConversationService",
+        "ProviderCostReconciliationService",
+        "CheckpointEvaluationService",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "BookingQueryService",
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BookingGateway",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "booking_actions": {
+      "create_writer": "BookingGateway",
+      "purpose": "CONFIRMED_BOOKING_RECOVERY",
+      "internal_readers": [
+        "BookingGateway",
+        "AvailabilityService",
+        "BookingReconciliationService",
+        "CalendarObservationService",
+        "ActionAuthorizationService",
+        "ConversationService",
+        "ProviderCostReconciliationService",
+        "CheckpointEvaluationService",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "BookingQueryService",
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BookingGateway",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "booking_attempts": {
+      "create_writer": "BookingGateway",
+      "purpose": "CONFIRMED_BOOKING_RECOVERY",
+      "internal_readers": [
+        "BookingGateway",
+        "AvailabilityService",
+        "BookingReconciliationService",
+        "CalendarObservationService",
+        "ActionAuthorizationService",
+        "ConversationService",
+        "ProviderCostReconciliationService",
+        "CheckpointEvaluationService",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "BookingQueryService",
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BookingGateway",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "booking_provider_results": {
+      "create_writer": "BookingGateway",
+      "purpose": "CONFIRMED_BOOKING_RECOVERY",
+      "internal_readers": [
+        "BookingGateway",
+        "AvailabilityService",
+        "BookingReconciliationService",
+        "CalendarObservationService",
+        "ActionAuthorizationService",
+        "ConversationService",
+        "ProviderCostReconciliationService",
+        "CheckpointEvaluationService",
+        "SensitivePreviewService"
+      ],
+      "query_readers": [
+        "BookingQueryService",
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "BookingGateway",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "calendar_observations": {
+      "create_writer": "CalendarObservationService",
+      "purpose": "CALENDAR_PROVIDER_TRUTH",
+      "internal_readers": [
+        "CalendarObservationService",
+        "AvailabilityService",
+        "BookingReconciliationService",
+        "BookingGateway"
+      ],
+      "query_readers": [
+        "BookingQueryService",
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "CalendarObservationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "agent_runs": {
+      "create_writer": "AgentRunRecordingService",
+      "purpose": "IMMUTABLE_AGENT_EXECUTION",
+      "internal_readers": [
+        "AgentRunRecordingService",
+        "ArtifactValidationService",
+        "ArtifactCommandService",
+        "EvaluationExecutionService",
+        "AgentInputMaterializer",
+        "ProviderCostReconciliationService"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "EVALUATION_VERSIONED",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "AgentRunRecordingService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "agent_io_snapshots": {
+      "create_writer": "AgentRunRecordingService",
+      "purpose": "IMMUTABLE_AGENT_EXECUTION",
+      "internal_readers": [
+        "AgentRunRecordingService",
+        "ArtifactValidationService",
+        "ArtifactCommandService",
+        "EvaluationExecutionService",
+        "AgentInputMaterializer",
+        "ProviderCostReconciliationService"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "AgentRunRecordingService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "payload_retention_override": "SENSITIVE_SHORT"
+    },
+    "artifacts": {
+      "create_writer": "ArtifactCommandService",
+      "purpose": "IMMUTABLE_ARTIFACT_PROVENANCE",
+      "internal_readers": [
+        "ArtifactCommandService",
+        "ArtifactValidationService",
+        "ArtifactAcceptanceService",
+        "IdeaBriefMaterializer",
+        "OfferMaterializationService",
+        "QualificationService",
+        "CommercialDecisionService",
+        "BookingGateway",
+        "CheckpointEvaluationService",
+        "StrategyActivationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ArtifactCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "artifact_input_snapshots": {
+      "create_writer": "ArtifactCommandService",
+      "purpose": "IMMUTABLE_ARTIFACT_PROVENANCE",
+      "internal_readers": [
+        "ArtifactCommandService",
+        "ArtifactValidationService",
+        "ArtifactAcceptanceService",
+        "IdeaBriefMaterializer",
+        "OfferMaterializationService",
+        "QualificationService",
+        "CommercialDecisionService",
+        "BookingGateway",
+        "CheckpointEvaluationService",
+        "StrategyActivationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "SENSITIVE_SHORT",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ArtifactCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "payload_retention_override": "SENSITIVE_SHORT"
+    },
+    "artifact_evidence_links": {
+      "create_writer": "ArtifactValidationService",
+      "purpose": "ARTIFACT_VALIDATION_LINEAGE",
+      "internal_readers": [
+        "ArtifactValidationService",
+        "ArtifactAcceptanceService",
+        "OfferMaterializationService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ArtifactValidationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "artifact_validations": {
+      "create_writer": "ArtifactValidationService",
+      "purpose": "ARTIFACT_VALIDATION_LINEAGE",
+      "internal_readers": [
+        "ArtifactValidationService",
+        "ArtifactAcceptanceService",
+        "OfferMaterializationService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ArtifactValidationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "snapshot_input_dependencies": {
+      "create_writer": "ArtifactValidationService",
+      "purpose": "ARTIFACT_VALIDATION_LINEAGE",
+      "internal_readers": [
+        "ArtifactValidationService",
+        "ArtifactAcceptanceService",
+        "OfferMaterializationService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "BUSINESS_ACTIVE",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ArtifactValidationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "artifact_acceptances": {
+      "create_writer": "ArtifactAcceptanceService",
+      "purpose": "ACCEPTED_ARTIFACT_RECEIPT",
+      "internal_readers": [
+        "ArtifactAcceptanceService",
+        "OfferMaterializationService",
+        "QualificationService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "CheckpointEvaluationService",
+        "StrategyActivationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ArtifactAcceptanceService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "evaluation_cases": {
+      "create_writer": "EvaluationSuiteCommandService",
+      "purpose": "PROTECTED_OFFLINE_EVALUATION",
+      "internal_readers": [
+        "EvaluationSuiteCommandService",
+        "EvaluationExecutionService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService"
+      ],
+      "retention_class": "EVALUATION_VERSIONED",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "EvaluationSuiteCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "evaluation_results": {
+      "create_writer": "EvaluationExecutionService",
+      "purpose": "PROTECTED_OFFLINE_EVALUATION",
+      "internal_readers": [
+        "EvaluationExecutionService",
+        "StrategyActivationService",
+        "ArtifactValidationService"
+      ],
+      "query_readers": [
+        "ArtifactEvidenceQueryService",
+        "StrategyQueryService"
+      ],
+      "retention_class": "EVALUATION_VERSIONED",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "EvaluationExecutionService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "checkpoints": {
+      "create_writer": "CheckpointEvaluationService",
+      "purpose": "MINIMIZED_CHECKPOINT_EVIDENCE",
+      "internal_readers": [
+        "CheckpointEvaluationService",
+        "StrategyActivationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "CheckpointQueryService",
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "CheckpointEvaluationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "checkpoint_evidence_members": {
+      "create_writer": "CheckpointEvaluationService",
+      "purpose": "MINIMIZED_CHECKPOINT_EVIDENCE",
+      "internal_readers": [
+        "CheckpointEvaluationService",
+        "StrategyActivationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "CheckpointQueryService",
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "CheckpointEvaluationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "global_learning_runs": {
+      "create_writer": "StrategyActivationService",
+      "purpose": "BOUNDARY_ONLY_GLOBAL_STRATEGY",
+      "internal_readers": [
+        "StrategyActivationService",
+        "CheckpointEvaluationService",
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "StrategyActivationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "agent_learning_results": {
+      "create_writer": "StrategyActivationService",
+      "purpose": "BOUNDARY_ONLY_GLOBAL_STRATEGY",
+      "internal_readers": [
+        "StrategyActivationService",
+        "CheckpointEvaluationService",
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "StrategyActivationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "global_strategy_versions": {
+      "create_writer": "StrategyActivationService",
+      "purpose": "BOUNDARY_ONLY_GLOBAL_STRATEGY",
+      "internal_readers": [
+        "StrategyActivationService",
+        "CheckpointEvaluationService",
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "StrategyActivationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "strategy_agent_versions": {
+      "create_writer": "StrategyActivationService",
+      "purpose": "BOUNDARY_ONLY_GLOBAL_STRATEGY",
+      "internal_readers": [
+        "StrategyActivationService",
+        "CheckpointEvaluationService",
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "StrategyActivationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "strategy_activations": {
+      "create_writer": "StrategyActivationService",
+      "purpose": "BOUNDARY_ONLY_GLOBAL_STRATEGY",
+      "internal_readers": [
+        "StrategyActivationService",
+        "CheckpointEvaluationService",
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "StrategyActivationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "strategy_rollbacks": {
+      "create_writer": "StrategyActivationService",
+      "purpose": "BOUNDARY_ONLY_GLOBAL_STRATEGY",
+      "internal_readers": [
+        "StrategyActivationService",
+        "CheckpointEvaluationService",
+        "CampaignAdmissionService",
+        "ActionAuthorizationService",
+        "AgentInputMaterializer"
+      ],
+      "query_readers": [
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "StrategyActivationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "domain_events": {
+      "create_writer": "UnitOfWork",
+      "purpose": "ATOMIC_DOMAIN_DELIVERY",
+      "internal_readers": [
+        "UnitOfWork",
+        "AuditRecorder",
+        "IdempotentCommandExecutor",
+        "CheckpointEvaluationService",
+        "RecoveryCommandService"
+      ],
+      "query_readers": [
+        "ExperimentTimelineQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "UnitOfWork",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "outbox_messages": {
+      "create_writer": "UnitOfWork",
+      "purpose": "ATOMIC_DOMAIN_DELIVERY",
+      "internal_readers": [
+        "UnitOfWork",
+        "AuditRecorder",
+        "IdempotentCommandExecutor",
+        "CheckpointEvaluationService",
+        "RecoveryCommandService"
+      ],
+      "query_readers": [
+        "ExperimentTimelineQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "UnitOfWork",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "audit_events": {
+      "create_writer": "AuditRecorder",
+      "purpose": "IMMUTABLE_ACTION_AUDIT",
+      "internal_readers": [
+        "AuditRecorder",
+        "RecoveryCommandService",
+        "CheckpointEvaluationService",
+        "StrategyActivationService"
+      ],
+      "query_readers": [
+        "ExperimentTimelineQueryService",
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "AuditRecorder",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "action_attributions": {
+      "create_writer": "AuditRecorder",
+      "purpose": "IMMUTABLE_ACTION_AUDIT",
+      "internal_readers": [
+        "AuditRecorder",
+        "RecoveryCommandService",
+        "CheckpointEvaluationService",
+        "StrategyActivationService"
+      ],
+      "query_readers": [
+        "ExperimentTimelineQueryService",
+        "StrategyQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "AuditRecorder",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "command_idempotency": {
+      "create_writer": "IdempotentCommandExecutor",
+      "purpose": "EXACT_COMMAND_REPLAY",
+      "internal_readers": [
+        "IdempotentCommandExecutor",
+        "RecoveryCommandService",
+        "GmailOAuthSagaService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "IdempotentCommandExecutor",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "outbox_deliveries": {
+      "create_writer": "OutboxDeliveryReceiptService",
+      "purpose": "ATOMIC_CONSUMER_DEDUPLICATION",
+      "internal_readers": [
+        "OutboxDeliveryReceiptService",
+        "UnitOfWork",
+        "RecoveryCommandService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "OutboxDeliveryReceiptService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "policy_decisions": {
+      "create_writer": "PolicyEvaluationService",
+      "purpose": "DETERMINISTIC_POLICY_EVIDENCE",
+      "internal_readers": [
+        "PolicyEvaluationService",
+        "ActionAuthorizationService",
+        "SendGateway",
+        "BookingGateway",
+        "CommercialDecisionService",
+        "RecoveryCommandService"
+      ],
+      "query_readers": [
+        "ActionAuthorizationQueryService",
+        "ExperimentTimelineQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "PolicyEvaluationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "cost_entries": {
+      "create_writer": "ProviderCostReconciliationService",
+      "purpose": "PROVIDER_COST_RECONCILIATION",
+      "internal_readers": [
+        "ProviderCostReconciliationService",
+        "BudgetService",
+        "CheckpointEvaluationService"
+      ],
+      "query_readers": [
+        "ExperimentCostQueryService",
+        "ProviderOperationsQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ProviderCostReconciliationService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "repair_actions": {
+      "create_writer": "RecoveryCommandService",
+      "purpose": "AUDITED_RECOVERY",
+      "internal_readers": [
+        "RecoveryCommandService",
+        "IncidentCommandService",
+        "ControlCommandService"
+      ],
+      "query_readers": [
+        "RecoveryQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "RecoveryCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    },
+    "exception_cases": {
+      "create_writer": "ExceptionCommandService",
+      "purpose": "BOUNDED_EXCEPTION_RESOLUTION",
+      "internal_readers": [
+        "ExceptionCommandService",
+        "SensitivePreviewService",
+        "RecoveryCommandService",
+        "ActionAuthorizationService"
+      ],
+      "query_readers": [
+        "ExceptionQueryService"
+      ],
+      "retention_class": "SAFETY_LONG",
+      "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
+      "normal_update_writer": "ExceptionCommandService",
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+    }
+  },
+  "operational_policies": {
+    "security_runtime.oidc_flows": {
+      "create_writer": "OperatorSessionService",
+      "internal_readers": [
+        "OperatorSessionService"
+      ],
+      "query_readers": [],
+      "purpose": "ONE_TIME_OIDC_FLOW",
+      "retention_class": "AUTH_RUNTIME_DETAIL",
+      "raw_field_rule": "SECRET_OR_SECRET_ENCRYPTED;NO_PRODUCT_READER",
+      "restore": "EXPIRE_FLOW_BEFORE_READINESS",
+      "normal_update_writer": "OperatorSessionService",
+      "deletion_policy": "PAYLOAD_TOMBSTONE_THEN_AUTH_ROW",
+      "scope_clock": "FLOW_EXPIRED_AT_OR_SESSION_TERMINATED_AT",
+      "payload_retention": "AUTH_RUNTIME_DETAIL"
+    },
+    "security_runtime.operator_sessions": {
+      "create_writer": "OperatorSessionService",
+      "internal_readers": [
+        "OperatorSessionService"
+      ],
+      "query_readers": [],
+      "purpose": "OPERATOR_SESSION_VALIDATION",
+      "retention_class": "AUTH_RUNTIME_DETAIL",
+      "raw_field_rule": "SECRET_OR_PSEUDONYMOUS;NO_PRODUCT_READER",
+      "restore": "REVOKE_EVERY_SESSION_BEFORE_READINESS",
+      "normal_update_writer": "OperatorSessionService",
+      "deletion_policy": "PAYLOAD_TOMBSTONE_THEN_AUTH_ROW",
+      "scope_clock": "FLOW_EXPIRED_AT_OR_SESSION_TERMINATED_AT",
+      "payload_retention": "AUTH_RUNTIME_DETAIL"
+    }
+  },
+  "external_policies": {
+    "GMAIL_OAUTH_FLOW": {
+      "writer": "GmailOAuthSagaService",
+      "readers": [
+        "GmailOAuthSagaService",
+        "OAuthCredentialGarbageCollector"
+      ],
+      "purpose": "ONE_EXCHANGE_CREDENTIAL_BINDING",
+      "sensitivity": "SECRET",
+      "model": "DENY",
+      "telemetry": "DENY",
+      "encryption": "EXTERNAL_SECRET_OBJECT_DEK",
+      "retention": "PROVIDER-01_10_MINUTE_FLOW_24_HOUR_ORPHAN_WITH_REFERENCE_CHECK",
+      "hold": "HANDLER_BIND_LEASE_OR_REFERENCED_CREDENTIAL_ONLY",
+      "restore": "REVOKED_UNTIL_EXACT_ACTIVE_PROOF"
+    },
+    "GMAIL_CREDENTIAL": {
+      "writer": "GmailOAuthSagaService",
+      "readers": [
+        "GmailOAuthSagaService",
+        "GmailCredentialConsistencyService",
+        "GmailReadAdapter",
+        "GmailWriteAdapter"
+      ],
+      "purpose": "EXACT_GMAIL_ACCOUNT_SCOPE_GENERATION",
+      "sensitivity": "SECRET",
+      "model": "DENY",
+      "telemetry": "DENY",
+      "encryption": "EXTERNAL_SECRET_OBJECT_DEK",
+      "retention": "REVOKE_THEN_REFERENCE_CHECKED_DESTROY;NO_AGE_BASED_DELETE_OF_IN_PROGRESS",
+      "hold": "EXACT_CREDENTIAL_REFERENCE_OR_LEASE",
+      "restore": "NO_TOKEN_ACCESS_BEFORE_BINDING_RECONCILIATION"
+    },
+    "CALENDAR_CREDENTIAL": {
+      "writer": "CalendarAccountService",
+      "readers": [
+        "CalendarAccountService",
+        "CalendarReadAdapter",
+        "CalendarWriteAdapter"
+      ],
+      "purpose": "EXACT_CALENDAR_SCOPE_GENERATION",
+      "sensitivity": "SECRET",
+      "model": "DENY",
+      "telemetry": "DENY",
+      "encryption": "EXTERNAL_SECRET_OBJECT_DEK",
+      "retention": "REVOKE_THEN_REFERENCE_CHECKED_DESTROY;SAME_FLOW_ORPHAN_MAXIMA",
+      "hold": "EXACT_CREDENTIAL_REFERENCE_OR_LEASE",
+      "restore": "NO_TOKEN_ACCESS_BEFORE_BINDING_RECONCILIATION"
+    },
+    "PERSONAL_OR_PROVIDER_CAPTURE": {
+      "writer": "EvidenceIngestService",
+      "readers": [
+        "EvidenceIngestService",
+        "ArtifactValidationService"
+      ],
+      "purpose": "EXACT_BOUND_SOURCE_EVIDENCE",
+      "sensitivity": "RESTRICTED_PERSONAL_CONTENT",
+      "model": "EXACT_TRANSFORM_ONLY",
+      "telemetry": "DENY",
+      "encryption": "PERSONAL_DATA_OBJECT_DEK",
+      "retention": "INHERIT_SOURCE_TABLE_FIELD_SHORTEST_CLOCK",
+      "hold": "EXACT_SOURCE_FIELD_HOLD_ONLY",
+      "restore": "SOURCE_TOMBSTONE_REPLAY_BEFORE_ACCESS"
+    },
+    "MODEL_TRANSFER": {
+      "writer": "AgentInputMaterializer",
+      "readers": [
+        "MatchingModelAdapter"
+      ],
+      "purpose": "EXACT_REGISTERED_AGENT_INPUT",
+      "sensitivity": "SANITIZED_RESTRICTED",
+      "model": "EXACT_TRANSFORM_OUTPUT_ONLY",
+      "telemetry": "USAGE_COUNT_ONLY",
+      "encryption": "TLS_AND_ENCRYPTED_CAPTURE_IF_RETAINED",
+      "retention": "REQUEST_MEMORY_UNTIL_CALL_END;RETAINED_COPY_INHERITS_AGENT_IO_SENSITIVE_SHORT",
+      "hold": "NO_MEMORY_EXTENSION;MINIMIZED_IO_EVIDENCE_ONLY",
+      "restore": "NEVER_REPLAY_PAID_MODEL_CALL_FROM_BACKUP"
+    },
+    "LOG_RECORD": {
+      "writer": "TelemetryAdapter",
+      "readers": [
+        "OperatorObservabilityQuery"
+      ],
+      "purpose": "BOUNDED_OPERATIONAL_DIAGNOSIS",
+      "sensitivity": "MINIMIZED_OPERATIONAL",
+      "model": "DENY",
+      "telemetry": "DECLARED_BOUNDED_ENUM_COUNT_DURATION_ONLY",
+      "encryption": "TLS_AND_ENCRYPTED_SINK",
+      "retention": "LOG_RECORD",
+      "hold": "EXTRACT_MINIMIZED_INCIDENT_EVIDENCE",
+      "restore": "NO_RAW_PAYLOAD_REINTRODUCTION"
+    },
+    "TRACE_SPAN": {
+      "writer": "TelemetryAdapter",
+      "readers": [
+        "OperatorObservabilityQuery"
+      ],
+      "purpose": "BOUNDED_OPERATIONAL_DIAGNOSIS",
+      "sensitivity": "MINIMIZED_OPERATIONAL",
+      "model": "DENY",
+      "telemetry": "DECLARED_SAFE_TRACE_SCHEMA_ONLY",
+      "encryption": "TLS_AND_ENCRYPTED_SINK",
+      "retention": "TRACE_SPAN",
+      "hold": "EXTRACT_MINIMIZED_INCIDENT_EVIDENCE",
+      "restore": "NO_RAW_PAYLOAD_REINTRODUCTION"
+    },
+    "METRIC_SAMPLE": {
+      "writer": "TelemetryAdapter",
+      "readers": [
+        "OperatorObservabilityQuery"
+      ],
+      "purpose": "NONPII_AGGREGATED_METRICS",
+      "sensitivity": "AGGREGATE_NONPII",
+      "model": "DENY_DIRECT;CHECKPOINT_LEARNING_TRANSFORM_ONLY",
+      "telemetry": "NO_HIGH_CARDINALITY_IDENTITY_LABEL",
+      "encryption": "TLS_AND_ENCRYPTED_SINK",
+      "retention": "METRIC_SAMPLE",
+      "hold": "SIGNED_NONPII_REPORT_ONLY",
+      "restore": "PRESERVE_COHORT_AND_DEFINITION_ATTRIBUTION"
+    },
+    "BACKUP_OBJECT": {
+      "writer": "BackupService",
+      "readers": [
+        "IsolatedRestoreService"
+      ],
+      "purpose": "ISOLATED_RECOVERY",
+      "sensitivity": "RECOVERY_RESTRICTED",
+      "model": "DENY",
+      "telemetry": "NONPII_MANIFEST_ONLY",
+      "encryption": "BACKUP_DEK_SEPARATE_RECOVERY_KEY",
+      "retention": "OPERATIONAL_BACKUP_CHAINS",
+      "hold": "NONE_35_DAY_LIMIT_UNCONDITIONAL",
+      "restore": "TOMBSTONES_REVOKED_SESSIONS_ALL_CONTROLS_FALSE"
+    },
+    "DELETION_TOMBSTONE": {
+      "writer": "RetentionCommandService",
+      "readers": [
+        "IsolatedRestoreService",
+        "RetentionCommandService"
+      ],
+      "purpose": "PREVENT_PAYLOAD_RESURRECTION",
+      "sensitivity": "NONRECONSTRUCTIBLE_EVIDENCE_ONLY",
+      "model": "DENY",
+      "telemetry": "CLASS_COUNT_RESULT_ONLY",
+      "encryption": "SIGNED_ENCRYPTED_MANIFEST",
+      "retention": "SAFETY_LONG;MAY_OUTLIVE_BACKUP_ONLY_IF_NONPII",
+      "hold": "NO_RECONSTRUCTIBLE_PAYLOAD_ALLOWED",
+      "restore": "MUST_APPLY_BEFORE_ANY_READER"
+    }
+  },
+  "redaction_rules": {
+    "schema_version": "redaction.deterministic.v1",
+    "unicode": "REJECT_INVALID_UTF8;NFC_NORMALIZE;PRESERVE_SOURCE_BYTE_SPAN_MAP",
+    "replacement": "[REDACTED]",
+    "dictionary": "EXACT_SAME_SCOPE_PERSON_NAME_CONTACT_VALUE_RECIPIENT_ADDRESS_PROVIDER_SECRET_AND_PRIVATE_CALENDAR_VALUES;LONGEST_FIRST_CASEFOLD_MATCH;EMPTY_VALUES_IGNORED",
+    "patterns": [
+      {
+        "id": "EMAIL",
+        "regex": "(?i)\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b"
+      },
+      {
+        "id": "PHONE",
+        "regex": "(?<!\\w)\\+?\\d[\\d ()-]{6,}\\d(?!\\w)"
+      },
+      {
+        "id": "TOKEN",
+        "regex": "(?i)\\b(bearer\\s+\\S+|(?:api[_ -]?key|access[_ -]?token|refresh[_ -]?token|password|secret)\\s*[:=]\\s*\\S+)"
+      },
+      {
+        "id": "SENSITIVE_LABEL",
+        "regex": "(?i)\\b(religion|ethnicity|sexual orientation|political affiliation|diagnosis|medical condition|personal income|bank account|credit card)\\s*[:=][^\\n;]+"
+      }
+    ],
+    "structured_drop": "ALL_FIELDS_OUTSIDE_EXACT_SOURCE_SCHEMA_AND_TRANSFORM_SELECTORS;ALL_SENSITIVE_INFERENCE_BUDGET_ASSERTION_PRIVATE_CALENDAR_CREDENTIAL_IDENTITY_FIELDS",
+    "operational_free_text": "ONLY_SANITIZED_THREAD_OR_ACCEPTED_OFFER_OR_APPROVED_BUSINESS_EVIDENCE_SELECTORS;APPLY_DICTIONARY_AND_PATTERNS_AND_EXPLICIT_SOURCE_RESTRICTED_SPANS;NEVER_RAW_THREAD_COLUMN",
+    "global_free_text": "DROP_ALL_STRING_VALUES_EXCEPT_SCHEMA_BOUNDED_ENUMS;DROP_IDENTIFIERS_AND_LOOKUP_HASHES;MINIMUM_CELL_5",
+    "invalid_input": "DENY_VALUE_ON_INVALID_UTF8_UNKNOWN_SCHEMA_MISSING_SOURCE_SCOPE_TERMS_HASH_OR_INVALID_SPAN;NO_MODEL_MAY_CERTIFY_PRIVACY_OR_WIDEN_ACCESS",
+    "source_span_rule": "EXPLICIT_RESTRICTED_SPANS_MUST_BE_NONOVERLAPPING_IN_RANGE_UTF8_BOUNDARIES;MASK_THEIR_UNION_WITH_DICTIONARY_AND_PATTERN_MATCHES;NO_ROUTINE_OPERATOR_APPROVAL"
+  },
+  "source_contract_sha256": {
+    "../02-database/01-core-data-model.md": "7fe54508e210d887b66b8b4781fa44f0feb077a4a4073d06b745f321b8d6abb5",
+    "../02-database/02-experiment-and-offer-schema.md": "c368ba95a354ef7cfbfa326a2a413169a9d85dba1584333a22e3a6cd816fe33c",
+    "../02-database/03-leads-campaigns-and-messages.md": "75f600ca57ec837505208d09a671efbafa800164c886ea101893397f73271a17",
+    "../02-database/04-agent-artifacts-and-evidence.md": "b2f8fdf68825441b0773940041441f1fd2e8024e847e78cdefceefd387420af3",
+    "../02-database/05-audit-events-and-idempotency.md": "bf562fad2ceba5597cb821fe6a5e10881301f16d21de64a45500b3819b14cd54"
+  }
+}
