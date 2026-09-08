@@ -270,36 +270,41 @@ def _commands(verification: str) -> tuple[str, ...]:
 
 
 def parse_manifest(root: Path) -> tuple[ManifestDocument, ...]:
-    lines = (
-        (root / "docs/development-roadmap/README.md")
-        .read_text(encoding="utf-8")
-        .splitlines()
-    )
+    source = "docs/development-roadmap/README.md"
+    lines = (root / source).read_text(encoding="utf-8").splitlines()
     heading = "## Complete file manifest mapped to vertical gates"
     found = [index for index, line in enumerate(lines) if line == heading]
     if len(found) != 1:
-        raise ValidationError("manifest heading must be unique")
+        raise SourceLocation(source, found[1] + 1 if len(found) > 1 else 1).error(
+            "manifest heading must be unique"
+        )
     start = found[0] + 1
     boundaries = [
         index for index in range(start, len(lines)) if lines[index].startswith("## ")
     ]
     if not boundaries:
-        raise ValidationError("manifest requires closing boundary")
+        raise SourceLocation(source, found[0] + 1).error(
+            "manifest requires closing boundary"
+        )
     end = boundaries[0]
     for index, line in enumerate(lines):
         if not (start <= index < end) and _manifest_like(line):
-            raise ValidationError("manifest-like row outside manifest section")
-    for line in lines[start:end]:
+            raise SourceLocation(source, index + 1).error(
+                "manifest-like row outside manifest section"
+            )
+    for index, line in enumerate(lines[start:end], start=start):
+        location = SourceLocation(source, index + 1)
         cells = _logical_cells(line)
         candidate_cells = _candidate_cells(line)
         if candidate_cells and _path_shaped(candidate_cells[0]):
             if (cells and not cells[0]) or (len(cells) > 2 and not cells[-1]):
-                raise ValidationError("manifest data row has invalid outer delimiters")
+                raise location.error("manifest data row has invalid outer delimiters")
             if len(cells) < 2:
-                raise ValidationError("manifest data row requires path and milestone")
+                raise location.error("manifest data row requires path and milestone")
     documents: list[ManifestDocument] = []
     seen_paths: set[str] = set()
-    for line in lines[start:end]:
+    for index, line in enumerate(lines[start:end], start=start):
+        location = SourceLocation(source, index + 1)
         cells = _logical_cells(line)
         if not cells or not _path_shaped(cells[0]):
             continue
@@ -310,23 +315,23 @@ def parse_manifest(root: Path) -> tuple[ManifestDocument, ...]:
             or not path_cell.endswith("`")
             or _PATH.fullmatch(path_cell[1:-1]) is None
         ):
-            raise ValidationError("invalid manifest path")
+            raise location.error("invalid manifest path")
         if milestone not in _MILESTONES:
-            raise ValidationError("invalid manifest milestone")
+            raise location.error("invalid manifest milestone")
         relative_path = path_cell[1:-1]
         if relative_path in seen_paths:
-            raise ValidationError("duplicate manifest path")
+            raise location.error(f"duplicate manifest path: {relative_path}")
         seen_paths.add(relative_path)
         roadmap_root = root / "docs/development-roadmap"
         document_path = roadmap_root / relative_path
         try:
             document_path.resolve().relative_to(roadmap_root.resolve())
         except ValueError as error:
-            raise ValidationError(
-                "manifest path resolves outside roadmap root"
+            raise location.error(
+                f"manifest path resolves outside roadmap root: {relative_path}"
             ) from error
         if not document_path.is_file():
-            raise ValidationError("missing manifest document")
+            raise location.error(f"missing manifest document: {relative_path}")
         documents.append(
             ManifestDocument(f"docs/development-roadmap/{relative_path}", milestone)
         )
@@ -354,9 +359,7 @@ def parse_manifest(root: Path) -> tuple[ManifestDocument, ...]:
             details.append(
                 "extra manifest paths (ordered section missing): " + ", ".join(extra)
             )
-        raise SourceLocation("docs/development-roadmap/README.md", found[0] + 1).error(
-            "; ".join(details)
-        )
+        raise SourceLocation(source, found[0] + 1).error("; ".join(details))
     return tuple(documents)
 
 
@@ -635,7 +638,10 @@ def build_waves(roadmap: Roadmap) -> tuple[Wave, ...]:
             if task.milestone == milestone and set(task.depends_on) <= completed
         ]
         if not ready_before:
-            raise ValidationError(f"no ready task in unfinished milestone {milestone}")
+            blocked = next(task for task in unfinished if task.milestone == milestone)
+            raise blocked.location.error(
+                f"no ready task in unfinished milestone {milestone}"
+            )
         first = ready_before[0]
         if first.mode == "serial":
             selected = [first]
@@ -683,66 +689,101 @@ def build_waves(roadmap: Roadmap) -> tuple[Wave, ...]:
 
 def validate_waves(roadmap: Roadmap, waves: tuple[Wave, ...]) -> None:
     """Validate a supplied plan against the deterministic wave contract."""
-    planned_ids = [
-        assignment.task.id for wave in waves for assignment in wave.assignments
-    ]
-    expected_ids = {task.id for task in roadmap.tasks}
-    if len(planned_ids) != len(set(planned_ids)):
-        raise ValidationError("duplicate task in wave plan")
-    if expected_ids - set(planned_ids):
-        raise ValidationError("missing task in wave plan")
-    if set(planned_ids) - expected_ids:
-        raise ValidationError("unknown task in wave plan")
     tasks_by_id = {task.id: task for task in roadmap.tasks}
+
+    def plan_error(
+        message: str, row: int, task_id: str | None = None
+    ) -> ValidationError:
+        task = tasks_by_id.get(task_id) if task_id is not None else None
+        location = (
+            task.location if task else SourceLocation(ARTIFACT_PATHS[2], 1, task_id)
+        )
+        return location.error(f"wave row {row}: {message}")
+
+    expected_ids = {task.id for task in roadmap.tasks}
+    seen_ids: set[str] = set()
+    for row, wave in enumerate(waves, start=1):
+        for assignment in wave.assignments:
+            task_id = assignment.task.id
+            if task_id in seen_ids:
+                raise plan_error("duplicate task in wave plan", row, task_id)
+            seen_ids.add(task_id)
+    for task in roadmap.tasks:
+        if task.id not in seen_ids:
+            raise task.location.error("missing task in wave plan")
+    for row, wave in enumerate(waves, start=1):
+        for assignment in wave.assignments:
+            if assignment.task.id not in expected_ids:
+                raise plan_error("unknown task in wave plan", row, assignment.task.id)
     completed: set[str] = set()
-    for wave in waves:
+    for row, wave in enumerate(waves, start=1):
+        if not wave.assignments:
+            raise plan_error("empty wave in plan", row)
         if len(wave.assignments) > 4:
-            raise ValidationError("wave permits at most four implementers")
+            raise plan_error(
+                "wave permits at most four implementers",
+                row,
+                wave.assignments[4].task.id,
+            )
         for position, assignment in enumerate(wave.assignments, start=1):
             if (
                 assignment.implementer != f"I{position}"
                 or assignment.reviewer != f"R{position}"
             ):
-                raise ValidationError("agent assignment drift")
+                raise plan_error("agent assignment drift", row, assignment.task.id)
             if assignment.merge_order != position:
-                raise ValidationError("merge-order drift")
-        if len(wave.assignments) > 1 and any(
-            assignment.task.mode == "serial" for assignment in wave.assignments
-        ):
-            raise ValidationError("serial task must be alone in wave")
-        if any(
-            assignment.task.milestone != wave.milestone
-            for assignment in wave.assignments
-        ):
-            raise ValidationError("milestone crossing")
+                raise plan_error("merge-order drift", row, assignment.task.id)
+        for assignment in wave.assignments:
+            if len(wave.assignments) > 1 and assignment.task.mode == "serial":
+                raise plan_error(
+                    "serial task must be alone in wave", row, assignment.task.id
+                )
+        for assignment in wave.assignments:
+            if assignment.task.milestone != wave.milestone:
+                raise plan_error("milestone crossing", row, assignment.task.id)
         unfinished = expected_ids - completed
         expected_milestone = min(
             int(tasks_by_id[task_id].milestone[1:]) for task_id in unfinished
         )
         if wave.milestone != f"M{expected_milestone}":
-            raise ValidationError("milestone skipping")
+            raise plan_error(
+                "milestone skipping",
+                row,
+                wave.assignments[0].task.id,
+            )
         current = {assignment.task.id for assignment in wave.assignments}
         seen_locks: set[str] = set()
         for assignment in wave.assignments:
             overlap = seen_locks.intersection(assignment.task.locks)
             if overlap:
-                raise ValidationError("shared lock in wave")
+                raise plan_error("shared lock in wave", row, assignment.task.id)
             seen_locks.update(assignment.task.locks)
-        if any(
-            dependency in current
-            for assignment in wave.assignments
-            for dependency in assignment.task.depends_on
-        ):
-            raise ValidationError("current-wave dependency")
-        if any(
-            dependency not in completed
-            for assignment in wave.assignments
-            for dependency in assignment.task.depends_on
-        ):
-            raise ValidationError("task requires dependency from an earlier wave")
+        for assignment in wave.assignments:
+            if any(dependency in current for dependency in assignment.task.depends_on):
+                raise plan_error("current-wave dependency", row, assignment.task.id)
+        for assignment in wave.assignments:
+            if any(
+                dependency not in completed for dependency in assignment.task.depends_on
+            ):
+                raise plan_error(
+                    "task requires dependency from an earlier wave",
+                    row,
+                    assignment.task.id,
+                )
         completed.update(current)
-    if waves != build_waves(roadmap):
-        raise ValidationError("wave plan drifts from deterministic schedule")
+    expected_waves = build_waves(roadmap)
+    if waves != expected_waves:
+        row = next(
+            (
+                row
+                for row, (actual, expected) in enumerate(
+                    zip(waves, expected_waves), start=1
+                )
+                if actual != expected
+            ),
+            min(len(waves), len(expected_waves)) + 1,
+        )
+        raise plan_error("wave plan drifts from deterministic schedule", row)
 
 
 def canonical_fingerprint_bytes(roadmap: Roadmap) -> bytes:
@@ -988,36 +1029,57 @@ def _validate_rendered_artifacts(
     root: Path, roadmap: Roadmap, contents: dict[str, str]
 ) -> None:
     if tuple(contents) != ARTIFACT_PATHS:
-        raise ValidationError("renderer produced an invalid artifact set")
-    if any(not content.endswith("\n") for content in contents.values()):
-        raise ValidationError("generated artifact requires final newline")
-    try:
-        for content in contents.values():
+        missing = next(
+            (path for path in ARTIFACT_PATHS if path not in contents), ARTIFACT_PATHS[0]
+        )
+        raise SourceLocation(missing, 1).error(
+            "renderer produced an invalid artifact set"
+        )
+    for relative, content in contents.items():
+        if not content.endswith("\n"):
+            raise SourceLocation(relative, content.count("\n") + 1).error(
+                "generated artifact requires final newline"
+            )
+        try:
             content.encode("utf-8")
+        except UnicodeEncodeError as error:
+            raise SourceLocation(
+                relative, content.count("\n", 0, error.start) + 1
+            ).error("generated artifact is not valid UTF-8/JSON") from error
+    try:
         manifest = json.loads(contents[ARTIFACT_PATHS[0]])
-    except (UnicodeError, json.JSONDecodeError) as error:
-        raise ValidationError("generated artifact is not valid UTF-8/JSON") from error
+    except json.JSONDecodeError as error:
+        raise SourceLocation(ARTIFACT_PATHS[0], error.lineno).error(
+            "generated artifact is not valid UTF-8/JSON"
+        ) from error
     ordered_ids = [task.id for task in topological_order(roadmap)]
     if [task["id"] for task in manifest.get("tasks", [])] != ordered_ids:
-        raise ValidationError("generated manifest task order drift")
+        raise SourceLocation(ARTIFACT_PATHS[0], 1).error(
+            "generated manifest task order drift"
+        )
     validate_waves(roadmap, build_waves(roadmap))
-    markdown = contents[ARTIFACT_PATHS[1]] + contents[ARTIFACT_PATHS[2]]
     roadmap_root = (root / "docs/development-roadmap").resolve()
-    for relative, line_text in re.findall(
-        r"\[source\]\(([^)#]+)#L([0-9]+)\)", markdown
-    ):
-        target = (roadmap_root / relative).resolve()
-        try:
-            target.relative_to(roadmap_root)
-        except ValueError as error:
-            raise ValidationError(
-                f"generated link escapes roadmap: {relative}"
-            ) from error
-        if not target.is_file():
-            raise ValidationError(f"generated link target is missing: {relative}")
-        line = int(line_text)
-        if line < 1 or line > len(target.read_text(encoding="utf-8").splitlines()):
-            raise ValidationError(f"generated link line is invalid: {relative}#L{line}")
+    for artifact in ARTIFACT_PATHS[1:]:
+        markdown = contents[artifact]
+        for match in re.finditer(r"\[source\]\(([^)#]+)#L([0-9]+)\)", markdown):
+            location = SourceLocation(
+                artifact, markdown.count("\n", 0, match.start()) + 1
+            )
+            relative, line_text = match.groups()
+            target = (roadmap_root / relative).resolve()
+            try:
+                target.relative_to(roadmap_root)
+            except ValueError as error:
+                raise location.error(
+                    f"generated link escapes roadmap: {relative}"
+                ) from error
+            if not target.is_file():
+                raise location.error(f"generated link target is missing: {relative}")
+            line = int(line_text)
+            if line < 1 or line > len(target.read_text(encoding="utf-8").splitlines()):
+                raise location.error(
+                    f"generated link line is invalid: {relative}#L{line}"
+                )
 
 
 def check_artifacts(root: Path) -> None:

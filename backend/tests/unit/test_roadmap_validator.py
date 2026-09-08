@@ -361,6 +361,91 @@ def test_manifest_heading_is_unique(tmp_path: Path, count: int) -> None:
         parse_manifest(tmp_path)
 
 
+@pytest.mark.parametrize(
+    ("old", "new", "line", "reason"),
+    [
+        (
+            "## Complete file manifest mapped to vertical gates",
+            "## Wrong",
+            1,
+            "manifest heading",
+        ),
+        (
+            "## Launch promotion ladder",
+            "## Complete file manifest mapped to vertical gates",
+            9,
+            "manifest heading",
+        ),
+        (
+            "## Launch promotion ladder",
+            "### No closing boundary",
+            3,
+            "closing boundary",
+        ),
+        (
+            "## Launch promotion ladder",
+            f"## Launch promotion ladder\n{ROOT_ROW}",
+            10,
+            "outside manifest",
+        ),
+        (ROOT_ROW, "|| `00-product/01-scope.md` | M0 ||", 7, "outer delimiters"),
+        (ROOT_ROW, "| `00-product/01-scope.md` |", 7, "requires path and milestone"),
+        (ROOT_ROW, "| `00-product/01-scope.md` | |", 7, "manifest milestone"),
+        (ROOT_ROW, "| bad/path | M0 |", 7, "manifest path"),
+        (ROOT_ROW, "| `00-product/01-scope.md` | MZ |", 7, "manifest milestone"),
+        (ROOT_ROW, f"{ROOT_ROW}\n{ROOT_ROW}", 8, "duplicate manifest path"),
+    ],
+)
+def test_manifest_diagnostics_include_exact_readme_location(
+    tmp_path: Path, old: str, new: str, line: int, reason: str
+) -> None:
+    roadmap = write_tree(tmp_path)
+    readme = roadmap / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8").replace(old, new), encoding="utf-8"
+    )
+
+    with pytest.raises(ValidationError, match=reason) as error:
+        parse_manifest(tmp_path)
+
+    assert f"docs/development-roadmap/README.md:{line}:" in str(error.value)
+    assert str(tmp_path) not in str(error.value)
+
+
+@pytest.mark.parametrize("mutation", ["missing", "escaped"])
+def test_manifest_document_diagnostics_include_row_and_target(
+    tmp_path: Path, mutation: str
+) -> None:
+    roadmap = write_tree(tmp_path)
+    document = roadmap / "00-product/01-scope.md"
+    document.unlink()
+    if mutation == "escaped":
+        outside = tmp_path / "outside.md"
+        outside.write_text("# Outside\n", encoding="utf-8")
+        document.symlink_to(outside)
+
+    with pytest.raises(ValidationError) as error:
+        parse_manifest(tmp_path)
+
+    assert "docs/development-roadmap/README.md:7:" in str(error.value)
+    assert "00-product/01-scope.md" in str(error.value)
+    assert str(tmp_path) not in str(error.value)
+
+
+@pytest.mark.parametrize("mode", ["--check", "--write"])
+def test_cli_manifest_milestone_diagnostic_retains_location(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str], mode: str
+) -> None:
+    roadmap = write_tree(tmp_path)
+    readme = roadmap / "README.md"
+    readme.write_text(
+        readme.read_text(encoding="utf-8").replace("| M0 |", "| MZ |"), encoding="utf-8"
+    )
+
+    assert main([mode], root=tmp_path) == 1
+    assert "docs/development-roadmap/README.md:7:" in capsys.readouterr().err
+
+
 def test_manifest_requires_closing_level_two_boundary(tmp_path: Path) -> None:
     roadmap = write_tree(tmp_path)
     readme = roadmap / "README.md"
@@ -1287,8 +1372,12 @@ def test_wave_validation_rejects_current_wave_dependency(tmp_path: Path) -> None
         ),
     )
 
-    with pytest.raises(ValidationError, match="current-wave dependency"):
+    with pytest.raises(ValidationError, match="current-wave dependency") as error:
         validate_waves(roadmap, invalid)
+
+    assert "docs/development-roadmap/01-arch/01-system.md:10: ARCH-01-T02:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_rejects_milestone_crossing(tmp_path: Path) -> None:
@@ -1306,8 +1395,12 @@ def test_wave_validation_rejects_milestone_crossing(tmp_path: Path) -> None:
     first, second = build_waves(roadmap)
     invalid = (first, replace(second, milestone="M0"))
 
-    with pytest.raises(ValidationError, match="milestone crossing"):
+    with pytest.raises(ValidationError, match="milestone crossing") as error:
         validate_waves(roadmap, invalid)
+
+    assert "docs/development-roadmap/01-arch/01-system.md:8: ARCH-01-T01:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_rejects_shared_lock(tmp_path: Path) -> None:
@@ -1342,8 +1435,12 @@ def test_wave_validation_rejects_shared_lock(tmp_path: Path) -> None:
         ),
     )
 
-    with pytest.raises(ValidationError, match="shared lock"):
+    with pytest.raises(ValidationError, match="shared lock") as error:
         validate_waves(roadmap, invalid)
+
+    assert "docs/development-roadmap/01-arch/01-system.md:10: ARCH-01-T02:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_rejects_serial_co_tenancy(tmp_path: Path) -> None:
@@ -1378,8 +1475,12 @@ def test_wave_validation_rejects_serial_co_tenancy(tmp_path: Path) -> None:
         ),
     )
 
-    with pytest.raises(ValidationError, match="serial task must be alone"):
+    with pytest.raises(ValidationError, match="serial task must be alone") as error:
         validate_waves(roadmap, invalid)
+
+    assert "docs/development-roadmap/01-arch/01-system.md:8: ARCH-01-T01:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_rejects_fifth_implementer(tmp_path: Path) -> None:
@@ -1407,16 +1508,24 @@ def test_wave_validation_rejects_fifth_implementer(tmp_path: Path) -> None:
     )
     invalid = (first, replace(second, assignments=second.assignments + (fifth,)))
 
-    with pytest.raises(ValidationError, match="at most four implementers"):
+    with pytest.raises(ValidationError, match="at most four implementers") as error:
         validate_waves(roadmap, invalid)
+
+    assert "docs/development-roadmap/01-arch/01-system.md:16: ARCH-01-T05:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_rejects_missing_task(tmp_path: Path) -> None:
     roadmap = write_wave_tree(tmp_path)
     waves = build_waves(roadmap)
 
-    with pytest.raises(ValidationError, match="missing task"):
+    with pytest.raises(ValidationError, match="missing task") as error:
         validate_waves(roadmap, waves[:-1])
+
+    assert "docs/development-roadmap/01-arch/01-system.md:16: ARCH-01-T05:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_rejects_duplicate_task(tmp_path: Path) -> None:
@@ -1424,8 +1533,12 @@ def test_wave_validation_rejects_duplicate_task(tmp_path: Path) -> None:
     waves = build_waves(roadmap)
     invalid = waves + (replace(waves[0], index=4, newly_unlocked=()),)
 
-    with pytest.raises(ValidationError, match="duplicate task"):
+    with pytest.raises(ValidationError, match="duplicate task") as error:
         validate_waves(roadmap, invalid)
+
+    assert "docs/development-roadmap/00-product/01-scope.md:8: PRODUCT-01-T01:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_rejects_agent_assignment_drift(tmp_path: Path) -> None:
@@ -1436,8 +1549,12 @@ def test_wave_validation_rejects_agent_assignment_drift(tmp_path: Path) -> None:
         waves[1], assignments=(assignment, *waves[1].assignments[1:])
     )
 
-    with pytest.raises(ValidationError, match="agent assignment drift"):
+    with pytest.raises(ValidationError, match="agent assignment drift") as error:
         validate_waves(roadmap, (waves[0], invalid_wave, waves[2]))
+
+    assert "docs/development-roadmap/01-arch/01-system.md:8: ARCH-01-T01:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_rejects_merge_order_drift(tmp_path: Path) -> None:
@@ -1448,8 +1565,12 @@ def test_wave_validation_rejects_merge_order_drift(tmp_path: Path) -> None:
         waves[1], assignments=(assignment, *waves[1].assignments[1:])
     )
 
-    with pytest.raises(ValidationError, match="merge-order drift"):
+    with pytest.raises(ValidationError, match="merge-order drift") as error:
         validate_waves(roadmap, (waves[0], invalid_wave, waves[2]))
+
+    assert "docs/development-roadmap/01-arch/01-system.md:8: ARCH-01-T01:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_requires_dependencies_in_earlier_waves(
@@ -1458,8 +1579,14 @@ def test_wave_validation_requires_dependencies_in_earlier_waves(
     roadmap = write_chain_tree(tmp_path)
     first, second, third = build_waves(roadmap)
 
-    with pytest.raises(ValidationError, match="dependency from an earlier wave"):
+    with pytest.raises(
+        ValidationError, match="dependency from an earlier wave"
+    ) as error:
         validate_waves(roadmap, (first, third, second))
+
+    assert "docs/development-roadmap/01-arch/01-system.md:10: ARCH-01-T02:" in str(
+        error.value
+    )
 
 
 def test_wave_validation_rejects_milestone_skipping(tmp_path: Path) -> None:
@@ -1485,8 +1612,103 @@ def test_wave_validation_rejects_milestone_skipping(tmp_path: Path) -> None:
     roadmap = parse_roadmap(tmp_path)
     first, second, third = build_waves(roadmap)
 
-    with pytest.raises(ValidationError, match="milestone skipping"):
+    with pytest.raises(ValidationError, match="milestone skipping") as error:
         validate_waves(roadmap, (first, third, second))
+
+    assert "docs/development-roadmap/02-data/01-schema.md:8: DATA-01-T01:" in str(
+        error.value
+    )
+
+
+@pytest.mark.parametrize("mutation", ["unknown", "schedule", "empty"])
+def test_supplied_wave_plan_errors_include_artifact_row_context(
+    tmp_path: Path, mutation: str
+) -> None:
+    roadmap = write_wave_tree(tmp_path)
+    waves = build_waves(roadmap)
+    if mutation == "unknown":
+        assignment = replace(
+            waves[0].assignments[0], task=replace(roadmap.tasks[0], id="UNKNOWN-01-T01")
+        )
+        invalid = (*waves, replace(waves[0], index=4, assignments=(assignment,)))
+        row = 4
+    elif mutation == "empty":
+        invalid = (*waves, replace(waves[0], index=4, assignments=()))
+        row = 4
+    else:
+        invalid = (replace(waves[0], newly_unlocked=()), *waves[1:])
+        row = 1
+
+    with pytest.raises(ValidationError) as error:
+        validate_waves(roadmap, invalid)
+
+    assert "docs/development-roadmap/AGENT_EXECUTION_PLAN.md" in str(error.value)
+    assert f"wave row {row}" in str(error.value)
+    if mutation == "unknown":
+        assert "UNKNOWN-01-T01" in str(error.value)
+
+
+def test_blocked_milestone_schedule_includes_owning_task_location(
+    tmp_path: Path,
+) -> None:
+    roadmap = write_chain_tree(tmp_path)
+    invalid = replace(
+        roadmap, tasks=(replace(roadmap.tasks[0], milestone="M1"), *roadmap.tasks[1:])
+    )
+
+    with pytest.raises(ValidationError, match="no ready task") as error:
+        build_waves(invalid)
+
+    assert "docs/development-roadmap/01-arch/01-system.md:8: ARCH-01-T01:" in str(
+        error.value
+    )
+
+
+@pytest.mark.parametrize(
+    ("mutation", "artifact", "reason"),
+    [
+        ("set", ARTIFACT_PATHS[1], "invalid artifact set"),
+        ("newline", ARTIFACT_PATHS[1], "final newline"),
+        ("unicode", ARTIFACT_PATHS[1], "UTF-8/JSON"),
+        ("json", ARTIFACT_PATHS[0], "UTF-8/JSON"),
+        ("order", ARTIFACT_PATHS[0], "task order drift"),
+        ("escape", ARTIFACT_PATHS[1], "link escapes"),
+        ("missing", ARTIFACT_PATHS[1], "link target is missing"),
+        ("line", ARTIFACT_PATHS[1], "link line is invalid"),
+    ],
+)
+def test_generated_artifact_diagnostics_include_owning_path_and_line(
+    tmp_path: Path, mutation: str, artifact: str, reason: str
+) -> None:
+    write_tree(tmp_path)
+    roadmap = parse_roadmap(tmp_path)
+    contents = _validator.render_artifacts(roadmap)
+    line = 1
+    if mutation == "set":
+        contents.pop(artifact)
+    elif mutation == "newline":
+        contents[artifact] = "# No final newline"
+    elif mutation == "unicode":
+        contents[artifact] = "# Header\n\ud800\n"
+        line = 2
+    elif mutation == "json":
+        contents[artifact] = "\ninvalid JSON\n"
+        line = 2
+    elif mutation == "order":
+        contents[artifact] = '{"tasks": []}\n'
+    else:
+        target = {
+            "escape": "../escape.md#L1",
+            "missing": "00-product/02-missing.md#L1",
+            "line": "00-product/01-scope.md#L999",
+        }[mutation]
+        contents[artifact] = f"# Header\n[source]({target})\n"
+        line = 2
+
+    with pytest.raises(ValidationError, match=reason) as error:
+        _validator._validate_rendered_artifacts(tmp_path, roadmap, contents)
+
+    assert f"{artifact}:{line}:" in str(error.value)
 
 
 def test_canonical_fingerprint_bytes_and_digest_are_exact(tmp_path: Path) -> None:
