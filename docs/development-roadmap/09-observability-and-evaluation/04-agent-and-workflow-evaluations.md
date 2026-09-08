@@ -1,134 +1,71 @@
-# Agent and Durable-Workflow Evaluation Operations
+# Agent, Conversation, and Checkpoint Learning Evaluation
 
 **Document ID:** OBS-04
-**Status:** Planned M3-M8 evaluation operations; no Pydantic AI agents/evals, DBOS workflows, evaluation cases/results, capture runner, promotion registry, shadow monitor, or rollback automation exists today
-**Milestone:** M8 (exact scope and prerequisites are declared per task)
+**Status:** Planned roadmap requirements; product implementation and live evidence are not claimed
+**Milestone:** M8
 **Owner:** Solo operator
-**Prerequisites:** exact local order `OBS-04-T01 -> OBS-04-T02 -> OBS-04-T03 -> OBS-04-T04 -> OBS-04-T05`; cross-document task Inputs `OBS-04-T01 <- AGENT-10-T01; OBS-04-T03 <- AGENT-10-T04,AGENT-10-T05; OBS-04-T04 <- ARCH-03-T01,DB-05-T01,ARCH-02-T01,BACKEND-01-T04,WF-00-T01,PROVIDER-01-T02,PROVIDER-02-T01,PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,PROVIDER-06-T01,WF-02-T05,WF-03-T05,WF-04-T05,WF-06-T05,PROVIDER-01-T01,TEST-03-T03,TEST-03-T04,TEST-03-T06,TEST-04-T06,WF-05-T05,WF-01-T03,TEST-04-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): AGENT-01 through [AGENT-10](../04-agents/10-agent-evals-and-versioning.md), WF-00/01/02/05/06, DB-04/05, six provider contracts, SEC-01/03/06, and OBS-01/02/03
-**Outputs:** Evaluation execution cadence, immutable datasets/captures/results/manifests, workflow recovery suites, promotion/rollback operations, shadow/production monitoring, and evidence retention
-**Unlocks:** M3 agent configuration promotion, M1/M6 workflow acceptance, and M8 regression detection
+**Prerequisites:** exact task Inputs `OBS-04-T01 <- AGENT-10-T01; OBS-04-T02 <- OBS-04-T01; OBS-04-T03 <- OBS-04-T02,AGENT-10-T04,AGENT-10-T05; OBS-04-T04 <- OBS-04-T03,ARCH-03-T01,DB-05-T01,ARCH-02-T01,BACKEND-01-T04,WF-00-T01,PROVIDER-01-T02,PROVIDER-02-T01,PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,PROVIDER-06-T01,WF-02-T05,WF-03-T05,WF-04-T05,WF-06-T05,PROVIDER-01-T01,TEST-03-T03,TEST-03-T04,TEST-03-T06,TEST-04-T06,WF-05-T05,WF-01-T03,TEST-04-T05,WF-07-T04,WF-08-T04,WF-09-T04,BACKEND-01-T08,BACKEND-01-T09,BACKEND-01-T10; OBS-04-T05 <- OBS-04-T04`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
+**Outputs:** Versioned implementation contracts, closed coverage and retained verification evidence
+**Unlocks:** Dependent acceptance gates only; never automatic live release or provider authority
 **Risk:** Critical
 **Complexity:** XL
 
 ## Outcome and timing
 
-Every agent configuration and workflow/runtime version earns execution eligibility through frozen, reproducible, privacy-reviewed evaluation evidence. Promotion changes only a versioned registry pointer for future runs. Evaluation grants no artifact acceptance, policy, approval, suppression, budget, compliance, state-transition, Gmail or `SendGateway` authority. A hard-safety failure rejects or rolls back regardless of average quality/cost.
+Evaluation is planned; no agent suite, accepted product artifact, durable sales workflow or global strategy has implementation credit from this roadmap. The foundation tests and selected dependencies do not establish product readiness. Use AGENT-10's exact ten suites and 692 cases, three fresh candidate captures per case (2,076), frozen allocations/thresholds and two independent offline scorers. Do not duplicate weaker thresholds or retain historical eight-agent names.
 
-## Current repository state
+## Evaluation authority and execution
 
-Pydantic AI/Pydantic Evals and DBOS are selected dependencies, but agent/workflow packages are empty and M1 is unrun. DB-04 tables and AGENT-10 models/functions/suites are planned only. There are no 552 cases, three-capture manifests, scorers, promotion/rollback registry, workflow crash suite, shadow execution, production window, dashboard or alert. Foundation unit tests do not constitute agent/workflow evaluation.
+M3 reviewed PromotionManifestV1 registers baseline code/prompt/model/tool/schema eligibility and protected evaluation rules. It is release evidence, not an additional inter-agent artifact. Runtime learning is one mechanism: closed CheckpointEvidenceBundle → GlobalLearningEngine proposals → StrategyActivationService deterministic gate → GlobalStrategyPackage → campaign-boundary StrategyActivation. Ordinary in-envelope checkpoint learning is automatic; the operator may tighten/stop protected controls. No arbitrary prompt editing, policy relaxation or model self-certification is allowed.
 
-## Scope and non-goals
+EvaluationSuiteCommandService owns evaluation_cases; AgentRunRecordingService alone starts/closes agent_runs; EvaluationExecutionService orchestrates and writes evaluation_results; ProviderCostReconciliationService owns billed usage. Verify exact suite/case/rubric/configuration/fixture/schema/provider/dependency hashes and reserve the full three-repetition maximum before capture. Only candidate model network is allowed; every non-model capability uses signed fixtures. Scoring has zero network. Capture/run/result/ledger identity and signatures must reconcile before any gate passes.
 
-In scope: dataset/case governance; eight exact agent suites; candidate capture/scoring/promotion/rollback; six provider fixture consistency; prompt injection/privacy/safety cases; workflow determinism/versioning/crash/recovery/control/send ambiguity; continuous/shadow monitoring; cost/latency/quality drift; operator review; and retained evidence.
+Each of the three repetitions independently passes exact quality, evidence, hard-safety, duration, mean/p95/max cost and regression gates. Use unrounded Decimal/Fraction golden vectors, NFC code-point spans, SUCCESS-only ECE population, nearest-rank percentiles, missing-prediction/zero-denominator rules and bounded baseline age from AGENT-10. Averages never rescue a hard failure, missing capture or failed repetition. Hard failures include false CONTINUE, false qualification, invented identity/claims/budget/commitment, opt-out false negative, illegal scope/economics, unconfirmed booking, authority/PII leak or uncontrolled provider network.
 
-Non-goals: online self-training, changing labels after candidate output, model-as-sole-evaluator, reducing hard cases, using production recipients by default, networking during deterministic scoring, reusing model captures, trading quality/safety for cost, agents evaluating their own authority, or inventing `evaluation.*`/`agent.promoted.*` domain events absent ARCH-03.
+## Exact evaluation matrix
 
-## Exact planned implementation surfaces
-
-Create `evaluations/datasets.py`, `evaluations/capture.py`, `evaluations/scoring.py`, `evaluations/manifests.py`, `evaluations/promotion.py`, `evaluations/runtime_monitor.py`, `evaluations/workflows/`, isolated runner configuration, registry storage, and tests. Persist exactly through DB-04/05 owners: `EvaluationSuiteCommandService` writes `evaluation_cases`; `AgentRunRecordingService` alone starts/closes `agent_runs`; `EvaluationExecutionService` orchestrates and writes only `evaluation_results`; `ProviderCostReconciliationService` writes costs. Signed capture/manifests are versioned encrypted objects under SEC-03/06.
-
-### Frozen agent evaluation contract
-
-AGENT-10 remains fully normative:
-
-- exactly eight suites: `idea_discovery.v1` 48, `offer_design.v1` 48, `market_research.v1` 60, `lead_research.v1` 60, `lead_qualification.v1` 80, `outreach_drafting.v1` 64, `reply_classification.v1` 120, and `experiment_evaluation.v1` 72—552 cases total;
-- exact normal/underspecified/contradictory/attack and specialist allocations, weights, hard gates, precision/recall/F1/ECE/citation/span/abstention/quality thresholds, p10/p95 duration and mean/p95/max native-cost ceilings from AGENT-10; no copied weaker threshold here;
-- three fresh independent candidate `model.complete_structured` network captures per case: 1,656 candidate captures; all five non-model capabilities resolve only from signed fixtures; deterministic scoring has zero network;
-- exact strict models, NFC Unicode code-point spans, `SUCCESS`-only ECE population, unrounded Decimal comparisons, nearest-rank percentiles, candidate/baseline regression bands, signature/hash/provider ledger/cost reconciliation, and three independently passing repetition summaries;
-- any hard failure, false `SCALE`, false-qualified required failure, unsubscribe false negative, PII/contact/credential leak, authority edge, or fixture/live-network violation rejects immediately;
-- no quality regression may be traded for lower cost; one max-cost breach is immediate incident/rollback; exact consecutive non-overlapping rolling windows remain normative.
-
-Dataset changes are reviewed independently from candidate output and create a new suite version. Every case has stable key, source/provenance, frozen input/expected/rubric hashes, sensitivity class, attack tags, labeler/reviewer reference, and change reason. Synthetic/redacted data is default. A production-derived case requires SEC-06 purpose/consent/minimization, encrypted restricted access, no live address/token/body beyond the minimum transformed fact, and expiry.
-
-### Exact execution and ownership sequence
-
-1. Verify suite/case/rubric/fixture/config/prompt/model/tool/schema/validator/evaluator/dependency/release hashes and reserve the complete three-repetition native cost maximum.
-2. `EvaluationExecutionService` selects case/config/repetition and asks `AgentRunRecordingService` to insert/start one run; it never writes `agent_runs` itself.
-3. Isolated capture runner enables only exact candidate `model.complete_structured` network; denies Gmail/SendGateway/product DB/state and every live non-model call; stores signed `CandidateGenerationCaptureV1` plus provider ledger.
-4. `AgentRunRecordingService` closes terminal run and reconciles cost. Then `EvaluationExecutionService` writes one immutable result per `(case,agent_run,evaluator_version)`.
-5. Offline scorer verifies every signature/hash and computes exact deterministic case/repetition/suite/regression/cost reports with no network.
-6. Operator reviews three complete repetition summaries, authority graph, privacy scan, cost/ILS evidence and rollback target; only a signed `PROMOTE` manifest changes the registry pointer. Startup recomputes the active manifest/config/dependency hash.
-7. Rollback appends a `ROLLBACK` manifest, points new runs to the prior promoted config, and drains/version-routes in-flight workflows. It never edits cases/results/history.
-
-ARCH-03 defines no evaluation/promotion domain events. Operational telemetry uses OBS-01 `evaluation.operation.completed`; release audit/Git/manifests hold promotion facts until an upstream canonical event/schema is approved.
-
-### Workflow/runtime evaluation matrix
-
-| Suite | Required coverage and hard pass |
+| Family | Required evidence and independent pass |
 | --- | --- |
-| M1 DBOS acceptance | exact WF-00 eight disqualifiers and WF-01 kill points, signed two-table NDJSON/RFC 8785/Ed25519 evidence; any disqualifier forces Temporal before product workflow work |
-| finite lifecycle | every legal/illegal ARCH-03 experiment/run/campaign transition, finite deadlines/retries, snapshot hash/version verify-before-use, one sole writer/event bundle |
-| internal delivery | outbox at-least-once with business write + `outbox_deliveries` atomic; poison/dead-letter incident; external effects forbidden |
-| provider/agent | six typed capability success/failure/time/cancel/budget/result-hash/fixture contracts; no mutation/credential/Gmail edge |
-| control/recovery | pause/cancel requested/ack, resume revalidation, new-run retry, runtime mapping/version drain, kill at every boundary, no SQL repair |
-| Gmail/OAuth | PROVIDER-01 six OAuth kill points/CAS/GC, exact 14-step SendGateway kill/concurrency/suppression/rate/result matrix, ambiguity never retry, mailbox-only history reconciliation/cursor atomicity |
-| backup/restore | restore 46 product tables/events/snapshots/attempt chains, sessions revoked, controls false, no provider call, runtime version compatibility |
-| security/privacy/cost | injection/SSRF/exfiltration/redaction/canary/supply-chain, retention/rights, reservation/original currency/ILS/overage, telemetry failure |
+| artifact/order | all fifteen canonical names; accepted immutable provider refs; USER_SUPPLIED uses the same IdeaBrief; research before offer; preliminary before deep research; final before drafting; no circular acceptance/authority hash |
+| discovery/research | approved multi-source adapters/scopes, duplicate identity precision/recall, conflict/unknown abstention, FACT/ESTIMATE/UNKNOWN, claim/evidence coverage and unsupported person/contact/role denial |
+| writing/reply | writer has no send credentials; exact sanitized full thread and objective; inbound cold stop before classification; rejection versus genuine objection; durable suppression only from qualifying signal; bounded round/message/window and terminal behavior |
+| commercial | accepted OfferPackage authority; STATED/INFERRED/UNKNOWN; exact min-price/margin/tax/fee/FX/rounding vectors; allowed variant/pilot/discount/payment/bundle; no guarantee/legal-term invention |
+| booking | qualified CALL_NEXT_STEP without purchase acceptance, explicit timezone/slot confirmation, DST, expiry, conflicts, notifications, create/reschedule/cancel idempotency and ambiguous positive reconciliation |
+| checkpoint | frozen newly closed stage as primary evidence; exact CONTINUE/REVISE/KILL/INCONCLUSIVE/SAFETY_STOP; missing costs/denominators and safety overrides; increments 100/200/300/400, cumulative 100/300/600/1,000 and no fifth cohort |
+| global learning | every applicable agent gets PROMOTE/KEEP/ROLLBACK/INSUFFICIENT_EVIDENCE; minimum evidence, offline comparison, protected holdout, transfer/guardrail/confidence and stored rollback rules; weak evidence changes nothing |
+| activation | trigger campaign next boundary only after CONTINUE; other active campaigns at their own checkpoint; future campaigns newest approved baseline; frozen offer/strategy/qualification/causal/evidence definitions never change mid-cohort |
+| recovery | M1 K0–K8/eight disqualifiers, finite transactions/outbox/cancel/pause/version drain, Gmail six-point OAuth/fourteen-step gateway and history ambiguity, booking/checkpoint/learning kill points, restore and tombstone replay |
+| privacy/cost | minimized transform-only global evidence; raw threads/contact/calendar/budget/holdout denial; all billed failures/retries retained; complete cost/operator-time evidence before commercial/checkpoint success |
 
-Workflow version promotion requires the relevant matrix on real PostgreSQL and the selected runtime. DBOS product eligibility exists only after all M1 passes; a disqualifying DBOS result is not waived by later green tests and triggers a signed Temporal migration decision. Temporal then runs the same application-level Gmail/authority/recovery matrix because runtime change cannot remove external ambiguity.
+## Cadence, global evidence, and rollback
 
-### Cadence, shadow execution, drift, and rollback
+On each relevant code/config/model/provider/schema change run affected deterministic contracts and full applicable capture/gate suites before eligibility. At each closed checkpoint freeze triggering campaign/stage evidence as primary, similar campaigns as secondary and all relevant historical failures/incidents as guardrails. Evaluate every applicable agent and record immutable lineage/expected metrics/confidence/reversibility. Runtime output scoring uses independent delayed labels; it can inform the next checkpoint bundle only through approved minimized transforms.
 
-| Trigger | Required evaluation |
-| --- | --- |
-| every commit/PR | deterministic schema/scorer/golden/authority/import tests, selected impacted synthetic fixtures, no network, privacy/secret scan |
-| prompt/model/tool/provider/schema/validator/dependency/config change | all affected eight-suite cases × three fresh captures; all exact gates; operator promotion |
-| workflow/runtime/application state/event/side-effect change | complete affected workflow matrix plus M1/M6 gates where applicable; crash/replay/version tests |
-| release | active manifest/dependency/release hash, Critical security and restore evidence freshness, no unresolved hard alert |
-| weekly while operating | full deterministic fixture/workflow smoke; no model network unless budgeted candidate/shadow run is approved |
-| rolling runtime | exact AGENT-10 populations/windows over every chronological terminal invocation under active config; provider/cost/latency and hard-safety detections |
-| monthly or provider/policy notice | review source/price/model/version/fixture drift and schedule a shadow candidate if needed |
+KEEP means evidence supports retaining the strategy; INSUFFICIENT_EVIDENCE means change is unjustified. Both are no-mutation results; NO_CHANGE is explanatory text, never serialized. Running-cohort offer/strategy/qualification/causal/evidence definitions freeze. Deterioration blocks affected future actions immediately, pauses/closes the current checkpoint, then applies compatible rollback at the boundary. A failed rollback remains blocked. Historical attribution never changes.
 
-Shadow agent runs use synthetic/redacted approved inputs, have no artifact acceptance/materialization/business transition/Gmail path, reserve budget, and are visibly `fixture/shadow` in ledgers. Production outputs may be scored only with delayed, independently accepted labels/evidence and never feed automated promotion. Drift indicators are prompts for evaluation, not automatic model judgment.
+Use AGENT-10 exact rolling populations: every chronological terminal invocation under the active configuration, including billed failures; order by finished_at/agent_run_id; N=20 or N=30 according to specialist; two adjacent non-overlapping windows and stored max-cost/hard-safety rules. No favorable-run reset or post-hoc exclusions. Weekly synthetic smoke and release/restore evidence remain separate from real demand. OBS-02 displays complete suite/capture sets, per-agent results, cohort/version/activation comparisons and cross-campaign transfer without claiming causation from correlation.
 
-Immediate rollback/pause: any AGENT-10 hard failure, production secret/PII leak, authority edge, false unsubscribe handling, false `SCALE`/qualification, manifest/hash drift, max-cost breach, two consecutive exact rolling latency/cost windows, workflow duplicate/unauthorized/suppressed send, snapshot/replay/version invariant, or restore failure. When agent rollback compatibility is uncertain, pause affected experiment stage; send controls remain false where outreach is involved.
-
-### Evaluation telemetry and evidence
-
-OBS-01 logs case/result IDs, suite/agent/config/evaluator/prompt/model/tool/schema/validator versions/hashes where allowlisted, repetition, pass/hard reason enum, duration/usage/cost entry, fixture/shadow mode, correlation—never fixture/prompt/output/expected/rubric content. OBS-02 metric labels use suite/agent/repetition/pass/hard only. Dashboards show 552/1,656 completeness, three repetition status, hard failures, components, regression, p10/p95, mean/p95/max native cost plus separately evidenced ILS, active/rollback manifests, rolling windows and workflow matrices.
+Every required workflow matrix is executed on isolated PostgreSQL and the selected accepted runtime. Any M1 DBOS disqualifier forces the Temporal acceptance path; later tests cannot waive it. No evaluation suite directly writes Gmail/calendar or accepts its own artifact.
 
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=OBS-04-T01 milestone=M8 depends_on=AGENT-10-T01 mode=parallel locks=agent-artifacts -->
-- [ ] **Implement governed datasets/manifests —** Input: eight exact suites, specialist cases/rubrics/fixtures and sensitivity review. Operation: create 552 immutable cases, signed hashes, independent labels and change protocol. Output: reproducible dataset. Test evidence: count/allocation/provenance/hash/attack/privacy scans. Failure behavior: suite invalid; no capture/promotion.
+- [ ] **Freeze complete governed suite manifests —** Input: AGENT-10 exact suite/rubric/provider sets. Operation: materialize all ten suites and 692 cases with independently reviewed provenance and protected holdouts. Output: immutable dataset/fixture manifest. Test evidence: exact set/count/hash/privacy and unknown-agent negatives. Failure behavior: stop the affected capability/gate, preserve immutable evidence and quarantine uncertainty; no blind retry, admission or success claim.
 <!-- roadmap-task id=OBS-04-T02 milestone=M8 depends_on=OBS-04-T01 mode=serial locks=agent-artifacts,live-environment -->
-- [ ] **Implement isolated capture and exact ownership —** Input: candidate config/case/repetition/reserved budget. Operation: delegate run rows, permit only candidate model network, sign capture/ledger, close run, then write result. Output: 1,656 complete captures/results. Test evidence: network/authority spy, kill/replay/missing/tamper/cost matrix. Failure behavior: full repetition/promotion fails.
+- [ ] **Execute isolated capture ownership —** Input: eligible candidate manifest, case/repetition and reserved budget. Operation: capture three fresh model results per case with non-model network denied and sole-owner run/result/cost writes. Output: 2,076 signed candidate captures and reconciled results. Test evidence: crash/replay/missing/tamper/provider-network cases. Failure behavior: stop the affected capability/gate, preserve immutable evidence and quarantine uncertainty; no blind retry, admission or success claim.
 <!-- roadmap-task id=OBS-04-T03 milestone=M8 depends_on=OBS-04-T02,AGENT-10-T04,AGENT-10-T05 mode=serial locks=agent-runtime,agent-artifacts,milestone-gate -->
-- [ ] **Implement deterministic scoring/promotion/rollback —** Input: signed captures and exact AGENT-10 functions/gates; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: invoke the versioned AGENT-10 scorer twice offline, compare baseline through the AGENT-10 gate interface, render the operator review, and request any approved promotion/rollback exclusively through the existing AGENT-10 owner; OBS-04 never writes a competing registry pointer; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: promoted/rejected/rollback manifest. Test evidence: threshold equality/rounding/ECE/span/percentile/hard/regression/concurrency. Failure behavior: prior config remains.
-<!-- roadmap-task id=OBS-04-T04 milestone=M8 depends_on=OBS-04-T03,ARCH-03-T01,DB-05-T01,ARCH-02-T01,BACKEND-01-T04,WF-00-T01,PROVIDER-01-T02,PROVIDER-02-T01,PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,PROVIDER-06-T01,WF-02-T05,WF-03-T05,WF-04-T05,WF-06-T05,PROVIDER-01-T01,TEST-03-T03,TEST-03-T04,TEST-03-T06,TEST-04-T06,WF-05-T05,WF-01-T03,TEST-04-T05 mode=serial locks=workflow-runtime,backup-restore,milestone-gate -->
-- [ ] **Implement workflow evaluation suites —** Input: canonical state/event/owner/runtime/provider/Gmail/recovery contracts; implemented M1 crash harness, finite-workflow failure-injection suite, Gmail workflow execution/control contract, Gmail history/suppression suite and typed-repair/restore runner; separately signed M1/M6 gate evidence and exact scenario/command manifests; implemented original M1 crash harness and completed executable Gmail history/suppression suite; signed M1/M6 gate bundles remain evidence, not runner implementations; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: consolidate and re-execute the completed owner-supplied M1/M6/restore failure-injection suites against the M8 real-DB/runtime candidate, retaining exact original scenario identities and signed results; do not redefine or retroactively supply the earlier M1/M6 gates; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: runtime/workflow gate evidence. Test evidence: exact matrix above. Failure behavior: block milestone; Temporal after DBOS disqualifier.
+- [ ] **Apply deterministic scoring and strategy gates —** Input: AGENT-10 scorer and StrategyActivationService promotion interface. Operation: compare all repetitions/baseline/holdouts/transfer and produce exact per-agent results. Output: reproducible accepted/rejected package evidence. Test evidence: weak evidence, immutable-bound and favorable-average denial. Failure behavior: stop the affected capability/gate, preserve immutable evidence and quarantine uncertainty; no blind retry, admission or success claim.
+<!-- roadmap-task id=OBS-04-T04 milestone=M8 depends_on=OBS-04-T03,ARCH-03-T01,DB-05-T01,ARCH-02-T01,BACKEND-01-T04,WF-00-T01,PROVIDER-01-T02,PROVIDER-02-T01,PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,PROVIDER-06-T01,WF-02-T05,WF-03-T05,WF-04-T05,WF-06-T05,PROVIDER-01-T01,TEST-03-T03,TEST-03-T04,TEST-03-T06,TEST-04-T06,WF-05-T05,WF-01-T03,TEST-04-T05,WF-07-T04,WF-08-T04,WF-09-T04,BACKEND-01-T08,BACKEND-01-T09,BACKEND-01-T10 mode=serial locks=workflow-runtime,backup-restore,milestone-gate -->
+- [ ] **Verify every durable sales workflow —** Input: WF-07/08/09 and existing M1/Gmail/restore harnesses. Operation: execute complete artifact/conversation/commercial/booking/checkpoint/activation crash matrices. Output: signed workflow and global-learning simulation evidence. Test evidence: every durable boundary and no duplicate side effect. Failure behavior: stop the affected capability/gate, preserve immutable evidence and quarantine uncertainty; no blind retry, admission or success claim.
 <!-- roadmap-task id=OBS-04-T05 milestone=M8 depends_on=OBS-04-T04 mode=parallel locks=telemetry-catalog -->
-- [ ] **Operate shadow/drift/rolling gates —** Input: active manifest and terminal runtime population. Operation: schedule bounded synthetic shadow, exact rolling windows, alerts and manual review. Output: continuous evidence/rollback trigger. Test evidence: hard event, two-window breach, provider drift, alert/outage. Failure behavior: rollback or pause; no unpromoted fallback.
+- [ ] **Operate attributed deterioration monitoring —** Input: frozen action attribution and exact rolling rule populations. Operation: detect hard/window drift, block affected actions and request compatible boundary rollback. Output: automatic rollback/exception evidence. Test evidence: cross-campaign timing, mid-cohort blocking and unchanged historical hashes. Failure behavior: stop the affected capability/gate, preserve immutable evidence and quarantine uncertainty; no blind retry, admission or success claim.
 
-## Test strategy
+## Test strategy, acceptance and recovery
 
-- **Completeness `test_exact_eight_suites_552_cases_three_fresh_captures_and_all_manifests_exist`.**
-- **Isolation `test_capture_only_model_network_scoring_no_network_and_eval_has_no_product_gmail_or_credential_authority`.**
-- **Ownership `test_evaluation_execution_never_writes_agent_runs_and_result_waits_for_terminal_owned_run`.**
-- **Scoring `test_all_agent10_golden_functions_thresholds_regressions_and_native_costs_match_independent_implementations`.**
-- **Workflow `test_every_state_event_side_effect_kill_replay_version_and_recovery_boundary_has_exact_result`.**
-- **Runtime `test_any_dbos_disqualifier_produces_temporal_migration_gate_not_waiver`.**
-- **Rollback `test_hard_and_exact_rolling_triggers_restore_prior_manifest_and_pause_incompatible_runs`.**
-- **Privacy `test_evaluation_artifacts_telemetry_and_graphify_exclude_secret_pii_and_hidden_reasoning`.**
+- [ ] Every required positive/negative/concurrent case has a fixture identity, versioned owner, command, evidence hash and fail action; missing or unavailable evidence is not passing.
+- [ ] Only SendGateway invokes Gmail writes and only BookingGateway invokes calendar create/reschedule/cancel. Crash/replay cannot duplicate effects.
+- [ ] Cohorts remain 100/200/300/400 with cumulative 100/300/600/1,000 and no active-cohort mutation or fifth cohort.
+- [ ] Decision sets remain CONTINUE/REVISE/KILL/INCONCLUSIVE/SAFETY_STOP and PROMOTE/KEEP/ROLLBACK/INSUFFICIENT_EVIDENCE; weak evidence cannot promote or continue.
+- [ ] Retain signed case/result/command/fixture/schema/provider/strategy/activation hashes, call counts, costs, immutable action history and safe failure traces. Raw PII, message/calendar content, sensitive inferred attributes and credentials are excluded from ordinary telemetry/global learning.
 
-## Security, privacy, compliance, idempotency, observability, and cost
-
-Evaluation objects are encrypted/versioned/access-audited and synthetic/redacted by default. Case/config/evaluator hashes and DB uniqueness provide idempotency; a retry never substitutes a prior model capture. Exact OBS telemetry/cost applies. Legal/compliance labels come only from retained counsel/policy evidence; an evaluator/model cannot declare a real recipient lawful. Evaluation spend is pre-reserved and cannot buy authority.
-
-## Failure, rollback, and operator recovery
-
-Missing/corrupt/tampered case/capture/result/ledger/cost/manifest, scorer disagreement, network/authority leak, hard failure, threshold regression, runtime replay mismatch or incomplete persistence rejects the candidate. Stop affected runner/config/workflow, preserve restricted evidence, rotate leaked credentials, restore prior registry for new runs, drain/version-route or pause in-flight work, and open incident. Never delete a hard case, relabel after output, average missing as zero, relax a threshold, or activate unpromoted config.
-
-## Acceptance and retained evidence
-
-- [ ] AGENT-10 exact eight/552/three-capture/scoring/gate/promotion/rollback contracts run without weaker aliases.
-- [ ] Workflow matrices prove runtime, state/event/sole-writer, provider/Gmail/control/recovery/restore behavior at every failure boundary.
-- [ ] Continuous cadence/windows/alerts use exact populations and cannot auto-promote or grant product authority.
-- [ ] Every result/capture/ledger/cost/manifest is reproducible, privacy-safe and owner-correct.
-
-Retain datasets/rubrics/fixture/config/prompt/model/tool/schema/validator/evaluator/dependency hashes, 1,656 candidate captures/provider ledgers, results/repetition/suite/regression/cost reports, authority/network/privacy scans, promotion/rollback registry history, M1/M6/workflow/restore crash traces, rolling-window alerts, and operator reviews.
-
-## Dependencies and next deliverable
-
-OBS-04 consumes Task 2-4 evaluation/runtime contracts and OBS-03 cost. Passing agent suites unlocks only M3 execution eligibility; passing workflow suites unlocks the relevant milestone gate. Incidents/rollbacks flow to [OBS-05](05-incident-response.md); no evaluation result authorizes real outreach.
+Preserve first failures and resolve root cause; never average away safety failures or rewrite labels/history. Restore/rollback keeps admission off, applies current suppression/tombstones and reconciles possibly-called effects before any separately authorized re-entry. Use [canonical product authority](../00-product-strategy/01-product-scope.md), [booking](../03-workflows/07-booking-workflow.md), [checkpoints](../03-workflows/08-checkpoint-evaluation-workflow.md), [global learning](../03-workflows/09-global-learning-workflow.md), [shared evaluation](../04-agents/12-agent-evals-and-versioning.md), [API](../06-backend/02-api-contracts.md) and [privacy](../08-security-and-compliance/06-data-privacy-and-retention.md) as exact contracts.

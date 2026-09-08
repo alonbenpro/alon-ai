@@ -4,7 +4,7 @@
 **Status:** Planned M8 release discipline; current GitHub Actions builds/tests the foundation but does not publish signed images or deploy
 **Milestone:** M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator; GitHub Actions produces candidates, and the operator performs the separate VPS promotion ceremony
-**Prerequisites:** exact local order `INFRA-02-T01 -> INFRA-02-T02 -> INFRA-02-T03 -> INFRA-02-T04 -> INFRA-02-T05 -> INFRA-02-T06`; cross-document task Inputs `INFRA-02-T01 <- TEST-01-T01; INFRA-02-T03 <- INFRA-04-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): TEST-01..06, INFRA-01, current CI, immutable migration/release contracts, SEC-01 supply-chain controls, OBS-04/05
+**Prerequisites:** exact task Inputs `INFRA-02-T01 <- TEST-01-T01; INFRA-02-T02 <- INFRA-02-T01; INFRA-02-T03 <- INFRA-02-T02,INFRA-04-T02; INFRA-02-T04 <- INFRA-02-T03; INFRA-02-T05 <- INFRA-02-T04; INFRA-02-T06 <- INFRA-02-T05`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
 **Outputs:** Staged CI gates, SBOM/provenance/image digests, signed release manifest, operator-led deployment, migration compatibility, rollback and upgrade evidence
 **Unlocks:** INFRA-03 private VPS promotion and M8 release evidence
 **Risk:** Critical
@@ -35,7 +35,7 @@ Extend `.github/workflows/ci.yml`; add `.github/workflows/release.yml`, `infra/r
 | release build | clean checkout, locked build once, SBOM, provenance, signature, image/config/migration/API hashes, test evidence refs | signed tag/operator dispatch | candidate manifest only |
 | VPS promotion | verify candidate/target/pre-backup/capacity/active runs/ambiguities/controls, additive migration, start/health/soak | explicit operator command on private VPS | retain prior release; rollback/restore path |
 
-`ReleaseManifestV1` includes release ID, commit/tree/dirty=false, Python/npm lock hashes, action/workflow hashes, backend/frontend/public-edge image digests, SBOM/provenance/signature refs, migration head/compatibility range, OpenAPI 66/64+2 and incident/policy/provider manifest hashes, DBOS/Temporal runtime version, active agent promotion refs, config/KMS/secret generations without values, test evidence IDs/freshness/applicability, previous release/rollback digest, backup/restore proof IDs and intended route/control states. Any missing/mismatched field rejects.
+`ReleaseManifestV1` includes release ID, commit/tree/dirty=false, Python/npm lock hashes, action/workflow hashes, backend/frontend/public-edge image digests, SBOM/provenance/signature refs, migration head/compatibility range, OpenAPI operation/partition and incident/policy/provider manifest hashes, DBOS/Temporal runtime version, active agent promotion refs, config/KMS/secret generations without values, test evidence IDs/freshness/applicability, previous release/rollback digest, backup/restore proof IDs and intended route/control states. Any missing/mismatched field rejects.
 
 Promotion sequence:
 
@@ -49,6 +49,18 @@ Promotion sequence:
 Rollback pins the prior image/config/agent/runtime-compatible digest, stops new work, drains/version-routes in-flight workflows, and runs forward-compatible schema. Database restore is not normal application rollback and is used only under INFRA-04/05 after authoritative reconciliation.
 
 CI/candidate requirements map exactly to `T7-DOC-CONTRACT|T7-CONTRACT-INTEGRATION|T7-WORKFLOW-RECOVERY|T7-GMAIL-OFFLINE|T7-BROWSER-PRIVATE|T7-LOAD|T7-SECURITY-CHAOS|T7-RELEASE-CANDIDATE`; manual promotion and application rollback map exactly to destructive `T7-RELEASE-PROMOTE` and `T7-RELEASE-ROLLBACK`. Each uses the [TEST-01 exact runner invocation](../10-testing/01-testing-strategy.md#closed-command-manifest), immutable profile/fixture hashes and declared artifacts. Promotion/rollback target manifests bind provider project, host, database system ID, current/prior release digests, control/public-route states and writer/workflow counts; mismatch exits `50` before migration/process changes. Missing CI/VPS/registry capability exits `30`, partial external state exits `60`, and neither passes. Requirement-to-command set equality is retained with the release manifest.
+
+## Sales-aware release and rollback compatibility
+
+The recovery/release evidence must bind the accepted OfferPackage/economics/claim hashes; approved agent configurations and GlobalStrategyPackage/StrategyActivation/rollback lineage; campaign/cohort ordinals, membership/query/hash, caps and frozen qualification/causal/evidence/metric versions; CheckpointEvidenceBundle/cutoff/decision/learning triggers; full conversation/reply/negotiation state and counters; BookingIntent/slot/confirmation/action/attempt/result/observation/notification state; current suppression/tombstones/legal-policy; immutable action authorizations/consumptions; costs/reservations; and all current control/checkpoint generations.
+
+ReleaseManifestV1 additionally references a signed read-only snapshot manifest for that state, all fifteen artifact schemas/accepted-ref variants, exact API/provider/read-write owner sets, protected evaluation/holdout rules, pricing/FX/rounding/evidence-transform versions and remaining stage/cumulative allowances. Only digest/opaque references enter release evidence; raw recipient/message/calendar/budget/secret data remains in its encrypted owner.
+
+Before rollout stop admission and provider call entry, acknowledge versioned fences, retain unresolved actions, verify fresh backup/witness and run migration/runtime/offer/strategy/conversation/booking/checkpoint compatibility checks. Deploy by signed digest, then inspect state with all provider writes denied. Candidate green health cannot enable outreach or booking. New worker code must drain/version-route old accepted inputs and preserve every historical activation/action attribution.
+
+Application rollback changes the deployable code/config to a schema-compatible digest; it cannot rewind database business history, offer terms, active cohort strategy, consumed capacity or suppression. Strategy rollback is separately owned by StrategyActivationService and remains checkpoint-bound. If that rollback is triggered while a cohort runs, block affected actions and close the checkpoint first. A restore is the distinct INFRA-04 procedure and never a shortcut to application rollback.
+
+Required release evidence includes TEST-02 artifact/commercial/booking/checkpoint/learning contracts; TEST-03 every durable-boundary replay; TEST-05 full browser simulation/authority bypass; TEST-06 cross-campaign/kill/privacy chaos; and WF-07/08/09 recorded or owned gates as applicable. M8 controlled rollout proves zero provider writes during deploy/rollback. M9 requires separately current legal/provider/phase evidence for each enabled product capability. Any missing/mismatched dependency keeps both Gmail and calendar product controls off.
 
 ## Ordered implementation tasks
 
@@ -69,7 +81,7 @@ CI/candidate requirements map exactly to `T7-DOC-CONTRACT|T7-CONTRACT-INTEGRATIO
 
 - **CI `test_required_lane_skip_failure_or_stale_evidence_cannot_create_release_candidate`.**
 - **Supply `test_release_manifest_rejects_dirty_tree_mutable_tag_bad_signature_sbom_or_provenance`.**
-- **Manifest `test_release_binds_exact_46_66_64_plus_2_policy_incident_provider_runtime_and_agent_hashes`.**
+- **Manifest `test_release_binds_exact_schema_operation_partition_policy_incident_provider_runtime_and_agent_hashes`.**
 - **Migration `test_additive_old_new_compatibility_and_worker_drain_precede_contract_change`.**
 - **Promotion `test_vps_preflight_resolves_target_backup_capacity_controls_runs_and_ambiguities`.**
 - **Rollback `test_prior_digest_restores_service_without_database_history_edit_or_provider_call`.**

@@ -4,7 +4,7 @@
 **Status:** Planned M8 testing program; current unit, readiness-integration, generated-contract, build, secret-scan, and Compose CI checks cover only the foundation
 **Milestone:** M1, M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator; the same person may execute and review, but generated evidence and signed manifests must make self-review reproducible
-**Prerequisites:** exact local order `TEST-01-T01 -> TEST-01-T02 -> TEST-01-T03 -> TEST-01-T04 -> TEST-01-T05 -> TEST-01-T06`; cross-document task Inputs `TEST-01-T01 <- PRODUCT-01-T03; TEST-01-T05 <- TEST-02-T07,TEST-05-T04,TEST-06-T04,TEST-03-T06,TEST-04-T06,TEST-03-T07,TEST-06-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): M0-M7 canonical contracts, [OBS-04 evaluation operations](../09-observability-and-evaluation/04-agent-and-workflow-evaluations.md), [OBS-05 incident exercises](../09-observability-and-evaluation/05-incident-response.md), and current CI/Compose foundation
+**Prerequisites:** exact task Inputs `TEST-01-T01 <- PRODUCT-01-T03; TEST-01-T02 <- TEST-01-T01; TEST-01-T03 <- TEST-01-T02; TEST-01-T04 <- TEST-01-T03; TEST-01-T05 <- TEST-01-T04,TEST-02-T07,TEST-05-T04,TEST-06-T04,TEST-03-T06,TEST-04-T06,TEST-03-T07,TEST-06-T05; TEST-01-T06 <- TEST-01-T05`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
 **Outputs:** Test taxonomy, environment/isolation rules, fixture provenance, coverage registry, deterministic command lanes, evidence retention, and release-blocking ownership
 **Unlocks:** TEST-02 through TEST-06, INFRA-02 promotion gates, and the M8 private-operations evidence bundle
 **Risk:** Critical
@@ -16,11 +16,11 @@ Every canonical contract has one named test owner, one environment, one authorit
 
 ## Current repository state
 
-Implemented today: backend pytest unit/integration markers, Ruff, Pyright, Alembic upgrade, frontend Vitest/Testing Library, ESLint/TypeScript/build, generated OpenAPI drift rejection, tracked-secret scan, and a GitHub Actions Compose build/smoke job. The local Compose stack is PostgreSQL/API/idle worker/frontend on loopback with outreach false. There is no 46-table product schema, DBOS workflow, Temporal adapter, Gmail/OAuth implementation, agent/evaluation runtime, product UI, browser E2E runner, load/chaos harness, backup/PITR system, public unsubscribe ingress, VPS, KMS/secret manager, or exercised DR. Planned test names below are acceptance contracts, not passing claims.
+Implemented today: backend pytest unit/integration markers, Ruff, Pyright, Alembic upgrade, frontend Vitest/Testing Library, ESLint/TypeScript/build, generated OpenAPI drift rejection, tracked-secret scan, and a GitHub Actions Compose build/smoke job. The local Compose stack is PostgreSQL/API/idle worker/frontend on loopback with outreach false. There is no declared product schema, DBOS workflow, Temporal adapter, Gmail/OAuth implementation, agent/evaluation runtime, product UI, browser E2E runner, load/chaos harness, backup/PITR system, public unsubscribe ingress, VPS, KMS/secret manager, or exercised DR. Planned test names below are acceptance contracts, not passing claims.
 
 ## Scope and non-goals
 
-In scope: strict schemas/digests, all database objects, API 64+2 partition, policies and 14 dedicated final-SEND denials, finite workflows, runtime kill/replay/version behavior, providers/agents/evals, Gmail/OAuth, browser/accessibility, load/rate/budget, security/privacy/supply chain, backup/restore, fixture governance, flake handling, and evidence. Non-goals: mocking PostgreSQL where constraints matter, treating code coverage as assurance, live provider calls in ordinary CI, retrying flaky safety tests until green, production-data fixtures, destructive tests against shared/live targets, or inventing a second contract registry.
+In scope: strict schemas/digests, all database objects, API private-plus-two-public partition, policies and 14 dedicated final-SEND denials, finite workflows, runtime kill/replay/version behavior, providers/agents/evals, Gmail/OAuth, browser/accessibility, load/rate/budget, security/privacy/supply chain, backup/restore, fixture governance, flake handling, and evidence. Non-goals: mocking PostgreSQL where constraints matter, treating code coverage as assurance, live provider calls in ordinary CI, retrying flaky safety tests until green, production-data fixtures, destructive tests against shared/live targets, or inventing a second contract registry.
 
 ## Exact planned implementation surfaces
 
@@ -137,6 +137,23 @@ exec "$handler_real" "${handler_args[@]}"
 | `T7-DR-SCENARIO` | `scripts/task7/handlers/dr-scenario` | operator / quarterly DR destructive | `DR_ISOLATED`; destructive form, `T7-DR-SCENARIO`, `DR_ISOLATED` | exact scenario-matrix result, timelines, hashes and abort/escalation |
 
 The registry maps every TEST-01..06 and INFRA-01..05 acceptance ID to exactly one command row. `T7-DOC-CONTRACT` mechanically proves requirement-ID domain equals mapping domain, mapping range equals the 24 command IDs above, handler-path set equals the 24 distinct paths above, all IDs are reachable, and no requirement is duplicated. It runs `bash -n` on the runner and all handlers; substitutes 24 executable spy handlers with signed hashes; invokes the canonical absolute runner once per row from repository root, `backend/`, `frontend/`, and `/tmp`; and requires one matching handler exec, identical derived root/normalized handler argv/evidence, runner-exec count `0`, and total handler calls `24` per starting directory. A row whose handler is `scripts/task7/run`, equal-inode/copy recursion, a second exec, relative handler, handler symlink/escape/hash mismatch, malicious runner symlink, copied runner in a wrong Git root, root/profile/commit mismatch, caller root env override, and each destructive identity/confirmation mutation must exit `20`, `40`, or `50` before target access/write.
+
+## Sales coverage ownership and launch evidence
+
+The coverage registry must include every canonical sales artifact and durable boundary. The command set remains the exact existing 24 rows; expanded cases join their owning commands with versioned scenario IDs and exact set-equality checks. Do not introduce a shadow runner or certify a future implementation from roadmap text.
+
+| Required sales coverage | Owning command / document |
+| --- | --- |
+| all fifteen artifacts, order/lineage, unsupported facts/evidence, approved multi-source dedupe, PRELIMINARY/FINAL, deterministic commercial vectors, conversation states, booking and strategy schema/owner/privacy contracts | T7-CONTRACT-INTEGRATION / TEST-02 |
+| close/freeze/decision/learning trigger, all-agent results, cross-campaign activation, no mid-cohort mutation, weak evidence, rollback and crash/replay at every durable boundary | T7-WORKFLOW-RECOVERY / TEST-03 |
+| EmailWritingAgent/SendGateway separation, inbound cold-stop and durable-suppression distinction, bounded reply/terminal race, Gmail provider uncertainty/caps/history | T7-GMAIL-OFFLINE and separately owned-alias T7-GMAIL-LIVE / TEST-04 |
+| complete funnel, calendar, exception and strategy UI, browser bypass denial, full four-cohort campaign simulation | T7-BROWSER-PRIVATE / TEST-05 |
+| calendar/write capability isolation, commercial and strategy injection, multi-campaign races, privacy leakage, kill/restore chaos and public abuse | T7-SECURITY-CHAOS, T7-LOAD and existing public-edge commands / TEST-06 |
+| release/rollback/backup/restore preserves offer/strategy/cohort/checkpoint/conversation/booking/suppression and never reopens effects | existing release/restore/DR command rows / INFRA-02/04/05 |
+
+Recorded calendar action fixtures are part of T7-CONTRACT-INTEGRATION and T7-WORKFLOW-RECOVERY; real dedicated-calendar acceptance is WF-07-T04's separately signed M6 provider gate. The Gmail live runner never gains CalendarWritePort. No new live command is inferred from an offline fixture.
+
+Acceptance evidence follows exactly: synthetic agent pipeline → recorded provider fixtures → owned test-inbox conversations → simulated objections and negotiation → test calendar bookings → checkpoint and global-learning simulation → tightly controlled real campaign → earned autonomous sending and negotiation. Phases 1–6 never count as real demand. Existing M1, M6, M8 and M9 gates retain independent authority. The full simulation proves 100/200/300/400 increments, cumulative 100/300/600/1,000, five exact checkpoint decisions and four exact learning results with sole SendGateway/BookingGateway writers.
 
 ## Ordered implementation tasks
 

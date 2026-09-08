@@ -4,7 +4,7 @@
 **Status:** Planned M8 operations gate; liveness/readiness and structured foundation logs exist, but no OTel metrics/traces, SLOs, alert manager, dashboards, or notification path exists
 **Milestone:** M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `OBS-02-T01 -> OBS-02-T02 -> OBS-02-T03 -> OBS-02-T04 -> OBS-02-T05`; cross-document task Inputs `OBS-02-T01 <- OBS-01-T01,OBS-01-T03; OBS-02-T02 <- BACKEND-02-T05,DB-06-T01,WF-05-T05,AGENT-10-T05,SEC-05-T04,OBS-03-T02,INFRA-04-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): OBS-01, DB-01/03/05, WF-01/05/06, AGENT-10, PROVIDER-01/02, BACKEND-04/06, SEC-01/02/05/06
+**Prerequisites:** exact task Inputs `OBS-02-T01 <- OBS-01-T01,OBS-01-T03; OBS-02-T02 <- OBS-02-T01,BACKEND-02-T05,DB-06-T01,WF-05-T05,AGENT-10-T05,SEC-05-T04,OBS-03-T02,INFRA-04-T02; OBS-02-T03 <- OBS-02-T02; OBS-02-T04 <- OBS-02-T03; OBS-02-T05 <- OBS-02-T04`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
 **Outputs:** Exact low-cardinality metrics, span model, SLO/error budgets, dashboards, alert rules/routes, and telemetry-health gates
 **Unlocks:** M8 monitored operation and OBS-05 incident detection
 **Risk:** Critical
@@ -24,7 +24,7 @@ The API exposes `/health/live` and DB-backed `/health/ready`; Compose defines co
 
 ## Scope and non-goals
 
-In scope: API/database/worker/runtime, queue/workflow, agents/evaluations, six provider capabilities, Gmail OAuth/send/history/replies, policy/approval/suppression/controls, budgets/costs, sessions/security, retention/backups, telemetry pipeline, SLOs, alerts and dashboards.
+In scope: API/database/worker/runtime, queue/workflow, agents/evaluations, registered provider capabilities, Gmail OAuth/send/history/replies, policy/action-authorization/suppression/controls, budgets/costs, sessions/security, retention/backups, telemetry pipeline, SLOs, alerts and dashboards.
 
 Non-goals: per-recipient/mailbox/session/experiment labels; public status page; 24/7 staffing claim; alerts that mutate product state before canonical control commands except explicitly defined fail-closed local watchdog; tracing as audit; one giant dashboard; availability SLO that tolerates any unauthorized send; or measuring only happy-path latency.
 
@@ -45,111 +45,157 @@ The following JSON is the normative, signed input to code generation. A literal 
   "unknown_value_action": "REJECT_BEFORE_RECORD",
   "literal_domains": {
     "service.name": ["alon-ai-api"],
-    "http.response.status_class": ["2xx", "3xx", "4xx", "5xx"],
-    "operation.outcome": ["SUCCEEDED", "DENIED", "FAILED", "UNAVAILABLE", "CANCELLED"],
-    "command.replay": [false, true],
-    "workflow.type": ["IDEA_VALIDATION", "LEAD_QUALIFICATION", "OUTREACH_AND_REPLY", "EXPERIMENT_EVALUATION"],
-    "workflow.terminal_state": ["SUCCEEDED", "FAILED", "CANCELLED"],
-    "workflow.runtime": ["DBOS", "TEMPORAL"],
-    "workflow.replay": [false, true],
-    "workflow.state": ["PENDING", "RUNNING", "PAUSE_REQUESTED", "PAUSED", "CANCEL_REQUESTED", "CANCELLED", "SUCCEEDED", "FAILED"],
-    "agent.type": ["IDEA_DISCOVERY", "OFFER_DESIGN", "MARKET_RESEARCH", "LEAD_RESEARCH", "LEAD_QUALIFICATION", "OUTREACH_DRAFTING", "REPLY_CLASSIFICATION", "EXPERIMENT_EVALUATION"],
-    "agent.terminal_state": ["SUCCESS", "ABSTAIN", "FAILED"],
-    "execution.mode": ["LIVE", "RECORDED", "SYNTHETIC"],
-    "provider.capability": ["model.complete_structured", "evidence.read", "search.query", "page.extract", "business.search", "business.details"],
-    "policy.scope": ["APPROVAL_ELIGIBILITY", "SEND"],
-    "policy.allowed": [false, true],
-    "suppression.scope": ["GLOBAL", "BUSINESS", "RECIPIENT"],
-    "suppression.source": ["OPERATOR", "GMAIL_REPLY", "GMAIL_UNSUBSCRIBE", "GMAIL_HARD_BOUNCE", "GMAIL_COMPLAINT", "GMAIL_SOFT_BOUNCE_LIMIT", "PUBLIC_UNSUBSCRIBE"],
-    "control.name": ["PRODUCT_OUTREACH", "TEST_INBOX_SENDING"],
-    "control.action": ["DISABLE", "ENABLE"],
-    "send.attempt_state": ["STARTED", "AMBIGUOUS", "RECONCILING", "SENT", "FAILED"],
-    "send.authority_mode": ["TEST_INBOX_ONLY", "PRODUCT_ELIGIBLE"],
-    "gmail.boundary": ["CANCEL_PRE_UOW", "LOCK_AUTHORITY", "VERIFY_IMMUTABLE", "VERIFY_MODE", "VERIFY_ELIGIBILITY", "VERIFY_APPROVAL", "BUILD_CURRENT_FACTS", "EVALUATE_SEND_POLICY", "COMMIT_ATTEMPT", "CANCEL_PRE_CALL", "GMAIL_CALL", "LOCK_RESULT", "COMMIT_RESULT", "SCHEDULE_FOLLOWUP"],
-    "gmail.cursor_gap": [false, true],
-    "gmail.signal_kind": ["NONE", "REPLY", "UNSUBSCRIBE", "HARD_BOUNCE", "SOFT_BOUNCE", "COMPLAINT"],
-    "suppression.committed": [false, true],
-    "session.action": ["CREATED", "TOUCHED", "ROTATED", "REAUTHENTICATED", "LOGGED_OUT", "REVOKED", "EXPIRED", "EVICTED"],
-    "budget.scope": ["PROVIDER_CALL", "WORKFLOW_RUN", "EXPERIMENT", "CAMPAIGN_SEND"],
-    "currency": ["ILS", "USD"],
-    "budget.state": ["RESERVED", "RELEASED", "RECONCILED", "EXPIRED"],
-    "provider.operation_class": ["MODEL", "SEARCH", "PAGE", "BUSINESS_DATA", "GMAIL", "IDENTITY_SECRET", "INFRASTRUCTURE"],
-    "cost.state": ["PENDING_USAGE", "PENDING_FX", "PENDING_INVOICE", "DISCREPANCY"],
-    "evaluation.repetition": [1, 2, 3],
-    "evaluation.passed": [false, true],
-    "evaluation.hard_safety": [false, true],
-    "backup.data_kind": ["PRIMARY", "DR"],
-    "telemetry.signal": ["LOG", "METRIC", "TRACE"]
+    "http.response.status_class": ["2xx","3xx","4xx","5xx"],
+    "operation.outcome": ["SUCCEEDED","DENIED","FAILED","UNAVAILABLE","CANCELLED"],
+    "command.replay": [false,true],
+    "workflow.type": ["IDEA_VALIDATION","LEAD_QUALIFICATION","OUTREACH_AND_REPLY","EXPERIMENT_EVALUATION","CALL_BOOKING","CHECKPOINT_EVALUATION","GLOBAL_LEARNING"],
+    "workflow.terminal_state": ["SUCCEEDED","FAILED","CANCELLED"],
+    "workflow.runtime": ["DBOS","TEMPORAL"],
+    "workflow.replay": [false,true],
+    "workflow.state": ["PENDING","RUNNING","PAUSE_REQUESTED","PAUSED","CANCEL_REQUESTED","CANCELLED","SUCCEEDED","FAILED"],
+    "agent.type": ["IDEA_DISCOVERY","MARKET_RESEARCH","OFFER_DESIGN","LEAD_DISCOVERY","LEAD_RESEARCH","LEAD_QUALIFICATION","EMAIL_WRITING","REPLY_EVALUATION","EXPERIMENT_EVALUATION","GLOBAL_LEARNING"],
+    "agent.terminal_state": ["SUCCESS","ABSTAIN","FAILED"],
+    "execution.mode": ["LIVE","RECORDED","SYNTHETIC"],
+    "provider.capability": ["model.complete_structured","evidence.read","search.query","page.extract","business.search","business.details","lead.discover"],
+    "policy.scope": ["ACTION_CREATION","SEND","BOOKING","COMMERCIAL","CHECKPOINT","STRATEGY"],
+    "policy.allowed": [false,true],
+    "suppression.scope": ["GLOBAL","BUSINESS","RECIPIENT"],
+    "suppression.source": ["OPERATOR","GMAIL_UNSUBSCRIBE","GMAIL_HARD_BOUNCE","GMAIL_COMPLAINT","GMAIL_SOFT_BOUNCE_LIMIT","PUBLIC_UNSUBSCRIBE","QUALIFIED_NO_FUTURE_CONTACT","LEGAL_PROHIBITION"],
+    "control.name": ["PRODUCT_OUTREACH","TEST_INBOX_SENDING","CALENDAR_WRITES","TEST_CALENDAR_WRITES"],
+    "control.action": ["DISABLE","ENABLE"],
+    "send.attempt_state": ["STARTED","AMBIGUOUS","RECONCILING","SENT","FAILED"],
+    "send.authority_mode": ["TEST_INBOX_ONLY","PRODUCT_ELIGIBLE"],
+    "gmail.boundary": ["CANCEL_PRE_UOW","LOCK_AUTHORITY","VERIFY_IMMUTABLE","VERIFY_MODE","VERIFY_ELIGIBILITY","VERIFY_ACTION_AUTHORITY","BUILD_CURRENT_FACTS","EVALUATE_SEND_POLICY","COMMIT_ATTEMPT","CANCEL_PRE_CALL","GMAIL_CALL","LOCK_RESULT","COMMIT_RESULT","SCHEDULE_FOLLOWUP"],
+    "gmail.cursor_gap": [false,true],
+    "gmail.signal_kind": ["NONE","REPLY","UNSUBSCRIBE","HARD_BOUNCE","SOFT_BOUNCE","COMPLAINT"],
+    "suppression.committed": [false,true],
+    "session.action": ["CREATED","TOUCHED","ROTATED","REAUTHENTICATED","LOGGED_OUT","REVOKED","EXPIRED","EVICTED"],
+    "budget.scope": ["PROVIDER_CALL","WORKFLOW_RUN","EXPERIMENT","CAMPAIGN_SEND"],
+    "currency": ["ILS","USD"],
+    "budget.state": ["RESERVED","RELEASED","RECONCILED","EXPIRED"],
+    "provider.operation_class": ["MODEL","SEARCH","PAGE","BUSINESS_DATA","GMAIL","IDENTITY_SECRET","INFRASTRUCTURE","CALENDAR"],
+    "cost.state": ["PENDING_USAGE","PENDING_FX","PENDING_INVOICE","DISCREPANCY"],
+    "evaluation.repetition": [1,2,3],
+    "evaluation.passed": [false,true],
+    "evaluation.hard_safety": [false,true],
+    "backup.data_kind": ["PRIMARY","DR"],
+    "telemetry.signal": ["LOG","METRIC","TRACE"],
+    "qualification.phase": ["PRELIMINARY","FINAL"],
+    "booking.action": ["CREATE","RESCHEDULE","CANCEL"],
+    "booking.state": ["INTENT_RECORDED","SLOTS_PROPOSED","CONFIRMATION_PENDING","CONFIRMED","CREATING","AMBIGUOUS","RECONCILING","BOOKED","RESCHEDULE_PENDING","CANCEL_PENDING","CANCELLED","EXPIRED","FAILED"],
+    "checkpoint.decision": ["CONTINUE","REVISE","KILL","INCONCLUSIVE","SAFETY_STOP"],
+    "learning.result": ["PROMOTE","KEEP","ROLLBACK","INSUFFICIENT_EVIDENCE"],
+    "strategy.action": ["PROMOTE","ACTIVATE","ROLLBACK"],
+    "objection.category": ["PRICE","SCOPE","TIMING","TRUST","AUTHORITY","NEED","UNKNOWN"],
+    "objection.resolution": ["RESOLVED","UNRESOLVED","DECLINED","UNKNOWN"]
   },
   "tuple_domains": {
     "workflow.type|workflow.step": [
-      ["IDEA_VALIDATION", "IDEA"], ["IDEA_VALIDATION", "OFFER"], ["IDEA_VALIDATION", "MARKET_RESEARCH"], ["IDEA_VALIDATION", "BUNDLE"],
-      ["LEAD_QUALIFICATION", "LEAD_RESEARCH"], ["LEAD_QUALIFICATION", "LEAD_QUALIFY"],
-      ["OUTREACH_AND_REPLY", "PREPARE_AUTHORITY"], ["OUTREACH_AND_REPLY", "SEND"], ["OUTREACH_AND_REPLY", "RECONCILE"], ["OUTREACH_AND_REPLY", "HISTORY_SYNC"], ["OUTREACH_AND_REPLY", "RECIPIENT_SIGNAL"],
-      ["EXPERIMENT_EVALUATION", "EVALUATE"]
+      ["IDEA_VALIDATION","IDEA"],
+      ["IDEA_VALIDATION","MARKET_RESEARCH"],
+      ["IDEA_VALIDATION","OFFER"],
+      ["IDEA_VALIDATION","BUNDLE"],
+      ["LEAD_QUALIFICATION","DISCOVERY"],
+      ["LEAD_QUALIFICATION","PRELIMINARY"],
+      ["LEAD_QUALIFICATION","LEAD_RESEARCH"],
+      ["LEAD_QUALIFICATION","FINAL"],
+      ["OUTREACH_AND_REPLY","PREPARE_AUTHORITY"],
+      ["OUTREACH_AND_REPLY","SEND"],
+      ["OUTREACH_AND_REPLY","RECONCILE"],
+      ["OUTREACH_AND_REPLY","HISTORY_SYNC"],
+      ["OUTREACH_AND_REPLY","RECIPIENT_SIGNAL"],
+      ["OUTREACH_AND_REPLY","REPLY_EVALUATE"],
+      ["OUTREACH_AND_REPLY","NEGOTIATE"],
+      ["EXPERIMENT_EVALUATION","EVALUATE"],
+      ["CALL_BOOKING","SLOTS"],
+      ["CALL_BOOKING","CONFIRM"],
+      ["CALL_BOOKING","WRITE"],
+      ["CALL_BOOKING","RECONCILE"],
+      ["CHECKPOINT_EVALUATION","CLOSE"],
+      ["CHECKPOINT_EVALUATION","FREEZE"],
+      ["CHECKPOINT_EVALUATION","DECIDE"],
+      ["GLOBAL_LEARNING","EVALUATE"],
+      ["GLOBAL_LEARNING","PROMOTE"],
+      ["GLOBAL_LEARNING","ACTIVATE"],
+      ["GLOBAL_LEARNING","ROLLBACK"]
     ],
     "oauth.identity_kind|oauth.state": [
-      ["OIDC", "PENDING"], ["OIDC", "CLAIMED"], ["OIDC", "CONSUMED"], ["OIDC", "EXPIRED"],
-      ["GMAIL", "ISSUED"], ["GMAIL", "CLAIMED"], ["GMAIL", "EXCHANGE_STARTED"], ["GMAIL", "CREDENTIAL_STAGED"], ["GMAIL", "CREDENTIAL_ACTIVE"], ["GMAIL", "DB_COMMITTED"], ["GMAIL", "CONSUMED_SUCCESS"], ["GMAIL", "CONSUMED_FAILURE"]
+      ["OIDC","PENDING"],
+      ["OIDC","CLAIMED"],
+      ["OIDC","CONSUMED"],
+      ["OIDC","EXPIRED"],
+      ["GMAIL","ISSUED"],
+      ["GMAIL","CLAIMED"],
+      ["GMAIL","EXCHANGE_STARTED"],
+      ["GMAIL","CREDENTIAL_STAGED"],
+      ["GMAIL","CREDENTIAL_ACTIVE"],
+      ["GMAIL","DB_COMMITTED"],
+      ["GMAIL","CONSUMED_SUCCESS"],
+      ["GMAIL","CONSUMED_FAILURE"]
     ],
     "operation.outcome|telemetry.drop_reason": [
-      ["SUCCEEDED", "NONE"], ["DENIED", "POLICY"], ["DENIED", "PRIVACY_FILTER"], ["FAILED", "EXPORT_ERROR"], ["UNAVAILABLE", "SINK_UNAVAILABLE"], ["CANCELLED", "SHUTDOWN"]
+      ["SUCCEEDED","NONE"],
+      ["DENIED","POLICY"],
+      ["DENIED","PRIVACY_FILTER"],
+      ["FAILED","EXPORT_ERROR"],
+      ["UNAVAILABLE","SINK_UNAVAILABLE"],
+      ["CANCELLED","SHUTDOWN"]
     ]
   },
   "imports": {
-    "http.route|http.request.method": {"catalog": "BackendOperationCatalogV1", "source": "BACKEND-02#exact-route-and-openapi-operation-manifest", "cardinality": 66},
-    "command.type": {"catalog": "CommandCatalogV1", "source": "BACKEND-05#exact-command-registry", "cardinality": 46},
-    "policy.reason_code": {"catalog": "PolicyReasonCodeV1PlusNone", "source": "BACKEND-03#scope-specific-rule-composition-and-reason-codes", "cardinality": 59},
-    "evaluation.suite|agent.type": {"catalog": "AgentEvaluationSuiteMapV1", "source": "AGENT-10#exact-suite-manifests-and-promotion-thresholds", "cardinality": 8},
-    "incident.severity|incident.trigger_code|incident.alert_id|incident.runbook_id": {"catalog": "IncidentRouteV1", "source": "OBS-05#closed-incident-alert-runbook-resolution-and-repair-catalogs", "cardinality": 18}
+    "http.route|http.request.method": {"catalog":"BackendOperationCatalogV1","source":"BACKEND-02#exact-route-and-openapi-operation-manifest+BACKEND-02#autonomous-sales-api-operations","cardinality_rule":"EXACT_IMPORTED_SET_SIZE"},
+    "command.type": {"catalog":"CommandCatalogV1","source":"BACKEND-05#exact-command-registry-and-authority","cardinality_rule":"EXACT_IMPORTED_SET_SIZE"},
+    "policy.reason_code": {"catalog":"PolicyReasonCodeV1PlusNone","source":"BACKEND-03#fixed-final-effect-rule-order-and-reason-taxonomy","cardinality_rule":"EXACT_IMPORTED_SET_SIZE"},
+    "evaluation.suite|agent.type": {"catalog":"AgentEvaluationSuiteMapV1","source":"AGENT-10#exact-suite-manifests-and-promotion-thresholds","cardinality_rule":"EXACT_IMPORTED_SET_SIZE"},
+    "incident.severity|incident.trigger_code|incident.alert_id|incident.runbook_id": {"catalog":"IncidentRouteV1","source":"OBS-05#closed-incident-alert-runbook-resolution-and-repair-catalogs","cardinality_rule":"EXACT_IMPORTED_SET_SIZE"}
   }
 }
 ```
 <!-- METRIC_ATTRIBUTE_REGISTRY_V1_END -->
 
-CI requires every attribute named by the 39 instruments to be owned exactly once by a literal, tuple, or imported domain; duplicated ownership, missing keys, empty sets, repeated values/tuples, source-anchor drift, import count without set equality, or an imported source that does not enumerate its members fails closed. The provider operation classes are the seven cost/allocation classes above, not provider-native operation strings. The four cost states are unresolved reconciliation projections only; terminal cost truth stays in DB-05 and report evidence. The 14 Gmail boundaries map positionally and exactly to BACKEND-04 steps 1 through 14. `service.name` has one honest value because this modular monolith exposes one API service; invented future services are forbidden until a versioned registry change.
+CI requires every instrument attribute to have exactly one literal, tuple or imported owner; duplicated/missing ownership, empty/repeated values, source drift or count without set equality fails closed. Derive imported sets from actual canonical rows and hash the resolved registry. Provider classes are allocation classes, not provider strings. The Gmail boundary tuple maps in order to BACKEND-04's fourteen steps. Workflow tuple labels are the exact local instrumentation projection of the named WF-03/04/05/07/08/09 boundaries; they do not create domain workflow enums.
 
 | Instrument | OTel instrument | UCUM unit | Aggregation / temporality | Allowed attributes only | Max series |
 | --- | --- | --- | --- | --- | ---: |
-| `alon_ai.http.server.request.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `service.name`, valid `(http.route,http.request.method)`, `http.response.status_class` | `1*66*4=264` |
-| `alon_ai.http.server.request.count` | Counter | `{request}` | monotonic sum, cumulative | `service.name`, valid `(http.route,http.request.method)`, `http.response.status_class` | `1*66*4=264` |
-| `alon_ai.command.execution.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `command.type`, `operation.outcome`, `command.replay` | `46*5*2=460` |
-| `alon_ai.command.execution.count` | Counter | `{command}` | monotonic sum, cumulative | `command.type`, `operation.outcome`, `command.replay` | `46*5*2=460` |
-| `alon_ai.workflow.run.count` | Counter | `{run}` | monotonic sum, cumulative | `workflow.type`, `workflow.terminal_state`, `workflow.runtime` | `4*3*2=24` |
-| `alon_ai.workflow.step.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | valid `(workflow.type,workflow.step)`, `operation.outcome`, `workflow.replay` | `12*5*2=120` |
-| `alon_ai.workflow.active` | UpDownCounter | `{run}` | nonmonotonic sum, cumulative | `workflow.type`, `workflow.state` | `4*8=32` |
-| `alon_ai.agent.run.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `agent.type`, `agent.terminal_state`, `execution.mode` | `8*3*3=72` |
-| `alon_ai.agent.run.count` | Counter | `{run}` | monotonic sum, cumulative | `agent.type`, `agent.terminal_state`, `execution.mode` | `8*3*3=72` |
-| `alon_ai.provider.call.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `provider.capability`, `operation.outcome`, `execution.mode` | `6*5*3=90` |
-| `alon_ai.provider.request.count` | Counter | `{request}` | monotonic sum, cumulative | `provider.capability`, `operation.outcome`, `execution.mode` | `6*5*3=90` |
-| `alon_ai.provider.input_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.capability`, `execution.mode` | `6*3=18` |
-| `alon_ai.provider.output_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.capability`, `execution.mode` | `6*3=18` |
-| `alon_ai.provider.request.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.capability`, `execution.mode` | `6*3=18` |
-| `alon_ai.provider.response.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.capability`, `execution.mode` | `6*3=18` |
-| `alon_ai.provider.result.count` | Counter | `{result}` | monotonic sum, cumulative | `provider.capability`, `operation.outcome`, `execution.mode` | `6*5*3=90` |
-| `alon_ai.policy.decision.count` | Counter | `{decision}` | monotonic sum, cumulative | `policy.scope`, `policy.allowed`, `policy.reason_code` | `2*2*59=236` |
-| `alon_ai.suppression.denial.count` | Counter | `{denial}` | monotonic sum, cumulative | `suppression.scope`, `suppression.source` | `3*7=21` |
-| `alon_ai.control.state` | ObservableGauge | `1` | last value, instantaneous (temporality N/A) | `control.name` | `2` |
-| `alon_ai.control.acknowledgement.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `control.name`, `control.action`, `operation.outcome` | `2*2*5=20` |
-| `alon_ai.gmail.send.attempt.count` | Counter | `{attempt}` | monotonic sum, cumulative | `send.attempt_state`, `operation.outcome`, `send.authority_mode` | `5*5*2=50` |
-| `alon_ai.gmail.send.boundary.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `gmail.boundary`, `operation.outcome` | `14*5=70` |
-| `alon_ai.gmail.ambiguity.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `send.authority_mode` | `2` |
-| `alon_ai.gmail.ambiguity.resolution.duration` | Histogram | `s` | `AGE_SECONDS`, cumulative | `operation.outcome`, `send.authority_mode` | `5*2=10` |
-| `alon_ai.gmail.history.page.count` | Counter | `{page}` | monotonic sum, cumulative | `operation.outcome`, `gmail.cursor_gap` | `5*2=10` |
-| `alon_ai.gmail.history.page.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `operation.outcome`, `gmail.cursor_gap` | `5*2=10` |
-| `alon_ai.gmail.recipient_signal.count` | Counter | `{signal}` | monotonic sum, cumulative | `gmail.signal_kind`, `suppression.committed` | `6*2=12` |
-| `alon_ai.oauth.saga.count` | Counter | `{saga}` | monotonic sum, cumulative | valid `(oauth.identity_kind,oauth.state)`, `operation.outcome` | `12*5=60` |
-| `alon_ai.oauth.saga.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | valid `(oauth.identity_kind,oauth.state)` | `12` |
-| `alon_ai.session.lifecycle.count` | Counter | `{session}` | monotonic sum, cumulative | `session.action`, `operation.outcome` | `8*5=40` |
-| `alon_ai.budget.reservation.count` | Counter | `{reservation}` | monotonic sum, cumulative | `budget.scope`, `currency`, `budget.state` | `4*2*4=32` |
-| `alon_ai.cost.amount` | Counter | `{currency_minor}` | monotonic sum, cumulative; group by `currency` before sum | `provider.operation_class`, `currency` | `7*2=14` |
-| `alon_ai.cost.reconciliation.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `provider.operation_class`, `cost.state` | `7*4=28` |
-| `alon_ai.evaluation.case.count` | Counter | `{case}` | monotonic sum, cumulative | valid `(evaluation.suite,agent.type)`, `evaluation.repetition`, `evaluation.passed`, `evaluation.hard_safety` | `8*3*2*2=96` |
-| `alon_ai.incident.open` | ObservableGauge | `{incident}` | last value, instantaneous (temporality N/A) | valid `(incident.severity,incident.trigger_code,incident.alert_id,incident.runbook_id)` | `18` |
-| `alon_ai.backup.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | `2*5=10` |
-| `alon_ai.restore.proof.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | `2*5=10` |
-| `alon_ai.telemetry.export.count` | Counter | `{export}` | monotonic sum, cumulative | `telemetry.signal`, valid `(operation.outcome,telemetry.drop_reason)` | `3*6=18` |
-| `alon_ai.telemetry.export.lag` | Histogram | `s` | `AGE_SECONDS`, cumulative | `telemetry.signal`, `operation.outcome` | `3*5=15` |
+| `alon_ai.http.server.request.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `service.name`, valid `(http.route,http.request.method)`, `http.response.status_class` | derived exact allowed tuple-domain product |
+| `alon_ai.http.server.request.count` | Counter | `{request}` | monotonic sum, cumulative | `service.name`, valid `(http.route,http.request.method)`, `http.response.status_class` | derived exact allowed tuple-domain product |
+| `alon_ai.command.execution.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `command.type`, `operation.outcome` | derived exact allowed tuple-domain product |
+| `alon_ai.command.execution.count` | Counter | `{command}` | monotonic sum, cumulative | `command.type`, `operation.outcome` | derived exact allowed tuple-domain product |
+| `alon_ai.workflow.run.count` | Counter | `{run}` | monotonic sum, cumulative | `workflow.type`, `workflow.terminal_state`, `workflow.runtime` | derived exact allowed tuple-domain product |
+| `alon_ai.workflow.step.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | valid `(workflow.type,workflow.step)`, `operation.outcome`, `workflow.replay` | derived exact allowed tuple-domain product |
+| `alon_ai.workflow.active` | UpDownCounter | `{run}` | nonmonotonic sum, cumulative | `workflow.type`, `workflow.state` | derived exact allowed tuple-domain product |
+| `alon_ai.agent.run.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `agent.type`, `agent.terminal_state`, `execution.mode` | derived exact allowed tuple-domain product |
+| `alon_ai.agent.run.count` | Counter | `{run}` | monotonic sum, cumulative | `agent.type`, `agent.terminal_state`, `execution.mode` | derived exact allowed tuple-domain product |
+| `alon_ai.provider.call.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `provider.capability`, `operation.outcome`, `execution.mode` | derived exact allowed tuple-domain product |
+| `alon_ai.provider.request.count` | Counter | `{request}` | monotonic sum, cumulative | `provider.capability`, `operation.outcome`, `execution.mode` | derived exact allowed tuple-domain product |
+| `alon_ai.provider.input_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.capability`, `execution.mode` | derived exact allowed tuple-domain product |
+| `alon_ai.provider.output_token.count` | Counter | `{token}` | monotonic sum, cumulative | `provider.capability`, `execution.mode` | derived exact allowed tuple-domain product |
+| `alon_ai.provider.request.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.capability`, `execution.mode` | derived exact allowed tuple-domain product |
+| `alon_ai.provider.response.size` | Histogram | `By` | `BYTE_SIZE`, cumulative | `provider.capability`, `execution.mode` | derived exact allowed tuple-domain product |
+| `alon_ai.provider.result.count` | Counter | `{result}` | monotonic sum, cumulative | `provider.capability`, `operation.outcome`, `execution.mode` | derived exact allowed tuple-domain product |
+| `alon_ai.policy.decision.count` | Counter | `{decision}` | monotonic sum, cumulative | `policy.allowed`, `policy.reason_code` | derived exact allowed tuple-domain product |
+| `alon_ai.suppression.denial.count` | Counter | `{denial}` | monotonic sum, cumulative | `suppression.scope`, `suppression.source` | derived exact allowed tuple-domain product |
+| `alon_ai.control.state` | ObservableGauge | `1` | last value, instantaneous (temporality N/A) | `control.name` | derived exact allowed tuple-domain product |
+| `alon_ai.control.acknowledgement.duration` | Histogram | `s` | `FAST_SECONDS`, cumulative | `control.name`, `control.action`, `operation.outcome` | derived exact allowed tuple-domain product |
+| `alon_ai.gmail.send.attempt.count` | Counter | `{attempt}` | monotonic sum, cumulative | `send.attempt_state`, `operation.outcome`, `send.authority_mode` | derived exact allowed tuple-domain product |
+| `alon_ai.gmail.send.boundary.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `gmail.boundary`, `operation.outcome` | derived exact allowed tuple-domain product |
+| `alon_ai.gmail.ambiguity.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `send.authority_mode` | derived exact allowed tuple-domain product |
+| `alon_ai.gmail.ambiguity.resolution.duration` | Histogram | `s` | `AGE_SECONDS`, cumulative | `operation.outcome`, `send.authority_mode` | derived exact allowed tuple-domain product |
+| `alon_ai.gmail.history.page.count` | Counter | `{page}` | monotonic sum, cumulative | `operation.outcome`, `gmail.cursor_gap` | derived exact allowed tuple-domain product |
+| `alon_ai.gmail.history.page.duration` | Histogram | `s` | `DURABLE_SECONDS`, cumulative | `operation.outcome`, `gmail.cursor_gap` | derived exact allowed tuple-domain product |
+| `alon_ai.gmail.recipient_signal.count` | Counter | `{signal}` | monotonic sum, cumulative | `gmail.signal_kind`, `suppression.committed` | derived exact allowed tuple-domain product |
+| `alon_ai.oauth.saga.count` | Counter | `{saga}` | monotonic sum, cumulative | valid `(oauth.identity_kind,oauth.state)`, `operation.outcome` | derived exact allowed tuple-domain product |
+| `alon_ai.oauth.saga.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | valid `(oauth.identity_kind,oauth.state)` | derived exact allowed tuple-domain product |
+| `alon_ai.session.lifecycle.count` | Counter | `{session}` | monotonic sum, cumulative | `session.action`, `operation.outcome` | derived exact allowed tuple-domain product |
+| `alon_ai.budget.reservation.count` | Counter | `{reservation}` | monotonic sum, cumulative | `budget.scope`, `currency`, `budget.state` | derived exact allowed tuple-domain product |
+| `alon_ai.cost.amount` | Counter | `{currency_minor}` | monotonic sum, cumulative; group by `currency` before sum | `provider.operation_class`, `currency` | derived exact allowed tuple-domain product |
+| `alon_ai.cost.reconciliation.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `provider.operation_class`, `cost.state` | derived exact allowed tuple-domain product |
+| `alon_ai.evaluation.case.count` | Counter | `{case}` | monotonic sum, cumulative | valid `(evaluation.suite,agent.type)`, `evaluation.repetition`, `evaluation.passed`, `evaluation.hard_safety` | derived exact allowed tuple-domain product |
+| `alon_ai.incident.open` | ObservableGauge | `{incident}` | last value, instantaneous (temporality N/A) | valid `(incident.severity,incident.trigger_code,incident.alert_id,incident.runbook_id)` | derived exact allowed tuple-domain product |
+| `alon_ai.backup.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | derived exact allowed tuple-domain product |
+| `alon_ai.restore.proof.oldest_age` | ObservableGauge | `s` | last value, instantaneous (temporality N/A) | `backup.data_kind`, `operation.outcome` | derived exact allowed tuple-domain product |
+| `alon_ai.telemetry.export.count` | Counter | `{export}` | monotonic sum, cumulative | `telemetry.signal`, valid `(operation.outcome,telemetry.drop_reason)` | derived exact allowed tuple-domain product |
+| `alon_ai.telemetry.export.lag` | Histogram | `s` | `AGE_SECONDS`, cumulative | `telemetry.signal`, `operation.outcome` | derived exact allowed tuple-domain product |
 
 The aggregation registry is closed: `FAST_SECONDS=[0.005,0.01,0.025,0.05,0.1,0.25,0.5,1,2,5,10]`, `DURABLE_SECONDS=[0.01,0.05,0.1,0.25,0.5,1,2,5,10,30,60,120,300,900,3600]`, `AGE_SECONDS=[1,5,15,30,60,120,300,900,3600,21600,86400,604800,7776000]`, and `BYTE_SIZE=[128,512,1024,4096,16384,65536,262144,1048576,5000000]`. Values use exact base units before recording; milliseconds, token/request/result counts, and bytes never share an instrument. Counters reject negative values; duration/size histograms reject negative/non-finite values; gauges publish one value per allowed attribute set per collection.
 
@@ -157,7 +203,7 @@ Canonical vectors: one provider call with 17 input tokens, 4 output tokens, 1,02
 
 Forbidden metric labels include every UUID/record ID, hashes/digests, idempotency/request/correlation/trace IDs, subject/session/IP/user agent, recipient/business/mailbox/campaign/experiment, actual URL/path/query, prompt/model input/output, exception/error/detail text, provider request ID, source URI/domain, free-form reason, cost-entry/invoice/FX source ID, or timestamps. `model_name`/release commit may appear in logs/traces and dashboards as filters only after bounded registry review, not high-churn metric labels. CI fails when projected series exceed the per-instrument budget (default 500, total 10,000 for the solo deployment).
 
-Unknown instrument/type/unit/aggregation/temporality/attribute/value is rejected at the recording API. CI parses all 39 rows, evaluates only integer multiplication in the `Max series` cells, proves imported catalog counts and valid-tuple sets by set equality, and requires the exact ordered vector `[264,264,460,460,24,120,32,72,72,90,90,18,18,18,18,90,236,21,2,20,50,70,2,10,10,10,12,60,12,40,32,14,28,96,18,10,10,18,15]`, whose sum is exactly `2,906`. It fails on a 40th/missing/duplicate instrument, arithmetic mismatch, row above 500, total above 10,000, catalog drift, version attribute, or uncontrolled dimension. Dashboards never aggregate different UCUM units, different original currencies, or semantically different event kinds into one number; rate conversion is a query over one counter, not a new instrument type.
+Unknown instrument/type/unit/aggregation/temporality/attribute/value rejects before recording. CI parses the complete instrument table and additive sales rows, resolves every literal/import/valid tuple, computes exact per-instrument series as the product of independent domain sizes with tuple sizes counted once, and signs the ordered instrument/attribute/budget manifest. Command replay and policy scope remain in operational records instead of multiplying the counter label sets. Default budget is 500 per instrument and 10,000 total; any excess blocks instrumentation until dimensions are narrowed by an explicit reviewed registry version. Do not silently truncate values, sample counters or raise a limit. No fixed historical count/vector is authoritative. Repeated/missing rows, cardinality drift, or any version/record-ID dimension fail. Units, native currencies and semantic event populations remain separate.
 
 ### Span model and durable execution
 
@@ -176,7 +222,7 @@ Status `ERROR` means the operation failed unexpectedly, not a normal determinist
 | ambiguous send visibility | 100% possibly-called outcomes recorded `AMBIGUOUS` within result transaction/restart recovery; operator alert <=60s; M6 test reconciliation target <=15m | authoritative attempts plus alert timestamps; one hidden/blind retry is Critical |
 | workflow finite completion | >=99% terminal within frozen run deadline; zero immortal active run | workflow rows/snapshots; stall alert at min(5m, configured deadline threshold) |
 | provider result/cost completeness | 100% provider calls have terminal typed result/ledger; 100% incurred costs reconciled <=15m or held/incident | provider/cost rows, not metric inference; missing blocks new paid calls |
-| eval promotion integrity | 100% promotions have 552 cases × three fresh candidate captures and all AGENT-10 gates | manifest/result count/hashes; one missing rejects promotion |
+| eval promotion integrity | 100% promotions have the complete AGENT-10 suite set × three fresh candidate captures and all AGENT-10 gates | manifest/result count/hashes; one missing rejects promotion |
 | telemetry safety availability | exporter lag <2m; no >5m gap for Critical signals | self-health plus DB canary; >5m forces send controls false |
 | backup/restore | successful encrypted backup <=24h old; clean restore proof <=90d old | signed manifests/drill; stale/failed proof blocks M8/control enable |
 | privacy | zero secret/PII/content canary detections in telemetry/eval/Graphify | scans; one finding is Critical leak response |
@@ -188,7 +234,7 @@ SLO percentages never offset a safety objective. Low traffic uses event-count pl
 Five dashboards only initially:
 
 1. **Safety and authority:** both controls, M1/M6/current SEC evidence age, open incidents, suppression denials, final-SEND outcomes, ambiguity age, last provider call and post-disable invariant.
-2. **Workflow/agent/provider:** run states/deadlines/replays, queue age, agent terminal outcomes, six capability latency/errors/usage, active promotion/version.
+2. **Workflow/agent/provider:** run states/deadlines/replays, queue age, agent terminal outcomes, registered capability latency/errors/usage, active promotion/version.
 3. **Gmail/OAuth/replies:** saga states/age/replay, mailbox consistency, send boundary/outcome, rate lease, history cursor gap/age, replies/unsubscribe/bounces, public-route availability/rate/WAF outcomes—with no recipient/mailbox/token/IP labels.
 4. **Cost/budget/evaluation:** reservation/reconciliation, original currencies and ILS reporting in panels (not combined metric), caps/burn, eval suite/repetition/hard gates/rolling windows.
 5. **Platform/recovery/privacy:** API/DB/worker, telemetry export, disk/cert/clock, backup/restore age, retention/rights jobs, auth/security events, release provenance.
@@ -221,6 +267,59 @@ Required alerts: any zero-tolerance violation; control disable ack timeout; ambi
 | `ALERT_RECIPIENT_HASH_ENUMERATION -> CRITICAL -> RECIPIENT_HASH_ENUMERATION -> IR-04` | ten denied restricted-hash queries in 60s or 100 total queries/hour outside a registered batch purpose |
 
 Unknown/mismatched severity/alert/trigger/runbook/version is rejected before notification and incident insert, increments only a bounded registry-error counter, forces the affected safety control false, and pages through the local fallback using the full `CRITICAL -> ALERT_TELEMETRY_BLINDNESS -> TELEMETRY_OR_ALERT_BLINDNESS -> IR-11` route. Alert replay uses `(catalog_version,alert_id,dedupe_window)` and cannot change routing. Clear/resolve is evidence-driven and never enables a control.
+
+## Sales metrics, attribution, and alerts
+
+The following analytical registry is normative for metric definitions, not a browser calculation or additional high-cardinality time series. MetricSnapshotService/BACKEND-06 derive it from immutable authoritative ID sets using a frozen cutoff, evidence transform and definition version. Every row retains numerator/denominator, status, cohort, agent strategy version, GlobalStrategyPackage and StrategyActivation in private evidence/report joins. Null means unavailable/insufficient; zero is recorded only with complete evidence. Release/configuration/activation IDs never become OTel labels.
+
+| Metric key | Exact population and calculation |
+| --- | --- |
+| discovery.yield | accepted distinct LeadDiscoveryCandidate identities / raw observed candidate identities within the approved source/query snapshot |
+| discovery.duplicate_rate | observations deterministically linked to an already represented business / all observed candidates; source conflicts remain separate unknowns |
+| research.coverage | required dossier fields with accepted FACT evidence / required fields; ESTIMATE/UNKNOWN do not pass factual coverage |
+| research.factual_accuracy | independently verified correct fact claims / reviewed factual claims, with label coverage/confidence; unreviewed claims never count correct |
+| qualification.precision | independently verified true-qualified decisions / reviewed positive decisions, reported separately for PRELIMINARY and FINAL under the same offer filters |
+| personalization.evidence_coverage | personalized factual claims with accepted supporting spans / all personalized factual claims; no-claim case has ZERO_DENOMINATOR |
+| delivery.rate | unique contacted recipients with verified delivery evidence / unique provider-accepted contacted recipients; Gmail acceptance alone is not delivery and unavailable delivery stays unknown |
+| bounce.rate | unique provider-accepted recipients with qualifying bounce observation / unique provider-accepted contacted recipients; show hard and soft categories separately |
+| complaint.rate | unique contacted recipients with verified complaint / unique provider-accepted contacted recipients |
+| reply.rate | unique contacted recipients with accepted inbound reply / unique provider-accepted contacted recipients |
+| reply.positive_rate | recipients with accepted positive ReplyEvaluation / recipients with classified replies; display classification coverage and positive/contacted separately |
+| commitment.rate | distinct qualified PURCHASE_PROPOSAL commitments / unique provider-accepted contacted recipients; CALL_NEXT_STEP is not purchase commitment |
+| objection.category_count | one accepted objection occurrence per reply/proposal/canonical category key; count by the minimized closed category transform |
+| objection.resolution_rate | objection occurrences with independently evidenced resolution / mature objection occurrences with known outcomes; show unknown/censored count |
+| negotiation.outcome_rate | terminal proposal count for accepted/rejected/expired/exception/closed disposition / terminal proposals; active proposals remain separate |
+| negotiation.discount_bps | exact server effective discount versus the selected accepted offer variant's undiscounted net price; report count/mean/p95 by complete decision population |
+| negotiation.margin_bps | exact CommercialPolicyEngine contribution / authoritative net revenue times 10,000 under stored rounding; retain minimum/distribution and any floor violation |
+| negotiation.scope_change_rate | presented proposals selecting an approved non-baseline scope variant / all presented proposals; unauthorized scope is a safety violation |
+| booking.rate | distinct BookingIntents with positive CREATE confirmation / distinct qualified CALL_NEXT_STEP agreements; reschedule never adds a booking |
+| booking.show_rate | verified attended calls / due confirmed calls not cancelled before their scheduled start; unknown attendance/censored calls are explicit and prevent complete-rate claims |
+| cost.per_qualified_lead | reconciled allocated acquisition spend / distinct FINAL-qualified leads at the same frozen cutoff |
+| cost.per_commitment | complete reconciled allocated experiment/cohort spend / distinct qualified PURCHASE_PROPOSAL commitments |
+| cost.per_booking | complete reconciled allocated experiment/cohort spend / distinct confirmed BookingIntents; all failed/cancelled/reconciliation costs remain included |
+| strategy.pre_post_delta | difference and uncertainty between comparable frozen pre/post activation metric populations using each action's original strategy/activation; list confounders and never claim causality from correlation |
+| learning.promotion_rate | per-agent PROMOTE results passing deterministic promotion / all closed per-agent learning results; separately show proposal versus successful package promotion |
+| learning.rollback_rate | applied compatible rollback activations / active/past activations eligible for the signed observation window; pending/failed requests remain separate |
+| strategy.cross_campaign_transfer | comparable target-campaign post-boundary metric delta versus its frozen prior baseline and approved holdout, stratified by triggering/secondary/guardrail evidence; negative and missing results cannot be excluded |
+
+Objection telemetry uses only the explicit enum transform in the registry; UNKNOWN is a minimized classification, not an invented objection. Denominators freeze before evaluation, mature windows are pre-registered, event retries/late evidence cannot inflate counts, and synthetic/recorded/owned-alias populations remain separate from real demand. Qualified call intent is distinct from purchase acceptance throughout.
+
+Additional exact operational instruments join the instrument table above:
+
+| Instrument | OTel instrument | UCUM unit | Aggregation / temporality | Allowed attributes only | Max series |
+| --- | --- | --- | --- | --- | --- |
+| alon_ai.booking.action.count | Counter | {action} | monotonic sum, cumulative | booking.action, operation.outcome, execution.mode | derived exact allowed tuple-domain product |
+| alon_ai.booking.ambiguity.oldest_age | ObservableGauge | s | last value, instantaneous | booking.action | derived exact allowed tuple-domain product |
+| alon_ai.booking.action.duration | Histogram | s | DURABLE_SECONDS, cumulative | booking.action, operation.outcome | derived exact allowed tuple-domain product |
+| alon_ai.commercial.decision.count | Counter | {decision} | monotonic sum, cumulative | policy.allowed, execution.mode | derived exact allowed tuple-domain product |
+| alon_ai.objection.outcome.count | Counter | {objection} | monotonic sum, cumulative | objection.category, objection.resolution, execution.mode | derived exact allowed tuple-domain product |
+| alon_ai.checkpoint.decision.count | Counter | {checkpoint} | monotonic sum, cumulative | checkpoint.decision, execution.mode | derived exact allowed tuple-domain product |
+| alon_ai.learning.result.count | Counter | {result} | monotonic sum, cumulative | agent.type, learning.result, execution.mode | derived exact allowed tuple-domain product |
+| alon_ai.strategy.action.count | Counter | {activation} | monotonic sum, cumulative | strategy.action, operation.outcome, execution.mode | derived exact allowed tuple-domain product |
+
+Only the unique committed record/outbox consumption increments counters; provider retries, restored events and duplicated callbacks do not. Booking ambiguity appears within the result/recovery transaction and alerts within 60 seconds, escalating investigation after 15 minutes without a blind retry. Any unauthorized booking, fabricated commitment, commercial floor breach, mid-cohort mutation, unknown serialized checkpoint/learning result or 1,000-ceiling breach is a zero-tolerance safety condition. Missing checkpoint cost/evidence closes admission; stale or incompatible activation blocks affected actions; stored monitored deterioration triggers automatic pause/checkpoint closure and boundary rollback.
+
+Use the exact existing routes in OBS-05's sales-funnel incident table for commercial, booking, checkpoint/strategy and learning-privacy alerts. Add booking/calendar, checkpoint evidence and global strategy/transfer panels to the existing five dashboard destinations. A metric alert never grants send/booking authority, increases capacity, or mutates a running cohort.
 
 ## Ordered implementation tasks
 

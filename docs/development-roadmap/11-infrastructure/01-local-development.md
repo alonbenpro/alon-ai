@@ -4,7 +4,7 @@
 **Status:** Planned M8 local-environment hardening; a limited lockfile/host/Compose foundation exists today
 **Milestone:** M1, M4 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `INFRA-01-T01 -> INFRA-01-T02 -> INFRA-01-T03 -> INFRA-01-T04 -> INFRA-01-T05 -> INFRA-01-T06 -> INFRA-01-T07 -> INFRA-01-T08`; cross-document task Inputs `INFRA-01-T01 <- TEST-01-T02; INFRA-01-T05 <- TEST-01-T01,TEST-01-T02; INFRA-01-T06 <- DB-06-T02,BACKEND-02-T02; INFRA-01-T07 <- DB-01-T05; INFRA-01-T08 <- TEST-01-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): Current `Makefile`, `.env.example`, Dockerfiles, `infra/compose.yaml`, [local runbook](../../runbooks/local-development.md), TEST-01/02, and the selected Pydantic AI/DBOS/PostgreSQL architecture
+**Prerequisites:** exact task Inputs `INFRA-01-T01 <- TEST-01-T02; INFRA-01-T02 <- INFRA-01-T01; INFRA-01-T03 <- INFRA-01-T02; INFRA-01-T04 <- INFRA-01-T03; INFRA-01-T05 <- INFRA-01-T04,TEST-01-T01,TEST-01-T02; INFRA-01-T06 <- INFRA-01-T05,DB-06-T02,BACKEND-02-T02; INFRA-01-T07 <- INFRA-01-T06,DB-01-T05; INFRA-01-T08 <- INFRA-01-T07,TEST-01-T02`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
 **Outputs:** Exact host/Compose workflows, environment isolation, safe reset/seed/migration commands, fixture-only provider modes, local evidence, and current-vs-planned boundary
 **Unlocks:** Reliable implementation of M1-M8 tasks and CI parity in INFRA-02
 **Risk:** High
@@ -56,6 +56,16 @@ docker compose --project-name alon-ai-dev --env-file .env.example -f infra/compo
 Reset is deliberately separate. `scripts/dev/reset_database.sh --project alon-ai-dev --database alon_ai --confirm alon-ai-dev:alon_ai` first resolves Compose labels, container ID, database name, PostgreSQL system identifier, mounted volume name/path and both controls; it refuses wildcard/empty/mismatched/live labels. It takes a disposable schema manifest, stops API/worker, removes only `alon-ai-dev_postgres_data`, recreates/migrates/seeds, then proves controls false. No `docker system prune`, broad volume glob, or unresolved variable is permitted.
 
 All setup/migration/generation/smoke requirements map exactly to `T7-LOCAL-SMOKE`; reset/cleanup requirements map exactly to destructive `T7-LOCAL-RESET` in the [TEST-01 closed command manifest](../10-testing/01-testing-strategy.md#closed-command-manifest). The invocations use profiles `LOCAL_COMPOSE` and `LOCAL_DISPOSABLE` respectively; reset must include the signed target manifest and confirmation digest. Docker unavailable exits `30`, a label/database/system-ID/volume/control mismatch exits `50` before stop/removal, and incomplete cleanup exits `40`; none counts as pass. Set equality proves the two domains are disjoint and complete.
+
+## Local autonomous-sales fixture topology
+
+All new product capabilities remain planned. Extend the existing loopback Compose topology with the same application workers/services and isolated fixtures; no additional product backend is introduced. Seed both idea origins, accepted offer economics, source/candidate/dossier/PRELIMINARY/FINAL records, conversations/negotiations, calendar intents/slots/actions, four cohorts/checkpoints and multiple global-strategy activations using deterministic synthetic identities.
+
+The recovery/release evidence must bind the accepted OfferPackage/economics/claim hashes; approved agent configurations and GlobalStrategyPackage/StrategyActivation/rollback lineage; campaign/cohort ordinals, membership/query/hash, caps and frozen qualification/causal/evidence/metric versions; CheckpointEvidenceBundle/cutoff/decision/learning triggers; full conversation/reply/negotiation state and counters; BookingIntent/slot/confirmation/action/attempt/result/observation/notification state; current suppression/tombstones/legal-policy; immutable action authorizations/consumptions; costs/reservations; and all current control/checkpoint generations.
+
+Ordinary local/CI profiles deny all Gmail/calendar/provider network and keep PRODUCT_OUTREACH, TEST_INBOX_SENDING, CALENDAR_WRITES and TEST_CALENDAR_WRITES false. Model/read fixtures and separate Gmail/calendar read/write spies are injected only into their named owners; the browser never receives a provider SDK or credential. Dedicated M6 profiles require signed owned-resource gates and distinct credential/calendar/mailbox namespaces; copying a fixture profile cannot enable a real target.
+
+Local startup verifies schema/runtime/API/strategy/retention manifest hashes, current baseline attribution and source scopes before any run. Run the full deterministic sales simulation and bounded crash/replay fixtures against fresh real PostgreSQL. Restart/reset requires exact disposable target identity and cannot reuse real contact/message/calendar evidence. Reset cancels local work and preserves signed fixture reports, not live data; destructive safeguards and TEST-01 runner exit semantics remain unchanged.
 
 ## Ordered implementation tasks
 

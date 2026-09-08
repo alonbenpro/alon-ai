@@ -4,7 +4,7 @@
 **Status:** Planned M3-M8 provider-cost ledger; no live providers, reservations, cost entries, invoices, FX capture, or cost dashboards exist today
 **Milestone:** M3, M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `OBS-03-T01 -> OBS-03-T02 -> OBS-03-T03 -> OBS-03-T04 -> OBS-03-T05`; cross-document task Inputs `OBS-03-T01 <- PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,PROVIDER-06-T01,PROVIDER-01-T02,PROVIDER-02-T01,PROVIDER-01-T01; OBS-03-T02 <- DB-05-T02; OBS-03-T05 <- AGENT-10-T01,AGENT-10-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [DB-01 budgets](../02-database/01-core-data-model.md), [DB-05 `cost_entries`](../02-database/05-audit-events-and-idempotency.md), [AGENT-01 provider meta/ledger](../04-agents/01-agent-runtime-and-contracts.md), [AGENT-10 eval costs](../04-agents/10-agent-evals-and-versioning.md), six provider contracts, BACKEND-03, SEC-05, and OBS-01/02
+**Prerequisites:** exact task Inputs `OBS-03-T01 <- PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,PROVIDER-06-T01,PROVIDER-01-T02,PROVIDER-02-T01,PROVIDER-01-T01; OBS-03-T02 <- OBS-03-T01,DB-05-T02; OBS-03-T03 <- OBS-03-T02; OBS-03-T04 <- OBS-03-T03; OBS-03-T05 <- OBS-03-T04,AGENT-10-T01,AGENT-10-T05`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
 **Outputs:** Original-currency cost ledger, reservation/reconciliation protocol, immutable pricing/usage evidence, Bank of Israel ILS projection, discrepancy handling, budgets/alerts, and tests
 **Unlocks:** Cost-gated provider calls, M7 cost reports, agent promotion/cost rollback, and M8 financial operations
 **Risk:** Critical
@@ -72,6 +72,18 @@ Every entry links to exactly one narrowest authoritative shape: agent run plus i
 
 Hard caps exist by provider call, agent config/suite, workflow run, experiment/campaign, provider/currency daily/monthly, and deployment month. Native AGENT-10 per-case mean/p95/max ceilings remain exact. Alert: one max-cost breach immediately; reservation/cost mismatch or unknown charge at once; 80% account/campaign threshold warning; 100% denies; invoice discrepancy; FX evidence older/missing; daily spend anomaly versus fixed cap—not a learned model. `alon_ai.cost.amount` labels provider/operation/currency only; ILS is derived in reports and not emitted as a second spend metric that could be double summed.
 
+## Commercial and checkpoint cost truth
+
+Attribute each immutable cost and reservation to the authoritative provider/action/run plus experiment, campaign, cohort, agent strategy, GlobalStrategyPackage and StrategyActivation. Before cohorts exist, use EXPERIMENT_BASELINE attribution and retain experiment-level discovery/research/offer costs separately. Never invent a cohort or silently redistribute costs after seeing results. Shared checkpoint/global-evaluation costs retain their triggering checkpoint and frozen allocation rule; cross-campaign reports disclose separately allocated transfer costs and never count the same ledger entry twice.
+
+Include discovery/search/page/business evidence, preliminary qualification, deep research, final qualification, writing, reply evaluation, commercial evaluation, Gmail reads/writes, calendar availability/create/reschedule/cancel/reconciliation, checkpoint evaluation and global-learning model/evaluation costs. Deterministic operations with no provider charge record actual zero only with evidence; unknown provider usage remains reserved/unreconciled. Billed failures/cancellations and ambiguity polling count. Pricing/currency/fee/tax/FX/rounding versions and timestamps remain immutable.
+
+CommercialPolicyEngine alone calculates revenue net of tax, provider/payment fees, delivery costs and contribution margin using the accepted OfferPackage versions. A negotiated discount/scope/pilot/payment schedule must satisfy both minimum net price and margin floor. Inferred budget cannot fill missing cost evidence. Unknown or stale economics makes the affected proposal ineligible; missing reconciliation or OperatorTimeEvidenceV1 verification blocks positive commercial/checkpoint economics rather than imputing zero.
+
+Cost per qualified lead is allocated reconciled experiment/cohort acquisition cost divided by distinct FINAL-qualified leads in the same frozen population. Cost per qualified commitment and per confirmed booking use complete allocated experiment/cohort spend through the same cutoff, divided respectively by distinct evidenced PURCHASE_PROPOSAL commitments and positive confirmed BookingIntents. Count one lead/commitment/booking identity once; reschedules, repeated replies, cancellations and provider retries retain their cost without adding a conversion. Zero denominators return ZERO_DENOMINATOR; missing cost/FX/time or incomplete outcome evidence returns INSUFFICIENT_EVIDENCE with null value.
+
+Reports expose native-currency groups and a separately complete verified ILS projection. Recompute independently from cost-entry ID sets and stored allocation/FX rules. Test split campaigns, pre-cohort costs, promotion/rollback boundaries, cross-campaign reuse, duplicate events, billed failure, cancellation, unavailable pricing and one-minor-unit floor crossings. Cash reservations, provider ceilings and operator time are separate constraints; no checkpoint CONTINUE or strategy PROMOTE increases any budget.
+
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=OBS-03-T01 milestone=M3 depends_on=PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,PROVIDER-06-T01,PROVIDER-01-T02,PROVIDER-02-T01,PROVIDER-01-T01 mode=parallel locks=provider-contracts -->
@@ -115,4 +127,4 @@ Retain price/currency/FX registry versions, official source captures/access date
 
 ## Dependencies and next deliverable
 
-OBS-03 supplies cost evidence to [OBS-04](04-agent-and-workflow-evaluations.md), SEC-05 and reports. Passing it unlocks bounded provider use only; budget availability never overrides quality, privacy, compliance, suppression, approval or SEND authority.
+OBS-03 supplies cost evidence to [OBS-04](04-agent-and-workflow-evaluations.md), SEC-05 and reports. Passing it unlocks bounded provider use only; budget availability never overrides quality, privacy, compliance, suppression, action authorization or SEND authority.

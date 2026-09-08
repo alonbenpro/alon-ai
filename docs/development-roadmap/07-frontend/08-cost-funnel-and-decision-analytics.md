@@ -1,108 +1,50 @@
-# Cost, Funnel, and Decision Analytics
+# Sales Funnel, Economics, and Strategy Analytics
 
 **Document ID:** FRONTEND-08
-**Status:** Planned M7 read/decision surface; no product reports, metrics, costs, or decision UI exist today
-**Milestone:** M7 (exact scope and prerequisites are declared per task)
+**Status:** Planned product frontend; current implementation is limited to the readiness foundation and generated health client
+**Milestone:** M7
 **Owner:** Solo operator
-**Prerequisites:** exact local order `FRONTEND-08-T01 -> FRONTEND-08-T02 -> FRONTEND-08-T03 -> FRONTEND-08-T04`; cross-document task Inputs `FRONTEND-08-T01 <- BACKEND-06-T04,BACKEND-02-T05; FRONTEND-08-T03 <- BACKEND-06-T03; FRONTEND-08-T04 <- BACKEND-06-T02,BACKEND-02-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [PRODUCT-02](../00-product-strategy/02-success-metrics.md), [DB-02 metrics](../02-database/02-experiment-and-offer-schema.md), [DB-05 cost ledger](../02-database/05-audit-events-and-idempotency.md), [BACKEND-06](../06-backend/06-reporting-and-query-services.md), and [BACKEND-02 report routes](../06-backend/02-api-contracts.md#exact-route-and-openapi-operation-manifest)
-**Outputs:** Reproducible overview/funnel/cost/timeline/provider analytics, explicit denominators/freshness/currency evidence, and immutable decision confirmation
-**Unlocks:** Evidence-based `SCALE`, `REVISE`, `KILL`, or `INCONCLUSIVE` recording; never automatic scale/spend
-**Risk:** High
+**Prerequisites:** exact task Inputs `FRONTEND-08-T01 <- BACKEND-06-T04,BACKEND-02-T05; FRONTEND-08-T02 <- FRONTEND-08-T01; FRONTEND-08-T03 <- FRONTEND-08-T02,BACKEND-06-T03; FRONTEND-08-T04 <- FRONTEND-08-T03,BACKEND-06-T02,BACKEND-02-T05,BACKEND-01-T09,BACKEND-01-T10`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
+**Outputs:** Server-authoritative sales control-plane views, guarded typed commands and browser evidence
+**Unlocks:** M7 integrated dashboard and M8/M9 acceptance evidence; no live authority
+**Risk:** Critical
 **Complexity:** XL
 
-## Outcome and timing
+## Outcome and planned surfaces
 
-The funnel renders every stage as a separate cohort and the full program as a deduplicated cumulative view. It displays raw denominators for delivery, positive reply, qualified conversation, paid commitment, provider cost, operator time, and contribution margin; excluded/late/duplicate observations remain visible as reasons, not silently dropped. Stage 1-3 may display `CONTINUE`; only Stage 4 may display a `SCALE` candidate.
+Render the funnel from distinct candidates → preliminary-qualified → deeply researched → finally qualified → contacted unique recipients → replies → positive replies → qualified commitments → confirmed bookings → attended calls. Keep proposals, call agreements, purchase commitments and confirmed bookings distinct. A booking requires positive provider evidence, and attendance needs verified evidence. Follow-up messages do not add recipients to the stage denominator.
 
-At `/experiments/[experimentId]`, the report panels can answer what happened, which exact records counted, what was spent, what remains reserved/discrepant, whether data is complete/fresh, and which immutable metric snapshot/evidence/rule supports an operator decision. Global provider operations render inside `/recovery`. Every number and decision input comes from a server projection; the browser formats but does not calculate authoritative funnel, conversion, cost, ILS, policy, or decision results.
+Every measure carries the server's numerator/denominator, definition/query/evidence-transform version, observation cutoff, cohort, agent strategy version and activation. Show AVAILABLE, ZERO_DENOMINATOR and INSUFFICIENT_EVIDENCE as returned; unavailable inputs are not zero. Unresolved sends/bookings, suppression, missing facts and late observations remain visible attention buckets.
 
-## Current repository state
+Required panels cover discovery yield/duplicate rate; research coverage/factual accuracy; preliminary/final qualification precision; personalization evidence coverage; delivery/bounce/complaint/reply/positive rates; qualified commitments; objection categories/resolution; negotiation outcomes/discount/margin/scope changes; booking/show rates; cost per qualified lead/commitment/booking; pre/post activation performance; per-agent promotion/rollback rate; and cross-campaign transfer. Use the exact OBS-02/BACKEND-06 formulas and metric definitions, never client arithmetic as authority.
 
-There are no product metric/cost/provider/event records, query services, report routes, exported snapshots, or charts. The current frontend only calls readiness. BACKEND-06 and all six report operations are planned.
+Offer economics and checkpoint success require reconciled provider/research/model/send/calendar/evaluation costs, delivery/fees/taxes/FX/rounding versions and verified OperatorTimeEvidenceV1 where applicable. Display original-currency groups separately from verified ILS projections, reserved/actual/unknown amounts, evidence freshness and missing ledger items. No estimated total can authorize below-floor terms or positive checkpoint economics.
 
-## Scope and non-goals
-
-In scope: experiment overview/funnel/cost/timeline panels, global provider operations link, query provenance, warnings/completeness, exact counts/ID-set hashes/conversions/denominators, original currency and recorded ILS evidence, discrepancy/ambiguity, accessible charts with data tables, and immutable decision command. Non-goals: client aggregation, inferred opens/delivery, guessed FX, vanity charts, hidden zero substitution, BI warehouse, cross-experiment recipient export, materialized frontend truth, or auto-decision.
-
-## Exact planned implementation surfaces
-
-Create report Client Components inside `src/app/(operator)/experiments/[experimentId]/page.tsx` and `src/app/(operator)/recovery/page.tsx`: `src/features/reports/components/{report-provenance,overview-panel,funnel-panel,funnel-chart,funnel-data-table,cost-panel,cost-table,cost-chart,timeline-panel,timeline-table,provider-operations,metric-value,decision-evidence,decision-dialog}.tsx`, `src/features/reports/hooks/{use-experiment-reports,use-paginated-report}.ts`, `src/features/reports/formatters.ts`, and matching unit/browser tests. Data visualizations are progressive enhancement over semantic tables.
-
-### Shared report and freshness contract
-
-Every report renders exact `schema_version`, `projection_version`, UTC `as_of`, `source_event_high_watermark` (`recorded_at,event_id` or null), `complete`, sorted `warnings`, and `correlation_id`. `stale=true` may appear inside 200 only with a complete documented cutoff. `complete=false` is limited to explicitly optional sections and lists why. Missing/corrupt authoritative source is 503 and no chart renders misleading partial truth.
-
-Paginated timeline/provider/approval/recovery pages retain one exported PostgreSQL snapshot. The client treats cursor as opaque, never logs/persists/edits it, and preserves `as_of`/high-watermark across pages. `REPORT_SNAPSHOT_EXPIRED` discards all accumulated pages and restarts page one with an announcement. It never appends a new snapshot.
-
-### Exact report operations and query behavior
-
-| Panel | URL / `operationId` / key | Exact output use and refetch |
-| --- | --- | --- |
-| overview | `GET /api/v1/reports/experiments/{experiment_id}/overview`, `getExperimentOverviewReport`; `['report','experiment',id,'overview']` | canonical experiment/run/campaign/controls/incidents/decision/caps/authority only; 15 seconds active, 60 terminal/on-focus |
-| funnel | `GET /api/v1/reports/experiments/{experiment_id}/funnel`, `getExperimentFunnelReport`; `['report','experiment',id,'funnel']` | server counts, ID-set hashes, conversions, losses/attention; 30 seconds active, 60 terminal/on-focus |
-| costs | `GET /api/v1/reports/experiments/{experiment_id}/costs`, `getExperimentCostReport`; `['report','experiment',id,'costs']` | reserved/released/reconciled/expired; provider/operation/original currency; recorded ILS totals/cap remaining/discrepancy IDs; 30/60 seconds |
-| timeline | `GET /api/v1/reports/experiments/{experiment_id}/timeline`, `getExperimentTimelineReport`; `['report','experiment',id,'timeline',{cursor,limit}]` | safe total order `(occurred_at,recorded_at,record_kind,event_or_record_id)`; manual/infinite paging under one snapshot, no automatic causality inference |
-| providers | `GET /api/v1/reports/providers`, `getProviderOperationsReport`; `['report','providers',{cursor,limit}]` | capability/operation/provider/config, outcomes/errors/time/tokens/cost/evidence/ambiguity/discrepancy; `/recovery`, manual paging/on-focus |
-| approvals | `GET /api/v1/reports/approvals`, `getApprovalQueueReport`; `['report','approvals',{cursor,limit}]` | consumed by FRONTEND-06; not recomputed here |
-
-All are authenticated GET queries with no mutation, idempotency key, `If-Match`, or optimistic behavior. Backend cache may be at most 15 seconds except freshness-critical surfaces; the UI always displays returned `as_of`. Report panel errors are isolated by `QueryErrorResetBoundary` so one optional section cannot erase other valid snapshots; shared decision actions require all authoritative inputs complete/current.
-
-### Exact funnel, cost, and metric presentation
-
-Render server counts for researched leads, qualified, eligible members, send intents, direct sent, reconciled sent, replies, positive replies, suppressed, disqualified, conflicts, permanent/retryable/ambiguous/reconciling. Never count event rows or add direct + reconciled when the response already returns deduplicated `sent_messages`.
-
-Every conversion displays `numerator`, `denominator`, returned `value` or null, and exact status `AVAILABLE`, `ZERO_DENOMINATOR`, or `INSUFFICIENT_EVIDENCE`, plus definition/rule/query versions and ID-set hashes when present. A zero denominator is not missing; missing is not zero; insufficient evidence is not failure. Formatting may round visually but accessible text exposes the exact returned value and raw numerator/denominator. The client never divides.
-
-Cost shows integer minor amount and three-letter original currency for every group. Unlike currencies remain separate. ILS reporting total appears only when the response includes complete conversion amount/rate/source/date evidence; otherwise the ILS section is incomplete with discrepancy IDs. Reservations are not spend. Gmail operational calls may be counted with zero fee without inventing a cost. Client-side FX, floats, current exchange-rate lookup, and subtracting cap from mixed currencies are forbidden.
-
-Charts use semantic SVG/canvas only as a visual companion. Each has a visible title, text summary, legend with shape/pattern and text, and adjacent fully equivalent HTML table. Keyboard users can reach data rows without traversing every decorative mark. `prefers-reduced-motion` disables transitions. Color contrast is at least 3:1 for chart marks and 4.5:1 for normal text.
-
-### Immutable decision action
-
-The `DecisionEvidence` panel uses server-returned stage ordinal, metric snapshot ID/version/hash, evidence bundle refs, rule/query version, complete/warnings/as-of, counts/denominators, and existing barrier/decision status. Before enabling confirmation, it calls `getArtifact` for every evidence-bundle artifact and displays the exact returned accepted status/version/content hash beside the decision request; missing, stale, rejected, superseded, or mismatched evidence blocks the action without calculating acceptance. It does not run PRODUCT-02 thresholds. `recordExperimentDecision` uses the generated `RecordStageBarrierRequestV1|RecordFinalExperimentDecisionRequestV1 -> ResourceResponseV1` union, mutation `['experiment',id,'record-decision']`, one key, latest experiment `If-Match`, and the stage-correct enum plus generated snapshot/evidence/rule/reason fields.
-
-The confirmation repeats immutable inputs and warns: a decision does not create another experiment, change a control, allocate budget, contact a recipient, or scale automatically. Require typing the decision kind. Pending disables repeat paths. On 201, invalidate experiment/list/overview/funnel/cost/timeline and render returned immutable decision. Conflict/stale report refetches everything and requires new confirmation.
-
-Loading keeps units/labels blank rather than zero. Empty timeline/funnel explicitly reports the server snapshot has no records. Stale shows age/as-of and disables decision. Partial shows warnings and prevents decision when an authoritative section is incomplete. Redacted timeline entries remain hash/ID-visible. A decided experiment is terminal and analytics remain readable.
+Checkpoint panels display CONTINUE/REVISE/KILL/INCONCLUSIVE/SAFETY_STOP at increments 100/200/300/400 and cumulative 100/300/600/1,000. Global strategy panels display PROMOTE/KEEP/ROLLBACK/INSUFFICIENT_EVIDENCE for every applicable agent, with approved comparison/holdout/transfer/guardrail summaries. The triggering stage is primary evidence; similar campaigns secondary; all relevant history/failures/incidents are guardrails. Comparisons show cohort/selection/definition differences and uncertainty; pre/post correlation is not causal proof. No UI filter modifies a frozen decision or activation.
 
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=FRONTEND-08-T01 milestone=M7 depends_on=BACKEND-06-T04,BACKEND-02-T05 mode=serial locks=frontend-client -->
-- [ ] **Implement report provenance/query hooks —** Input: six generated operations and snapshot rules, using BACKEND-02 canonical generated client/types. Operation: render version/as-of/high-watermark/completeness/warnings/correlation, stable paging, and expiry restart. Output: reproducible panels. Test evidence: concurrent-commit, expired/lost cursor, stale/partial/503 fixtures. Failure behavior: discard mixed pages and disable decision.
+- [ ] **Render attributed funnel —** Input: BACKEND-06 frozen metric projections. Operation: show distinct recipients, staged qualification, replies/commitments/bookings/attendance with denominators. Output: funnel analytics. Test evidence: zero/missing/unresolved data and call-versus-purchase tests. Failure behavior: retain canonical blocked/unknown state; no authority, retry, success or admission is inferred.
 <!-- roadmap-task id=FRONTEND-08-T02 milestone=M7 depends_on=FRONTEND-08-T01 mode=serial locks=frontend-client -->
-- [ ] **Implement funnel and accessible chart/table —** Input: server counts/conversions/hashes. Operation: display exact statuses/numerators/denominators and equivalent visualization without arithmetic. Output: honest funnel. Test evidence: zero denominator, missing, insufficient evidence, direct/reconciled dedupe, suppression/ambiguity fixtures. Failure behavior: no fabricated zero/value.
+- [ ] **Render objections and negotiation outcomes —** Input: server aggregate metric definitions and minimized evidence. Operation: display objection/resolution, discount/margin/scope and booking/show outcomes. Output: commercial analytics. Test evidence: unknown cost or outcomes remain unavailable. Failure behavior: retain canonical blocked/unknown state; no authority, retry, success or admission is inferred.
 <!-- roadmap-task id=FRONTEND-08-T03 milestone=M7 depends_on=FRONTEND-08-T02,BACKEND-06-T03 mode=serial locks=frontend-client -->
-- [ ] **Implement cost/provider evidence —** Input: server original-currency/reservation/conversion/discrepancy fields. Operation: group/display exactly as returned and expose recorded ILS provenance. Output: cost diagnosis. Test evidence: unlike currencies, rounding vectors, missing FX, reservation lifecycle, provider parity. Failure behavior: incomplete ILS and visible discrepancy.
-<!-- roadmap-task id=FRONTEND-08-T04 milestone=M7 depends_on=FRONTEND-08-T03,BACKEND-06-T02,BACKEND-02-T05 mode=serial locks=frontend-client -->
-- [ ] **Implement immutable decision confirmation —** Input: fresh complete server snapshot/rule references plus refetched accepted artifact versions/hashes, using BACKEND-02 canonical generated client/types. Operation: confirm exact generated request/key/ETag, submit once, invalidate/refetch, and render immutable result. Output: operator-owned decision plus implemented decision-handoff UI surface/action contract. Test evidence: each kind, stale report/ETag, duplicate decision, network unknown, no downstream authority. Failure behavior: remain evaluating and preserve inputs.
+- [ ] **Render cost and commercial truth —** Input: OBS-03 reconciled cost/FX/operator-time evidence. Operation: show native currencies and valid ILS totals plus costs per qualified lead/commitment/booking. Output: cost evidence panel. Test evidence: mixed currency, unreconciled cost, missing time and floor boundary cases. Failure behavior: retain canonical blocked/unknown state; no authority, retry, success or admission is inferred.
+<!-- roadmap-task id=FRONTEND-08-T04 milestone=M7 depends_on=FRONTEND-08-T03,BACKEND-06-T02,BACKEND-02-T05,BACKEND-01-T09,BACKEND-01-T10 mode=serial locks=frontend-client -->
+- [ ] **Compare checkpoint and global strategies —** Input: checkpoint bundles and strategy/activation reports. Operation: show frozen decisions, per-agent results, pre/post and cross-campaign transfer with confidence/guardrails. Output: learning analytics. Test evidence: no causal claim from correlation, no mid-cohort mutation or client promotion. Failure behavior: retain canonical blocked/unknown state; no authority, retry, success or admission is inferred.
 
-## Test strategy
+## Test strategy and acceptance
 
-- **Math `test_frontend_never_calculates_conversion_denominator_cost_ils_or_decision`:** AST/runtime spy.
-- **Funnel `test_zero_denominator_missing_and_insufficient_evidence_render_distinctly`:** exact values.
-- **Cost `test_original_currencies_and_recorded_ils_evidence_never_silently_mix`:** discrepancy visible.
-- **Snapshot `test_expired_timeline_cursor_discards_pages_and_restarts_one`:** no mixed snapshot.
-- **Decision `test_recorded_decision_uses_fresh_server_refs_and_grants_no_scale_send_or_spend`:** network allowlist.
-- **Accessibility `test_every_chart_has_equivalent_table_noncolor_encoding_and_reduced_motion`:** axe/keyboard/contrast.
+- [ ] Each displayed state, amount, membership, decision and allowed action comes from an exact generated server DTO and accepted version.
+- [ ] Strict unknown-field/schema/version, stale generation, command replay, timeout, auth, privacy and keyboard tests pass against the owning service contract.
+- [ ] Automatic sends use fresh ActionAuthorityScopeV1 through SendGateway; calendar writes use BookingGateway. The frontend owns neither capability.
+- [ ] Browser fixtures retain safe screenshots/traces, request/response schema hashes, command IDs, server denial evidence and zero unauthorized provider-call counts.
+- [ ] This document plans implementation and evidence; it does not claim any product UI or live gate has passed.
 
-## Security, privacy, compliance, idempotency, observability, and cost
+## Privacy, failure and recovery
 
-Reports expose safe IDs/hashes and redacted summaries only. No recipient/content/source text/provider payload/credential/prompt appears. Opaque cursors stay in memory and out of URL/telemetry. Safe telemetry records operation, projection version, freshness/complete status, row/page count, duration, safe error/warning codes, cache indicator as returned, and correlation. The UI itself incurs bounded query/render cost through page limit 50, documented polling, virtualization only with accessible table fallback, and aborts.
-
-## Failure, rollback, and operator recovery
-
-Unknown enum, impossible multiplicity, missing authoritative source, currency discrepancy, cursor loss, timeout, or privacy error fails the affected report visibly and may link returned incident to Recovery. The browser never repairs source rows or saves a corrected number. Roll back report UI/query version; backend immutable source data remains. A decision command with unknown outcome replays exact request/key after refetch checks.
-
-## Acceptance and retained evidence
-
-- [ ] All report provenance/freshness/completeness/warnings and stable snapshot behavior are visible.
-- [ ] Counts, hashes, denominators/statuses, currency/ILS evidence, reservations, discrepancies, and ambiguity are server-owned and unmodified.
-- [ ] Every chart has a fully equivalent accessible data table and non-color encoding.
-- [ ] Decision uses exact generated request/ETag/key and grants no automatic scale/spend/send.
-- [ ] Loading/empty/stale/error/partial/redacted/terminal states pass across tested breakpoints.
-
-Retain report fixtures, AST no-math scan, snapshot pagination traces, chart/table parity and contrast evidence, currency/ILS screenshots, decision network traces, and axe/keyboard output.
+Use redacted no-store projections for conversations/calendar/exception detail and approved minimized learning evidence. Telemetry contains registered outcomes and safe correlation only; no PII/content/credentials, inferred sensitive attributes or provider payloads. Preserve immutable history across refresh, rollback and recovery. Missing contracts block the affected surface until its backend owner supplies them; no browser fallback may invent an operation or bypass policy.
 
 ## Dependencies and next deliverable
 
-FRONTEND-08 consumes BACKEND-06 and message/provider evidence. Discrepancies, ambiguities, snapshot failures, and incidents deep-link to [FRONTEND-09](09-error-recovery-and-accessibility.md). Recording a decision closes the current experiment version; it does not start a new one.
+Consume [canonical sales authority](../00-product-strategy/01-product-scope.md), [API contracts](../06-backend/02-api-contracts.md), [query owners](../06-backend/06-reporting-and-query-services.md), [action authority](../06-backend/05-approval-and-command-handling.md), [booking](../03-workflows/07-booking-workflow.md), [checkpoint evaluation](../03-workflows/08-checkpoint-evaluation-workflow.md) and [global learning](../03-workflows/09-global-learning-workflow.md). Hand retained browser evidence to [TEST-05](../10-testing/05-end-to-end-browser-tests.md); release and live operation remain independently gated.

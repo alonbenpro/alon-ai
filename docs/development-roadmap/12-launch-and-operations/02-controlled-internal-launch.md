@@ -4,7 +4,7 @@
 **Status:** Planned M8 private-operations gate; no product stack, VPS, AWS witness, backup, monitoring, operator auth, or internal launch exists today
 **Milestone:** M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `LAUNCH-02-T01 -> LAUNCH-02-T02 -> LAUNCH-02-T03 -> LAUNCH-02-T04 -> LAUNCH-02-T05`; cross-document task Inputs `LAUNCH-02-T01 <- LAUNCH-01-T06,INFRA-02-T04,INFRA-04-T06,OBS-02-T05,INFRA-05-T07,ARCH-01-T05,TEST-01-T02,TEST-01-T05,INFRA-03-T08; LAUNCH-02-T02 <- INFRA-02-T02,INFRA-04-T02; LAUNCH-02-T04 <- INFRA-03-T04,INFRA-04-T06,INFRA-05-T06,TEST-06-T04`. Descriptive source authorities/resources (not whole-document completion dependencies): Passing M0-M7 including [LAUNCH-01](01-test-inbox-pilot.md); [release process](../11-infrastructure/02-ci-cd-and-release-process.md); [private VPS](../11-infrastructure/03-private-vps-deployment.md); [backup/restore](../11-infrastructure/04-postgresql-backups-and-restores.md); [monitoring/DR](../11-infrastructure/05-monitoring-and-disaster-recovery.md); all Task 7 command and canonical-contract audits
+**Prerequisites:** exact task Inputs `LAUNCH-02-T01 <- LAUNCH-01-T06,INFRA-02-T04,INFRA-04-T06,OBS-02-T05,INFRA-05-T07,ARCH-01-T05,TEST-01-T02,TEST-01-T05,INFRA-03-T08; LAUNCH-02-T02 <- LAUNCH-02-T01,INFRA-02-T02,INFRA-04-T02; LAUNCH-02-T03 <- LAUNCH-02-T02; LAUNCH-02-T04 <- LAUNCH-02-T03,INFRA-03-T04,INFRA-04-T06,INFRA-05-T06,TEST-06-T04; LAUNCH-02-T05 <- LAUNCH-02-T04,WF-07-T04,WF-08-T04,WF-09-T04,TEST-05-T02`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
 **Outputs:** Signed private-stack entry and M8 exit records, synthetic/internal run evidence, operational observation windows, restore/DR/security/alert results, rollback proof, and explicit M9 block or eligibility decision
 **Unlocks:** Eligibility to assemble [LAUNCH-03 first-real-experiment](03-first-real-experiment.md) entry evidence; never Gmail or recipient authority
 **Risk:** Critical
@@ -22,13 +22,13 @@ Only the foundation application, CI and Compose exist. Product DBOS/Gmail/schema
 
 ## Scope and non-goals
 
-In scope: one signed release on one private VPS, exact PostgreSQL 18 target, private operator session, product API/UI/worker with provider egress and both send controls off, synthetic/internal workflows, 39-instrument/18-incident observability closure, all 24 Task 7 command owners, `DR01..DR11`, encrypted GCS plus selected AWS S3 `eu-central-1` repository/witness acceptance, clean restore, alert paths, upgrades/rollback, operator runbooks and evidence retention.
+In scope: one signed release on one private VPS, exact PostgreSQL 18 target, private operator session, product API/UI/worker with provider egress and both send controls off, synthetic/internal workflows, exact instrument/incident observability closure, all 24 Task 7 command owners, `DR01..DR11`, encrypted GCS plus selected AWS S3 `eu-central-1` repository/witness acceptance, clean restore, alert paths, upgrades/rollback, operator runbooks and evidence retention.
 
 Non-goals: real recipients, Gmail sends, public unsubscribe publication, external users, performance theater beyond the registered load profile, hot multi-cloud compute, GCS as deletion authority, automatic failover, agent policy/control decisions, concurrent experiment portfolio, or converting a private green dashboard into a production claim.
 
 ## Exact planned implementation surfaces
 
-This phase creates no new endpoint, table, event, agent artifact, provider capability, service, incident, metric, DR scenario, or Task 7 command ID. It consumes exact canonical sets: 46 product tables and owners, 66 API/UI operations partitioned 64 private plus the two still-absent public unsubscribe operations, 39 metrics, 18 incident trigger/alert/runbook tuples, 24 Task 7 commands, 14 final-SEND denials, six provider capability families and `DR01..DR11`. AWS S3 is the sole off-Google repo-2/deletion witness and must pass the real, non-emulator `T7-AWS-WITNESS-ACCEPT` matrix in `eu-central-1` before M8.
+This phase creates no new endpoint, table, event, agent artifact, provider capability, service, incident, metric, DR scenario, or Task 7 command ID. It consumes exact canonical sets: complete declared product table set and owners, complete API/UI operation registry partitioned private plus the two still-absent public unsubscribe operations, registered metrics, 18 incident trigger/alert/runbook tuples, 24 Task 7 commands, 14 final-SEND denials, registered provider capability families and `DR01..DR11`. AWS S3 is the sole off-Google repo-2/deletion witness and must pass the real, non-emulator `T7-AWS-WITNESS-ACCEPT` matrix in `eu-central-1` before M8.
 
 ### Entry manifest and prerequisites
 
@@ -36,7 +36,7 @@ The signed immutable entry record binds literal phase `CONTROLLED_INTERNAL_STACK
 
 | Entry prerequisite | Required evidence | Failure behavior |
 | --- | --- | --- |
-| Product gates | current M0-M7 records including LAUNCH-01, exact M1 runtime decision, 46/66/39/18/24/14/6/DR set-equality and no unresolved roadmap-contract blocker | no M8 entry |
+| Product gates | current M0-M7 records including LAUNCH-01, exact M1 runtime decision, table/operation/metric/incident/command/policy/provider/DR set-equality and no unresolved roadmap-contract blocker | no M8 entry |
 | Release/target | signed digest-addressed candidate, additive migration compatibility, exact clean target, private identity and capacity preflight | prior release remains; no promotion |
 | Data recovery | current dual-repository backup evidence, accepted real AWS S3 witness, independent recovery packages and a successful clean isolated restore no older than 90 days | services/workers/controls/public stay off |
 | Visibility/recovery | direct Critical signal, collector-to-PagerDuty acknowledgement watchdog, local offline path, exact incident routes and DR prerequisites | no worker start; M8 blocked |
@@ -54,7 +54,7 @@ The signed immutable entry record binds literal phase `CONTROLLED_INTERNAL_STACK
 | Provider/cost | only entry-manifest allowlisted research/evaluation calls under exact per-call/run/experiment/product reservations; no paid-call admission with unknown price/FX/cost |
 | Controls | both send controls false at startup, restore, every window boundary and exit |
 
-The operator verifies the target and signed release, performs pre-backup and migration/runtime compatibility checks, promotes with workers/dequeues/provider egress off, confirms exact private routes and public absence, starts API/UI, then compatible workers with send paths denied. Each window records authoritative health, 39 metrics, 18 routes, budgets/cost, backup/WAL/witness freshness, queue/run states, local-versus-sink counts and zero Gmail/public evidence. During the phase the operator executes the required load/security/chaos, alert, clean-restore and all applicable `DR01..DR11` rows on isolated targets, then rolls back and forward once by signed digest without data-history edits.
+The operator verifies the target and signed release, performs pre-backup and migration/runtime compatibility checks, promotes with workers/dequeues/provider egress off, confirms exact private routes and public absence, starts API/UI, then compatible workers with send paths denied. Each window records authoritative health, registered metrics, 18 routes, budgets/cost, backup/WAL/witness freshness, queue/run states, local-versus-sink counts and zero Gmail/public evidence. During the phase the operator executes the required load/security/chaos, alert, clean-restore and all applicable `DR01..DR11` rows on isolated targets, then rolls back and forward once by signed digest without data-history edits.
 
 | Decision point | Exact rule |
 | --- | --- |
@@ -63,6 +63,16 @@ The operator verifies the target and signed release, performs pre-backup and mig
 | Rollback/demotion | stop dequeues/workers, keep controls/public off, preserve evidence, return to prior signed release/config if compatible or isolated restore, open canonical incident and invalidate affected windows |
 | Re-entry | exact incident/repair closure, new signed candidate/entry, rerun of every affected command, fresh restore/witness proof and seven new complete windows; prior green windows cannot be cherry-picked |
 | Downstream unlock | M8 operational eligibility only; LAUNCH-03 still needs all recipient/legal/campaign/public-ingress evidence and a separate operator decision |
+
+## Internal sales-state and six-phase evidence gate
+
+M8 internal launch consumes all first six ordered sales evidence phases: synthetic pipeline, recorded providers, owned conversations, simulated objections/negotiation, owned test calendar, and checkpoint/global-learning/full campaign simulation. Require WF-07-T04, WF-08-T04, WF-09-T04, complete LAUNCH-01/TEST-04 evidence and TEST-05-T02 before signing the M8 exit. Earlier implementation fixtures do not replace their ordered phase execution.
+
+The recovery/release evidence must bind the accepted OfferPackage/economics/claim hashes; approved agent configurations and GlobalStrategyPackage/StrategyActivation/rollback lineage; campaign/cohort ordinals, membership/query/hash, caps and frozen qualification/causal/evidence/metric versions; CheckpointEvidenceBundle/cutoff/decision/learning triggers; full conversation/reply/negotiation state and counters; BookingIntent/slot/confirmation/action/attempt/result/observation/notification state; current suppression/tombstones/legal-policy; immutable action authorizations/consumptions; costs/reservations; and all current control/checkpoint generations.
+
+Internal deployment may run the complete synthetic funnel/dashboard/exception/calendar/strategy simulation with all real provider writes denied. Product and test Gmail/calendar controls remain false outside their separately signed isolated fixture windows. M8 does not count synthetic/owned evidence as real demand or authorize phase-7 real recipients.
+
+Exercise release/rollback/restore with pending send/calendar attempts, checkpoint/learning triggers and cross-campaign activations. Preserve suppression/tombstones, commercial evidence and remaining capacities; no health check, deploy, restore, exception resolution or current strategy pointer can reopen admission. Sign exact table/API/provider/artifact/metric/event/incident/command sets from their owning manifests, with no obsolete fixed count shortcut. Retain existing private access, AWS witness, DR01..DR11, paging, command and no-public-ingress safeguards.
 
 ## Ordered implementation tasks
 
@@ -74,7 +84,7 @@ The operator verifies the target and signed release, performs pre-backup and mig
 - [ ] **Run bounded synthetic/internal operations —** Input: immutable briefs/configs and exact budgets; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: schedule at most the envelope, produce typed artifacts/evaluations and compare authoritative state/metrics/cost daily; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: seven-window operational record. Test evidence: cap/concurrency/replay/cost/privacy/zero-Gmail assertions. Failure behavior: abort and invalidate affected windows.
 <!-- roadmap-task id=LAUNCH-02-T04 milestone=M8 depends_on=LAUNCH-02-T03,INFRA-03-T04,INFRA-04-T06,INFRA-05-T06,TEST-06-T04 mode=serial locks=backup-restore,live-environment,milestone-gate -->
 - [ ] **Prove restore, witness, alerts and DR —** Input: Task-7 profiles, isolated targets, accepted AWS S3 identity, INFRA-04 restore evidence, INFRA-05 DR harness/report, and TEST-06 recovery-time/data-loss measurements; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: execute clean restore, split-stage alert paths, load/security/chaos and exactly `DR01..DR11`; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: signed M8 recovery bundle. Test evidence: provider unavailable=`30`, integrity=`40`, unsafe target=`50`, partial external=`60` all reject. Failure behavior: M8 remains blocked.
-<!-- roadmap-task id=LAUNCH-02-T05 milestone=M8 depends_on=LAUNCH-02-T04 mode=serial locks=ci-release,live-environment,milestone-gate -->
+<!-- roadmap-task id=LAUNCH-02-T05 milestone=M8 depends_on=LAUNCH-02-T04,WF-07-T04,WF-08-T04,WF-09-T04,TEST-05-T02 mode=serial locks=ci-release,live-environment,milestone-gate -->
 - [ ] **Close rollback and M8 exit —** Input: all windows/commands/incidents/cost and release pointers; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: exercise signed rollback/forward, prove data/history/control/public invariants and sign pass/block; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: M8 gate record. Test evidence: missing/stale/larger-authority and automatic-enable negatives. Failure behavior: no M9 eligibility.
 
 ## Test strategy
@@ -83,7 +93,7 @@ The operator verifies the target and signed release, performs pre-backup and mig
 - **Authority `test_internal_stack_has_zero_real_recipient_gmail_send_and_public_operations`.**
 - **Window `test_only_seven_complete_unchanged_windows_with_twenty_runs_can_exit_m8`.**
 - **Recovery `test_real_aws_acceptance_clean_restore_and_dr01_through_dr11_all_fail_closed`.**
-- **Visibility `test_39_metrics_18_routes_direct_signal_and_ack_watchdog_match_authoritative_truth`.**
+- **Visibility `test_exact_metric_incident_sets_direct_signal_and_ack_watchdog_match_authoritative_truth`.**
 - **Rollback `test_signed_prior_digest_recovers_without_history_edit_control_enable_or_public_publish`.**
 
 ## Security, privacy, compliance, idempotency, observability, and cost

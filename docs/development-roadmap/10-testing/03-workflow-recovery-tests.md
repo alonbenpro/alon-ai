@@ -4,7 +4,7 @@
 **Status:** Planned M1-M8 recovery suite; no DBOS product workflow, Temporal adapter, kill harness, workflow projection, or typed repair implementation exists today
 **Milestone:** M1, M6, M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `TEST-03-T01 -> TEST-03-T02 -> TEST-03-T03 -> TEST-03-T04 -> TEST-03-T05 -> TEST-03-T06 -> TEST-03-T07`; cross-document task Inputs `TEST-03-T01 <- WF-01-T01,WF-01-T02,WF-01-T03,TEST-01-T03; TEST-03-T02 <- WF-01-T01,WF-01-T02,WF-01-T03,TEST-01-T04; TEST-03-T03 <- WF-01-T05; TEST-03-T04 <- TEST-02-T02,ARCH-03-T01,WF-02-T05,WF-03-T05,WF-04-T05; TEST-03-T05 <- WF-06-T04; TEST-03-T06 <- INFRA-04-T02,WF-06-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [WF-00 runtime gate](../03-workflows/00-dbos-selection-and-temporal-fallback.md), [WF-01 production-acceptance spike](../03-workflows/01-dbos-production-acceptance-spike.md), WF-02 through WF-06, DB-01/05/06, OBS-04/05, TEST-01/02
+**Prerequisites:** exact task Inputs `TEST-03-T01 <- WF-01-T01,WF-01-T02,WF-01-T03,TEST-01-T03; TEST-03-T02 <- TEST-03-T01,WF-01-T01,WF-01-T02,WF-01-T03,TEST-01-T04; TEST-03-T03 <- TEST-03-T02,WF-01-T05; TEST-03-T04 <- TEST-03-T03,TEST-02-T02,ARCH-03-T01,WF-02-T05,WF-03-T05,WF-04-T05; TEST-03-T05 <- TEST-03-T04,WF-06-T04; TEST-03-T06 <- TEST-03-T05,INFRA-04-T02,WF-06-T05; TEST-03-T07 <- TEST-03-T06`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
 **Outputs:** Finite-workflow transition matrix, kill-point harness, replay/version/cancellation proof, DBOS decision evidence or mandatory Temporal handoff, and no-SQL repair/restore evidence
 **Unlocks:** M1 acceptance or Temporal migration, M6 controlled Gmail pilot, and M8 workflow operations
 **Risk:** Critical
@@ -56,6 +56,25 @@ scenario.await_terminal_or_visible_blocked()
 assert_invariants(snapshot, scenario.expected_rows_events_calls)
 evidence.sign_manifest_last()
 ```
+
+## Sales durable-boundary crash and replay matrix
+
+Extend TEST-03-T04/T05 with the implemented WF-07/WF-08/WF-09 and BACKEND-01-T08/T09/T10 owners, using recorded providers and real isolated PostgreSQL. M1 K0–K8 remains the unchanged independent runtime acceptance matrix. Add these exact scenario families to T7-WORKFLOW-RECOVERY:
+
+| Family | Kill immediately before and after | Required replay truth |
+| --- | --- | --- |
+| accepted artifact chain | candidate/validation/acceptance/materialization/input snapshot commit | same accepted version/hash and producer order; no paid regeneration or circular acceptance |
+| phased lead pipeline | identity/dedupe, PRELIMINARY acceptance, deep research, FINAL acceptance and cohort membership freeze | unique business/recipient; no early expensive work/send; current-stage exact member hash/cap |
+| conversation/negotiation | inbound observation+cold-stop+cursor, evaluation, commercial decision, draft, authority consumption and send attempt | cold queue invalidated before reply evaluation; accepted objectives/round counts once; terminal/rejection/opt-out never reopened |
+| booking | intent, slots, explicit confirmation, action/attempt, provider write, result/observation and event/outbox | CREATE/RESCHEDULE/CANCEL retain kind/version/idempotency/ETag/notification hash; ambiguity retains quarantine until positive exact observation; zero blind retries |
+| checkpoint | close admission, drain, freeze cutoff/bundle, evaluation result, five-way decision and learning outbox | no double checkpoint/decision or lost trigger, no late mutation, incomplete safety/cost cannot CONTINUE |
+| global learning | trigger claim, each agent result, package comparison/promotion, schedule/activate and rollback | all agents exactly once; KEEP/INSUFFICIENT_EVIDENCE unchanged; approved package cannot activate on open cohort |
+| cross-campaign boundary | concurrent campaign start, own checkpoint, promotion/rollback CAS and action dequeue | trigger next boundary only after CONTINUE; other active campaigns own checkpoint; future newest approved; no history rewrite |
+| restore/release | version drain, backup cutoff, tombstone/current suppression replay, runtime mapping and provider reconciliation | offer/strategy/cohort/checkpoint/conversation/booking/suppression preserved; controls/generations fence all actions; zero provider writes during offline restore |
+
+Cover increments 100/200/300/400 and cumulative 100/300/600/1,000 at every admission crash, especially last-slot races and duplicate identity across stages. At final CONTINUE there is no fifth cohort. Kill a rollback after it blocks future actions but before checkpoint closure and again before/after activation; restart must retain the block and immutable old attribution.
+
+Use hard process death, new DB connections and durable state/provider call spies. Replayed workflow acknowledgement, duplicate callback, repeated outbox delivery, lost timer and zero read results never cause a second side effect. Finite deadlines/attempt budgets persist across restart. No test may “repair” uncertainty by rewriting state or using an unchecked compensating calendar action. Preserve the exact M1 two-table runtime rejection/Temporal fallback and existing Gmail OAuth/history/cap/suppression/typed-repair cases.
 
 ## Ordered implementation tasks
 
