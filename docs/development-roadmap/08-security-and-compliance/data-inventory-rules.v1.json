@@ -134,7 +134,9 @@
     "source": "EXACT_ROW_OR_TRANSITIVE_EVIDENCE_SOURCE_ADAPTER_SCOPE_TERMS_VERSION_HASH;LOCAL_DETERMINISTIC_RECORD_USES_CREATE_WRITER_AND_COMMAND_SCHEMA_HASH;MISSING_PROVIDER_LINEAGE_DENIES_USE",
     "hold_owner": "RetentionCommandService_EXECUTES_ONLY_SIGNED_AUTHENTICATED_OPERATOR_HOLD;INCIDENT_EVIDENCE_FROM_IncidentCommandService;LEGAL_HOLD_REQUIRES_COUNSEL_REFERENCE",
     "secret_maxima": "SEC02_AUTH_RUNTIME_DETAIL_AND_SEC03_PROVIDER_SECRET_LIFECYCLES_ARE_NONEXTENDABLE;NO_PRODUCT_RAW_SECRET;NO_BACKUP_OF_EXTERNAL_SECRET_OBJECT_WITHOUT_SAME_EXPIRY",
-    "mutable_writer_arm_rule": "INSERT_DIRECTION_SELECTS_EXACT_OWNER;UPDATE_FIELD_OWNER_LIST_INTERSECTS_CANONICAL_COMMAND_STATE_TRANSITION_IN_DB01_DB03_BACKEND01_BACKEND04;NO_OTHER_COLUMNS_OR_COMMANDS;MULTIPLE_APPLICABLE_ARMS_REJECT"
+    "mutable_writer_arm_rule": "INSERT_DIRECTION_SELECTS_EXACT_OWNER;UPDATE_FIELD_OWNER_LIST_INTERSECTS_CANONICAL_COMMAND_STATE_TRANSITION_IN_DB01_DB03_BACKEND01_BACKEND04;NO_OTHER_COLUMNS_OR_COMMANDS;MULTIPLE_APPLICABLE_ARMS_REJECT",
+    "internal_datastore_access": "EXACT_TABLE_INTERNAL_READERS_INTERSECT_FIELD_PROFILE;NEVER_SUBTRACT_QUERY_OUTPUT_PRINCIPALS;READ_GRANT_IS_NOT_SERIALIZATION_GRANT",
+    "descendant_projection": "EXACT_ROOT_SELECTOR_AND_CLOSED_DESCENDANT_SCHEMA_REF_VERSION_HASH_AND_EXACT_LEAF_PATH_TYPE_AND_DESCENDANT_SAFE_POLICY;INTERSECT_LEAF_PROFILE_ANCESTOR_DENIALS_AND_TRANSFORM_CONSUMERS;NO_CONTAINER_OR_UNKNOWN_DESCENDANT_GRANT"
   },
   "field_rules": [
     {
@@ -225,7 +227,7 @@
       "sensitivity": "PSEUDONYMOUS_ENUMERABLE",
       "encryption": "SHARED_STORAGE_ENCRYPTION",
       "redaction": "NEVER_SERIALIZE;USE_EXISTING_OPAQUE_TARGET_REF",
-      "raw_readers": "TABLE_INTERNAL_READERS_EXCEPT_QUERY_ROLES",
+      "raw_readers": "TABLE_INTERNAL_READERS",
       "query": "DENY",
       "model": "DENY",
       "telemetry": "DENY",
@@ -255,7 +257,7 @@
       "sensitivity": "RESTRICTED_PERSONAL_CONTENT",
       "encryption": "PERSONAL_DATA_OBJECT_DEK_AND_AUTHENTICATED_AAD_PLUS_SHARED_STORAGE",
       "redaction": "EXACT_NAMED_TRANSFORM_OR_STEP_UP_EXCEPTION_ONLY",
-      "raw_readers": "TABLE_INTERNAL_READERS_EXCEPT_QUERY_ROLES",
+      "raw_readers": "TABLE_INTERNAL_READERS",
       "query": "TRANSFORM_OUTPUT_ONLY",
       "model": "EXACT_TRANSFORM_ONLY",
       "telemetry": "DENY",
@@ -305,7 +307,7 @@
       "sensitivity": "RESTRICTED_PERSONAL_CONTENT",
       "encryption": "SHARED_STORAGE_ENCRYPTION;FIELD_ENVELOPE_WHERE_CIPHERTEXT_DECLARED",
       "redaction": "MASK_WHOLE_VALUE_UNLESS_EXACT_TRANSFORM_OR_STEP_UP_EXCEPTION",
-      "raw_readers": "TABLE_INTERNAL_READERS_EXCEPT_QUERY_ROLES",
+      "raw_readers": "TABLE_INTERNAL_READERS",
       "query": "DENY_RAW",
       "model": "DENY_UNLESS_EXACT_TRANSFORM",
       "telemetry": "DENY",
@@ -357,7 +359,46 @@
         "LeadResearchAgent",
         "LeadQualificationAgent"
       ],
-      "projection": "ONLY_ACCEPTED_PACKAGE_OR_DECISION_FIELDS;EXACT_CLAIM_EVIDENCE;STRIP_CONTACT_AND_SENSITIVE_INFERENCE;NO_PRICING_CALCULATION"
+      "projection": "ONLY_ACCEPTED_PACKAGE_OR_DECISION_FIELDS;EXACT_CLAIM_EVIDENCE;STRIP_CONTACT_AND_SENSITIVE_INFERENCE;NO_PRICING_CALCULATION",
+      "descendant_schemas": {
+        "offer_packages": {
+          "scope": "offer.scope.model.v1",
+          "deliverables": "offer.deliverables.model.v1",
+          "exclusions": "offer.exclusions.model.v1"
+        },
+        "offer_economics": {
+          "payment_terms": "offer.payment_terms.model.v1"
+        },
+        "offer_variants": {
+          "scope": "offer.scope.model.v1",
+          "deliverables": "offer.deliverables.model.v1",
+          "payment_schedule": "offer.payment_schedule.model.v1",
+          "timing_bounds": "offer.timing_bounds.model.v1"
+        }
+      },
+      "structured_selectors": {
+        "offer_packages": [
+          "scope",
+          "deliverables",
+          "exclusions",
+          "proof_claims",
+          "qualification_filters",
+          "negotiation_options",
+          "booking_constraints"
+        ],
+        "offer_economics": [
+          "payment_terms"
+        ],
+        "offer_variants": [
+          "scope",
+          "deliverables",
+          "payment_schedule",
+          "timing_bounds"
+        ],
+        "negotiation_decisions": [
+          "reason_codes"
+        ]
+      }
     },
     {
       "id": "BUSINESS_EVIDENCE_V1",
@@ -382,7 +423,16 @@
         "LeadResearchAgent",
         "LeadQualificationAgent"
       ],
-      "projection": "APPROVED_SOURCE_SCOPE_AND_KNOWN_BUSINESS_FACT_FIELDS_ONLY;REDACT_KNOWN_CONTACT_VALUES_EMAIL_PHONE_AND_SENSITIVE_TRAIT_SPANS;UNKNOWN_OR_CONFLICT_STAYS_UNKNOWN;UNTRUSTED_CONTENT_NEVER_INSTRUCTIONS"
+      "projection": "APPROVED_SOURCE_SCOPE_AND_KNOWN_BUSINESS_FACT_FIELDS_ONLY;REDACT_KNOWN_CONTACT_VALUES_EMAIL_PHONE_AND_SENSITIVE_TRAIT_SPANS;UNKNOWN_OR_CONFLICT_STAYS_UNKNOWN;UNTRUSTED_CONTENT_NEVER_INSTRUCTIONS",
+      "structured_selectors": {
+        "evidence_items": [
+          "facts_ciphertext"
+        ],
+        "lead_discovery_candidates": [
+          "preliminary_facts",
+          "unknown_fields"
+        ]
+      }
     },
     {
       "id": "SANITIZED_THREAD_V1",
@@ -426,7 +476,20 @@
         "ExperimentEvaluationAgent",
         "GlobalLearningEngine"
       ],
-      "projection": "FROZEN_COHORT_STATISTICS_AND_BOUNDED_REASON_CATEGORIES_ONLY;MINIMUM_CELL_5;REMOVE_FREE_TEXT_PERSON_CONTACT_LOOKUP_BODY_SLOT_ATTENDEE_AND_SENSITIVE_BUDGET_FIELDS;KEEP_PRIMARY_SECONDARY_GUARDRAIL_SEPARATE"
+      "projection": "FROZEN_COHORT_STATISTICS_AND_BOUNDED_REASON_CATEGORIES_ONLY;MINIMUM_CELL_5;REMOVE_FREE_TEXT_PERSON_CONTACT_LOOKUP_BODY_SLOT_ATTENDEE_AND_SENSITIVE_BUDGET_FIELDS;KEEP_PRIMARY_SECONDARY_GUARDRAIL_SEPARATE",
+      "descendant_schemas": {
+        "metric_snapshots": {
+          "values_json": "checkpoint.metrics.model.v1"
+        }
+      },
+      "structured_selectors": {
+        "metric_snapshots": [
+          "values_json"
+        ],
+        "agent_learning_results": [
+          "reason_codes"
+        ]
+      }
     },
     {
       "id": "TYPED_ARTIFACT_INPUT_V1",
@@ -453,7 +516,8 @@
         "ExperimentEvaluationAgent",
         "GlobalLearningEngine"
       ],
-      "projection": "ACCEPTED_CANONICAL_INPUT_SCHEMA_AND_PRODUCER_BEFORE_CONSUMER_MAP;RECURSIVELY_APPLY_THE_OTHER_EXACT_TRANSFORMS_TO_EVERY_SOURCE_DEPENDENCY;NO_NEW_FIELD_GRANT;GLOBAL_AGENTS_ONLY_CHECKPOINT_LEARNING_V1;EVALUATION_HOLDOUT_ONLY_EVALUATIONEXECUTIONSERVICE_SELECTED_CASE"
+      "projection": "ACCEPTED_CANONICAL_INPUT_SCHEMA_AND_PRODUCER_BEFORE_CONSUMER_MAP;RECURSIVELY_APPLY_THE_OTHER_EXACT_TRANSFORMS_TO_EVERY_SOURCE_DEPENDENCY;NO_NEW_FIELD_GRANT;GLOBAL_AGENTS_ONLY_CHECKPOINT_LEARNING_V1;EVALUATION_HOLDOUT_ONLY_EVALUATIONEXECUTIONSERVICE_SELECTED_CASE",
+      "source_intersection_only": true
     }
   ],
   "table_policies": {
@@ -1136,7 +1200,18 @@
       "retention_class": "SAFETY_LONG",
       "scope_clock": "TRANSITIVE_SCOPE_TERMINAL",
       "normal_update_writer": "SuppressionCommandService",
-      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE"
+      "deletion_policy": "FK_LEAVES_AFTER_PAYLOAD_TOMBSTONE",
+      "internal_lookup_contract": {
+        "principal": "SuppressionQueryService",
+        "field": "recipient_hash",
+        "purpose": "PREVENT_FORBIDDEN_RECONTACT",
+        "mode": "UNCACHED_LOCKED_SAME_GATEWAY_UNIT_OF_WORK",
+        "lookup_input": "RecipientLookupKeyService_DERIVED_HASH_ONLY",
+        "result": "TYPED_MATCH_OR_NO_MATCH_AND_SAFE_REASON_TARGET_REF;NEVER_HASH_VALUE",
+        "http_report_hash_serialization": "DENY",
+        "model_access": "DENY",
+        "telemetry_access": "DENY"
+      }
     },
     "send_intents": {
       "create_writer": "SendGateway",
@@ -2326,5 +2401,173 @@
     "../02-database/03-leads-campaigns-and-messages.md": "75f600ca57ec837505208d09a671efbafa800164c886ea101893397f73271a17",
     "../02-database/04-agent-artifacts-and-evidence.md": "b2f8fdf68825441b0773940041441f1fd2e8024e847e78cdefceefd387420af3",
     "../02-database/05-audit-events-and-idempotency.md": "bf562fad2ceba5597cb821fe6a5e10881301f16d21de64a45500b3819b14cd54"
+  },
+  "descendant_projection_rules": {
+    "path_syntax": "LOWER_SNAKE_CASE_DOT_PATH;ARRAY_INDEX_NORMALIZES_TO_EXPLICIT_SCHEMA_ARRAY_TOKEN_[];NO_WILDCARDS_OR_RECURSIVE_PREFIX_GRANTS",
+    "schema_hash": "SHA256_UTF8_JSON_SORT_KEYS_COMPACT_SEPARATORS_ENSURE_ASCII_TRUE_OVER_EXACT_SCHEMA_OBJECT;ASCII_ONLY_SCHEMA_KEYS_AND_VALUES",
+    "source_binding": "INPUT_MATERIALIZER_VERIFIES_ACCEPTED_SOURCE_SCHEMA_VERSION_CONTENT_HASH_AND_EXACT_PROJECTION_SCHEMA_REF_IN_IMMUTABLE_INPUT;CALLER_FIELD_TYPE_MUST_EQUAL_DECLARED_LEAF_TYPE",
+    "container_grant": "DENY_WHOLE_OBJECT_ARRAY_OR_ENCRYPTED_STRUCTURED_WRAPPER;RESOLVE_EVERY_SOURCE_LEAF_SEPARATELY",
+    "missing_or_unknown": "DENY_ON_ABSENT_WRONG_VERSION_HASH_TYPE_OR_LEAF;NO_FALLBACK_MODEL_GRANT",
+    "deny_path_component_regex": "(^|_)(recipient|person|people|contact|email|phone|attendee|credential|secret|password|token|private_calendar|raw_body|thread_body|budget_assertion|inferred_budget|sensitive)(_|$)",
+    "descendant_safe_policies": {
+      "ACCEPTED_TERM_REDACTED": "ONLY_ACCEPTED_OFFER_TERM;EXISTING_DETERMINISTIC_REDACTION;NO_NEW_CLAIM_OR_MODEL_ARITHMETIC;NO_GLOBAL_CONSUMER",
+      "CLOSED_CHECKPOINT_AGGREGATE": "CLOSED_CHECKPOINT_EXACT_COHORT_PARTITION_DEFINITION_AND_CUTOFF;MINIMUM_CELL_5;NO_FREE_TEXT_OR_PERSON_IDENTIFIER",
+      "SOURCE_INTERSECTION": "WRAPPER_ADDS_NO_GRANT;RECURSIVELY_INTERSECT_EXACT_SOURCE_LEAF_TRANSFORM_AND_CONSUMERS"
+    }
+  },
+  "descendant_schemas": {
+    "checkpoint.metrics.model.v1": {
+      "schema_version": "checkpoint.metrics.model.v1",
+      "root_type": "object",
+      "additional_properties": false,
+      "leaves": {
+        "booking_count": {
+          "type": "integer",
+          "descendant_safe_policy": "CLOSED_CHECKPOINT_AGGREGATE"
+        },
+        "reply_count": {
+          "type": "integer",
+          "descendant_safe_policy": "CLOSED_CHECKPOINT_AGGREGATE"
+        },
+        "contacted_count": {
+          "type": "integer",
+          "descendant_safe_policy": "CLOSED_CHECKPOINT_AGGREGATE"
+        },
+        "qualified_count": {
+          "type": "integer",
+          "descendant_safe_policy": "CLOSED_CHECKPOINT_AGGREGATE"
+        },
+        "positive_reply_count": {
+          "type": "integer",
+          "descendant_safe_policy": "CLOSED_CHECKPOINT_AGGREGATE"
+        },
+        "commitment_count": {
+          "type": "integer",
+          "descendant_safe_policy": "CLOSED_CHECKPOINT_AGGREGATE"
+        },
+        "attended_call_count": {
+          "type": "integer",
+          "descendant_safe_policy": "CLOSED_CHECKPOINT_AGGREGATE"
+        },
+        "spend_minor": {
+          "type": "bigint",
+          "descendant_safe_policy": "CLOSED_CHECKPOINT_AGGREGATE"
+        }
+      }
+    },
+    "offer.scope.model.v1": {
+      "schema_version": "offer.scope.model.v1",
+      "root_type": "object",
+      "additional_properties": false,
+      "leaves": {
+        "summary": {
+          "type": "text",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "inclusions[]": {
+          "type": "text",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "exclusions[]": {
+          "type": "text",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "deliverables[].description": {
+          "type": "text",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "deliverables[].quantity": {
+          "type": "integer",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        }
+      }
+    },
+    "offer.deliverables.model.v1": {
+      "schema_version": "offer.deliverables.model.v1",
+      "root_type": "array",
+      "additional_properties": false,
+      "leaves": {
+        "[].description": {
+          "type": "text",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "[].quantity": {
+          "type": "integer",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        }
+      }
+    },
+    "offer.exclusions.model.v1": {
+      "schema_version": "offer.exclusions.model.v1",
+      "root_type": "array",
+      "additional_properties": false,
+      "leaves": {
+        "[]": {
+          "type": "text",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        }
+      }
+    },
+    "offer.payment_terms.model.v1": {
+      "schema_version": "offer.payment_terms.model.v1",
+      "root_type": "object",
+      "additional_properties": false,
+      "leaves": {
+        "currency": {
+          "type": "text",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "net_days": {
+          "type": "integer",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "instalments[].amount_minor": {
+          "type": "bigint",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "instalments[].due_after_days": {
+          "type": "integer",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "instalments[].due_event": {
+          "type": "enum",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        }
+      }
+    },
+    "offer.payment_schedule.model.v1": {
+      "schema_version": "offer.payment_schedule.model.v1",
+      "root_type": "array",
+      "additional_properties": false,
+      "leaves": {
+        "[].amount_minor": {
+          "type": "bigint",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "[].due_after_days": {
+          "type": "integer",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "[].due_event": {
+          "type": "enum",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        }
+      }
+    },
+    "offer.timing_bounds.model.v1": {
+      "schema_version": "offer.timing_bounds.model.v1",
+      "root_type": "object",
+      "additional_properties": false,
+      "leaves": {
+        "earliest_days": {
+          "type": "integer",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        },
+        "latest_days": {
+          "type": "integer",
+          "descendant_safe_policy": "ACCEPTED_TERM_REDACTED"
+        }
+      }
+    }
   }
 }
