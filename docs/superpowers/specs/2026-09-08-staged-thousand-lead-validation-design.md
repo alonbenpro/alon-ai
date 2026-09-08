@@ -153,4 +153,3 @@ Roadmap completion requires:
 ## Non-goals
 
 This design does not authorize real sending, select exact legal rules, guarantee that 1,000 eligible leads exist, guarantee statistical significance, automate offer pivots, add automated follow-ups, or claim that agent research proves product-market fit. It changes the planned experiment envelope and evidence system; implementation of the roadmap remains separate.
-
