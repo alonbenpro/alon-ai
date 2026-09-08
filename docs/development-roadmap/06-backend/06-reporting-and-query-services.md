@@ -2,9 +2,9 @@
 
 **Document ID:** BACKEND-06
 **Status:** Planned M7 read layer; no product data, projection, or report endpoint exists today
-**Milestone:** M7, with internal gate queries used from M2
+**Milestone:** M7 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** DB-01 through DB-06, [BACKEND-01](01-domain-services.md), [BACKEND-02 report routes](02-api-contracts.md#exact-route-and-openapi-operation-manifest), and canonical ARCH-03 states/events
+**Prerequisites:** exact local order `BACKEND-06-T01 -> BACKEND-06-T02 -> BACKEND-06-T03 -> BACKEND-06-T04 -> BACKEND-06-T05`; cross-document task Inputs `BACKEND-06-T01 <- BACKEND-03-T01,SEC-04-T02,DB-05-T02,ARCH-03-T01,OBS-05-T01; BACKEND-06-T03 <- OBS-03-T03; BACKEND-06-T04 <- BACKEND-02-T04; BACKEND-06-T05 <- BACKEND-02-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): DB-01 through DB-06, [BACKEND-01](01-domain-services.md), [BACKEND-02 report routes](02-api-contracts.md#exact-route-and-openapi-operation-manifest), and canonical ARCH-03 states/events
 **Outputs:** Stable PostgreSQL projections for overview, funnel, costs, timeline, providers, approvals, and recovery with freshness/provenance
 **Unlocks:** M7 dashboard diagnosis and evidence-based experiment decision
 **Risk:** High
@@ -94,11 +94,16 @@ V1 query responses may use private in-process/HTTP cache keyed by operator, rout
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=BACKEND-06-T01 milestone=M7 depends_on=BACKEND-03-T01,SEC-04-T02,DB-05-T02,ARCH-03-T01,OBS-05-T01 mode=serial locks=openapi-contract,backend-domain -->
 - [ ] **Encode projection schemas/query versions —** Input: canonical tables/states/events/metrics, BACKEND-03 dedicated final-SEND reasons, exact compliance evidence tuples, and `incident.catalog.v1`. Operation: define strict response unions, cutoff/high-watermark, warnings, pagination, redaction, and exhaustive incident maps. Output: stable report contracts. Test evidence: schema snapshots, every final-SEND denial fixture, and every incident/catalog fixture. Failure behavior: unknown source/state/catalog code blocks the affected authoritative report.
+<!-- roadmap-task id=BACKEND-06-T02 milestone=M7 depends_on=BACKEND-06-T01 mode=parallel locks=backend-domain -->
 - [ ] **Implement overview/funnel/recovery queries —** Input: one repeatable-read snapshot and exact filters. Operation: compute distinct ID sets/hashes/counts/statuses and the five-kind recovery overview without writes. Output: operator diagnosis through exact BACKEND-02 routes. Test evidence: real-PostgreSQL boundary/duplicate/ambiguous/suppression/recovery fixtures. Failure behavior: visible incomplete/degraded, never inferred success.
+<!-- roadmap-task id=BACKEND-06-T03 milestone=M7 depends_on=BACKEND-06-T02,OBS-03-T03 mode=parallel locks=backend-domain -->
 - [ ] **Implement cost/provider queries —** Input: reservations/cost/provider ledgers and conversion evidence. Operation: group original currencies, reconcile ILS/discrepancies, expose safe performance. Output: budget/cost diagnosis. Test evidence: currency/rounding/duplicate/missing-FX/provider parity fixtures. Failure behavior: incomplete ILS total and discrepancy.
-- [ ] **Implement repeatable-read/exported-snapshot pagination/API routes —** Input: frozen MVCC snapshot and event/audit/provider/recovery records. Operation: retain bounded exporter lease, import before every page query, apply stable keyset order, sign cursor, and serialize BACKEND-02 models. Output: replayable report/recovery API. Test evidence: concurrent commits cannot alter report/page, snapshot expiry/restart, serialization retry, cursor tamper, page continuity, and OpenAPI tests. Failure behavior: discard traversal and restart page one or typed dependency error.
-- [ ] **Prove decision reproducibility, redaction, and UI contract —** Input: metric/report fixtures, retention/redaction states, generated client. Operation: reproduce snapshot views, scan sensitive fields, and render all states/actions. Output: M7 evidence. Test evidence: query/gate comparison, privacy scan, browser E2E/accessibility. Failure behavior: M7 blocked.
+<!-- roadmap-task id=BACKEND-06-T04 milestone=M7 depends_on=BACKEND-06-T03,BACKEND-02-T04 mode=serial locks=openapi-contract,backend-domain -->
+- [ ] **Implement repeatable-read/exported-snapshot pagination/API routes —** Input: the BACKEND-02 authenticated M7 report/recovery OpenAPI contract plus a frozen MVCC snapshot and event/audit/provider/recovery records. Operation: retain bounded exporter lease, import before every page query, apply stable keyset order, sign cursor, and serialize BACKEND-02 models. Output: replayable report/recovery API. Test evidence: concurrent commits cannot alter report/page, snapshot expiry/restart, serialization retry, cursor tamper, page continuity, and OpenAPI tests. Failure behavior: discard traversal and restart page one or typed dependency error.
+<!-- roadmap-task id=BACKEND-06-T05 milestone=M7 depends_on=BACKEND-06-T04,BACKEND-02-T05 mode=serial locks=milestone-gate,backend-domain -->
+- [ ] **Prove decision reproducibility, redaction, and UI contract —** Input: metric/report fixtures, retention/redaction states, generated client; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: reproduce snapshot views, scan sensitive fields, and render all states/actions; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: M7 evidence. Test evidence: query/gate comparison, privacy scan, browser E2E/accessibility. Failure behavior: M7 blocked.
 
 ## Test strategy
 

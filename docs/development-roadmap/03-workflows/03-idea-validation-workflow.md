@@ -2,9 +2,9 @@
 
 **Document ID:** WF-03
 **Status:** Planned no-send workflow
-**Milestone:** M4
+**Milestone:** M4 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [WF-02](02-experiment-lifecycle.md), DB-02/DB-04/DB-05, and promoted M3 idea/offer/research agents plus recorded provider fixtures
+**Prerequisites:** exact local order `WF-03-T01 -> WF-03-T02 -> WF-03-T03 -> WF-03-T04 -> WF-03-T05`; cross-document task Inputs `WF-03-T01 <- AGENT-10-T05,DB-02-T03,DB-02-T04,PRODUCT-02-T01; WF-03-T02 <- PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,OBS-03-T02,BACKEND-01-T01,DB-04-T04; WF-03-T03 <- DB-04-T04,BACKEND-01-T04,AGENT-02-T03,AGENT-03-T03,AGENT-04-T03; WF-03-T04 <- WF-02-T03`. Descriptive source authorities/resources (not whole-document completion dependencies): [WF-02](02-experiment-lifecycle.md), DB-02/DB-04/DB-05, and promoted M3 idea/offer/research agents plus recorded provider fixtures
 **Outputs:** Accepted idea, offer hypothesis, market evidence, metric/evidence bundle, and `READY_FOR_LEADS` experiment state
 **Unlocks:** Synthetic M4 gate and WF-04 lead qualification
 **Risk:** High
@@ -44,11 +44,16 @@ Agents can create `PRODUCED` rows only. Deterministic validators verify typed sc
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=WF-03-T01 milestone=M4 depends_on=AGENT-10-T05,DB-02-T03,DB-02-T04,PRODUCT-02-T01 mode=parallel locks=workflow-runtime -->
 - [ ] **Freeze M4 fixture/input contract —** Input: approved brief/metric versions and M3 promoted configs. Operation: encode the DB-01 RFC 8785 version/payload envelope, reproduce its golden SHA-256 vectors independently, and verify before every resumed step. Output: stable run input snapshot. Test evidence: `test_resume_rejects_changed_brief_hash_schema_type_or_json_null_without_new_run`. Failure behavior: fail run; operator revises/restarts explicitly.
-- [ ] **Implement typed artifact steps —** Input: frozen refs/read-only provider ports/budget. Operation: run each promoted agent once per command key and persist envelope/artifact/cost. Output: produced candidates/evidence. Test evidence: recorded fixture, schema, timeout, retry, and cost tests. Failure behavior: bounded retry only for classified no-side-effect provider failures.
-- [ ] **Implement validation/acceptance/materialization —** Input: produced artifact and source links. Operation: validate and accept/reject, then materialize normalized idea/offer under expected version. Output: authoritative product records with provenance. Test evidence: adversarial citation and concurrency tests. Failure behavior: retain rejection; do not transition.
-- [ ] **Complete evidence bundle and stage —** Input: all accepted required artifacts/metrics. Operation: build immutable bundle, recheck versions, and invoke WF-02 completion. Output: `READY_FOR_LEADS`. Test evidence: end-to-end synthetic fixture and restart at every step. Failure behavior: `FAILED` with closed ARCH-03 exits.
-- [ ] **Prove no-send boundary —** Input: full M4 composition/import graph. Operation: assert no Gmail/send port is registered or reachable. Output: M4 evidence. Test evidence: `test_m4_workflow_has_no_gmail_or_sendgateway_edge`. Failure behavior: M4 blocked.
+<!-- roadmap-task id=WF-03-T02 milestone=M4 depends_on=WF-03-T01,PROVIDER-03-T01,PROVIDER-04-T01,PROVIDER-05-T01,OBS-03-T02,BACKEND-01-T01,DB-04-T04 mode=parallel locks=workflow-runtime,backend-domain,agent-artifacts -->
+- [ ] **Implement typed artifact steps —** Input: frozen refs/read-only provider ports/budget; implemented recording/artifact, reservation/cost and validation service interfaces. Operation: run each promoted agent once per command key and persist envelope/artifact/cost. Output: produced candidates/evidence. Test evidence: recorded fixture, schema, timeout, retry, and cost tests. Failure behavior: bounded retry only for classified no-side-effect provider failures.
+<!-- roadmap-task id=WF-03-T03 milestone=M4 depends_on=WF-03-T02,DB-04-T04,BACKEND-01-T04,AGENT-02-T03,AGENT-03-T03,AGENT-04-T03 mode=parallel locks=workflow-runtime,backend-domain,agent-artifacts -->
+- [ ] **Implement validation/acceptance/materialization —** Input: specialist-produced artifact and source links, DB-04 versioned artifact-validation/acceptance service interface, and BACKEND-01 no-send sole-writer service contracts. Operation: validate and accept/reject, then materialize normalized idea/offer under expected version. Output: authoritative product records with provenance. Test evidence: adversarial citation and concurrency tests. Failure behavior: retain rejection; do not transition.
+<!-- roadmap-task id=WF-03-T04 milestone=M4 depends_on=WF-03-T03,WF-02-T03 mode=parallel locks=workflow-runtime -->
+- [ ] **Complete evidence bundle and stage —** Input: all accepted required artifacts/metrics and the WF-02 versioned atomic completion-handler interface. Operation: build immutable bundle, recheck versions, and invoke WF-02 completion. Output: `READY_FOR_LEADS`. Test evidence: end-to-end synthetic fixture and restart at every step. Failure behavior: `FAILED` with closed ARCH-03 exits.
+<!-- roadmap-task id=WF-03-T05 milestone=M4 depends_on=WF-03-T04 mode=serial locks=workflow-runtime,milestone-gate -->
+- [ ] **Prove no-send boundary —** Input: full M4 composition/import graph; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: assert no Gmail/send port is registered or reachable; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: complete versioned finite WF-03 workflow contract plus signed M4 no-send evidence. Test evidence: `test_m4_workflow_has_no_gmail_or_sendgateway_edge`. Failure behavior: M4 blocked.
 
 ## Test strategy
 

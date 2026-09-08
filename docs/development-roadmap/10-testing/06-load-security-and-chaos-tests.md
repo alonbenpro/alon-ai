@@ -2,9 +2,9 @@
 
 **Document ID:** TEST-06
 **Status:** Planned M8 adversarial/capacity gate and M9 public-ingress subset; current CI only scans tracked files for high-signal credentials and smoke-tests foundation containers
-**Milestone:** M8 private operations; M9 scanner-safe unsubscribe ingress
+**Milestone:** M8, M9 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator; counsel/provider support participates only where facts require it
-**Prerequisites:** SEC-01 T01-T16, SEC-02..06, BACKEND-02..05, OBS-01..05, TEST-01..05, and candidate infrastructure manifests
+**Prerequisites:** exact local order `TEST-06-T01 -> TEST-06-T02 -> TEST-06-T03 -> TEST-06-T04 -> TEST-06-T05 -> TEST-06-T06`; cross-document task Inputs `TEST-06-T01 <- TEST-01-T01; TEST-06-T02 <- INFRA-02-T02; TEST-06-T03 <- SEC-01-T02; TEST-06-T04 <- INFRA-04-T02,INFRA-02-T04; TEST-06-T05 <- TEST-01-T01; TEST-06-T06 <- LAUNCH-03-T02,BACKEND-02-T05,SEC-04-T04,OBS-01-T07`. Descriptive source authorities/resources (not whole-document completion dependencies): SEC-01 T01-T16, SEC-02..06, BACKEND-02..05, OBS-01..05, TEST-01..05, and candidate infrastructure manifests
 **Outputs:** Measured capacity envelope, rate/budget correctness, T01-T16 closure evidence, secret/PII/hash-enumeration scans, public abuse/WAF matrix, fault/chaos results, and safe rollback thresholds
 **Unlocks:** M8 capacity/security acceptance and the infrastructure portion of M9 public unsubscribe eligibility
 **Risk:** Critical
@@ -42,12 +42,18 @@ Capacity/rate/budget rows map exactly to `T7-LOAD`; T01-T16, secret/PII/recipien
 
 ## Ordered implementation tasks
 
-- [ ] **Freeze capacity and destructive-target guards —** Input: planned VPS resources, SLOs, pools/queues/caps and disposable target. Operation: encode thresholds/stop conditions and resolve target identity before any load/fault. Output: signed capacity scenario. Test evidence: production-like name, unresolved variable, wrong DB/system ID and threshold-stop self-tests. Failure behavior: refuse execution.
+<!-- roadmap-task id=TEST-06-T01 milestone=M8 depends_on=TEST-01-T01 mode=serial locks=test-command-registry -->
+- [ ] **Freeze capacity and destructive-target guards —** Input: the TEST-01 signed coverage manifest plus document-local planned VPS resources, SLOs, pools/queues/caps, and an operator-selected disposable target. Operation: encode thresholds/stop conditions and resolve target identity before any load/fault. Output: signed capacity scenario. Test evidence: production-like name, unresolved variable, wrong DB/system ID and threshold-stop self-tests. Failure behavior: refuse execution.
+<!-- roadmap-task id=TEST-06-T02 milestone=M8 depends_on=TEST-06-T01,INFRA-02-T02 mode=serial locks=test-command-registry -->
 - [ ] **Measure private capacity/rate/budget —** Input: representative synthetic dataset and candidate image. Operation: run ramp/steady/burst/soak while comparing API results to PostgreSQL and cost/rate ledgers. Output: safe envelope or smaller/resized recommendation. Test evidence: latency/errors/resources/rows/leases/cost exactness. Failure behavior: release/authority capped at last proven bound.
+<!-- roadmap-task id=TEST-06-T03 milestone=M8 depends_on=TEST-06-T02,SEC-01-T02 mode=serial locks=test-command-registry -->
 - [ ] **Execute T01-T16 and canary corpus —** Input: SEC-01 closure matrix, secret/PII/hash canaries and candidate artifacts. Operation: attack every boundary and verify exact alert/incident/runbook/disable evidence. Output: signed security matrix. Test evidence: no orphan threat and zero uncontrolled data/authority path. Failure behavior: Critical incident and release blocked.
-- [ ] **Prove public route/WAF abuse controls —** Input: exact 64+2 manifests and synthetic unsubscribe tokens. Operation: exercise scanners, method/path/body/token/origin/fetch/CSRF/rate/timeout/upstream failures from distinct sources. Output: M9 public-ingress evidence. Test evidence: route set equality, DB write/call/telemetry counts and dependency product-off. Failure behavior: public hostname/ruleset stays disabled and product outreach false.
+<!-- roadmap-task id=TEST-06-T04 milestone=M8 depends_on=TEST-06-T03,INFRA-04-T02,INFRA-02-T04 mode=serial locks=test-command-registry -->
 - [ ] **Execute bounded chaos and rollback —** Input: disposable environment, fault schedule, backup and last release. Operation: inject one fault at a time, capture detection/containment/recovery, and restore/rollback without live-target mutation. Output: recovery-time/data-loss measurements. Test evidence: each fault meets its RPO/RTO/invariant or records failure. Failure behavior: M8 blocked; preserve environment for diagnosis.
+<!-- roadmap-task id=TEST-06-T05 milestone=M8 depends_on=TEST-06-T04,TEST-01-T01 mode=serial locks=test-command-registry -->
 - [ ] **Close adversarial command ownership —** Input: every capacity/security/privacy/public/fault requirement and TEST-01 registry. Operation: prove exact mapping to `T7-LOAD`, `T7-SECURITY-CHAOS`, `T7-PUBLIC-EDGE-VERIFY` or the restore owner; validate profile, guard, stop and artifact semantics. Output: signed command-coverage report. Test evidence: orphan/duplicate/unsafe/unavailable negatives. Failure behavior: M8/M9 remains blocked.
+<!-- roadmap-task id=TEST-06-T06 milestone=M9 depends_on=TEST-06-T05,LAUNCH-03-T02,BACKEND-02-T05,SEC-04-T04,OBS-01-T07 mode=serial locks=test-command-registry,live-environment -->
+- [ ] **Prove active public route, WAF, and recipient-stop controls —** Input: the SEC-04 activation-ready stop path, LAUNCH-03 recipient-opaque activated public capability, BACKEND-02 exact disabled-public 64+2 manifest, and TEST-06-owned synthetic unsubscribe tokens; active-public safe correlation/redaction evidence. Operation: exercise token, method, path, body, scanner GET, Origin/fetch/CSRF POST, rate, timeout, redaction, dependency failure, suppression, Gmail-history, and operator evidence against the active bounded M9 ingress. Output: scanner-safe active public-ingress and recipient-suppression evidence. Test evidence: route equality, database writes, provider calls, events/telemetry, suppression, and dependency `PRODUCT_OUTREACH` fail-close counts. Failure behavior: disable the public hostname/ruleset and keep product outreach false.
 
 ## Test strategy
 

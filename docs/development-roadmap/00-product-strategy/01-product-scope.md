@@ -2,9 +2,9 @@
 
 **Document ID:** PRODUCT-01
 **Status:** Planned gate definition
-**Milestone:** M0
+**Milestone:** M0 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** Approved roadmap design and [master milestone order](../README.md#authoritative-milestone-order)
+**Prerequisites:** exact local order `PRODUCT-01-T01 -> PRODUCT-01-T02 -> PRODUCT-01-T03 -> PRODUCT-01-T04`; cross-document task Inputs `none`. Descriptive source authorities/resources (not whole-document completion dependencies): Approved roadmap design and [master milestone order](../README.md#authoritative-milestone-order)
 **Outputs:** Product job, actor, artifact vocabulary, scope boundary, experiment brief, and non-goals
 **Unlocks:** PRODUCT-02 success metrics and PRODUCT-03 risk gate
 **Risk:** High
@@ -133,9 +133,13 @@ Those paths do not exist today. Their detailed contracts belong to later roadmap
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=PRODUCT-01-T01 milestone=M0 depends_on=- mode=parallel locks=product-contracts -->
 - [ ] **Capture the M0 bet —** Input: operator interview notes and any prior manual evidence. Operation: create the versioned `ExperimentBrief` with every required field, marking absence as `zero-history baseline` rather than inventing data. Output: reviewable brief. Test evidence: schema validation plus operator signature. Failure behavior: block M1 when any scope, budget, jurisdiction, success, or kill field is missing.
+<!-- roadmap-task id=PRODUCT-01-T02 milestone=M0 depends_on=PRODUCT-01-T01 mode=parallel locks=product-contracts -->
 - [ ] **Run the narrowness test —** Input: the brief. Operation: ask whether one person can name the customer, problem, offer, evidence channel, and cap without “and/or” branches. Output: pass or a smaller brief. Test evidence: completed M0 scope checklist. Failure behavior: split the hypothesis; never build one workflow for multiple untested markets.
+<!-- roadmap-task id=PRODUCT-01-T03 milestone=M0 depends_on=PRODUCT-01-T02 mode=parallel locks=product-contracts,architecture-contracts -->
 - [ ] **Register artifact and authority vocabulary —** Input: the frozen catalogs and tables above. Operation: map each planned producer, consumer, authority, and immutable version key without creating aliases. Output: vocabulary crosswalk consumed by M2-M7. Test evidence: exact-name/set-equality scan across M0, DB-04, AGENT-02..09, BACKEND-02/05/06, and FRONTEND-01; reject `IdeaBrief`, `MarketEvidenceBundle`, recipient-bearing `OutreachDraft`, phantom table/route/command names, and any ninth agent artifact. Failure behavior: M0 remains open and M1 is blocked.
+<!-- roadmap-task id=PRODUCT-01-T04 milestone=M0 depends_on=PRODUCT-01-T03 mode=parallel locks=product-contracts -->
 - [ ] **Freeze non-goals for the first experiment —** Input: operator wishlist. Operation: classify each item as required by the next gate or deferred. Output: signed non-goal list. Test evidence: every planned feature points to a milestone gate. Failure behavior: remove work that has no next-gate evidence purpose.
 
 ## Test strategy

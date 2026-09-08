@@ -2,9 +2,9 @@
 
 **Document ID:** PROVIDER-05
 **Status:** Planned M3 capabilities; no evidence reader, safe fetcher, extractor, or fixture adapter exists today
-**Milestone:** M3
+**Milestone:** M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [AGENT-01 capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), [DB-04](../02-database/04-agent-artifacts-and-evidence.md), and PROVIDER-04 search captures
+**Prerequisites:** exact local order `PROVIDER-05-T01 -> PROVIDER-05-T02 -> PROVIDER-05-T03 -> PROVIDER-05-T04 -> PROVIDER-05-T05`; cross-document task Inputs `PROVIDER-05-T01 <- AGENT-01-T01,DB-01-T01; PROVIDER-05-T03 <- OBS-03-T02,DB-04-T03`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01 capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), [DB-04](../02-database/04-agent-artifacts-and-evidence.md), and PROVIDER-04 search captures
 **Outputs:** Byte-exact `evidence.read` and `page.extract`, SSRF-safe HTTP extraction, NFC/code-point normalization, capture lifecycle, fixtures, and replacement seams
 **Unlocks:** Evidence-backed AGENT-02/04/05/09 evaluations and M4/M5 source capture
 **Risk:** Critical
@@ -99,10 +99,15 @@ Agents cannot access the HTTP/object-store client, credentials, repositories, co
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=PROVIDER-05-T01 milestone=M3 depends_on=AGENT-01-T01,DB-01-T01 mode=parallel locks=provider-contracts -->
 - [ ] **Implement exact evidence/page contracts —** Input: Task 3 families and DB-01 canonicalizer. Operation: preserve fields/literals/unions/timeouts/error allowlists/hash/fixture/ledger semantics. Output: two read-only ports. Test evidence: `test_evidence_and_page_wire_parity_with_agent01`. Failure behavior: reject before storage/network.
+<!-- roadmap-task id=PROVIDER-05-T02 milestone=M3 depends_on=PROVIDER-05-T01 mode=parallel locks=provider-contracts -->
 - [ ] **Implement scoped evidence reader —** Input: strict request and immutable capture. Operation: verify identity/hash/redaction/scope/size and return allowlisted payload. Output: exact success/failure. Test evidence: missing/purged/restricted/corrupt/cancel matrix. Failure behavior: no content leakage.
-- [ ] **Implement safe HTTP extractor —** Input: strict URI/source policy/reservation. Operation: enforce DNS/TLS/redirect/MIME/stream/parse/injection/NFC bounds and ingest through sole writer. Output: capture-backed page payload. Test evidence: SSRF and hostile-content suite. Failure behavior: abort/quarantine; no dependent artifact acceptance.
+<!-- roadmap-task id=PROVIDER-05-T03 milestone=M3 depends_on=PROVIDER-05-T02,OBS-03-T02,DB-04-T03 mode=parallel locks=provider-contracts,backend-domain,agent-artifacts -->
+- [ ] **Implement safe HTTP extractor —** Input: strict URI/source policy/reservation; implemented EvidenceIngestService sole-writer interface. Operation: enforce DNS/TLS/redirect/MIME/stream/parse/injection/NFC bounds and ingest through sole writer. Output: capture-backed page payload. Test evidence: SSRF and hostile-content suite. Failure behavior: abort/quarantine; no dependent artifact acceptance.
+<!-- roadmap-task id=PROVIDER-05-T04 milestone=M3 depends_on=PROVIDER-05-T03 mode=parallel locks=provider-contracts -->
 - [ ] **Implement hash/span and fixture gates —** Input: Unicode/raw/text fixtures and sanitized captures. Operation: reproduce digests, convert offsets, sign fixtures, and replay without network. Output: deterministic evaluation data. Test evidence: independent hash encoders and Unicode boundary suite. Failure behavior: reject fixture/result.
+<!-- roadmap-task id=PROVIDER-05-T05 milestone=M3 depends_on=PROVIDER-05-T04 mode=parallel locks=provider-contracts -->
 - [ ] **Prove replacement/authority and retention —** Input: fake extractor, object/import graph, purge holds. Operation: run parity, no-credential/state/send reachability, and retention closure tests. Output: least-authority provider evidence. Test evidence: graph, log/PII scan, purge/incident fixtures. Failure behavior: provider disabled.
 
 ## Test strategy

@@ -2,9 +2,9 @@
 
 **Document ID:** PROVIDER-03
 **Status:** Planned M3 provider; no model client, prompt registry, live call, or fixture adapter exists today
-**Milestone:** M3
+**Milestone:** M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [AGENT-01 exact capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), DB-01 digest rules, DB-04/05 ledgers, and promoted configuration gates
+**Prerequisites:** exact local order `PROVIDER-03-T01 -> PROVIDER-03-T02 -> PROVIDER-03-T03 -> PROVIDER-03-T04 -> PROVIDER-03-T05 -> PROVIDER-03-T06`; cross-document task Inputs `PROVIDER-03-T01 <- AGENT-01-T01,DB-01-T01; PROVIDER-03-T05 <- AGENT-10-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01 exact capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), DB-01 digest rules, DB-04/05 ledgers, and promoted configuration gates
 **Outputs:** Byte-exact `model.complete_structured` protocol, OpenAI Responses adapter, typed failures, live-capture/fixture modes, cost and replacement contract
 **Unlocks:** Offline candidate capture and AGENT-02 through AGENT-09 promotion
 **Risk:** High
@@ -12,7 +12,7 @@
 
 ## Outcome and timing
 
-One promoted configuration makes one bounded structured model request and returns AGENT-01's exact typed union. The initial live adapter uses the OpenAI Responses API with strict JSON Schema; the application contract does not expose OpenAI objects or credentials and can be replaced only by passing byte/semantic parity fixtures.
+One exact immutable configuration authorized by product promotion or the bounded isolated M3 evaluation-only candidate rule makes one bounded structured model request and returns AGENT-01's exact typed union. The initial live adapter uses the OpenAI Responses API with strict JSON Schema; the application contract does not expose OpenAI objects or credentials and can be replaced only by passing byte/semantic parity fixtures.
 
 ## Current repository state
 
@@ -24,7 +24,7 @@ In scope: exact Task 3 wire family, deterministic method mapping, model/prompt/s
 
 ## Exact planned implementation surfaces
 
-Create `providers/model/contracts.py`, `providers/model/openai_responses.py`, `providers/model/fixtures.py`, `providers/model/errors.py`, and composition from the promoted immutable `AgentConfigurationRefV1`. Credentials live only in provider composition. The Python-to-wire mapping is exact:
+Create `providers/model/contracts.py`, `providers/model/openai_responses.py`, `providers/model/fixtures.py`, `providers/model/errors.py`, and composition from the immutable `AgentConfigurationRefV1` with separately checked product-promotion or isolated M3 evaluation-only candidate authority. Credentials live only in provider composition. The Python-to-wire mapping is exact:
 
 | Python protocol/method | Frozen capability | Exact request / success / failure / fixture | Literal success payload identity |
 | --- | --- | --- | --- |
@@ -34,7 +34,7 @@ The request fields, strict types, and semantics are byte-identical to AGENT-01: 
 
 ### OpenAI Responses translation and result construction
 
-The selected adapter issues `POST /v1/responses` with the promoted exact model identifier; developer instructions reconstructed from the immutable prompt whose RFC 8785 hash equals `prompt_hash`; the canonical input envelope; `text.format={type:"json_schema",name:output_schema_version,schema:registered_schema,strict:true}`; `max_output_tokens`; compatible temperature/seed only when the promoted model manifest proves support; `store=false`; `background=false`; no conversation/previous response; no tools; and truncation disabled. OpenAI documents Responses JSON output/status/usage and `store`: [create a response](https://developers.openai.com/api/reference/cli/resources/responses/methods/create). JSON Schema structured output is preferred over legacy JSON mode: [Responses formats](https://developers.openai.com/api/reference/cli/resources/beta/subresources/responses).
+The selected adapter issues `POST /v1/responses` with the exact authority-validated model identifier; developer instructions reconstructed from the immutable prompt whose RFC 8785 hash equals `prompt_hash`; the canonical input envelope; `text.format={type:"json_schema",name:output_schema_version,schema:registered_schema,strict:true}`; `max_output_tokens`; compatible temperature/seed only when the signed immutable model capability manifest proves support; `store=false`; `background=false`; no conversation/previous response; no tools; and truncation disabled. OpenAI documents Responses JSON output/status/usage and `store`: [create a response](https://developers.openai.com/api/reference/cli/resources/responses/methods/create). JSON Schema structured output is preferred over legacy JSON mode: [Responses formats](https://developers.openai.com/api/reference/cli/resources/beta/subresources/responses).
 
 Only `status=completed`, exactly one non-refusal structured output, exact registered `output_schema_version`, strict Pydantic validation, and no extra output item can succeed. `failed`, `cancelled`, `incomplete`, refusal, missing usage, duplicate output, schema mismatch/coercion, or trailing free text is a typed failure. The adapter never repairs JSON itself; a specialist's separately budgeted second/third model request is a new provider call/ledger row controlled by `AgentExecutionService`.
 
@@ -46,7 +46,7 @@ The only non-success `AgentErrorCode` values are: `DEPENDENCY_UNAVAILABLE`, `MOD
 
 | Provider observation | Shared error | Retry classification |
 | --- | --- | --- |
-| authentication/permission/unknown promoted model, unsupported temperature/seed/schema | `DEPENDENCY_UNAVAILABLE` | no retry; configuration/operator repair |
+| authentication/permission/unknown or execution-mode-ineligible model/configuration, unsupported temperature/seed/schema | `DEPENDENCY_UNAVAILABLE` | no retry; configuration/operator repair |
 | deadline/SDK timeout | `MODEL_TIMEOUT` | bounded only when no response/charge acceptance evidence exists and workflow budget permits |
 | 429 or provider quota before call admission | `MODEL_BUDGET_EXHAUSTED` | no immediate adapter retry; application rate/budget window owns later attempt |
 | refusal output | `MODEL_REFUSAL` | no automatic retry |
@@ -60,7 +60,7 @@ Provider quotas/rate headers feed a versioned limiter per project/model; `Execut
 
 ### Modes, fixtures, replacement, example, and authority
 
-`LIVE_CAPTURE` is permitted only for isolated M3 candidate generation with provider credential composition, a prior budget reservation, promoted schema/prompt/model configuration, and sanitized capture. `RECORDED_FIXTURE` accepts only `ModelCompleteStructuredFixtureV1`, recomputes request/response/expected-ledger/fixture hashes, disables the network client, and drives Pydantic Evals. Fixture output remains immutable `EVALUATION_VERSIONED`.
+`LIVE_CAPTURE` is permitted only for isolated M3 candidate generation with provider credential composition, a prior budget reservation, exact code-bound schema/prompt/model configuration frozen and operator-signed by AGENT-10 for evaluation only, with current provider/legal/cost approval and every original execution ceiling; product promotion is not required for this isolated candidate call, but product composition must reject this context before credential access, and sanitized capture. `RECORDED_FIXTURE` accepts only `ModelCompleteStructuredFixtureV1`, recomputes request/response/expected-ledger/fixture hashes, disables the network client, and drives Pydantic Evals. Fixture output remains immutable `EVALUATION_VERSIONED`.
 
 The fixture contains the exact strict request and result; `response_hash` is present even for failure and covers the exact union branch. A replacement provider must reproduce every schema literal, payload hash, meta/outcome/error allowlist, token/cost ledger, timeout bound, cancellation point, NFC/span behavior, and fixture digest. Model/provider identity remains in the configuration and ledger; semantics cannot widen.
 
@@ -100,10 +100,17 @@ Agents receive only `StructuredModelProvider`, never the API key/client, and can
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=PROVIDER-03-T01 milestone=M3 depends_on=AGENT-01-T01,DB-01-T01 mode=parallel locks=provider-contracts -->
 - [ ] **Implement exact model protocol —** Input: AGENT-01 family and DB-01 canonicalizer. Operation: encode/import the same strict models, method mapping, literal schemas, digest validation, timeout/default, and error allowlist. Output: provider-neutral protocol. Test evidence: `test_model_capability_wire_is_byte_exact_with_agent01`. Failure behavior: fail construction before a provider call.
-- [ ] **Implement OpenAI Responses adapter —** Input: promoted configuration, reservation, credential, request. Operation: translate to one no-tool/no-store strict-schema response and map result/meta/usage/errors. Output: exact result union. Test evidence: fake HTTP status/status-output/refusal/schema/usage matrix. Failure behavior: typed failure; no partial artifact.
+<!-- roadmap-task id=PROVIDER-03-T02 milestone=M3 depends_on=PROVIDER-03-T01 mode=parallel locks=provider-contracts -->
+- [ ] **Implement OpenAI Responses adapter —** Input: document-local candidate configuration/request fixtures, reservation, isolated candidate credential and strict provider request contract. Operation: translate to one no-tool/no-store strict-schema response and map result/meta/usage/errors; implement the evaluation-only adapter with fake HTTP verification and no product activation; only the bounded AGENT-10 capture runner may make fresh candidate-network calls. Output: executable isolated candidate-model adapter and exact result union; no promoted product activation. Test evidence: fake HTTP status/status-output/refusal/schema/usage matrix; fake-HTTP execution of a fresh unpromoted signed candidate-configuration fixture succeeds under isolated evaluation authority with all ceilings intact; the identical context fails product composition before credential access; missing signature/reservation, drift and non-model/product authority fail closed. Failure behavior: typed failure; no partial artifact.
+<!-- roadmap-task id=PROVIDER-03-T03 milestone=M3 depends_on=PROVIDER-03-T02 mode=parallel locks=provider-contracts -->
 - [ ] **Implement ceilings and cancellation —** Input: run/provider deadlines and limiter. Operation: disable SDK retry, reserve before call, stop at every boundary, and reconcile actual ledger/cost. Output: bounded call evidence. Test evidence: `test_model_deadline_cancel_rate_token_and_cost_boundaries_have_exact_call_count`. Failure behavior: no next call; discrepancy visible.
+<!-- roadmap-task id=PROVIDER-03-T04 milestone=M3 depends_on=PROVIDER-03-T03 mode=parallel locks=provider-contracts -->
 - [ ] **Implement signed live-capture/fixture adapters —** Input: sanitized candidate capture. Operation: build fixture, recompute all hashes, replay with network physically unavailable. Output: deterministic evaluation input. Test evidence: tamper/cross-capability/extra-field/zero-network tests. Failure behavior: fixture rejected; version not promoted.
+<!-- roadmap-task id=PROVIDER-03-T05 milestone=M3 depends_on=PROVIDER-03-T04,AGENT-10-T05 mode=serial locks=provider-contracts,milestone-gate -->
+- [ ] **Bind promoted product model activation —** Input: implemented candidate adapter, recorded fixture compatibility, and AGENT-10 immutable approved PromotionManifestV1/configuration/registry binding; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: compose the product adapter only from the exact eligible promoted configuration and enforce reservation, credential, model/schema and no-tool/no-store boundaries at every call; reject unpromoted or evaluation-only contexts; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: promoted product model-adapter activation contract bound to one immutable eligible configuration, or a retained disabled rejection. Test evidence: unpromoted/stale/spliced configuration, disabled evaluation credential, missing reservation and exact promoted positive fixtures. Failure behavior: product model calls remain disabled; candidate evaluation authority never grants product authority.
+<!-- roadmap-task id=PROVIDER-03-T06 milestone=M3 depends_on=PROVIDER-03-T05 mode=parallel locks=provider-contracts -->
 - [ ] **Prove replacement and authority seams —** Input: fake second provider and object/import graph. Operation: run shared contract suite and assert no credential/state/send reachability. Output: replaceable least-authority boundary. Test evidence: provider parity and static/runtime graph. Failure behavior: adapter/config promotion blocked.
 
 ## Test strategy

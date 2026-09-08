@@ -2,9 +2,9 @@
 
 **Document ID:** AGENT-08
 **Status:** Planned M3 specialist; no implementation exists
-**Milestone:** M3; first workflow use at M6
+**Milestone:** M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [AGENT-01](01-agent-runtime-and-contracts.md), DB-03/DB-04, recorded reply fixtures, and deterministic unsubscribe/bounce safety rules
+**Prerequisites:** exact local order `AGENT-08-T01 -> AGENT-08-T02 -> AGENT-08-T03 -> AGENT-08-T04`; cross-document task Inputs `AGENT-08-T01 <- DB-03-T04,AGENT-10-T01; AGENT-08-T02 <- AGENT-01-T01,AGENT-01-T02; AGENT-08-T03 <- BACKEND-01-T01,DB-04-T04,OBS-03-T02,AGENT-01-T04; AGENT-08-T04 <- AGENT-10-T01,AGENT-10-T03,AGENT-10-T04`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01](01-agent-runtime-and-contracts.md), DB-03/DB-04, recorded reply fixtures, and deterministic unsubscribe/bounce safety rules
 **Outputs:** Versioned `ReplyClassification` `PRODUCED` artifact, abstention/failure results, labeled fixtures, scores, and review evidence
 **Unlocks:** WF-05 reply classification/triage; never automatic response authority
 **Risk:** Critical
@@ -112,10 +112,14 @@ Operator review is mandatory for `POSITIVE`, `QUESTION`, `OBJECTION`, `OTHER`, `
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=AGENT-08-T01 milestone=M3 depends_on=DB-03-T04,AGENT-10-T01 mode=parallel locks=agent-runtime -->
 - [ ] **Encode taxonomy/input/output/spans —** Input: reply identity and safety rules. Operation: implement strict models, prompt/config/hash and sanitizer contract. Output: typed classifier. Test evidence: enum/schema/span boundary snapshots. Failure behavior: malformed input blocks model.
-- [ ] **Implement bounded hostile-content classification —** Input: verified reply envelope. Operation: apply pre-rules, one optional evidence read, structured classify, post-rules, ceilings/cancellation. Output: classification/abstention/failure. Test evidence: fake model/injection/timeout matrix. Failure behavior: deterministic safety signals remain available; no artifact attachment.
-- [ ] **Implement validator/persistence/safety handoff —** Input: output/ledger/signals. Operation: verify spans/labels, persist only `PRODUCED`, and keep reply attachment/suppression in separate services. Output: immutable review artifact. Test evidence: atomic reply-event and suppression-independence cases. Failure behavior: classification absent/rejected, cursor history unaffected.
-- [ ] **Build and gate 120-case labeled suite —** Input: frozen bilingual/adversarial cases. Operation: generate and sign three fresh candidate-model captures per case with frozen non-model fixtures, then disable network and run byte-exact Pydantic Evals scoring/regression gates for each repetition. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
+<!-- roadmap-task id=AGENT-08-T02 milestone=M3 depends_on=AGENT-08-T01,AGENT-01-T01,AGENT-01-T02 mode=parallel locks=agent-runtime -->
+- [ ] **Implement bounded hostile-content classification —** Input: verified reply envelope; AGENT-01 importable envelope contracts and immutable AgentDependenciesV1. Operation: apply pre-rules, one optional evidence read, structured classify, post-rules, ceilings/cancellation. Output: classification/abstention/failure. Test evidence: fake model/injection/timeout matrix. Failure behavior: deterministic safety signals remain available; no artifact attachment.
+<!-- roadmap-task id=AGENT-08-T03 milestone=M3 depends_on=AGENT-08-T02,BACKEND-01-T01,DB-04-T04,OBS-03-T02,AGENT-01-T04 mode=parallel locks=agent-artifacts,backend-domain -->
+- [ ] **Implement validator/persistence/safety handoff —** Input: output/ledger/signals; implemented M3 recorder/PRODUCED insertion, validation/acceptance, cost-reconciliation and terminal-handoff interfaces; signed fixture rows, never later product commands. Operation: verify spans/labels, persist only `PRODUCED`, and keep reply attachment/suppression in separate services. Output: immutable review artifact, with the immutable specialist implementation/configuration identity and its frozen typed capability contract. Test evidence: atomic reply-event and suppression-independence cases; execute these checks against signed M3 fixture rows and actual M3 services; later lead/reply/approval/product transitions remain mandatory at their existing product owners. Failure behavior: classification absent/rejected, cursor history unaffected.
+<!-- roadmap-task id=AGENT-08-T04 milestone=M3 depends_on=AGENT-08-T03,AGENT-10-T01,AGENT-10-T03,AGENT-10-T04 mode=serial locks=agent-runtime,agent-artifacts,live-environment -->
+- [ ] **Build and gate 120-case labeled suite —** Input: frozen bilingual/adversarial cases; AGENT-10 signed fresh capture-set and deterministic scoring package/repetition summaries. Operation: select this specialist's exact frozen-case subset from the AGENT-10 capture set, independently verify three fresh candidate calls per case and all signatures/configuration/fixture hashes, invoke the shared deterministic scorer and evaluate every original specialist component/duration/cost/regression gate; retain the full repetition and suite summaries without a second capture or promotion writer. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
 
 ## Test strategy
 

@@ -2,9 +2,9 @@
 
 **Document ID:** ARCH-03
 **Status:** Canonical planned vocabulary
-**Milestone:** M0 definition; persisted from M2
+**Milestone:** M2, M6, M7 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [ARCH-01 target architecture](01-target-system-architecture.md) and [ARCH-02 module boundaries](02-module-boundaries.md)
+**Prerequisites:** exact local order `ARCH-03-T01 -> ARCH-03-T02 -> ARCH-03-T03 -> ARCH-03-T04 -> ARCH-03-T05`; cross-document task Inputs `ARCH-03-T01 <- PRODUCT-01-T03; ARCH-03-T03 <- WF-00-T04; ARCH-03-T04 <- DB-03-T04,PROVIDER-02-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): [ARCH-01 target architecture](01-target-system-architecture.md) and [ARCH-02 module boundaries](02-module-boundaries.md)
 **Outputs:** Event envelope, aggregate states, transition ownership, event catalog, idempotency and recovery semantics
 **Unlocks:** M2 schema/workflows and every later API/frontend state contract
 **Risk:** Critical
@@ -312,10 +312,15 @@ These surfaces do not exist today. M1 uses only `m1_spike.spike_runs` and `m1_sp
 
 ## Ordered implementation tasks
 
-- [ ] **Encode enums and transition tables at M2 —** Input: canonical states/guards above. Operation: implement pure transition functions that require explicit actor, current version, reason, and evidence IDs; close every non-terminal failure state and force bounded retry exhaustion to a terminal state. Output: typed decision plus event intent. Test evidence: table-driven legal/illegal transition matrix. Failure behavior: typed rejection with no mutation.
+<!-- roadmap-task id=ARCH-03-T01 milestone=M2 depends_on=PRODUCT-01-T03 mode=parallel locks=architecture-contracts,backend-domain -->
+- [ ] **Encode enums and transition tables at M2 —** Input: the PRODUCT-01 signed vocabulary crosswalk and the document-local canonical state/guard catalog. Operation: implement pure transition functions that require explicit actor, current version, reason, and evidence IDs; close every non-terminal failure state and force bounded retry exhaustion to a terminal state. Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents. Test evidence: table-driven legal/illegal transition matrix. Failure behavior: typed rejection with no mutation.
+<!-- roadmap-task id=ARCH-03-T02 milestone=M2 depends_on=ARCH-03-T01 mode=parallel locks=architecture-contracts,database-schema,backend-domain -->
 - [ ] **Persist events and idempotency atomically —** Input: command and transition result. Operation: commit aggregate version, domain/audit events, command result, and outbox entry in one unit of work. Output: replayable audit chain. Test evidence: rollback injection and concurrency tests on real PostgreSQL. Failure behavior: whole transaction rolls back.
-- [ ] **Map runtime states explicitly —** Input: selected DBOS runtime, or mandatory Temporal fallback after a disqualifying M1 result. Operation: translate runtime-native execution state to `WorkflowRunState` without making it aggregate truth. Output: inspectable run projection. Test evidence: restart/pause/cancel/failure contract suite. Failure behavior: unknown runtime state reports degraded and blocks unsafe commands.
+<!-- roadmap-task id=ARCH-03-T03 milestone=M2 depends_on=ARCH-03-T02,WF-00-T04 mode=parallel locks=architecture-contracts,workflow-runtime,backend-domain -->
+- [ ] **Map runtime states explicitly —** Input: WF-00 signed `SelectedRuntimeDecisionV1` naming the accepted DBOS runtime or validated mandatory Temporal fallback. Operation: translate runtime-native execution state to `WorkflowRunState` without making it aggregate truth. Output: inspectable run projection. Test evidence: restart/pause/cancel/failure contract suite. Failure behavior: unknown runtime state reports degraded and blocks unsafe commands.
+<!-- roadmap-task id=ARCH-03-T04 milestone=M6 depends_on=ARCH-03-T03,DB-03-T04,PROVIDER-02-T02 mode=serial locks=architecture-contracts,gmail-side-effects,backend-domain,security-runtime -->
 - [ ] **Implement message ambiguity path before Gmail activation —** Input: send intent/attempt states and Gmail reconciliation evidence. Operation: make every error/kill point choose a legal transition; forbid `AMBIGUOUS` retry. Output: M6-safe message history. Test evidence: exhaustive crash matrix and provider-observation dedupe tests. Failure behavior: global disable on impossible/unknown transition.
+<!-- roadmap-task id=ARCH-03-T05 milestone=M7 depends_on=ARCH-03-T04 mode=serial locks=architecture-contracts,openapi-contract,frontend-client -->
 - [ ] **Generate API/UI state mappings —** Input: canonical enums. Operation: expose typed OpenAPI enums and exhaustive frontend rendering/actions. Output: no hidden or invented state. Test evidence: backend enum schema tests, generated drift test, frontend exhaustive-state and E2E recovery tests. Failure behavior: UI displays unknown/degraded and disables mutations.
 
 ## Test strategy

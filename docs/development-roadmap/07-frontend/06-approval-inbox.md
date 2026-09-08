@@ -2,9 +2,9 @@
 
 **Document ID:** FRONTEND-06
 **Status:** Planned M7 authority review; no approval routes, records, or UI exist today
-**Milestone:** M7 after M6 gateway/control evidence; bounded real recipients remain M9-gated
+**Milestone:** M7 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [BACKEND-03 approval basis](../06-backend/03-policy-engine.md), [BACKEND-05 approval lifecycle](../06-backend/05-approval-and-command-handling.md#exact-approval-authority-and-lifecycle), [BACKEND-02](../06-backend/02-api-contracts.md), [DB-03](../02-database/03-leads-campaigns-and-messages.md), and [FRONTEND-04](04-evidence-and-agent-artifacts.md)
+**Prerequisites:** exact local order `FRONTEND-06-T01 -> FRONTEND-06-T02 -> FRONTEND-06-T03 -> FRONTEND-06-T04`; cross-document task Inputs `FRONTEND-06-T01 <- BACKEND-02-T05; FRONTEND-06-T02 <- SEC-02-T04,BACKEND-02-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [BACKEND-03 approval basis](../06-backend/03-policy-engine.md), [BACKEND-05 approval lifecycle](../06-backend/05-approval-and-command-handling.md#exact-approval-authority-and-lifecycle), [BACKEND-02](../06-backend/02-api-contracts.md), [DB-03](../02-database/03-leads-campaigns-and-messages.md), and [FRONTEND-04](04-evidence-and-agent-artifacts.md)
 **Outputs:** Exact pending queue, immutable-scope review, approve/deny/revoke controls, eligibility-versus-SEND explanation, and stale-authority blocking
 **Unlocks:** One exact approval can later be consumed by `RecordSendIntent`; it does not itself send
 **Risk:** Critical
@@ -71,9 +71,13 @@ Dialog initial focus is the heading; tab is trapped; Escape/close is unavailable
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=FRONTEND-06-T01 milestone=M7 depends_on=BACKEND-02-T05 mode=serial locks=frontend-client -->
 - [ ] **Implement queue/detail projections —** Input: generated approval page/detail/report types. Operation: render exact state, age/expiry, scope, eligibility/current validity, reason, and artifact refs with snapshot pagination. Output: reviewable queue. Test evidence: every-state/expiry/redaction/partial/snapshot fixtures. Failure behavior: no decision action when detail or authority projection is unavailable.
-- [ ] **Implement sensitive preview, approve, and deny —** Input: fresh exact scope, step-up session, no-store sensitive materialization/receipt, refetched artifact versions/hashes/statuses, generated expected state/reason, operator confirmation. Operation: display the exact recipient/content, submit its receipt once, wipe memory, render command result, invalidate/refetch linked resources; deny never previews. Output: server-owned state. Test evidence: content/recipient visibility, no-cache/telemetry/storage scan, double-decision race, stale/cross-session receipt, basis/expiry/hash conflict, timeout replay. Failure behavior: wipe preview, remain/refetch, and never approve/create intent.
+<!-- roadmap-task id=FRONTEND-06-T02 milestone=M7 depends_on=FRONTEND-06-T01,SEC-02-T04,BACKEND-02-T05 mode=serial locks=frontend-client -->
+- [ ] **Implement sensitive preview, approve, and deny —** Input: fresh exact scope, step-up session, no-store sensitive materialization/receipt, refetched artifact versions/hashes/statuses, generated expected state/reason, operator confirmation, using BACKEND-02 canonical generated client/types. Operation: display the exact recipient/content, submit its receipt once, wipe memory, render command result, invalidate/refetch linked resources; deny never previews. Output: server-owned state. Test evidence: content/recipient visibility, no-cache/telemetry/storage scan, double-decision race, stale/cross-session receipt, basis/expiry/hash conflict, timeout replay. Failure behavior: wipe preview, remain/refetch, and never approve/create intent.
+<!-- roadmap-task id=FRONTEND-06-T03 milestone=M7 depends_on=FRONTEND-06-T02 mode=serial locks=frontend-client -->
 - [ ] **Implement revoke and consumption visibility —** Input: approved/consumed detail. Operation: destructive revoke confirmation or read-only consumed-intent linkage. Output: accurate lifecycle. Test evidence: revoke race, already consumed, already revoked, and focus-return tests. Failure behavior: preserve original approval/evidence.
+<!-- roadmap-task id=FRONTEND-06-T04 milestone=M7 depends_on=FRONTEND-06-T03 mode=serial locks=frontend-client -->
 - [ ] **Prove eligibility/final-SEND separation —** Input: UI/network/state graph. Operation: verify approve makes no `recordMessageSendIntent` or provider call and mutable denials remain visible. Output: bounded authority UX. Test evidence: network allowlist, suppression/control change, approval-consumption/final-denial E2E. Failure behavior: M7/M9 approval release blocked.
 
 ## Test strategy

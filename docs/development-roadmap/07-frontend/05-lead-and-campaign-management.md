@@ -2,9 +2,9 @@
 
 **Document ID:** FRONTEND-05
 **Status:** Planned bounded campaign and suppression UI over exact BACKEND-02 contracts
-**Milestone:** M5 read-only qualification visibility and M6-M7 campaign control
+**Milestone:** M7 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [DB-03](../02-database/03-leads-campaigns-and-messages.md), [ARCH-03 lead/campaign/message states](../01-architecture/03-domain-events-and-state-machines.md#lead-state-machine), [WF-04](../03-workflows/04-lead-qualification-workflow.md), [WF-05](../03-workflows/05-outreach-and-reply-workflow.md), and [BACKEND-02](../06-backend/02-api-contracts.md)
+**Prerequisites:** exact local order `FRONTEND-05-T01 -> FRONTEND-05-T02 -> FRONTEND-05-T03 -> FRONTEND-05-T04 -> FRONTEND-05-T05`; cross-document task Inputs `FRONTEND-05-T01 <- BACKEND-02-T05,BACKEND-02-T02; FRONTEND-05-T03 <- BACKEND-05-T06; FRONTEND-05-T04 <- BACKEND-02-T05; FRONTEND-05-T05 <- BACKEND-02-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [DB-03](../02-database/03-leads-campaigns-and-messages.md), [ARCH-03 lead/campaign/message states](../01-architecture/03-domain-events-and-state-machines.md#lead-state-machine), [WF-04](../03-workflows/04-lead-qualification-workflow.md), [WF-05](../03-workflows/05-outreach-and-reply-workflow.md), and [BACKEND-02](../06-backend/02-api-contracts.md)
 **Outputs:** Immutable campaign-version page, server-sourced member/lead/suppression state, and exact campaign control behavior
 **Unlocks:** Approval/message navigation and controlled M6 campaign operation
 **Risk:** Critical
@@ -70,10 +70,15 @@ The desktop table is inside a labeled, keyboard-focusable bounded horizontal-scr
 
 ## Ordered implementation tasks
 
-- [ ] **Implement immutable all-eligible version creation/read —** Input: generated create/read types and fresh aggregate eligibility summary. Operation: confirm the complete snapshot/caps with no lead selector, submit one request/key, navigate by returned ID/version, and render exact resource without writable copies. Output: campaign detail. Test evidence: replay/Location/version/unknown-field plus zero/overflow/drift/no-subset fixtures. Failure behavior: refetch summary; no guessed membership or local campaign row.
+<!-- roadmap-task id=FRONTEND-05-T01 milestone=M7 depends_on=BACKEND-02-T05,BACKEND-02-T02 mode=serial locks=frontend-client -->
+- [ ] **Implement immutable all-eligible version creation/read —** Input: BACKEND-02 canonical generated create/read types, implemented no-send campaign-readiness query contract, and its fresh runtime aggregate eligibility summary. Operation: confirm the complete snapshot/caps with no lead selector, submit one request/key, navigate by returned ID/version, and render exact resource without writable copies. Output: campaign detail. Test evidence: replay/Location/version/unknown-field plus zero/overflow/drift/no-subset fixtures. Failure behavior: refetch summary; no guessed membership or local campaign row.
+<!-- roadmap-task id=FRONTEND-05-T02 milestone=M7 depends_on=FRONTEND-05-T01 mode=serial locks=frontend-client -->
 - [ ] **Render exhaustive lead/member/message safety states —** Input: embedded generated resource. Operation: map all canonical enums, suppression/conflict/ambiguity, and safe deep links with table/card parity. Output: bounded management view. Test evidence: every-state, redacted, empty, responsive, and unknown-enum tests. Failure behavior: affected action disabled.
+<!-- roadmap-task id=FRONTEND-05-T03 milestone=M7 depends_on=FRONTEND-05-T02,BACKEND-05-T06 mode=serial locks=frontend-client -->
 - [ ] **Implement readiness and four campaign controls —** Input: current expected state, fresh accepted artifacts, and generated reason fields. Operation: confirm, submit with one key, render the exact 200 readiness resource or 202 control receipt, invalidate/poll, and distinguish draining from terminal. Output: server-reconciled transition. Test evidence: stale state, double-submit, signal delay, ambiguity, cancel-drain matrices. Failure behavior: keep conservative prior/requested state and link recovery.
+<!-- roadmap-task id=FRONTEND-05-T04 milestone=M7 depends_on=FRONTEND-05-T03,BACKEND-02-T05 mode=serial locks=frontend-client -->
 - [ ] **Implement typed suppression management —** Input: fresh generated page/row ETag and exact target/reason requests. Operation: list/filter/page, confirm create/deactivate, freeze one key/request, reconcile response, and invalidate every authority consumer without optimistic removal. Output: audited suppression view. Test evidence: target-union, stale ETag, in-flight/ambiguity/control guard, replay, no-stale-send, focus, and mobile fixtures. Failure behavior: retain active suppression and block authority.
+<!-- roadmap-task id=FRONTEND-05-T05 milestone=M7 depends_on=FRONTEND-05-T04,BACKEND-02-T05 mode=serial locks=frontend-client -->
 - [ ] **Enforce API boundaries and authority —** Input: BACKEND-02 manifest. Operation: assert no generic lead CRUD, local qualification/suppression matching, auto-merge, or derived eligibility. Output: exact v1 surface. Test evidence: network/AST operation allowlist. Failure behavior: block unsupported controls and record backend need.
 
 ## Test strategy

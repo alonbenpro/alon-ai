@@ -2,9 +2,9 @@
 
 **Document ID:** DB-01
 **Status:** Planned; no product table exists today
-**Milestone:** M2
+**Milestone:** M2 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [master roadmap](../README.md), [ARCH-01](../01-architecture/01-target-system-architecture.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), and a passing M1 DBOS acceptance record or completed Temporal fallback
+**Prerequisites:** exact local order `DB-01-T01 -> DB-01-T02 -> DB-01-T03 -> DB-01-T04 -> DB-01-T05`; cross-document task Inputs `DB-01-T01 <- ARCH-03-T01; DB-01-T04 <- WF-00-T04`. Descriptive source authorities/resources (not whole-document completion dependencies): [master roadmap](../README.md), [ARCH-01](../01-architecture/01-target-system-architecture.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), and a passing M1 DBOS acceptance record or completed Temporal fallback
 **Outputs:** PostgreSQL naming/type rules, ownership records, aggregate concurrency fields, workflow-run projection, controls, budgets, and incidents
 **Unlocks:** DB-02 through DB-06 and every M2 repository/unit-of-work implementation
 **Risk:** Critical
@@ -262,11 +262,16 @@ Every product run uses application UUID `workflow_run_id` and runtime ID `experi
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=DB-01-T01 milestone=M2 depends_on=ARCH-03-T01 mode=parallel locks=backend-domain -->
 - [ ] **Create core domain types —** Input: ARCH-03 enums and identifier rules. Operation: implement UUID value types, money, canonical state enums, and pure validation without SQLAlchemy/DBOS imports. Output: inward-facing types. Test evidence: `test_core_value_types_reject_invalid_values` and exhaustive enum snapshot. Failure behavior: reject construction; create no record.
+<!-- roadmap-task id=DB-01-T02 milestone=M2 depends_on=DB-01-T01 mode=serial locks=database-schema,migration-head -->
 - [ ] **Create the M2 core migration —** Input: the table contract above. Operation: add tables, foreign keys, checks, unique constraints, indexes, and outreach-off seed in one forward migration. Output: fresh PostgreSQL schema. Test evidence: `test_m2_core_upgrade_and_downgrade_on_real_postgres`. Failure behavior: rollback migration transaction and block M2.
+<!-- roadmap-task id=DB-01-T03 milestone=M2 depends_on=DB-01-T02 mode=parallel locks=database-schema,backend-domain -->
 - [ ] **Implement optimistic unit of work —** Input: expected aggregate version and command envelope. Operation: update with version predicate and atomically append event/audit/idempotency/outbox records. Output: committed command result. Test evidence: `test_concurrent_experiment_commands_have_one_winner`. Failure behavior: typed conflict; no partial write.
-- [ ] **Map runtime runs —** Input: DBOS acceptance adapter or mandatory Temporal adapter. Operation: persist canonical `workflow_runs` state without exposing engine-native state to domain/API. Output: inspectable finite run projection. Test evidence: `test_unknown_runtime_state_fails_closed`. Failure behavior: mark projection degraded, block unsafe command, open incident.
-- [ ] **Enforce both send controls default-off —** Input: M1/M6 gate evidence and test-inbox isolation references. Operation: seed `PRODUCT_OUTREACH=false` and `TEST_INBOX_SENDING=false`; allow the M6 test harness to enable only the latter with an owned-alias allowlist; require both M1 and M6 evidence before any later product-outreach enable command. Output: separated auditable authority. Test evidence: `test_test_inbox_control_cannot_enable_product_outreach` and `test_product_outreach_cannot_enable_without_m1_and_m6`. Failure behavior: both remain disabled.
+<!-- roadmap-task id=DB-01-T04 milestone=M2 depends_on=DB-01-T03,WF-00-T04 mode=parallel locks=database-schema,workflow-runtime,backend-domain -->
+- [ ] **Map runtime runs —** Input: WF-00 signed `SelectedRuntimeDecisionV1` naming the accepted DBOS adapter or the validated mandatory Temporal adapter. Operation: persist canonical `workflow_runs` state without exposing engine-native state to domain/API. Output: inspectable finite run projection. Test evidence: `test_unknown_runtime_state_fails_closed`. Failure behavior: mark projection degraded, block unsafe command, open incident.
+<!-- roadmap-task id=DB-01-T05 milestone=M2 depends_on=DB-01-T04 mode=serial locks=database-schema,security-runtime -->
+- [ ] **Enforce both send controls default-off —** Input: the M2 schema plus document-local separated-control definitions and outreach-off seed contract. Operation: create and seed independent `PRODUCT_OUTREACH=false` and `TEST_INBOX_SENDING=false` control authority with versioning/audit invariants; define no M6 enable command or harness behavior here. Output: versioned M2 separated-control contract with both controls default-off. Test evidence: migration/default/version/hash/independence tests prove neither row enables the other and no M6 evidence is consumed. Failure behavior: both controls remain disabled and M6 owners cannot start from an invalid contract.
 
 ## Test strategy
 

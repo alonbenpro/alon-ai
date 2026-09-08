@@ -2,9 +2,9 @@
 
 **Document ID:** SEC-03
 **Status:** Planned M6-M8 credential boundary; typed secret settings and CI secret scanning exist, but no runtime secret store, token encryption, key hierarchy, rotation, revocation, or restore proof exists
-**Milestone:** M6 Gmail credential gate and M8 private-deployment/recovery gate
+**Milestone:** M1, M6, M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [PROVIDER-01 Gmail OAuth saga](../05-providers/01-gmail-oauth-and-adapter.md), [DB-03 mailbox proof](../02-database/03-leads-campaigns-and-messages.md), [DB-06 retention](../02-database/06-migrations-seeding-and-retention.md), SEC-01, and SEC-02
+**Prerequisites:** exact local order `SEC-03-T01 -> SEC-03-T02 -> SEC-03-T03 -> SEC-03-T04 -> SEC-03-T05`; cross-document task Inputs `SEC-03-T01 <- SEC-01-T01; SEC-03-T02 <- PROVIDER-01-T03; SEC-03-T05 <- INFRA-04-T02`. Descriptive source authorities/resources (not whole-document completion dependencies): [PROVIDER-01 Gmail OAuth saga](../05-providers/01-gmail-oauth-and-adapter.md), [DB-03 mailbox proof](../02-database/03-leads-campaigns-and-messages.md), [DB-06 retention](../02-database/06-migrations-seeding-and-retention.md), SEC-01, and SEC-02
 **Outputs:** Versioned secret-object store, envelope-encryption/key hierarchy, least-access protocol, rotation/revocation/zeroization, backup/restore, and leak-prevention evidence
 **Unlocks:** Safe M6 Gmail pilot credentials, operator sessions, encrypted personal data, and M8 restore
 **Risk:** Critical
@@ -78,11 +78,16 @@ Forbidden everywhere outside the secret call boundary: `Authorization`, `Cookie`
 
 ## Ordered implementation tasks
 
-- [ ] **Implement the key/object contracts —** Input: secret classes, key hierarchy, canonical AAD, CAS/lease states. Operation: build strict models/ports and managed adapter with authenticated encryption and least workload identity. Output: versioned encrypted objects. Test evidence: tamper, nonce uniqueness, cross-purpose/environment/version denial. Failure behavior: secret read/write unavailable; capability off.
+<!-- roadmap-task id=SEC-03-T01 milestone=M1 depends_on=SEC-01-T01 mode=serial locks=security-runtime -->
+- [ ] **Implement the key/object contracts —** Input: secret classes, key hierarchy, canonical AAD, CAS/lease states. Operation: build strict models/ports and managed adapter with authenticated encryption and least workload identity. Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects. Test evidence: tamper, nonce uniqueness, cross-purpose/environment/version denial. Failure behavior: secret read/write unavailable; capability off.
+<!-- roadmap-task id=SEC-03-T02 milestone=M6 depends_on=SEC-03-T01,PROVIDER-01-T03 mode=serial locks=security-runtime -->
 - [ ] **Implement Gmail credential lifecycle —** Input: PROVIDER-01 flow and ACTIVE tuple. Operation: exchange once, STAGE/ACTIVATE, bind proof, DB commit, refresh/rotate/revoke/GC under exact leases. Output: mailbox-scoped retrievable credential. Test evidence: six kill points, three strong reads, handler/bind/GC CAS races, mismatch. Failure behavior: no mailbox success/token access; both controls false on mismatch.
+<!-- roadmap-task id=SEC-03-T03 milestone=M6 depends_on=SEC-03-T02 mode=serial locks=security-runtime -->
 - [ ] **Apply exact access/redaction controls —** Input: workload, purpose, version and data-flow inventory. Operation: enforce allowlist/audit and run canary scans across every sink. Output: zero uncontrolled secret path. Test evidence: compromised agent/workflow/frontend/telemetry attempts. Failure behavior: deny, revoke, incident.
-- [ ] **Implement rotation and emergency revoke —** Input: scheduled/compromise generation change. Operation: rewrap/verify/retire or revoke/provider-disable with bounded overlap. Output: current inventory and retired key proof. Test evidence: mid-call/mid-flow/mid-backup rotation and stolen generation. Failure behavior: dependent capability remains disabled.
-- [ ] **Prove clean backup/restore —** Input: encrypted object/DB backups and separate recovery artifacts. Operation: restore isolated, verify linkage/invariants, revoke sessions/flows, and reauthorize one fake mailbox. Output: signed drill. Test evidence: missing/corrupt key/object/manifest variants. Failure behavior: do not start workers or enable controls.
+<!-- roadmap-task id=SEC-03-T04 milestone=M6 depends_on=SEC-03-T03 mode=serial locks=security-runtime -->
+- [ ] **Implement rotation, emergency revoke, and recovery-package refresh —** Input: a scheduled/compromise generation change plus the current custody policy and offline recovery-device identities. Operation: rewrap, verify, retire or revoke/provider-disable with bounded overlap, then prepare, integrity-check, and sign the purpose-separated offline recovery-key package without performing a restore. Output: current inventory, retired-key proof, and signed offline recovery-key package. Test evidence: rotation/revocation cases plus wrong-key, missing-generation, tamper, custody, and tmpfs-cleanup negatives. Failure behavior: dependent capability remains disabled and no restore drill starts.
+<!-- roadmap-task id=SEC-03-T05 milestone=M8 depends_on=SEC-03-T04,INFRA-04-T02 mode=serial locks=security-runtime,backup-restore,milestone-gate -->
+- [ ] **Prove clean backup/restore —** Input: encrypted object/DB backups and separate recovery artifacts; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate. Operation: restore isolated, verify linkage/invariants, revoke sessions/flows, and reauthorize one fake mailbox; retain this gate's signed continue/revise/park/kill review and permit a later milestone only on the applicable continue decision. Output: signed drill. Test evidence: missing/corrupt key/object/manifest variants. Failure behavior: do not start workers or enable controls.
 
 ## Test strategy
 

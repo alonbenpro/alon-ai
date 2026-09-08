@@ -2,9 +2,9 @@
 
 **Document ID:** TEST-05
 **Status:** Planned M7-M8 browser suite; current frontend renders only readiness and has unit tests, not the product routes or browser automation described here
-**Milestone:** M7 operator control plane; M8 private release gate; M9 public-unsubscribe browser subset
+**Milestone:** M8, M9 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** BACKEND-02/05/06, FRONTEND-01 through [FRONTEND-09](../07-frontend/09-error-recovery-and-accessibility.md), SEC-02, TEST-01/02/04, and representative real-PostgreSQL projections
+**Prerequisites:** exact local order `TEST-05-T01 -> TEST-05-T02 -> TEST-05-T03 -> TEST-05-T04 -> TEST-05-T05 -> TEST-05-T06`; cross-document task Inputs `TEST-05-T01 <- TEST-01-T03,BACKEND-02-T05; TEST-05-T02 <- FRONTEND-01-T04,FRONTEND-02-T04,FRONTEND-03-T01,FRONTEND-03-T02,FRONTEND-04-T04,FRONTEND-05-T05,FRONTEND-06-T04,FRONTEND-07-T04,FRONTEND-08-T01,FRONTEND-08-T03,FRONTEND-09-T04,FRONTEND-01-T05,FRONTEND-03-T03; TEST-05-T03 <- SEC-02-T06,PROVIDER-01-T06,FRONTEND-09-T05; TEST-05-T05 <- SEC-04-T04; TEST-05-T06 <- TEST-01-T01`. Descriptive source authorities/resources (not whole-document completion dependencies): BACKEND-02/05/06, FRONTEND-01 through [FRONTEND-09](../07-frontend/09-error-recovery-and-accessibility.md), SEC-02, TEST-01/02/04, and representative real-PostgreSQL projections
 **Outputs:** Deterministic operator-journey specs, accessibility/responsive evidence, auth/OAuth/recovery browser security proof, and public scanner-safe unsubscribe journey
 **Unlocks:** M7 operator usability, M8 private release, and only the public-browser portion of the M9 gate
 **Risk:** High
@@ -50,11 +50,17 @@ The reference child commands are owned by two closed runner rows: all 64 private
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=TEST-05-T01 milestone=M8 depends_on=TEST-01-T03,BACKEND-02-T05 mode=serial locks=test-command-registry,frontend-client -->
 - [ ] **Build isolated browser fixture composition —** Input: signed database/API fixtures and operation manifest. Operation: start per-worker API/frontend/schema/session contexts with provider network spies. Output: deterministic browser environment. Test evidence: parallel isolation, stale projection, API restart and forbidden network cases. Failure behavior: abort worker and retain trace; no shared fallback.
-- [ ] **Implement private operator journeys —** Input: exact FRONTEND route/action/state contracts. Operation: execute session, experiment, evidence, lead/campaign, approval, timeline, cost, decision and recovery flows. Output: end-to-end receipts/projections. Test evidence: 64-operation consumer coverage and every empty/loading/stale/error/partial/redacted/pending/unknown/terminal state. Failure behavior: release blocked.
+<!-- roadmap-task id=TEST-05-T02 milestone=M8 depends_on=TEST-05-T01,FRONTEND-01-T04,FRONTEND-02-T04,FRONTEND-03-T01,FRONTEND-03-T02,FRONTEND-04-T04,FRONTEND-05-T05,FRONTEND-06-T04,FRONTEND-07-T04,FRONTEND-08-T01,FRONTEND-08-T03,FRONTEND-09-T04,FRONTEND-01-T05,FRONTEND-03-T03 mode=serial locks=test-command-registry,frontend-client -->
+- [ ] **Implement private operator journeys —** Input: exact FRONTEND route/action/state contracts; complete authenticated frontend foundation and integrated control-center report/control surface. Operation: execute session, experiment, evidence, lead/campaign, approval, timeline, cost, decision and recovery flows. Output: end-to-end receipts/projections. Test evidence: 64-operation consumer coverage and every empty/loading/stale/error/partial/redacted/pending/unknown/terminal state. Failure behavior: release blocked.
+<!-- roadmap-task id=TEST-05-T03 milestone=M8 depends_on=TEST-05-T02,SEC-02-T06,PROVIDER-01-T06,FRONTEND-09-T05 mode=serial locks=test-command-registry,frontend-client -->
 - [ ] **Prove auth/OAuth/control/recovery security —** Input: SEC-02/PROVIDER-01/FRONTEND-09 matrices. Operation: exercise callbacks, cookies, CSRF, saga kills, independent controls, ambiguity and incident repair. Output: no-secret auditable browser proof. Test evidence: request/network/storage/console scans and provider send spy. Failure behavior: controls false and affected capability unavailable.
+<!-- roadmap-task id=TEST-05-T04 milestone=M8 depends_on=TEST-05-T03 mode=serial locks=test-command-registry,frontend-client -->
 - [ ] **Prove accessibility and responsive contract —** Input: all routes/states and exact viewport matrix. Operation: run axe plus keyboard/focus/live/contrast/zoom/forced-color/reduced-motion/screen-reader checks. Output: signed screenshots/traces/manual checklist. Test evidence: no page overflow and every action operable without pointer/color. Failure behavior: M8 release blocked; no conformance claim.
+<!-- roadmap-task id=TEST-05-T05 milestone=M9 depends_on=TEST-05-T04,SEC-04-T04 mode=serial locks=test-command-registry,frontend-client -->
 - [ ] **Prove scanner-safe public unsubscribe —** Input: M9-gated two-route FastAPI fixture and synthetic token. Operation: run scanner GET, exact HTML hash/header/CSP checks, explicit button POST and abuse/security matrix with the Next server absent. Output: public-browser/WAF-compatible evidence. Test evidence: DB write spy zero and no Next asset/route request on GET, one idempotent suppression on POST, uniform/redacted errors. Failure behavior: public partition remains unavailable and product outreach false.
+<!-- roadmap-task id=TEST-05-T06 milestone=M9 depends_on=TEST-05-T05,TEST-01-T01 mode=serial locks=test-command-registry,frontend-client -->
 - [ ] **Close private/public browser command ownership —** Input: every journey/state/viewport/accessibility/route requirement. Operation: prove exact disjoint mapping to the two browser commands and verify profiles, target identity, artifacts and exit semantics. Output: signed browser command map. Test evidence: 64+2 equality, swapped-profile and unavailable-browser negatives. Failure behavior: affected M8/M9 gate remains failed.
 
 ## Test strategy

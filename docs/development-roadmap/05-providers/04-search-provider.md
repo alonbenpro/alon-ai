@@ -2,9 +2,9 @@
 
 **Document ID:** PROVIDER-04
 **Status:** Planned M3 provider; no search client, capture service, fixture, or credential exists today
-**Milestone:** M3
+**Milestone:** M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [AGENT-01 capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), [DB-04](../02-database/04-agent-artifacts-and-evidence.md), and [AGENT-04](../04-agents/04-market-research-agent.md)
+**Prerequisites:** exact local order `PROVIDER-04-T01 -> PROVIDER-04-T02 -> PROVIDER-04-T03 -> PROVIDER-04-T04 -> PROVIDER-04-T05`; cross-document task Inputs `PROVIDER-04-T01 <- AGENT-01-T01,DB-01-T01; PROVIDER-04-T03 <- OBS-03-T02,DB-04-T03`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01 capability contracts](../04-agents/01-agent-runtime-and-contracts.md#exact-provider-capability-wire-and-fixture-contracts), [DB-04](../02-database/04-agent-artifacts-and-evidence.md), and [AGENT-04](../04-agents/04-market-research-agent.md)
 **Outputs:** Byte-exact `search.query` capability, Brave Web Search adapter, evidence ingestion handoff, fixtures, quotas, and replacement seam
 **Unlocks:** Recorded M3 market-research evaluations and M4 evidence capture
 **Risk:** High
@@ -96,10 +96,15 @@ Agents receive the capability port, never provider credentials/client. Search ca
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=PROVIDER-04-T01 milestone=M3 depends_on=AGENT-01-T01,DB-01-T01 mode=parallel locks=provider-contracts -->
 - [ ] **Implement exact capability service —** Input: Task 3 models and DB-01 canonicalizer. Operation: preserve schemas/fields/hashes/timeout/error allowlist and method mapping. Output: `MarketSearchPort`. Test evidence: `test_search_capability_wire_and_fixture_are_agent01_exact`. Failure behavior: reject before call.
+<!-- roadmap-task id=PROVIDER-04-T02 milestone=M3 depends_on=PROVIDER-04-T01 mode=parallel locks=provider-contracts -->
 - [ ] **Implement Brave raw adapter and filters —** Input: validated request/credential/operation policy. Operation: reserve limiter, call once, normalize/filter/dedupe strict metadata. Output: bounded raw items or typed error. Test evidence: HTTP/domain/Unicode/status matrix. Failure behavior: no unsafe item escapes.
-- [ ] **Implement evidence/ledger/cost handoff —** Input: eligible raw results. Operation: ingest captures through sole writer, construct typed success/hash, and reconcile ledger/cost. Output: evidence-backed response. Test evidence: failure injection and total/hash equality. Failure behavior: omit failed item or fail whole invalid set without partial artifact acceptance.
+<!-- roadmap-task id=PROVIDER-04-T03 milestone=M3 depends_on=PROVIDER-04-T02,OBS-03-T02,DB-04-T03 mode=parallel locks=provider-contracts,backend-domain,agent-artifacts -->
+- [ ] **Implement evidence/ledger/cost handoff —** Input: eligible raw results, and OBS-03 complete reservation/reconciliation cost chain; implemented EvidenceIngestService sole-writer interface. Operation: ingest captures through sole writer, construct typed success/hash, and reconcile ledger/cost. Output: evidence-backed response. Test evidence: failure injection and total/hash equality. Failure behavior: omit failed item or fail whole invalid set without partial artifact acceptance.
+<!-- roadmap-task id=PROVIDER-04-T04 milestone=M3 depends_on=PROVIDER-04-T03 mode=parallel locks=provider-contracts -->
 - [ ] **Implement capture and fixture modes —** Input: sanitized live result sets. Operation: sign immutable fixtures and replay with network disabled. Output: M3 evaluation inputs. Test evidence: tamper, extra-field, cross-capability, zero-network tests. Failure behavior: promotion blocked.
+<!-- roadmap-task id=PROVIDER-04-T05 milestone=M3 depends_on=PROVIDER-04-T04 mode=parallel locks=provider-contracts -->
 - [ ] **Prove replacement/authority boundary —** Input: fake adapter/import graph. Operation: run shared parity and no-credential/state/send checks. Output: replacement evidence. Test evidence: contract suite and secret/PII log scan. Failure behavior: adapter disabled.
 
 ## Test strategy

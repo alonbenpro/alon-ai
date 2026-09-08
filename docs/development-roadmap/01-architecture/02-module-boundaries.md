@@ -2,9 +2,9 @@
 
 **Document ID:** ARCH-02
 **Status:** Planned target with current exceptions declared
-**Milestone:** M0 definition, enforced from M2
+**Milestone:** M2, M3, M6, M7 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [ARCH-01 target architecture](01-target-system-architecture.md) and ADR 0001
+**Prerequisites:** exact local order `ARCH-02-T01 -> ARCH-02-T02 -> ARCH-02-T03 -> ARCH-02-T04 -> ARCH-02-T05`; cross-document task Inputs `ARCH-02-T01 <- ARCH-03-T01,DB-01-T02; ARCH-02-T02 <- ARCH-03-T01; ARCH-02-T03 <- PROVIDER-03-T04,PROVIDER-04-T04,PROVIDER-05-T04,PROVIDER-06-T03,TEST-04-T01; ARCH-02-T04 <- DB-01-T05,DB-05-T05,PROVIDER-01-T02,PROVIDER-01-T04; ARCH-02-T05 <- BACKEND-02-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [ARCH-01 target architecture](01-target-system-architecture.md) and ADR 0001
 **Outputs:** Package responsibilities, allowed imports, ports, transaction ownership, and boundary tests
 **Unlocks:** M2 schema/repositories, M3 agents/providers, M4 application services
 **Risk:** High
@@ -91,10 +91,15 @@ Existing `db/engine.py` may remain the low-level engine bootstrap until persiste
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=ARCH-02-T01 milestone=M2 depends_on=ARCH-03-T01,DB-01-T02 mode=parallel locks=architecture-contracts,backend-domain -->
 - [ ] **Create inward contracts at M2 —** Input: ARCH-03 names and M2 schema. Operation: define domain values/events and application persistence/workflow/provider ports without framework imports. Output: stable interfaces. Test evidence: type checks and forbidden-import scan. Failure behavior: block concrete adapters.
+<!-- roadmap-task id=ARCH-02-T02 milestone=M2 depends_on=ARCH-02-T01,ARCH-03-T01 mode=parallel locks=architecture-contracts,database-schema,backend-domain -->
 - [ ] **Implement PostgreSQL unit of work —** Input: domain aggregates, events, idempotent command envelope. Operation: atomically persist state, version, audit/domain events, command result, and outbox item. Output: M2 transaction boundary. Test evidence: real-PostgreSQL rollback/concurrency/replay tests. Failure behavior: reject command with typed conflict/unavailable error.
-- [ ] **Wrap each provider —** Input: one port and recorded fixture. Operation: implement translation, timeout, error taxonomy, cost/provenance capture, and replaceable composition. Output: M3/M6 adapter. Test evidence: contract suite runs against fixture and adapter sandbox. Failure behavior: no provider-specific object crosses the port.
-- [ ] **Move send orchestration outward at M6 —** Input: current contract, persistence, policies, Gmail port. Operation: make `application.sending.SendGateway` the sole send caller and remove the foundation dependency inversion debt. Output: enforceable guarded path. Test evidence: import graph plus mock/real test-inbox call-path proof. Failure behavior: keep outreach disabled.
+<!-- roadmap-task id=ARCH-02-T03 milestone=M3 depends_on=ARCH-02-T02,PROVIDER-03-T04,PROVIDER-04-T04,PROVIDER-05-T04,PROVIDER-06-T03,TEST-04-T01 mode=parallel locks=architecture-contracts,provider-contracts -->
+- [ ] **Wrap every provider-neutral recorded path at M3 —** Input: the model, search, page, enrichment, and Gmail ports plus deterministic recorded fixtures and the Gmail simulator. Operation: implement translation, timeout, error taxonomy, cost/provenance capture, and replaceable composition against recorded paths; live provider activation remains in the provider-owned later tasks. Output: replaceable M3 provider adapter boundaries with no live authority. Test evidence: each contract suite passes against its signed fixture/simulator and a fake replacement adapter. Failure behavior: no provider-specific object crosses a port and every live adapter remains disabled.
+<!-- roadmap-task id=ARCH-02-T04 milestone=M6 depends_on=ARCH-02-T03,DB-01-T05,DB-05-T05,PROVIDER-01-T02,PROVIDER-01-T04 mode=serial locks=architecture-contracts,provider-contracts,gmail-side-effects,backend-domain,security-runtime -->
+- [ ] **Move send orchestration outward at M6 —** Input: current contract, persistence, policies, Gmail port. Operation: define and enforce import/port authority constraints and forbidden-call rules for the guarded Gmail path against pure contract fixtures; BACKEND-04 alone implements product send transactions and live integration is proven later. Output: enforceable guarded-path architecture/port contract with no duplicate product transaction writer. Test evidence: import graph plus mock/real test-inbox call-path proof. Failure behavior: keep outreach disabled.
+<!-- roadmap-task id=ARCH-02-T05 milestone=M7 depends_on=ARCH-02-T04,BACKEND-02-T05 mode=serial locks=architecture-contracts,openapi-contract,frontend-client -->
 - [ ] **Enforce frontend/API boundary at M7 —** Input: OpenAPI and route needs. Operation: add FastAPI contracts first, regenerate clients, and implement UI against them. Output: no invented endpoint or business rule. Test evidence: generation drift, contract, and E2E tests. Failure behavior: remove UI action until backend contract exists.
 
 ## Test strategy

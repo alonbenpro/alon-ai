@@ -2,9 +2,9 @@
 
 **Document ID:** DB-04
 **Status:** Planned M2 persistence; populated from M3
-**Milestone:** M2 schema, M3 agent promotion, M4-M9 evidence use
+**Milestone:** M2, M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [DB-01](01-core-data-model.md), [DB-02](02-experiment-and-offer-schema.md), [ARCH-02](../01-architecture/02-module-boundaries.md), and [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md)
+**Prerequisites:** exact local order `DB-04-T01 -> DB-04-T02 -> DB-04-T03 -> DB-04-T04 -> DB-04-T05`; cross-document task Inputs `DB-04-T01 <- PRODUCT-01-T03; DB-04-T03 <- PROVIDER-05-T01; DB-04-T04 <- BACKEND-01-T01,ARCH-03-T01; DB-04-T05 <- AGENT-10-T05`. Descriptive source authorities/resources (not whole-document completion dependencies): [DB-01](01-core-data-model.md), [DB-02](02-experiment-and-offer-schema.md), [ARCH-02](../01-architecture/02-module-boundaries.md), and [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md)
 **Outputs:** Typed agent-run envelope, immutable artifacts, source evidence, provenance edges, validation/acceptance, and evaluation records
 **Unlocks:** M3 typed agents/evaluations and evidence-backed M4/M5 workflows
 **Risk:** High
@@ -297,11 +297,16 @@ The agent-produced artifact registry is exactly the eight pairs enforced by `ck_
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=DB-04-T01 milestone=M2 depends_on=PRODUCT-01-T03 mode=parallel locks=agent-runtime,agent-artifacts -->
 - [ ] **Define typed envelopes and artifact registry —** Input: canonical artifact names and Pydantic AI boundary. Operation: register schema/version, producer, validator, and allowed consumers for each type. Output: serializable contracts. Test evidence: `test_every_artifact_type_has_schema_validator_and_owner`. Failure behavior: reject unknown type/version.
+<!-- roadmap-task id=DB-04-T02 milestone=M2 depends_on=DB-04-T01 mode=serial locks=database-schema,migration-head,agent-artifacts -->
 - [ ] **Migrate immutable run/artifact/evidence tables —** Input: table contract. Operation: create constraints, indexes, immutable triggers, and retention classes. Output: M2 schema. Test evidence: real-PostgreSQL migration/constraint tests. Failure behavior: rollback revision.
-- [ ] **Implement evidence capture and linking —** Input: bounded provider result. Operation: validate URI/type/size, hash capture, redact, store restricted reference, and link claims. Output: provenance-complete evidence. Test evidence: malicious URI/content/type fixtures. Failure behavior: quarantine evidence and reject dependent artifact.
-- [ ] **Implement validation and acceptance transitions —** Input: `PRODUCED` artifact and frozen validator/gate. Operation: append validation, apply ARCH-03 state, and emit exact event atomically. Output: eligible accepted artifact or retained rejection. Test evidence: exhaustive artifact-state matrix and command replay. Failure behavior: no workflow eligibility.
-- [ ] **Gate agent promotion on evaluations —** Input: immutable suite/version and agent configuration. Operation: run recorded cases, persist scores/cost, compare frozen thresholds, and record promotion evidence. Output: promoted or rejected version. Test evidence: deterministic fixture rerun. Failure behavior: retain prior promoted version.
+<!-- roadmap-task id=DB-04-T03 milestone=M3 depends_on=DB-04-T02,PROVIDER-05-T01 mode=parallel locks=agent-artifacts,provider-contracts,compliance-policy -->
+- [ ] **Implement evidence capture and linking —** Input: strict PROVIDER-05 URI/result contracts, migrated evidence schema and signed bounded synthetic provider-result fixtures. Operation: implement EvidenceIngestService to validate URI/type/size, hash capture, redact and store restricted evidence references through the sole writer; leave artifact_evidence_links to ArtifactValidationService. Output: implemented versioned EvidenceIngestService interface and provenance-complete fixture evidence. Test evidence: malicious URI/content/type fixtures. Failure behavior: quarantine evidence and reject dependent artifact.
+<!-- roadmap-task id=DB-04-T04 milestone=M3 depends_on=DB-04-T03,BACKEND-01-T01,ARCH-03-T01 mode=parallel locks=database-schema,agent-artifacts,backend-domain -->
+- [ ] **Implement validation and acceptance transitions —** Input: `PRODUCED` artifact and frozen validator/gate; implemented ArtifactCommandService PRODUCED/event interface and canonical artifact state/guard contract. Operation: implement ArtifactValidationService and authenticated ArtifactAcceptanceService: validate PRODUCED fixtures, insert links/validation records, apply the exact ARCH-03 transitions and events atomically; acceptance remains a separate authorized command. Output: implemented versioned ArtifactValidationService and ArtifactAcceptanceService interfaces plus eligible accepted fixture artifact or retained rejection. Test evidence: exhaustive artifact-state matrix and command replay. Failure behavior: no workflow eligibility.
+<!-- roadmap-task id=DB-04-T05 milestone=M3 depends_on=DB-04-T04,AGENT-10-T05 mode=parallel locks=agent-runtime,agent-artifacts,telemetry-catalog -->
+- [ ] **Gate agent promotion on evaluations —** Input: the AGENT-10 immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and eligible configuration or rejection. Operation: validate signature, identity, manifest, and registry version, then atomically persist that decision and its immutable DB registry evidence without exercising promotion authority a second time. Output: persisted immutable promotion decision and DB registry evidence. Test evidence: deterministic fixture rerun. Failure behavior: retain prior promoted version.
 
 ## Test strategy
 

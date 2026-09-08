@@ -2,9 +2,9 @@
 
 **Document ID:** AGENT-07
 **Status:** Planned M3 specialist; no implementation exists
-**Milestone:** M3; first workflow use at M6
+**Milestone:** M3 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** [AGENT-01](01-agent-runtime-and-contracts.md), promoted offer/lead agents, DB-03/DB-04, and M6 draft-review prerequisites
+**Prerequisites:** exact local order `AGENT-07-T01 -> AGENT-07-T02 -> AGENT-07-T03 -> AGENT-07-T04`; cross-document task Inputs `AGENT-07-T01 <- AGENT-10-T01,DB-02-T03,DB-03-T03; AGENT-07-T02 <- AGENT-01-T01,AGENT-01-T02; AGENT-07-T03 <- BACKEND-01-T01,DB-04-T04,OBS-03-T02,AGENT-01-T04; AGENT-07-T04 <- AGENT-10-T01,AGENT-10-T03,AGENT-10-T04`. Descriptive source authorities/resources (not whole-document completion dependencies): [AGENT-01](01-agent-runtime-and-contracts.md), promoted offer/lead agents, DB-03/DB-04, and M6 draft-review prerequisites
 **Outputs:** Versioned `OutreachDraft` `PRODUCED` artifact, abstention/failure results, fixtures, scores, and mandatory operator-review evidence
 **Unlocks:** WF-05 draft validation and exact-version approval request; never send authority
 **Risk:** Critical
@@ -103,10 +103,14 @@ Every draft requires operator review of the exact artifact/version/content hash 
 
 ## Ordered implementation tasks
 
+<!-- roadmap-task id=AGENT-07-T01 milestone=M3 depends_on=AGENT-10-T01,DB-02-T03,DB-03-T03 mode=parallel locks=agent-runtime -->
 - [ ] **Encode no-authority draft schemas —** Input: frozen offer/lead and content policies. Operation: implement exact models/prompt/config plus forbidden-field/static import rules. Output: typed contract. Test evidence: schema/recipient/authority snapshots. Failure behavior: invalid input blocks model.
-- [ ] **Implement bounded drafting —** Input: verified envelope/accepted evidence. Operation: expose only one scoped evidence read and structured generation under ceilings/cancellation. Output: draft/abstention/failure. Test evidence: fake-model/evidence boundary matrix. Failure behavior: no partial draft.
-- [ ] **Implement validator/persistence/review handoff —** Input: output/ledger. Operation: enforce citations/content safety, persist only `PRODUCED`, and require exact-version operator review through application services. Output: immutable review artifact. Test evidence: changed-draft invalidation and atomic event tests. Failure behavior: no message/approval/intent.
-- [ ] **Build and gate 64-case suite —** Input: frozen bilingual/adversarial cases. Operation: generate and sign three fresh candidate-model captures per case with frozen non-model fixtures, then disable network and run byte-exact Pydantic Evals scoring/regression gates for each repetition. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
+<!-- roadmap-task id=AGENT-07-T02 milestone=M3 depends_on=AGENT-07-T01,AGENT-01-T01,AGENT-01-T02 mode=parallel locks=agent-runtime -->
+- [ ] **Implement bounded drafting —** Input: verified envelope/accepted evidence; AGENT-01 importable envelope contracts and immutable AgentDependenciesV1. Operation: expose only one scoped evidence read and structured generation under ceilings/cancellation. Output: draft/abstention/failure. Test evidence: fake-model/evidence boundary matrix. Failure behavior: no partial draft.
+<!-- roadmap-task id=AGENT-07-T03 milestone=M3 depends_on=AGENT-07-T02,BACKEND-01-T01,DB-04-T04,OBS-03-T02,AGENT-01-T04 mode=parallel locks=agent-artifacts,backend-domain -->
+- [ ] **Implement validator/persistence/review handoff —** Input: output/ledger; implemented M3 recorder/PRODUCED insertion, validation/acceptance, cost-reconciliation and terminal-handoff interfaces; signed fixture rows, never later product commands. Operation: enforce citations/content safety, persist only `PRODUCED`, and require exact-version operator review through application services. Output: immutable review artifact, with the immutable specialist implementation/configuration identity and its frozen typed capability contract. Test evidence: changed-draft invalidation and atomic event tests; execute these checks against signed M3 fixture rows and actual M3 services; later lead/reply/approval/product transitions remain mandatory at their existing product owners. Failure behavior: no message/approval/intent.
+<!-- roadmap-task id=AGENT-07-T04 milestone=M3 depends_on=AGENT-07-T03,AGENT-10-T01,AGENT-10-T03,AGENT-10-T04 mode=serial locks=agent-runtime,agent-artifacts,live-environment -->
+- [ ] **Build and gate 64-case suite —** Input: frozen bilingual/adversarial cases; AGENT-10 signed fresh capture-set and deterministic scoring package/repetition summaries. Operation: select this specialist's exact frozen-case subset from the AGENT-10 capture set, independently verify three fresh candidate calls per case and all signatures/configuration/fixture hashes, invoke the shared deterministic scorer and evaluate every original specialist component/duration/cost/regression gate; retain the full repetition and suite summaries without a second capture or promotion writer. Output: three full repetition summaries, suite summary, and promotion/rejection evidence. Test evidence: unique provider call/request IDs, complete capture-set signatures, no model replay, non-model zero-network proof, scoring golden vectors, and per-repetition threshold audit. Failure behavior: prior promoted version remains.
 
 ## Test strategy
 

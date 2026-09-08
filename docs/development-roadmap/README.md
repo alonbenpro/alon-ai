@@ -33,6 +33,8 @@ The repository does not implement DBOS workflows, the Gmail API or OAuth, Gmail 
 
 ## How to execute this roadmap
 
+Run `python3 scripts/validate_roadmap.py --check` (or `make roadmap`) before selecting work. The generated [execution manifest](execution-manifest.json), [execution order](EXECUTION_ORDER.md), and [agent execution plan](AGENT_EXECUTION_PLAN.md) are execution/parallel-dispatch views; they do not prove implementation status.
+
 1. Open the current milestone in the table below.
 2. Follow links from that milestone across subsystem folders; directory order has no authority.
 3. Complete each checkbox with the named evidence retained in the repository or the milestone evidence bundle.
@@ -120,14 +122,14 @@ The milestone column indicates the first gate that needs the file; later gates m
 | `00-product-strategy/01-product-scope.md` | M0 | Defines the bet and non-goals; unlocks all product work |
 | `00-product-strategy/02-success-metrics.md` | M0 | Defines evidence and decision math; unlocks evaluations |
 | `00-product-strategy/03-risk-register-and-kill-criteria.md` | M0 | Defines abort paths; unlocks M1 |
-| `01-architecture/01-target-system-architecture.md` | M0 | Consumes ADRs; unlocks subsystem designs |
-| `01-architecture/02-module-boundaries.md` | M0 | Defines dependency rules; unlocks backend modules |
-| `01-architecture/03-domain-events-and-state-machines.md` | M0 | Defines names; unlocks M2 persistence |
+| `01-architecture/01-target-system-architecture.md` | M1 | Consumes ADRs; unlocks subsystem designs |
+| `01-architecture/02-module-boundaries.md` | M2 | Defines dependency rules; unlocks backend modules |
+| `01-architecture/03-domain-events-and-state-machines.md` | M2 | Defines names; unlocks M2 persistence |
 | `03-workflows/00-dbos-selection-and-temporal-fallback.md` | M1 | Records selected-stack decision history, M1 acceptance criteria, and mandatory Temporal fallback |
 | `03-workflows/01-dbos-production-acceptance-spike.md` | M1 | Proves DBOS crash/ambiguity behavior; unlocks production use or mandatory Temporal migration |
 | `02-database/01-core-data-model.md` | M2 | Starts the product data model after M1 |
 | `02-database/02-experiment-and-offer-schema.md` | M2 | Consumes canonical states; unlocks experiment persistence |
-| `02-database/03-leads-campaigns-and-messages.md` | M2 | Consumes send states; unlocks M5-M6 records |
+| `02-database/03-leads-campaigns-and-messages.md` | M1 | Consumes send states; unlocks M5-M6 records |
 | `02-database/04-agent-artifacts-and-evidence.md` | M2 | Consumes artifact contract; unlocks M3 agents |
 | `02-database/05-audit-events-and-idempotency.md` | M2 | Consumes event envelope; unlocks durable side effects |
 | `02-database/06-migrations-seeding-and-retention.md` | M2 | Proves schema lifecycle and restore |
@@ -152,7 +154,7 @@ The milestone column indicates the first gate that needs the file; later gates m
 | `05-providers/06-enrichment-provider.md` | M3 | Optional bounded enrichment; not required for M4 |
 | `03-workflows/02-experiment-lifecycle.md` | M4 | Orchestrates finite experiment state |
 | `03-workflows/03-idea-validation-workflow.md` | M4 | Produces offer and evidence artifacts without outreach |
-| `06-backend/01-domain-services.md` | M4 | Deterministic business behavior |
+| `06-backend/01-domain-services.md` | M3 | Deterministic business behavior |
 | `06-backend/02-api-contracts.md` | M4 | FastAPI command/query contract |
 | `03-workflows/04-lead-qualification-workflow.md` | M5 | Produces deduplicated qualified leads |
 
@@ -160,23 +162,23 @@ The milestone column indicates the first gate that needs the file; later gates m
 
 | File | First gate | Depends on / unlocks |
 | --- | --- | --- |
-| `05-providers/01-gmail-oauth-and-adapter.md` | M6 | Test-inbox credentials and Gmail adapter |
-| `05-providers/02-gmail-history-sync.md` | M6 | Reconciliation, reply sync, and cursor recovery |
+| `05-providers/01-gmail-oauth-and-adapter.md` | M1 | Test-inbox credentials and Gmail adapter |
+| `05-providers/02-gmail-history-sync.md` | M1 | Reconciliation, reply sync, and cursor recovery |
 | `03-workflows/05-outreach-and-reply-workflow.md` | M6 | Finite controlled send/reply loop |
 | `03-workflows/06-pause-cancel-resume-and-recovery.md` | M6 | Operator interruption and recovery semantics |
 | `06-backend/03-policy-engine.md` | M6 | Deterministic suppression, budget, and rate controls |
 | `06-backend/04-send-gateway.md` | M6 | Sole application path to Gmail |
 | `06-backend/05-approval-and-command-handling.md` | M6 | Idempotent operator commands and approvals |
-| `08-security-and-compliance/03-secrets-and-oauth-token-security.md` | M6 | Protects Gmail credentials |
+| `08-security-and-compliance/03-secrets-and-oauth-token-security.md` | M1 | Protects Gmail credentials |
 | `08-security-and-compliance/04-outreach-compliance.md` | M6 | Jurisdiction/configuration gate before any send |
 | `08-security-and-compliance/05-suppression-budgets-and-kill-switch.md` | M6 | Fail-closed global and campaign controls |
-| `09-observability-and-evaluation/01-structured-events-and-correlation.md` | M6 | End-to-end side-effect trace |
-| `09-observability-and-evaluation/03-provider-cost-accounting.md` | M6 | Cost ledger and budget enforcement |
-| `10-testing/03-workflow-recovery-tests.md` | M6 | Crash matrix evidence |
-| `10-testing/04-gmail-side-effect-tests.md` | M6 | Duplicate/reconciliation/suppression evidence |
-| `07-frontend/01-information-architecture.md` | M7 | Minimal operator routes |
-| `07-frontend/02-experiment-creation-flow.md` | M7 | Creates pre-registered experiments |
-| `07-frontend/03-experiment-control-center.md` | M7 | Pause/cancel/resume and state visibility |
+| `09-observability-and-evaluation/01-structured-events-and-correlation.md` | M3 | End-to-end side-effect trace |
+| `09-observability-and-evaluation/03-provider-cost-accounting.md` | M3 | Cost ledger and budget enforcement |
+| `10-testing/03-workflow-recovery-tests.md` | M1 | Crash matrix evidence |
+| `10-testing/04-gmail-side-effect-tests.md` | M1 | Duplicate/reconciliation/suppression evidence |
+| `07-frontend/01-information-architecture.md` | M4 | Minimal operator routes |
+| `07-frontend/02-experiment-creation-flow.md` | M4 | Creates pre-registered experiments |
+| `07-frontend/03-experiment-control-center.md` | M4 | Pause/cancel/resume and state visibility |
 | `07-frontend/04-evidence-and-agent-artifacts.md` | M7 | Provenance and review UI |
 | `07-frontend/05-lead-and-campaign-management.md` | M7 | Qualification and suppression UI |
 | `07-frontend/06-approval-inbox.md` | M7 | Approval decisions and authority visibility |
@@ -184,22 +186,22 @@ The milestone column indicates the first gate that needs the file; later gates m
 | `07-frontend/08-cost-funnel-and-decision-analytics.md` | M7 | Evidence-based decision view |
 | `07-frontend/09-error-recovery-and-accessibility.md` | M7 | Recovery, keyboard, and assistive-technology flows |
 | `06-backend/06-reporting-and-query-services.md` | M7 | Stable dashboard projections |
-| `08-security-and-compliance/02-authentication-and-private-access.md` | M7 | Single-operator access control |
+| `08-security-and-compliance/02-authentication-and-private-access.md` | M6 | Single-operator access control |
 
 ### M8-M9: private operations and a real experiment
 
 | File | First gate | Depends on / unlocks |
 | --- | --- | --- |
-| `08-security-and-compliance/01-threat-model.md` | M8 | Threat closure before private deployment |
-| `08-security-and-compliance/06-data-privacy-and-retention.md` | M8 | Retention and deletion operations |
+| `08-security-and-compliance/01-threat-model.md` | M1 | Threat closure before private deployment |
+| `08-security-and-compliance/06-data-privacy-and-retention.md` | M2 | Retention and deletion operations |
 | `09-observability-and-evaluation/02-metrics-tracing-and-alerting.md` | M8 | Actionable service and workflow alerts |
 | `09-observability-and-evaluation/04-agent-and-workflow-evaluations.md` | M8 | Continuous regression detection |
-| `09-observability-and-evaluation/05-incident-response.md` | M8 | Incident roles and recovery for one operator |
-| `10-testing/01-testing-strategy.md` | M8 | Whole-system gate ownership |
-| `10-testing/02-contract-and-integration-tests.md` | M8 | Boundary and real-database evidence |
+| `09-observability-and-evaluation/05-incident-response.md` | M6 | Incident roles and recovery for one operator |
+| `10-testing/01-testing-strategy.md` | M1 | Whole-system gate ownership |
+| `10-testing/02-contract-and-integration-tests.md` | M6 | Boundary and real-database evidence |
 | `10-testing/05-end-to-end-browser-tests.md` | M8 | Complete operator journeys |
 | `10-testing/06-load-security-and-chaos-tests.md` | M8 | Bounded capacity and failure evidence |
-| `11-infrastructure/01-local-development.md` | M8 | Reproducible operator environment |
+| `11-infrastructure/01-local-development.md` | M1 | Reproducible operator environment |
 | `11-infrastructure/02-ci-cd-and-release-process.md` | M8 | Promotion and rollback gates |
 | `11-infrastructure/03-private-vps-deployment.md` | M8 | Private single-operator runtime |
 | `11-infrastructure/04-postgresql-backups-and-restores.md` | M8 | Encrypted backup and clean restore proof |
