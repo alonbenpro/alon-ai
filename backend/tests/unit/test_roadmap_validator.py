@@ -67,7 +67,16 @@ SALES_SOURCE = "docs/development-roadmap/00-product-strategy/01-product-scope.md
 
 def sales_contract_payload():
     source = (Path(__file__).resolve().parents[3] / SALES_SOURCE).read_text()
-    return json.loads(re.search(r"```json\n(.*?)\n```", source, re.DOTALL).group(1))
+    match = re.search(r"```json\n(.*?)\n```", source, re.DOTALL)
+    assert match is not None, "canonical sales contract JSON block is required"
+    return json.loads(match.group(1))
+
+
+def test_sales_contract_payload_requires_a_canonical_json_block(monkeypatch):
+    monkeypatch.setattr(Path, "read_text", lambda _: "# Missing sales contract\n")
+
+    with pytest.raises(AssertionError, match="canonical sales contract JSON block"):
+        sales_contract_payload()
 
 
 def write_sales_contract(root, payload):
