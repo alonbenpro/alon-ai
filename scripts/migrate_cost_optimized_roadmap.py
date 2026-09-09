@@ -51,8 +51,6 @@ def migrate_secondary_roadmap_docs() -> None:
             continue
         text = path.read_text(encoding="utf-8")
         updated = text
-        # Metadata lock normalization applies to every document; schedule prose
-        # replacement is skipped only for the four canonical cost-first authorities.
         for old, new in replacements:
             if rel in primary and old not in {"locks=observability", ",observability"}:
                 continue
@@ -75,34 +73,36 @@ def migrate_security_secret_boundary() -> None:
     )
     if old in text:
         text = text.replace(old, new, 1)
-    elif "pre-revenue production adapter" in text:
-        pass
-    else:
+    elif "pre-revenue production adapter" not in text:
         raise RuntimeError("SEC-03 pre-revenue adapter paragraph is neither old nor migrated")
-    text = text.replace(
-        "Key hierarchy is: offline recovery wrapping key -> managed KMS root/KEK generation -> purpose-specific KEKs",
-        "Key hierarchy is: offline recovery wrapping key -> versioned pre-revenue root/KEK generation (or a later managed-KMS adapter) -> purpose-specific KEKs",
+    replacements = (
+        (
+            "Key hierarchy is: offline recovery wrapping key -> managed KMS root/KEK generation -> purpose-specific KEKs",
+            "Key hierarchy is: offline recovery wrapping key -> versioned pre-revenue root/KEK generation (or a later managed-KMS adapter) -> purpose-specific KEKs",
+        ),
+        (
+            "Production KEKs are non-exportable where the provider supports it.",
+            "Production KEKs are protected by the selected adapter; when a later provider supports non-exportable keys, prefer that property after the architecture/cost review.",
+        ),
+        (
+            "KMS configuration and recovery material are exported only as provider-supported wrapped/escrow artifacts;",
+            "Key configuration and recovery material are retained only as encrypted/wrapped recovery artifacts;",
+        ),
+        (
+            "KMS/secret-manager operation and storage prices enter DB-05 `cost_entries` where attributable;",
+            "Secret-store/encryption operation and storage prices enter DB-05 `cost_entries` where attributable;",
+        ),
+        (
+            "build strict models/ports and managed adapter with authenticated encryption and least workload identity.",
+            "build strict models/ports and a cost-first encrypted adapter with authenticated encryption and least workload identity; preserve a replaceable seam for a later managed adapter.",
+        ),
+        (
+            "Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects.",
+            "Output: versioned strict secret/key/object models, replaceable adapter ports and authenticated-encryption contract plus versioned encrypted objects.",
+        ),
     )
-    text = text.replace(
-        "Production KEKs are non-exportable where the provider supports it.",
-        "Production KEKs are protected by the selected adapter; when a later provider supports non-exportable keys, prefer that property after the architecture/cost review.",
-    )
-    text = text.replace(
-        "KMS configuration and recovery material are exported only as provider-supported wrapped/escrow artifacts;",
-        "Key configuration and recovery material are retained only as encrypted/wrapped recovery artifacts;",
-    )
-    text = text.replace(
-        "KMS/secret-manager operation and storage prices enter DB-05 `cost_entries` where attributable;",
-        "Secret-store/encryption operation and storage prices enter DB-05 `cost_entries` where attributable;",
-    )
-    text = text.replace(
-        "build strict models/ports and managed adapter with authenticated encryption and least workload identity.",
-        "build strict models/ports and a cost-first encrypted adapter with authenticated encryption and least workload identity; preserve a replaceable seam for a later managed adapter.",
-    )
-    text = text.replace(
-        "Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects.",
-        "Output: versioned strict secret/key/object models, replaceable adapter ports and authenticated-encryption contract plus versioned encrypted objects.",
-    )
+    for source, target in replacements:
+        text = text.replace(source, target)
     path.write_text(text, encoding="utf-8")
 
 
@@ -127,13 +127,28 @@ def migrate_validator() -> None:
     new_tail = '''    no_mutation_learning_results=("KEEP", "INSUFFICIENT_EVIDENCE"),\n    automated_discovery_provider="BRAVE_PLACE_SEARCH",\n    manual_evidence_sources=("SOCIAL_PROFILE", "PUBLIC_BUSINESS_PAGE"),\n    model_routing_tiers=("NO_AI", "NANO", "MINI", "PREMIUM"),\n    premium_model_requires_explicit_approval=True,\n    batch_for_non_urgent_research=True,\n    launch_stages=(\n        {"name": "SHADOW", "max_real_businesses": 0, "manual_review_required": False, "real_demand_learning": False},\n        {"name": "REVIEW_20", "max_real_businesses": 20, "manual_review_required": True, "real_demand_learning": True},\n        {"name": "QUALIFIED_50", "max_real_businesses": 50, "manual_review_required": False, "real_demand_learning": True},\n        {"name": "SCALE_100_TO_300", "min_real_businesses": 100, "max_real_businesses": 300, "manual_review_required": False, "real_demand_learning": True, "explicit_operator_authorization": True},\n    ),\n    pre_revenue_recipient_ceiling=300,\n    send_writer="SendGateway",'''
     text = replace_once(text, old_tail, new_tail, "expected contract tail")
 
-    pattern = re.compile(r'def validate_staged_lead_contract\(root: Path\) -> None:\n.*?\n\ndef _logical_cells', re.S)
-    replacement = '''def validate_staged_lead_contract(root: Path) -> None:\n    roadmap_root = root / "docs" / "development-roadmap"\n    authorities = (\n        roadmap_root / "00-product-strategy" / "01-product-scope.md",\n        roadmap_root / "00-product-strategy" / "02-success-metrics.md",\n        roadmap_root / "12-launch-and-operations" / "03-first-real-experiment.md",\n    )\n    if not all(path.is_file() for path in authorities):\n        return\n\n    required_tokens = ("SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300")\n    for path in authorities:\n        text = path.read_text(encoding="utf-8")\n        relative = path.relative_to(roadmap_root).as_posix()\n        for token in required_tokens:\n            if token not in text:\n                raise SourceLocation(relative, 1).error(\n                    f"cost-first launch authority is missing {token!r}"\n                )\n    product_text = authorities[0].read_text(encoding="utf-8")\n    for token in (\n        "BRAVE_PLACE_SEARCH",\n        '"model_routing_tiers": ["NO_AI", "NANO", "MINI", "PREMIUM"]',\n        '"pre_revenue_recipient_ceiling": 300',\n    ):\n        if token not in product_text:\n            raise SourceLocation(authorities[0].relative_to(roadmap_root).as_posix(), 1).error(\n                f"cost-first authority is missing {token!r}"\n            )\n\n    secondary_paths = [roadmap_root / "README.md"]\n    secondary_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))\n    primary = {path.resolve() for path in authorities}\n    for path in secondary_paths:\n        if not path.is_file() or path.resolve() in primary:\n            continue\n        relative = path.relative_to(roadmap_root).as_posix()\n        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):\n            if "100/200/300/400" in line or "100/300/600/1,000" in line or "100/300/600/1000" in line:\n                raise SourceLocation(relative, line_number).error(\n                    "legacy automatic cohort authority remains in an active secondary roadmap document"\n                )\n\n\ndef _logical_cells'''
+    pattern = re.compile(
+        r'def validate_staged_lead_contract\(root: Path\) -> None:\n.*?\n\ndef _logical_cells',
+        re.S,
+    )
+    replacement = '''def validate_staged_lead_contract(root: Path) -> None:\n    roadmap_root = root / "docs" / "development-roadmap"\n    authorities = (\n        roadmap_root / "00-product-strategy" / "01-product-scope.md",\n        roadmap_root / "00-product-strategy" / "02-success-metrics.md",\n        roadmap_root / "12-launch-and-operations" / "03-first-real-experiment.md",\n    )\n    if not all(path.is_file() for path in authorities):\n        return\n\n    required_tokens = ("SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300")\n    for path in authorities:\n        text = path.read_text(encoding="utf-8")\n        relative = path.relative_to(roadmap_root).as_posix()\n        for token in required_tokens:\n            if token not in text:\n                raise SourceLocation(relative, 1).error(\n                    f"cost-first launch authority is missing {token!r}"\n                )\n    product_text = authorities[0].read_text(encoding="utf-8")\n    for token in (\n        "BRAVE_PLACE_SEARCH",\n        '\"model_routing_tiers\": [\"NO_AI\", \"NANO\", \"MINI\", \"PREMIUM\"]',\n        '\"pre_revenue_recipient_ceiling\": 300',\n    ):\n        if token not in product_text:\n            raise SourceLocation(authorities[0].relative_to(roadmap_root).as_posix(), 1).error(\n                f"cost-first authority is missing {token!r}"\n            )\n\n    secondary_paths = [roadmap_root / "README.md"]\n    secondary_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))\n    primary = {path.resolve() for path in authorities}\n    for path in secondary_paths:\n        if not path.is_file() or path.resolve() in primary:\n            continue\n        relative = path.relative_to(roadmap_root).as_posix()\n        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):\n            if "100/200/300/400" in line or "100/300/600/1,000" in line or "100/300/600/1000" in line:\n                raise SourceLocation(relative, line_number).error(\n                    "legacy automatic cohort authority remains in an active secondary roadmap document"\n                )\n\n\ndef _logical_cells'''
     text, count = pattern.subn(replacement, text, count=1)
     if count != 1:
         raise RuntimeError(f"stage validation function: expected one match, found {count}")
     text = text.replace("exact v1 contract", "exact v2 contract")
     VALIDATOR.write_text(text, encoding="utf-8")
+
+
+def _replace_stage_validator_fixture_tests(text: str) -> str:
+    pattern = re.compile(
+        r'def test_staged_lead_source_validator_accepts_exact_authorities\(\n.*?\n\ndef write_tree',
+        re.S,
+    )
+    replacement = '''def _write_minimal_cost_first_authorities(tmp_path: Path) -> Path:\n    roadmap = tmp_path / "docs" / "development-roadmap"\n    scope = roadmap / "00-product-strategy" / "01-product-scope.md"\n    metrics = roadmap / "00-product-strategy" / "02-success-metrics.md"\n    launch = roadmap / "12-launch-and-operations" / "03-first-real-experiment.md"\n    scope.parent.mkdir(parents=True)\n    launch.parent.mkdir(parents=True)\n    authority = "SHADOW REVIEW_20 QUALIFIED_50 SCALE_100_TO_300"\n    scope.write_text(\n        authority\n        + ' BRAVE_PLACE_SEARCH "model_routing_tiers": ["NO_AI", "NANO", "MINI", "PREMIUM"]'\n        + ' "pre_revenue_recipient_ceiling": 300',\n        encoding="utf-8",\n    )\n    metrics.write_text(authority + " CONTINUE ScaleAuthorization", encoding="utf-8")\n    launch.write_text(authority + " ScaleAuthorization 100..300", encoding="utf-8")\n    return roadmap\n\n\ndef test_staged_lead_source_validator_accepts_exact_authorities(\n    tmp_path: Path,\n) -> None:\n    _write_minimal_cost_first_authorities(tmp_path)\n    _validator.validate_staged_lead_contract(tmp_path)\n\n\ndef test_staged_lead_source_validator_rejects_legacy_rule_with_location(\n    tmp_path: Path,\n) -> None:\n    roadmap = _write_minimal_cost_first_authorities(tmp_path)\n    readme = roadmap / "README.md"\n    readme.write_text("# Roadmap\\n100/200/300/400\\n", encoding="utf-8")\n\n    with pytest.raises(\n        ValidationError,\n        match=r"README\\.md:2: .*legacy automatic cohort authority",\n    ):\n        _validator.validate_staged_lead_contract(tmp_path)\n\n\ndef write_tree'''
+    text, count = pattern.subn(replacement, text, count=1)
+    if count != 1:
+        raise RuntimeError(f"stage validator fixture tests: expected one block, found {count}")
+    return text
 
 
 def migrate_tests() -> None:
@@ -142,6 +157,17 @@ def migrate_tests() -> None:
         '''def test_staged_lead_schedule_constants_are_exact() -> None:\n    assert _validator.STAGED_LEAD_SCHEDULE == (100, 200, 300, 400)\n    assert _validator.STAGED_LEAD_CUMULATIVE == (100, 300, 600, 1000)\n''',
         '''def test_cost_first_stage_constants_are_exact() -> None:\n    assert _validator.COST_FIRST_STAGE_NAMES == (\n        "SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300"\n    )\n    assert _validator.SCALE_TRANCHE_MIN == 100\n    assert _validator.SCALE_TRANCHE_MAX == 300\n''',
     )
+    # Replace the old active-roadmap assertion with direct cost-first coverage.
+    active_pattern = re.compile(
+        r'def test_active_roadmap_uses_only_staged_thousand_lead_contract\(\) -> None:\n.*?\n\ndef test_staged_lead_source_validator_accepts_exact_authorities',
+        re.S,
+    )
+    active_replacement = '''def test_active_roadmap_uses_cost_first_contract() -> None:\n    repository_root = Path(__file__).resolve().parents[3]\n    roadmap_root = repository_root / "docs" / "development-roadmap"\n    active_paths = [roadmap_root / "README.md"]\n    active_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))\n    active_text = "\\n".join(path.read_text(encoding="utf-8") for path in active_paths)\n\n    for required in (\n        "SHADOW",\n        "REVIEW_20",\n        "QUALIFIED_50",\n        "SCALE_100_TO_300",\n        "Brave Place Search",\n        "Cloudflare Tunnel",\n        "Cloudflare Access",\n        "R2",\n    ):\n        assert required in active_text\n\n\ndef test_staged_lead_source_validator_accepts_exact_authorities'''
+    text, count = active_pattern.subn(active_replacement, text, count=1)
+    if count != 1:
+        raise RuntimeError(f"active cost-first test: expected one block, found {count}")
+
+    text = _replace_stage_validator_fixture_tests(text)
     text = text.replace('"autonomous_sales_contract.v1"', '"autonomous_sales_contract.v2"')
     text = text.replace(
         'assert contract.cohort_increments == (100, 200, 300, 400)',
@@ -157,6 +183,10 @@ def migrate_tests() -> None:
     text = text.replace(
         'assert contract.recipient_ceiling == 1000',
         'assert contract.automated_discovery_provider == "BRAVE_PLACE_SEARCH"',
+    )
+    text = text.replace(
+        '"2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271"',
+        '"a6d8c772aa75769285732be8293438241d327586f72938fc718c0e314e35a2db"',
     )
     TESTS.write_text(text, encoding="utf-8")
 
