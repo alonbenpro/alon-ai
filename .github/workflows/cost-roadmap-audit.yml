@@ -1,0 +1,23 @@
+name: Audit Cost-Optimized Roadmap
+
+on:
+  push:
+    branches: [cost-optimized-roadmap]
+    paths:
+      - .github/workflows/cost-roadmap-audit.yml
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+      - name: Report legacy/cost-heavy references for review
+        run: |
+          echo '=== launch references ==='
+          rg -n '100/200/300/400|100/300/600|600/1,000|600/1000|1,000|1000' docs/development-roadmap || true
+          echo '=== infrastructure references ==='
+          rg -n 'AWS|Amazon S3|GCS|Google Cloud Storage|KMS|Secret Manager|160-GiB|160 GB|Object Lock|multi-cloud|Tailscale' docs/development-roadmap || true
+          echo '=== discovery references ==='
+          rg -n 'Google Maps|Instagram|TikTok|social scraping|automated social' docs/development-roadmap || true
+          echo '=== required cost-first tokens ==='
+          rg -n 'Brave Place Search|BRAVE_PLACE_SEARCH|NO_AI|NANO|MINI|PREMIUM|BATCH|Cloudflare Tunnel|Cloudflare Access|Cloudflare R2|REVIEW_20|QUALIFIED_50|SCALE_100_TO_300|ScaleAuthorization' docs/development-roadmap | head -n 300 || true
