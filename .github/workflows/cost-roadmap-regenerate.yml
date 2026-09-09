@@ -1,6 +1,6 @@
 name: Regenerate Cost-Optimized Roadmap
 
-# regeneration-attempt: 3
+# regeneration-attempt: 4
 on:
   push:
     branches: [cost-optimized-roadmap]
@@ -18,7 +18,7 @@ jobs:
         with:
           ref: cost-optimized-roadmap
           fetch-depth: 0
-      - name: Apply validator migration
+      - name: Apply cost-first roadmap migration
         run: python3 scripts/migrate_cost_optimized_roadmap.py
       - name: Regenerate executable roadmap
         run: python3 scripts/validate_roadmap.py --write
@@ -34,11 +34,11 @@ jobs:
       - name: Run roadmap validator tests
         run: uv run pytest tests/unit/test_roadmap_validator.py -q
         working-directory: backend
-      - name: Commit regenerated roadmap
+      - name: Commit migrated sources and generated roadmap
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add scripts/validate_roadmap.py backend/tests/unit/test_roadmap_validator.py docs/development-roadmap/execution-manifest.json docs/development-roadmap/EXECUTION_ORDER.md docs/development-roadmap/AGENT_EXECUTION_PLAN.md
+          git add scripts/validate_roadmap.py backend/tests/unit/test_roadmap_validator.py docs/development-roadmap
           if git diff --cached --quiet; then
             echo "No generated changes"
           else
