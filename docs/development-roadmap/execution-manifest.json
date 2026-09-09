@@ -762,7 +762,7 @@
     "strategy_activation_boundary": "CHECKPOINT_ONLY"
   },
   "schema_version": 2,
-  "source_graph_fingerprint": "a6d8c772aa75769285732be8293438241d327586f72938fc718c0e314e35a2db",
+  "source_graph_fingerprint": "301c6a3af1dc9433f11a2b0f2a6c55cfd84f10bff3ba792989b5ff9c6354e267",
   "tasks": [
     {
       "depends_on": [],

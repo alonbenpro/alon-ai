@@ -2,7 +2,7 @@
 
 > Warning: generated for the source graph below; it does not prove implementation status.
 
-- Source-graph fingerprint: `a6d8c772aa75769285732be8293438241d327586f72938fc718c0e314e35a2db`
+- Source-graph fingerprint: `301c6a3af1dc9433f11a2b0f2a6c55cfd84f10bff3ba792989b5ff9c6354e267`
 - Regenerate: `python3 scripts/validate_roadmap.py --write`
 - Validate: `python3 scripts/validate_roadmap.py --check`
 
@@ -356,7 +356,7 @@
 - Locks: `test-command-registry`
 - Branch: `agent/test-01-t02`
 - Worktree: `../alon-ai-task-test-01-t02`
-- Acceptance evidence: [source](10-testing/01-testing-strategy.md#L163) — Test evidence: `T7-DOC-CONTRACT`, including exact 24 calls/zero runner recursion, `/tmp` positive, malicious handler/runner symlink/wrong-root/hash, unavailable=`30`, target mismatch=`50`, missing artifact=`40`, the reachable `T7-AWS-WITNESS-ACCEPT` row, and set-equality negatives.
+- Acceptance evidence: [source](10-testing/01-testing-strategy.md#L163) — Test evidence: `T7-DOC-CONTRACT`, including exact 24 calls/zero runner recursion, `/tmp` positive, malicious handler/runner symlink/wrong-root/hash, unavailable=`30`, target mismatch=`50`, missing artifact=`40`, the reachable `T7-R2-RECOVERY-ACCEPT` row, and set-equality negatives.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5672,7 +5672,7 @@
 - Locks: `frontend-client`
 - Branch: `agent/frontend-03-t04`
 - Worktree: `../alon-ai-task-frontend-03-t04`
-- Acceptance evidence: [source](07-frontend/03-experiment-control-center.md#L34) — Test evidence: weak evidence, late evidence and terminal 1,000 cases.
+- Acceptance evidence: [source](07-frontend/03-experiment-control-center.md#L34) — Test evidence: weak evidence, late evidence and terminal explicitly authorized 100–300 scale cases.
 - Optional acceptance commands: none
 - Merge order: 1
 

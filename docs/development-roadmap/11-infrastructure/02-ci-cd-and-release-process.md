@@ -24,7 +24,7 @@ In scope: PR/scheduled/release lanes, exact test evidence freshness, dependency/
 
 ## Exact planned implementation surfaces
 
-Extend `.github/workflows/ci.yml`; add `.github/workflows/release.yml`, `infra/release/release-manifest.schema.json`, `scripts/release/{build_manifest,verify_manifest,preflight,apply,rollback}.sh`, SBOM/provenance generation, and private GitHub Container Registry packages addressed as `ghcr.io/alonbenpro/alon-ai-{backend,frontend,public-edge}@sha256:DIGEST_FROM_SIGNED_MANIFEST`. Workflows keep `permissions: contents: read` by default; only the release job receives minimal `packages: write` and `id-token: write` for GitHub artifact attestation, protected environment approval and no runtime/VPS credential. Operator deployment uses the VPS console/private Tailscale network to pull and verify exact digests, avoiding a permanent CI-to-VPS key.
+Extend `.github/workflows/ci.yml`; add `.github/workflows/release.yml`, `infra/release/release-manifest.schema.json`, `scripts/release/{build_manifest,verify_manifest,preflight,apply,rollback}.sh`, SBOM/provenance generation, and private GitHub Container Registry packages addressed as `ghcr.io/alonbenpro/alon-ai-{backend,frontend,public-edge}@sha256:DIGEST_FROM_SIGNED_MANIFEST`. Workflows keep `permissions: contents: read` by default; only the release job receives minimal `packages: write` and `id-token: write` for GitHub artifact attestation, protected environment approval and no runtime/VPS credential. Operator deployment uses the VPS console or Cloudflare Access-protected private operator path to pull and verify exact digests, avoiding a permanent CI-to-VPS key or public SSH requirement.
 
 | Stage | Required checks/evidence | Trigger | Failure action |
 | --- | --- | --- | --- |

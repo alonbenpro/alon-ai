@@ -81,7 +81,7 @@ Escalate to Israeli counsel before the first real recipient, every new jurisdict
 
 ### Approved collection and conversation/booking security
 
-Lead discovery uses only reviewed LeadDiscoveryProvider adapters and source-specific scopes, beginning with Google Maps and reviewed public business evidence. Register exact allowed URL/API/query/filter, fields, rate, terms, capture/expiry and onward-use constraints. Public visibility is evidence availability, never consent or authorization. Social/directory sources require their own adapter/terms/evidence tests; no arbitrary crawling or fabricated email/person/role linkage.
+Automated v1 lead discovery uses only the reviewed Brave Place Search LeadDiscoveryProvider adapter and its exact source-specific scope. Register the Brave API/query/filter, fields, rate, terms, capture/expiry, cost and onward-use constraints. Public visibility is evidence availability, never consent or authorization. Google Maps, Instagram, TikTok, social networks and directories are not automated discovery targets; social/public profiles may be attached only as manually reviewed evidence with provenance, retention and redaction. No arbitrary crawling or fabricated email/person/role linkage is allowed.
 
 Web content and inbound email are untrusted data, never instructions. Runtime separation, typed tool arguments, allowlisted source reads, source/provenance checks, secret/PII redaction before model calls and deterministic post-validation remain mandatory even when prompt-injection detectors find no indicator. Preserve full encrypted operational conversations; supply complete sanitized state to writer/evaluator while excluding source instructions and sensitive unnecessary fields.
 

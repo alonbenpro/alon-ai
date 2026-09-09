@@ -4,7 +4,7 @@
 
 - Regenerate: `python3 scripts/validate_roadmap.py --write`
 - Validate: `python3 scripts/validate_roadmap.py --check`
-- Source-graph fingerprint: `a6d8c772aa75769285732be8293438241d327586f72938fc718c0e314e35a2db`
+- Source-graph fingerprint: `301c6a3af1dc9433f11a2b0f2a6c55cfd84f10bff3ba792989b5ff9c6354e267`
 
 ## Totals
 

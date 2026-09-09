@@ -295,10 +295,32 @@ _EXPECTED_SALES_CONTRACT = SalesContract(
     premium_model_requires_explicit_approval=True,
     batch_for_non_urgent_research=True,
     launch_stages=(
-        {"name": "SHADOW", "max_real_businesses": 0, "manual_review_required": False, "real_demand_learning": False},
-        {"name": "REVIEW_20", "max_real_businesses": 20, "manual_review_required": True, "real_demand_learning": True},
-        {"name": "QUALIFIED_50", "max_real_businesses": 50, "manual_review_required": False, "real_demand_learning": True},
-        {"name": "SCALE_100_TO_300", "min_real_businesses": 100, "max_real_businesses": 300, "manual_review_required": False, "real_demand_learning": True, "explicit_operator_authorization": True},
+        {
+            "name": "SHADOW",
+            "max_real_businesses": 0,
+            "manual_review_required": False,
+            "real_demand_learning": False,
+        },
+        {
+            "name": "REVIEW_20",
+            "max_real_businesses": 20,
+            "manual_review_required": True,
+            "real_demand_learning": True,
+        },
+        {
+            "name": "QUALIFIED_50",
+            "max_real_businesses": 50,
+            "manual_review_required": False,
+            "real_demand_learning": True,
+        },
+        {
+            "name": "SCALE_100_TO_300",
+            "min_real_businesses": 100,
+            "max_real_businesses": 300,
+            "manual_review_required": False,
+            "real_demand_learning": True,
+            "explicit_operator_authorization": True,
+        },
     ),
     pre_revenue_recipient_ceiling=300,
     send_writer="SendGateway",
@@ -482,9 +504,9 @@ def validate_staged_lead_contract(root: Path) -> None:
         '"pre_revenue_recipient_ceiling": 300',
     ):
         if token not in product_text:
-            raise SourceLocation(authorities[0].relative_to(roadmap_root).as_posix(), 1).error(
-                f"cost-first authority is missing {token!r}"
-            )
+            raise SourceLocation(
+                authorities[0].relative_to(roadmap_root).as_posix(), 1
+            ).error(f"cost-first authority is missing {token!r}")
 
     secondary_paths = [roadmap_root / "README.md"]
     secondary_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))
@@ -493,8 +515,14 @@ def validate_staged_lead_contract(root: Path) -> None:
         if not path.is_file() or path.resolve() in primary:
             continue
         relative = path.relative_to(roadmap_root).as_posix()
-        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
-            if "100/200/300/400" in line or "100/300/600/1,000" in line or "100/300/600/1000" in line:
+        for line_number, line in enumerate(
+            path.read_text(encoding="utf-8").splitlines(), start=1
+        ):
+            if (
+                "100/200/300/400" in line
+                or "100/300/600/1,000" in line
+                or "100/300/600/1000" in line
+            ):
                 raise SourceLocation(relative, line_number).error(
                     "legacy automatic cohort authority remains in an active secondary roadmap document"
                 )

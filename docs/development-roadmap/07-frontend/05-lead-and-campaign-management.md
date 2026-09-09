@@ -12,7 +12,7 @@
 
 ## Outcome and planned surfaces
 
-Discovery uses Google Maps and other reviewed public business sources only through approved adapters and exact scopes. The UI exposes source time, query/filter version, provenance, preliminary facts/unknowns, dedupe disposition and review validity. Social/directory sources are unavailable until their own adapter/terms/evidence gate exists; an input URL is not permission to crawl.
+Automated discovery uses Brave Place Search only through the approved adapter and exact scope. The UI exposes source time, query/filter version, provenance, preliminary facts/unknowns, dedupe disposition, cost and review validity. Google Maps/social/directory automation is unavailable in v1; social/public profiles appear only as manually reviewed evidence with reviewer/time/provenance. An input URL is never permission to crawl.
 
 BusinessIdentityService owns accepted identity/deduplication across sources; QualificationService consumes that result. Render PRELIMINARY qualification before costly LeadResearchDossier work, and FINAL qualification against the accepted immutable OfferPackage afterward. Every fact is FACT, ESTIMATE or UNKNOWN with supported provenance. Identity, suppression, legal-policy, provider, frequency and capacity gates are separately displayed; agent qualification cannot waive them.
 

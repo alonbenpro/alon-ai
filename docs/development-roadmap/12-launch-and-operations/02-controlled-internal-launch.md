@@ -1,7 +1,7 @@
 # Controlled Internal Stack Launch
 
 **Document ID:** LAUNCH-02
-**Status:** Planned M8 private-operations gate; no product stack, VPS, AWS witness, backup, monitoring, operator auth, or internal launch exists today
+**Status:** Planned M8 private-operations gate; no product stack, private VPS, Cloudflare Access/Tunnel ingress, encrypted R2 backup, monitoring, operator auth, or internal launch exists today
 **Milestone:** M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
 **Prerequisites:** exact task Inputs `LAUNCH-02-T01 <- LAUNCH-01-T06,INFRA-02-T04,INFRA-04-T06,OBS-02-T05,INFRA-05-T07,ARCH-01-T05,TEST-01-T02,TEST-01-T05,INFRA-03-T08; LAUNCH-02-T02 <- LAUNCH-02-T01,INFRA-02-T02,INFRA-04-T02; LAUNCH-02-T03 <- LAUNCH-02-T02; LAUNCH-02-T04 <- LAUNCH-02-T03,INFRA-03-T04,INFRA-04-T06,INFRA-05-T06,TEST-06-T04; LAUNCH-02-T05 <- LAUNCH-02-T04,WF-07-T04,WF-08-T04,WF-09-T04,TEST-05-T02`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
@@ -22,17 +22,17 @@ Only the foundation application, CI and Compose exist. Product DBOS/Gmail/schema
 
 ## Scope and non-goals
 
-In scope: one signed release on one private VPS, exact PostgreSQL 18 target, private operator session, product API/UI/worker with provider egress and both send controls off, synthetic/internal workflows, exact instrument/incident observability closure, all 24 Task 7 command owners, `DR01..DR11`, encrypted GCS plus selected AWS S3 `eu-central-1` repository/witness acceptance, clean restore, alert paths, upgrades/rollback, operator runbooks and evidence retention.
+In scope: one signed release on one private VPS, exact PostgreSQL 18 target, private operator session, product API/UI/worker with provider egress and both send controls off, synthetic/internal workflows, exact instrument/incident observability closure, all 24 Task 7 command owners, `DR01..DR11`, application-encrypted Cloudflare R2 repository acceptance, off-host recovery material, clean restore, alert paths, upgrades/rollback, operator runbooks and evidence retention.
 
-Non-goals: real recipients, Gmail sends, public unsubscribe publication, external users, performance theater beyond the registered load profile, hot multi-cloud compute, GCS as deletion authority, automatic failover, agent policy/control decisions, concurrent experiment portfolio, or converting a private green dashboard into a production claim.
+Non-goals: real recipients, Gmail sends, public unsubscribe publication, external users, performance theater beyond the registered load profile, multi-cloud compute/backup as a pre-revenue requirement, provider-side encryption as sole backup protection, automatic failover, agent policy/control decisions, concurrent experiment portfolio, or converting a private green dashboard into a production claim.
 
 ## Exact planned implementation surfaces
 
-This phase creates no new endpoint, table, event, agent artifact, provider capability, service, incident, metric, DR scenario, or Task 7 command ID. It consumes exact canonical sets: complete declared product table set and owners, complete API/UI operation registry partitioned private plus the two still-absent public unsubscribe operations, registered metrics, 18 incident trigger/alert/runbook tuples, 24 Task 7 commands, 14 final-SEND denials, registered provider capability families and `DR01..DR11`. AWS S3 is the sole off-Google repo-2/deletion witness and must pass the real, non-emulator `T7-AWS-WITNESS-ACCEPT` matrix in `eu-central-1` before M8.
+This phase creates no new endpoint, table, event, agent artifact, provider capability, service, incident, metric, DR scenario, or Task 7 command ID. It consumes exact canonical sets: complete declared product table set and owners, complete API/UI operation registry partitioned private plus the two still-absent public unsubscribe operations, registered metrics, 18 incident trigger/alert/runbook tuples, 24 Task 7 commands, 14 final-SEND denials, registered provider capability families and `DR01..DR11`. Cloudflare R2 is the sole required pre-revenue off-host repository and must pass the real `T7-R2-RECOVERY-ACCEPT` encrypted backup/restore/account-recovery matrix before M8. No second-cloud witness is an M8 prerequisite.
 
 ### Entry manifest and prerequisites
 
-The signed immutable entry record binds literal phase `CONTROLLED_INTERNAL_STACK`, clean source/release/image/config/migration/OpenAPI/canonical-catalog hashes, `ReleaseManifestV1`, active agent `PromotionManifestV1` references, DBOS or mandatory Temporal runtime decision/version, exact model/prompt/tool/provider versions, VPS/database system identity, private ingress/auth/session configuration, secret/KMS generations without values, GCS/AWS account-region-bucket-policy/IAM hashes, latest `BackupManifestV1`, sole AWS authority-head exact version/ETag/checksum, Task 7 command/profile/fixture hashes, M0-M7 gate refs, budgets/caps, expected controls/routes, operator signature, and start/expiry UTC.
+The signed immutable entry record binds literal phase `CONTROLLED_INTERNAL_STACK`, clean source/release/image/config/migration/OpenAPI/canonical-catalog hashes, `ReleaseManifestV1`, active agent `PromotionManifestV1` references, DBOS or mandatory Temporal runtime decision/version, exact model/prompt/tool/provider versions, VPS/database system identity, private ingress/auth/session configuration, secret/encryption generations without values, R2 account/bucket/credential-policy/encryption hashes, latest `BackupManifestV1`, off-host recovery-package hash, Task 7 command/profile/fixture hashes, M0-M7 gate refs, budgets/caps, expected controls/routes, operator signature, and start/expiry UTC.
 
 | Entry prerequisite | Required evidence | Failure behavior |
 | --- | --- | --- |
@@ -59,7 +59,7 @@ The operator verifies the target and signed release, performs pre-backup and mig
 | Decision point | Exact rule |
 | --- | --- |
 | Success | all seven windows valid; at least 20 terminal runs; every applicable Task 7/M8 row exit `0`; fresh restore/AWS/alert/DR evidence; zero Critical/High unresolved incident; no authority/public/Gmail/data/cost violation |
-| Immediate abort | control/public/route/catalog drift; any send/provider authority edge; wrong target; schema/runtime incompatibility; backup/AWS witness ambiguity; restore/DR/alert failure; telemetry blindness; secret/PII leak; unreconciled cost; budget breach; or roadmap blocker discovered |
+| Immediate abort | control/public/route/catalog drift; any send/provider authority edge; wrong target; schema/runtime incompatibility; backup/R2 recovery ambiguity; restore/DR/alert failure; telemetry blindness; secret/PII leak; unreconciled cost; budget breach; or roadmap blocker discovered |
 | Rollback/demotion | stop dequeues/workers, keep controls/public off, preserve evidence, return to prior signed release/config if compatible or isolated restore, open canonical incident and invalidate affected windows |
 | Re-entry | exact incident/repair closure, new signed candidate/entry, rerun of every affected command, fresh restore/witness proof and seven new complete windows; prior green windows cannot be cherry-picked |
 | Downstream unlock | M8 operational eligibility only; LAUNCH-03 still needs all recipient/legal/campaign/public-ingress evidence and a separate operator decision |
@@ -72,7 +72,7 @@ The recovery/release evidence must bind the accepted OfferPackage/economics/clai
 
 Internal deployment may run the complete synthetic funnel/dashboard/exception/calendar/strategy simulation with all real provider writes denied. Product and test Gmail/calendar controls remain false outside their separately signed isolated fixture windows. M8 does not count synthetic/owned evidence as real demand or authorize phase-7 real recipients.
 
-Exercise release/rollback/restore with pending send/calendar attempts, checkpoint/learning triggers and cross-campaign activations. Preserve suppression/tombstones, commercial evidence and remaining capacities; no health check, deploy, restore, exception resolution or current strategy pointer can reopen admission. Sign exact table/API/provider/artifact/metric/event/incident/command sets from their owning manifests, with no obsolete fixed count shortcut. Retain existing private access, AWS witness, DR01..DR11, paging, command and no-public-ingress safeguards.
+Exercise release/rollback/restore with pending send/calendar attempts, checkpoint/learning triggers and cross-campaign activations. Preserve suppression/tombstones, commercial evidence and remaining capacities; no health check, deploy, restore, exception resolution or current strategy pointer can reopen admission. Sign exact table/API/provider/artifact/metric/event/incident/command sets from their owning manifests, with no obsolete fixed count shortcut. Retain Cloudflare Access/Tunnel private ingress, encrypted R2 recovery, DR01..DR11, paging, command and no-public-product-ingress safeguards.
 
 ## Ordered implementation tasks
 
@@ -102,7 +102,7 @@ Private ingress, OIDC/session, secrets/KMS, release signatures and least provide
 
 ## Failure, rollback, and operator recovery
 
-Contain first: both controls false, public DNS/edge absent, dequeue/provider egress stopped, affected credentials revoked, evidence preserved. Determine truth from PostgreSQL, signed release/backup/AWS manifests and provider records rather than dashboards alone. Roll back application/config pointers only when schema/runtime compatibility is proven; otherwise remain stopped and use the exact DR row. GCS data cannot vote on or reconstruct AWS deletion commitment. Never use direct SQL, mutable tags, skipped windows, a stale restore, or a green foundation CI run to claim M8.
+Contain first: both controls false, public DNS/edge absent, dequeue/provider egress stopped, affected credentials revoked, evidence preserved. Determine truth from PostgreSQL, signed release/backup/R2 manifests and provider records rather than dashboards alone. Roll back application/config pointers only when schema/runtime compatibility is proven; otherwise remain stopped and use the exact DR row. No provider-side metadata can substitute for the signed application retention/deletion ledger or successful encrypted R2 restore evidence. Never use direct SQL, mutable tags, skipped windows, a stale restore, or a green foundation CI run to claim M8.
 
 ## Acceptance and retained evidence
 
