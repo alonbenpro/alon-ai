@@ -1,7 +1,7 @@
 """One-time migration for the 2026-09-09 cost-optimized roadmap contract.
 
 The temporary workflow runs this once, regenerates roadmap artifacts, verifies them,
-then removes this script and the workflow before committing the result.
+then removes this script and both temporary workflows before committing the result.
 """
 from pathlib import Path
 import re
@@ -20,7 +20,7 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 def migrate_secondary_roadmap_docs() -> None:
-    """Remove legacy cohort authority from secondary docs without rewriting primary cost-first docs."""
+    """Remove legacy numeric-stage authority from active secondary roadmap docs."""
     primary = {
         "00-product-strategy/01-product-scope.md",
         "00-product-strategy/02-success-metrics.md",
@@ -42,7 +42,8 @@ def migrate_secondary_roadmap_docs() -> None:
         ("four-cohort", "cost-first staged"),
         ("four cohort", "cost-first stage"),
     )
-    for path in sorted(ROADMAP.glob("[0-9][0-9]-*/*.md")) + [ROADMAP / "README.md"]:
+    paths = sorted(ROADMAP.glob("[0-9][0-9]-*/*.md")) + [ROADMAP / "README.md"]
+    for path in paths:
         rel = path.relative_to(ROADMAP).as_posix()
         if rel in primary or not path.is_file():
             continue
@@ -66,9 +67,13 @@ def migrate_security_secret_boundary() -> None:
         "The pre-revenue production adapter is provider-neutral and must satisfy the same versioned encrypted-object, CAS, lease, revoke, rotation and restore contract using least-privilege encrypted local secret material plus separately held off-host recovery material. "
         "A managed KMS/secret manager may replace that adapter after revenue or a measured security/operations review, but it is not an M8 prerequisite. Local development uses an ephemeral encrypted fixture store containing fake tokens only. No Gmail pilot starts until the selected adapter passes the CAS/lease/restart/backup tests; plaintext production secret files are never an accepted fallback."
     )
-    if old not in text:
-        raise RuntimeError("SEC-03 managed-KMS initial-adapter sentence not found")
-    text = text.replace(old, new, 1)
+    if old in text:
+        text = text.replace(old, new, 1)
+    elif "managed KMS" not in text and "pre-revenue production adapter" in text:
+        # A concurrent roadmap edit already migrated this paragraph.
+        pass
+    else:
+        raise RuntimeError("SEC-03 pre-revenue adapter paragraph is neither old nor migrated")
     text = text.replace(
         "Key hierarchy is: offline recovery wrapping key -> managed KMS root/KEK generation -> purpose-specific KEKs",
         "Key hierarchy is: offline recovery wrapping key -> versioned pre-revenue root/KEK generation (or a later managed-KMS adapter) -> purpose-specific KEKs",
@@ -137,6 +142,9 @@ def migrate_tests() -> None:
         'assert contract.cohort_increments == (100, 200, 300, 400)',
         'assert tuple(stage["name"] for stage in contract.launch_stages) == _validator.COST_FIRST_STAGE_NAMES',
     )
+    old_mutations = '''        (("cohort_increments",), [100, 200, 300, 401], "cohort_increments"),\n        (\n            ("cohort_cumulative_maxima",),\n            [100, 300, 600, 1001],\n            "cohort_cumulative_maxima",\n        ),\n        (("recipient_ceiling",), 1001, "recipient_ceiling"),'''
+    new_mutations = '''        (("automated_discovery_provider",), "GOOGLE_MAPS", "automated_discovery_provider"),\n        (("manual_evidence_sources",), ["SOCIAL_PROFILE"], "manual_evidence_sources"),\n        (("model_routing_tiers",), ["NANO", "MINI", "PREMIUM"], "model_routing_tiers"),\n        (("premium_model_requires_explicit_approval",), False, "premium_model_requires_explicit_approval"),\n        (("batch_for_non_urgent_research",), False, "batch_for_non_urgent_research"),\n        (("launch_stages", 3, "max_real_businesses"), 301, "launch_stages"),\n        (("pre_revenue_recipient_ceiling",), 301, "pre_revenue_recipient_ceiling"),'''
+    text = replace_once(text, old_mutations, new_mutations, "unsafe mutation rows")
     text = text.replace(
         'assert contract.cohort_cumulative_maxima == (100, 300, 600, 1000)',
         'assert contract.pre_revenue_recipient_ceiling == 300',
@@ -146,13 +154,6 @@ def migrate_tests() -> None:
         'assert contract.automated_discovery_provider == "BRAVE_PLACE_SEARCH"',
     )
     TESTS.write_text(text, encoding="utf-8")
-
-
-def remove_temporary_tools() -> None:
-    workflow = ROOT / ".github/workflows/cost-roadmap-migration.yml"
-    if workflow.exists():
-        workflow.unlink()
-    Path(__file__).unlink()
 
 
 if __name__ == "__main__":
