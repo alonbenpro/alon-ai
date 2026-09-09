@@ -4,7 +4,7 @@
 
 - Regenerate: `python3 scripts/validate_roadmap.py --write`
 - Validate: `python3 scripts/validate_roadmap.py --check`
-- Source-graph fingerprint: `2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271`
+- Source-graph fingerprint: `a6d8c772aa75769285732be8293438241d327586f72938fc718c0e314e35a2db`
 
 ## Totals
 
@@ -112,12 +112,12 @@ A task is executable only when every dependency has retained passing evidence fr
 
 ## M0
 
-1. `PRODUCT-01-T01` — Capture the M0 bet ([source](00-product-strategy/01-product-scope.md#L211)); dependencies: none
-2. `PRODUCT-01-T02` — Run the narrowness test ([source](00-product-strategy/01-product-scope.md#L213)); dependencies: `PRODUCT-01-T01`
-3. `PRODUCT-01-T03` — Register artifact and authority vocabulary ([source](00-product-strategy/01-product-scope.md#L215)); dependencies: `PRODUCT-01-T02`
-4. `PRODUCT-01-T04` — Freeze non-goals for the first experiment ([source](00-product-strategy/01-product-scope.md#L217)); dependencies: `PRODUCT-01-T03`
-5. `PRODUCT-02-T01` — Register metric and staged-decision definitions ([source](00-product-strategy/02-success-metrics.md#L142)); dependencies: `PRODUCT-01-T02`
-6. `PRODUCT-02-T02` — Capture baseline evidence ([source](00-product-strategy/02-success-metrics.md#L144)); dependencies: `PRODUCT-02-T01`
+1. `PRODUCT-01-T01` — Capture the M0 bet ([source](00-product-strategy/01-product-scope.md#L181)); dependencies: none
+2. `PRODUCT-01-T02` — Run the narrowness test ([source](00-product-strategy/01-product-scope.md#L183)); dependencies: `PRODUCT-01-T01`
+3. `PRODUCT-01-T03` — Register artifact and authority vocabulary ([source](00-product-strategy/01-product-scope.md#L185)); dependencies: `PRODUCT-01-T02`
+4. `PRODUCT-01-T04` — Freeze non-goals for the first experiment ([source](00-product-strategy/01-product-scope.md#L187)); dependencies: `PRODUCT-01-T03`
+5. `PRODUCT-02-T01` — Register metric and staged-decision definitions ([source](00-product-strategy/02-success-metrics.md#L127)); dependencies: `PRODUCT-01-T02`
+6. `PRODUCT-02-T02` — Capture baseline evidence ([source](00-product-strategy/02-success-metrics.md#L129)); dependencies: `PRODUCT-02-T01`
 7. `PRODUCT-03-T01` — Approve M0 risk posture ([source](00-product-strategy/03-risk-register-and-kill-criteria.md#L124)); dependencies: `PRODUCT-01-T02`, `PRODUCT-02-T01`
 8. `PRODUCT-03-T02` — Review sunk-cost exposure at every gate ([source](00-product-strategy/03-risk-register-and-kill-criteria.md#L126)); dependencies: `PRODUCT-03-T01`
 
@@ -201,8 +201,8 @@ A task is executable only when every dependency has retained passing evidence fr
 78. `AGENT-04-T02` — Implement bounded specialist execution ([source](04-agents/03-market-research-agent.md#L59)); dependencies: `AGENT-04-T01`, `AGENT-01-T02`
 79. `AGENT-03-T01` — Encode exact schemas and immutable configuration ([source](04-agents/04-offer-design-agent.md#L59)); dependencies: `AGENT-02-T01`, `AGENT-04-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-02-T03`
 80. `AGENT-03-T02` — Implement bounded specialist execution ([source](04-agents/04-offer-design-agent.md#L61)); dependencies: `AGENT-03-T01`, `AGENT-01-T02`
-81. `AGENT-11-T01` — Encode exact schemas and immutable configuration ([source](04-agents/05-lead-discovery-agent.md#L56)); dependencies: `AGENT-03-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-03-T03`
-82. `AGENT-11-T02` — Implement bounded specialist execution ([source](04-agents/05-lead-discovery-agent.md#L58)); dependencies: `AGENT-11-T01`, `AGENT-01-T02`
+81. `AGENT-11-T01` — Encode exact schemas and immutable configuration ([source](04-agents/05-lead-discovery-agent.md#L44)); dependencies: `AGENT-03-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-03-T03`
+82. `AGENT-11-T02` — Implement bounded specialist execution ([source](04-agents/05-lead-discovery-agent.md#L46)); dependencies: `AGENT-11-T01`, `AGENT-01-T02`
 83. `AGENT-05-T01` — Encode exact schemas and immutable configuration ([source](04-agents/06-lead-research-agent.md#L57)); dependencies: `AGENT-11-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-03-T03`
 84. `AGENT-05-T02` — Implement bounded specialist execution ([source](04-agents/06-lead-research-agent.md#L59)); dependencies: `AGENT-05-T01`, `AGENT-01-T02`
 85. `AGENT-06-T01` — Encode exact schemas and immutable configuration ([source](04-agents/07-lead-qualification-agent.md#L56)); dependencies: `AGENT-03-T01`, `AGENT-05-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-03-T03`
@@ -215,10 +215,10 @@ A task is executable only when every dependency has retained passing evidence fr
 92. `AGENT-09-T02` — Implement bounded specialist execution ([source](04-agents/10-experiment-evaluation-agent.md#L58)); dependencies: `AGENT-09-T01`, `AGENT-01-T02`
 93. `AGENT-12-T01` — Encode exact schemas and immutable configuration ([source](04-agents/11-global-learning-engine.md#L57)); dependencies: `AGENT-09-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-04-T01`
 94. `AGENT-12-T02` — Implement bounded specialist execution ([source](04-agents/11-global-learning-engine.md#L59)); dependencies: `AGENT-12-T01`, `AGENT-01-T02`
-95. `PROVIDER-03-T01` — Implement exact model protocol ([source](05-providers/03-model-provider.md#L106)); dependencies: `AGENT-01-T01`, `DB-01-T01`
-96. `PROVIDER-03-T02` — Implement OpenAI Responses adapter ([source](05-providers/03-model-provider.md#L108)); dependencies: `PROVIDER-03-T01`
-97. `PROVIDER-03-T03` — Implement ceilings and cancellation ([source](05-providers/03-model-provider.md#L110)); dependencies: `PROVIDER-03-T02`
-98. `PROVIDER-03-T04` — Implement signed live-capture/fixture adapters ([source](05-providers/03-model-provider.md#L112)); dependencies: `PROVIDER-03-T03`
+95. `PROVIDER-03-T01` — Implement exact model protocol and routing contracts ([source](05-providers/03-model-provider.md#L65)); dependencies: `AGENT-01-T01`, `DB-01-T01`
+96. `PROVIDER-03-T02` — Implement OpenAI structured and batch adapters ([source](05-providers/03-model-provider.md#L67)); dependencies: `PROVIDER-03-T01`
+97. `PROVIDER-03-T03` — Implement routing ceilings, cancellation, and cost reconciliation ([source](05-providers/03-model-provider.md#L69)); dependencies: `PROVIDER-03-T02`
+98. `PROVIDER-03-T04` — Implement signed capture and fixture adapters ([source](05-providers/03-model-provider.md#L71)); dependencies: `PROVIDER-03-T03`
 99. `PROVIDER-04-T01` — Implement exact capability service ([source](05-providers/04-search-provider.md#L102)); dependencies: `AGENT-01-T01`, `DB-01-T01`
 100. `PROVIDER-04-T02` — Implement Brave raw adapter and filters ([source](05-providers/04-search-provider.md#L104)); dependencies: `PROVIDER-04-T01`
 101. `PROVIDER-05-T01` — Implement exact evidence/page contracts ([source](05-providers/05-page-fetching-and-extraction.md#L107)); dependencies: `AGENT-01-T01`, `DB-01-T01`
@@ -227,8 +227,8 @@ A task is executable only when every dependency has retained passing evidence fr
 104. `PROVIDER-06-T01` — Implement exact two-family contracts ([source](05-providers/06-enrichment-provider.md#L101)); dependencies: `AGENT-01-T01`, `DB-01-T01`
 105. `PROVIDER-07-T01` — Define neutral split capabilities ([source](05-providers/07-calendar-provider.md#L56)); dependencies: `ARCH-02-T01`, `ARCH-03-T01`
 106. `PROVIDER-07-T02` — Implement signed fixtures and replacement adapter ([source](05-providers/07-calendar-provider.md#L58)); dependencies: `PROVIDER-07-T01`
-107. `PROVIDER-08-T01` — Encode discovery capability and source registry ([source](05-providers/08-lead-discovery-provider.md#L51)); dependencies: `AGENT-01-T01`, `DB-01-T01`
-108. `PROVIDER-08-T02` — Implement multiple recorded source adapters ([source](05-providers/08-lead-discovery-provider.md#L53)); dependencies: `PROVIDER-08-T01`
+107. `PROVIDER-08-T01` — Encode Brave discovery capability and exact source registry ([source](05-providers/08-lead-discovery-provider.md#L70)); dependencies: `AGENT-01-T01`, `DB-01-T01`
+108. `PROVIDER-08-T02` — Implement recorded Brave Place Search adapter ([source](05-providers/08-lead-discovery-provider.md#L72)); dependencies: `PROVIDER-08-T01`
 109. `BACKEND-01-T01` — Implement shared M3 recording and evaluation sole writers ([source](06-backend/01-domain-services.md#L86)); dependencies: `AGENT-01-T01`, `DB-04-T02`, `DB-05-T03`
 110. `DB-04-T04` — Implement validation and acceptance transitions ([source](02-database/04-agent-artifacts-and-evidence.md#L108)); dependencies: `DB-04-T03`, `BACKEND-01-T01`, `ARCH-03-T01`
 111. `BACKEND-03-T01` — Encode action/fresh-gateway facts and reason registry ([source](06-backend/03-policy-engine.md#L121)); dependencies: `DB-05-T02`, `ARCH-03-T01`, `DB-03-T01`
@@ -238,7 +238,7 @@ A task is executable only when every dependency has retained passing evidence fr
 115. `OBS-03-T01` — Implement currency/price/usage contracts ([source](09-observability-and-evaluation/03-provider-cost-accounting.md#L106)); dependencies: `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `PROVIDER-06-T01`, `PROVIDER-01-T02`, `PROVIDER-02-T01`, `PROVIDER-01-T01`
 116. `OBS-03-T02` — Implement reservation/reconciliation ([source](09-observability-and-evaluation/03-provider-cost-accounting.md#L108)); dependencies: `OBS-03-T01`, `DB-05-T02`
 117. `DB-05-T05` — Implement policy/cost reconciliation ([source](02-database/05-audit-events-and-idempotency.md#L335)); dependencies: `DB-05-T04`, `PROVIDER-03-T04`, `OBS-03-T02`
-118. `PRODUCT-02-T03` — Implement gate queries in milestone order ([source](00-product-strategy/02-success-metrics.md#L146)); dependencies: `PRODUCT-02-T02`, `DB-05-T05`
+118. `PRODUCT-02-T03` — Implement gate queries in milestone order ([source](00-product-strategy/02-success-metrics.md#L131)); dependencies: `PRODUCT-02-T02`, `DB-05-T05`
 119. `AGENT-01-T03` — Implement finite execution and ledger ([source](04-agents/01-agent-runtime-and-contracts.md#L701)); dependencies: `AGENT-01-T02`, `OBS-03-T02`
 120. `AGENT-01-T04` — Implement deterministic validation/persistence handoff ([source](04-agents/01-agent-runtime-and-contracts.md#L703)); dependencies: `AGENT-01-T03`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`
 121. `AGENT-01-T05` — Prove authority and observability boundary ([source](04-agents/01-agent-runtime-and-contracts.md#L705)); dependencies: `AGENT-01-T04`
@@ -260,15 +260,15 @@ A task is executable only when every dependency has retained passing evidence fr
 137. `PROVIDER-06-T03` — Implement signed offline fixtures and replacement suite ([source](05-providers/06-enrichment-provider.md#L105)); dependencies: `PROVIDER-06-T02`
 138. `ARCH-02-T03` — Wrap every provider-neutral recorded path at M3 ([source](01-architecture/02-module-boundaries.md#L118)); dependencies: `ARCH-02-T02`, `PROVIDER-03-T04`, `PROVIDER-04-T04`, `PROVIDER-05-T04`, `PROVIDER-06-T03`, `TEST-04-T01`
 139. `AGENT-05-T03` — Validate and connect the deterministic handoff ([source](04-agents/06-lead-research-agent.md#L61)); dependencies: `AGENT-05-T02`, `AGENT-01-T04`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `PROVIDER-05-T04`, `PROVIDER-06-T03`
-140. `PROVIDER-08-T03` — Prove evidence/cost and replacement handoff ([source](05-providers/08-lead-discovery-provider.md#L55)); dependencies: `PROVIDER-08-T02`, `PROVIDER-05-T03`
-141. `AGENT-11-T03` — Validate and connect the deterministic handoff ([source](04-agents/05-lead-discovery-agent.md#L60)); dependencies: `AGENT-11-T02`, `AGENT-01-T04`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `PROVIDER-08-T03`
+140. `PROVIDER-08-T03` — Prove evidence, cost, manual-source separation and replacement handoff ([source](05-providers/08-lead-discovery-provider.md#L74)); dependencies: `PROVIDER-08-T02`, `PROVIDER-05-T03`
+141. `AGENT-11-T03` — Validate and connect the deterministic handoff ([source](04-agents/05-lead-discovery-agent.md#L48)); dependencies: `AGENT-11-T02`, `AGENT-01-T04`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `PROVIDER-08-T03`
 142. `AGENT-10-T02` — Freeze implemented candidate configurations ([source](04-agents/12-agent-evals-and-versioning.md#L367)); dependencies: `AGENT-10-T01`, `AGENT-01-T01`, `PROVIDER-03-T04`, `PROVIDER-04-T04`, `PROVIDER-05-T04`, `PROVIDER-06-T03`, `AGENT-02-T03`, `AGENT-03-T03`, `AGENT-04-T03`, `AGENT-05-T03`, `AGENT-06-T03`, `AGENT-07-T03`, `AGENT-08-T03`, `AGENT-09-T03`, `AGENT-11-T03`, `AGENT-12-T03`, `PROVIDER-08-T03`
 143. `AGENT-10-T03` — Implement isolated candidate capture ([source](04-agents/12-agent-evals-and-versioning.md#L369)); dependencies: `AGENT-10-T02`, `PROVIDER-03-T01`, `OBS-03-T02`, `AGENT-01-T01`, `AGENT-01-T04`, `PROVIDER-03-T02`, `BACKEND-01-T01`
 144. `AGENT-10-T04` — Implement network-disabled deterministic scoring ([source](04-agents/12-agent-evals-and-versioning.md#L371)); dependencies: `AGENT-10-T03`
 145. `AGENT-02-T04` — Gate specialist acceptance with shared evaluation ([source](04-agents/02-idea-discovery-agent.md#L63)); dependencies: `AGENT-02-T03`, `AGENT-10-T03`, `AGENT-10-T04`
 146. `AGENT-04-T04` — Gate specialist acceptance with shared evaluation ([source](04-agents/03-market-research-agent.md#L63)); dependencies: `AGENT-04-T03`, `AGENT-10-T03`, `AGENT-10-T04`
 147. `AGENT-03-T04` — Gate specialist acceptance with shared evaluation ([source](04-agents/04-offer-design-agent.md#L65)); dependencies: `AGENT-03-T03`, `AGENT-10-T03`, `AGENT-10-T04`
-148. `AGENT-11-T04` — Gate specialist acceptance with shared evaluation ([source](04-agents/05-lead-discovery-agent.md#L62)); dependencies: `AGENT-11-T03`, `AGENT-10-T03`, `AGENT-10-T04`
+148. `AGENT-11-T04` — Gate specialist acceptance with shared evaluation ([source](04-agents/05-lead-discovery-agent.md#L50)); dependencies: `AGENT-11-T03`, `AGENT-10-T03`, `AGENT-10-T04`
 149. `AGENT-05-T04` — Gate specialist acceptance with shared evaluation ([source](04-agents/06-lead-research-agent.md#L63)); dependencies: `AGENT-05-T03`, `AGENT-10-T03`, `AGENT-10-T04`
 150. `AGENT-06-T04` — Gate specialist acceptance with shared evaluation ([source](04-agents/07-lead-qualification-agent.md#L62)); dependencies: `AGENT-06-T03`, `AGENT-10-T03`, `AGENT-10-T04`
 151. `AGENT-07-T04` — Gate specialist acceptance with shared evaluation ([source](04-agents/08-email-writing-agent.md#L62)); dependencies: `AGENT-07-T03`, `AGENT-10-T03`, `AGENT-10-T04`
@@ -279,8 +279,8 @@ A task is executable only when every dependency has retained passing evidence fr
 156. `DB-04-T05` — Gate agent promotion on evaluations ([source](02-database/04-agent-artifacts-and-evidence.md#L110)); dependencies: `DB-04-T04`, `AGENT-10-T05`
 157. `ARCH-01-T03` — Add offline intelligence vertically ([source](01-architecture/01-target-system-architecture.md#L164)); dependencies: `ARCH-01-T02`, `ARCH-02-T01`, `AGENT-10-T05`, `DB-04-T05`, `ARCH-02-T03`
 158. `AGENT-10-T06` — Implement runtime selection/monitoring/rollback ([source](04-agents/12-agent-evals-and-versioning.md#L375)); dependencies: `AGENT-10-T05`
-159. `PROVIDER-03-T05` — Bind promoted product model activation ([source](05-providers/03-model-provider.md#L114)); dependencies: `PROVIDER-03-T04`, `AGENT-10-T05`
-160. `PROVIDER-03-T06` — Prove replacement and authority seams ([source](05-providers/03-model-provider.md#L116)); dependencies: `PROVIDER-03-T05`
+159. `PROVIDER-03-T05` — Bind promoted product routing activation ([source](05-providers/03-model-provider.md#L73)); dependencies: `PROVIDER-03-T04`, `AGENT-10-T05`
+160. `PROVIDER-03-T06` — Prove replacement and authority seams ([source](05-providers/03-model-provider.md#L75)); dependencies: `PROVIDER-03-T05`
 161. `OBS-03-T03` — Implement Bank of Israel FX capture ([source](09-observability-and-evaluation/03-provider-cost-accounting.md#L110)); dependencies: `OBS-03-T02`
 
 ## M4
@@ -318,7 +318,7 @@ A task is executable only when every dependency has retained passing evidence fr
 
 190. `PROVIDER-06-T04` — Implement the terms-gated live enrichment adapter ([source](05-providers/06-enrichment-provider.md#L107)); dependencies: `PROVIDER-06-T03`, `OBS-03-T01`, `OBS-03-T02`
 191. `PROVIDER-06-T05` — Prove minimization and authority ([source](05-providers/06-enrichment-provider.md#L109)); dependencies: `PROVIDER-06-T04`
-192. `PROVIDER-08-T04` — Gate source-specific live discovery ([source](05-providers/08-lead-discovery-provider.md#L57)); dependencies: `PROVIDER-08-T03`, `OBS-03-T02`
+192. `PROVIDER-08-T04` — Gate Brave live discovery ([source](05-providers/08-lead-discovery-provider.md#L76)); dependencies: `PROVIDER-08-T03`, `OBS-03-T02`
 193. `BACKEND-01-T06` — Prove boundary and current-truth gates ([source](06-backend/01-domain-services.md#L96)); dependencies: `BACKEND-01-T05`
 194. `BACKEND-01-T07` — Implement BusinessIdentityService and phased QualificationService ([source](06-backend/01-domain-services.md#L100)); dependencies: `BACKEND-01-T06`, `DB-03-T02`, `DB-04-T04`, `AGENT-11-T03`, `AGENT-06-T03`
 195. `WF-04-T01` — Freeze source and offer-filter plan ([source](03-workflows/04-lead-qualification-workflow.md#L47)); dependencies: `WF-03-T05`, `DB-02-T03`, `WF-03-T03`, `BACKEND-01-T07`, `PROVIDER-08-T03`
@@ -400,14 +400,14 @@ A task is executable only when every dependency has retained passing evidence fr
 268. `WF-07-T02` — Implement slot proposal and confirmation ([source](03-workflows/07-booking-workflow.md#L51)); dependencies: `WF-07-T01`, `PROVIDER-07-T03`
 269. `WF-07-T03` — Implement guarded create/change recovery ([source](03-workflows/07-booking-workflow.md#L53)); dependencies: `WF-07-T02`, `PROVIDER-07-T04`
 270. `WF-07-T04` — Retain owned-calendar M6 proof ([source](03-workflows/07-booking-workflow.md#L55)); dependencies: `WF-07-T03`, `LAUNCH-01-T03`
-271. `WF-08-T01` — Encode finite closure and evidence interfaces ([source](03-workflows/08-checkpoint-evaluation-workflow.md#L47)); dependencies: `WF-05-T04`, `AGENT-09-T04`, `ARCH-03-T01`, `BACKEND-01-T09`
-272. `WF-08-T02` — Implement immutable evidence freeze ([source](03-workflows/08-checkpoint-evaluation-workflow.md#L49)); dependencies: `WF-08-T01`
-273. `WF-08-T03` — Commit deterministic decision and learning trigger ([source](03-workflows/08-checkpoint-evaluation-workflow.md#L51)); dependencies: `WF-08-T02`
-274. `WF-08-T04` — Retain checkpoint recovery simulation ([source](03-workflows/08-checkpoint-evaluation-workflow.md#L53)); dependencies: `WF-08-T03`
-275. `WF-09-T01` — Encode checkpoint-only learning trigger ([source](03-workflows/09-global-learning-workflow.md#L50)); dependencies: `WF-08-T03`, `AGENT-12-T04`, `AGENT-10-T06`, `ARCH-03-T01`, `BACKEND-01-T10`
-276. `WF-09-T02` — Implement deterministic proposal gate ([source](03-workflows/09-global-learning-workflow.md#L52)); dependencies: `WF-09-T01`
-277. `WF-09-T03` — Implement campaign-boundary activation and rollback ([source](03-workflows/09-global-learning-workflow.md#L54)); dependencies: `WF-09-T02`
-278. `WF-09-T04` — Retain global learning simulation ([source](03-workflows/09-global-learning-workflow.md#L56)); dependencies: `WF-09-T03`
+271. `WF-08-T01` — Encode finite closure and evidence interfaces ([source](03-workflows/08-checkpoint-evaluation-workflow.md#L54)); dependencies: `WF-05-T04`, `AGENT-09-T04`, `ARCH-03-T01`, `BACKEND-01-T09`
+272. `WF-08-T02` — Implement immutable evidence freeze ([source](03-workflows/08-checkpoint-evaluation-workflow.md#L56)); dependencies: `WF-08-T01`
+273. `WF-08-T03` — Commit deterministic decision and learning trigger ([source](03-workflows/08-checkpoint-evaluation-workflow.md#L58)); dependencies: `WF-08-T02`
+274. `WF-08-T04` — Retain checkpoint recovery simulation ([source](03-workflows/08-checkpoint-evaluation-workflow.md#L60)); dependencies: `WF-08-T03`
+275. `WF-09-T01` — Encode checkpoint-only learning trigger ([source](03-workflows/09-global-learning-workflow.md#L56)); dependencies: `WF-08-T03`, `AGENT-12-T04`, `AGENT-10-T06`, `ARCH-03-T01`, `BACKEND-01-T10`
+276. `WF-09-T02` — Implement deterministic proposal gate ([source](03-workflows/09-global-learning-workflow.md#L58)); dependencies: `WF-09-T01`
+277. `WF-09-T03` — Implement stage-boundary activation and rollback ([source](03-workflows/09-global-learning-workflow.md#L60)); dependencies: `WF-09-T02`
+278. `WF-09-T04` — Retain global learning simulation ([source](03-workflows/09-global-learning-workflow.md#L62)); dependencies: `WF-09-T03`
 279. `BACKEND-04-T05` — Prove M6 gateway, service authority, and observability ([source](06-backend/04-send-gateway.md#L81)); dependencies: `BACKEND-04-T04`, `PROVIDER-01-T06`, `PROVIDER-02-T05`, `SEC-05-T04`, `TEST-03-T03`, `BACKEND-03-T03`, `BACKEND-05-T06`, `WF-00-T04`, `LAUNCH-01-T03`
 280. `WF-05-T05` — Verify controls and recovery ([source](03-workflows/05-outreach-and-reply-workflow.md#L69)); dependencies: `WF-05-T04`, `BACKEND-04-T05`, `SEC-05-T04`, `WF-06-T04`, `LAUNCH-01-T03`
 281. `TEST-04-T05` — Prove reconciliation and recipient signals ([source](10-testing/04-gmail-side-effect-tests.md#L80)); dependencies: `TEST-04-T04`, `PROVIDER-02-T04`, `WF-05-T04`
@@ -482,13 +482,13 @@ A task is executable only when every dependency has retained passing evidence fr
 344. `INFRA-02-T01` — Extend deterministic/deep CI gates ([source](11-infrastructure/02-ci-cd-and-release-process.md#L68)); dependencies: `TEST-01-T01`
 345. `INFRA-02-T02` — Build immutable supply-chain candidate ([source](11-infrastructure/02-ci-cd-and-release-process.md#L70)); dependencies: `INFRA-02-T01`
 346. `TEST-06-T02` — Measure private capacity/rate/budget ([source](10-testing/06-load-security-and-chaos-tests.md#L62)); dependencies: `TEST-06-T01`, `INFRA-02-T02`
-347. `INFRA-03-T01` — Provision and attest the private host ([source](11-infrastructure/03-private-vps-deployment.md#L65)); dependencies: `INFRA-02-T02`
-348. `INFRA-03-T02` — Deploy the modular-monolith topology ([source](11-infrastructure/03-private-vps-deployment.md#L67)); dependencies: `INFRA-03-T01`, `INFRA-02-T02`
-349. `INFRA-03-T03` — Integrate managed secret/KMS adapter ([source](11-infrastructure/03-private-vps-deployment.md#L69)); dependencies: `INFRA-03-T02`, `SEC-03-T01`
-350. `INFRA-03-T04` — Gate the sole off-provider recovery repository ([source](11-infrastructure/03-private-vps-deployment.md#L71)); dependencies: `INFRA-03-T03`
-351. `INFRA-03-T05` — Configure private DNS/TLS/proxy/firewall ([source](11-infrastructure/03-private-vps-deployment.md#L73)); dependencies: `INFRA-03-T04`
-352. `INFRA-04-T01` — Configure exact dual-repository WAL archiving ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L169)); dependencies: `INFRA-03-T04`
-353. `INFRA-04-T02` — Implement signed per-repository backups ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L171)); dependencies: `INFRA-04-T01`
+347. `INFRA-03-T01` — Provision and attest the small private host ([source](11-infrastructure/03-private-vps-deployment.md#L70)); dependencies: `INFRA-02-T02`
+348. `INFRA-03-T02` — Deploy the resource-limited modular monolith ([source](11-infrastructure/03-private-vps-deployment.md#L72)); dependencies: `INFRA-03-T01`, `INFRA-02-T02`
+349. `INFRA-03-T03` — Integrate pre-revenue secret and encryption boundary ([source](11-infrastructure/03-private-vps-deployment.md#L74)); dependencies: `INFRA-03-T02`, `SEC-03-T01`
+350. `INFRA-03-T04` — Gate encrypted Cloudflare R2 recovery repository ([source](11-infrastructure/03-private-vps-deployment.md#L76)); dependencies: `INFRA-03-T03`
+351. `INFRA-03-T05` — Configure Cloudflare Tunnel and Access ([source](11-infrastructure/03-private-vps-deployment.md#L78)); dependencies: `INFRA-03-T04`
+352. `INFRA-04-T01` — Configure exact encrypted R2 WAL/base-backup repository ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L65)); dependencies: `INFRA-03-T04`
+353. `INFRA-04-T02` — Implement signed encrypted backups and manifests ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L67)); dependencies: `INFRA-04-T01`
 354. `SEC-03-T05` — Prove clean backup/restore ([source](08-security-and-compliance/03-secrets-and-oauth-token-security.md#L101)); dependencies: `SEC-03-T04`, `INFRA-04-T02`
 355. `SEC-01-T02` — Close implemented security boundaries against the planned registry ([source](08-security-and-compliance/01-threat-model.md#L121)); dependencies: `SEC-01-T01`, `BACKEND-02-T05`, `OBS-01-T06`, `INFRA-03-T02`, `INFRA-04-T02`
 356. `SEC-01-T03` — Build the Critical abuse corpus ([source](08-security-and-compliance/01-threat-model.md#L123)); dependencies: `SEC-01-T02`
@@ -511,16 +511,16 @@ A task is executable only when every dependency has retained passing evidence fr
 373. `TEST-06-T05` — Close adversarial command ownership ([source](10-testing/06-load-security-and-chaos-tests.md#L68)); dependencies: `TEST-06-T04`, `TEST-01-T01`
 374. `INFRA-02-T05` — Exercise upgrade policy ([source](11-infrastructure/02-ci-cd-and-release-process.md#L76)); dependencies: `INFRA-02-T04`
 375. `INFRA-02-T06` — Close CI/release command ownership ([source](11-infrastructure/02-ci-cd-and-release-process.md#L78)); dependencies: `INFRA-02-T05`
-376. `INFRA-03-T06` — Stage but do not activate public unsubscribe edge ([source](11-infrastructure/03-private-vps-deployment.md#L75)); dependencies: `INFRA-03-T05`, `BACKEND-02-T05`, `SEC-01-T02`
+376. `INFRA-03-T06` — Stage but do not activate public unsubscribe edge ([source](11-infrastructure/03-private-vps-deployment.md#L80)); dependencies: `INFRA-03-T05`, `BACKEND-02-T05`, `SEC-01-T02`
 377. `SEC-04-T04` — Implement the activation-ready reply and public-stop path ([source](08-security-and-compliance/04-outreach-compliance.md#L103)); dependencies: `SEC-04-T03`, `SEC-05-T02`, `BACKEND-02-T05`, `SEC-01-T02`, `INFRA-03-T06`, `PROVIDER-02-T01`
-378. `INFRA-03-T07` — Prove capacity, upgrade and rollback ([source](11-infrastructure/03-private-vps-deployment.md#L77)); dependencies: `INFRA-03-T06`, `TEST-06-T02`, `INFRA-02-T04`
-379. `INFRA-03-T08` — Close topology command ownership ([source](11-infrastructure/03-private-vps-deployment.md#L79)); dependencies: `INFRA-03-T07`
-380. `INFRA-04-T03` — Implement the prepared/authorized/committed deletion ledger ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L173)); dependencies: `INFRA-04-T02`, `SEC-06-T02`
-381. `INFRA-04-T04` — Implement policy-bounded pruning ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L175)); dependencies: `INFRA-04-T03`, `SEC-06-T02`, `DB-06-T05`
+378. `INFRA-03-T07` — Prove 2/4 capacity, resize trigger, and rollback ([source](11-infrastructure/03-private-vps-deployment.md#L82)); dependencies: `INFRA-03-T06`, `TEST-06-T02`, `INFRA-02-T04`
+379. `INFRA-03-T08` — Close topology command ownership and deferred-upgrade registry ([source](11-infrastructure/03-private-vps-deployment.md#L84)); dependencies: `INFRA-03-T07`
+380. `INFRA-04-T03` — Implement deletion/hold evidence ledger without multi-cloud witness ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L69)); dependencies: `INFRA-04-T02`, `SEC-06-T02`
+381. `INFRA-04-T04` — Implement policy-bounded pruning ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L71)); dependencies: `INFRA-04-T03`, `SEC-06-T02`, `DB-06-T05`
 382. `SEC-06-T03` — Implement idempotent hold/redact/purge ([source](08-security-and-compliance/06-data-privacy-and-retention.md#L131)); dependencies: `SEC-06-T02`, `DB-06-T05`, `INFRA-04-T04`
 383. `SEC-06-T04` — Implement verified rights workflow ([source](08-security-and-compliance/06-data-privacy-and-retention.md#L133)); dependencies: `SEC-06-T03`
 384. `SEC-06-T05` — Exercise privacy incident and provider exit ([source](08-security-and-compliance/06-data-privacy-and-retention.md#L135)); dependencies: `SEC-06-T04`
-385. `INFRA-04-T05` — Implement isolated PITR/full restore ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L177)); dependencies: `INFRA-04-T04`
+385. `INFRA-04-T05` — Implement isolated PITR/full restore ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L73)); dependencies: `INFRA-04-T04`
 386. `WF-06-T05` — Implement recovery/repair runbook command ([source](03-workflows/06-pause-cancel-resume-and-recovery.md#L93)); dependencies: `WF-06-T04`, `OBS-05-T01`, `INFRA-04-T05`
 387. `TEST-03-T06` — Prove typed repair and isolated restore ([source](10-testing/03-workflow-recovery-tests.md#L92)); dependencies: `TEST-03-T05`, `INFRA-04-T02`, `WF-06-T05`
 388. `TEST-03-T07` — Close command ownership ([source](10-testing/03-workflow-recovery-tests.md#L94)); dependencies: `TEST-03-T06`
@@ -533,18 +533,18 @@ A task is executable only when every dependency has retained passing evidence fr
 395. `OBS-05-T06` — Implement post-incident and re-enable gate ([source](09-observability-and-evaluation/05-incident-response.md#L171)); dependencies: `OBS-05-T05`
 396. `TEST-01-T05` — Wire CI/release gates ([source](10-testing/01-testing-strategy.md#L169)); dependencies: `TEST-01-T04`, `TEST-02-T07`, `TEST-05-T04`, `TEST-06-T04`, `TEST-03-T06`, `TEST-04-T06`, `TEST-03-T07`, `TEST-06-T05`
 397. `TEST-01-T06` — Operate flake and quarantine policy ([source](10-testing/01-testing-strategy.md#L171)); dependencies: `TEST-01-T05`
-398. `INFRA-05-T01` — Implement telemetry and authoritative comparisons ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L98)); dependencies: `OBS-02-T01`, `OBS-01-T03`, `BACKEND-06-T02`
-399. `INFRA-05-T02` — Implement exact alert/incident routing ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L100)); dependencies: `INFRA-05-T01`, `OBS-02-T04`, `OBS-05-T01`, `OBS-05-T04`
-400. `INFRA-05-T03` — Establish two independent on-call paths ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L102)); dependencies: `INFRA-05-T02`
-401. `INFRA-05-T04` — Implement direct Critical signaling and the E2E watchdog ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L104)); dependencies: `INFRA-05-T03`, `OBS-05-T01`
-402. `INFRA-05-T05` — Monitor the sole AWS S3 deletion witness ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L106)); dependencies: `INFRA-05-T04`, `INFRA-04-T03`
-403. `INFRA-05-T06` — Execute every DR scenario ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L108)); dependencies: `INFRA-05-T05`, `INFRA-02-T04`, `SEC-03-T04`, `INFRA-04-T02`
-404. `INFRA-04-T06` — Exercise clean-host recovery every 90 days ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L179)); dependencies: `INFRA-04-T05`, `INFRA-05-T06`
-405. `INFRA-04-T07` — Exercise off-Google bootstrap and key rotation ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L181)); dependencies: `INFRA-04-T06`
-406. `INFRA-04-T08` — Close backup/restore command ownership ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L183)); dependencies: `INFRA-04-T07`
-407. `INFRA-05-T07` — Operate freshness and re-enable gates ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L110)); dependencies: `INFRA-05-T06`, `INFRA-04-T06`
+398. `INFRA-05-T01` — Implement telemetry and authoritative comparisons ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L77)); dependencies: `OBS-02-T01`, `OBS-01-T03`, `BACKEND-06-T02`
+399. `INFRA-05-T02` — Implement exact alert/incident routing ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L79)); dependencies: `INFRA-05-T01`, `OBS-02-T04`, `OBS-05-T01`, `OBS-05-T04`
+400. `INFRA-05-T03` — Establish independent operator alert path ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L81)); dependencies: `INFRA-05-T02`
+401. `INFRA-05-T04` — Implement Critical watchdog and capacity alarms ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L83)); dependencies: `INFRA-05-T03`, `OBS-05-T01`
+402. `INFRA-05-T05` — Monitor R2 backup, retention and recovery-package freshness ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L85)); dependencies: `INFRA-05-T04`, `INFRA-04-T03`
+403. `INFRA-05-T06` — Execute every pre-revenue DR scenario ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L87)); dependencies: `INFRA-05-T05`, `INFRA-02-T04`, `SEC-03-T04`, `INFRA-04-T02`
+404. `INFRA-04-T06` — Exercise clean-host recovery every 90 days ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L75)); dependencies: `INFRA-04-T05`, `INFRA-05-T06`
+405. `INFRA-04-T07` — Exercise R2 credential/key rotation and provider-account recovery ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L77)); dependencies: `INFRA-04-T06`
+406. `INFRA-04-T08` — Close backup/restore command ownership and deferred-upgrade inventory ([source](11-infrastructure/04-postgresql-backups-and-restores.md#L79)); dependencies: `INFRA-04-T07`
+407. `INFRA-05-T07` — Operate freshness and re-enable gates ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L89)); dependencies: `INFRA-05-T06`, `INFRA-04-T06`
 408. `ARCH-01-T06` — Prove private operations ([source](01-architecture/01-target-system-architecture.md#L170)); dependencies: `ARCH-01-T05`, `INFRA-03-T07`, `INFRA-04-T06`, `INFRA-05-T07`, `OBS-05-T03`
-409. `INFRA-05-T08` — Close command and DR scenario sets ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L112)); dependencies: `INFRA-05-T07`
+409. `INFRA-05-T08` — Close command/DR scenario sets and deferred enterprise upgrades ([source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L91)); dependencies: `INFRA-05-T07`
 410. `LAUNCH-02-T01` — Freeze the internal entry and authority-zero target ([source](12-launch-and-operations/02-controlled-internal-launch.md#L80)); dependencies: `LAUNCH-01-T06`, `INFRA-02-T04`, `INFRA-04-T06`, `OBS-02-T05`, `INFRA-05-T07`, `ARCH-01-T05`, `TEST-01-T02`, `TEST-01-T05`, `INFRA-03-T08`
 411. `LAUNCH-02-T02` — Promote the private candidate safely ([source](12-launch-and-operations/02-controlled-internal-launch.md#L82)); dependencies: `LAUNCH-02-T01`, `INFRA-02-T02`, `INFRA-04-T02`
 412. `LAUNCH-02-T03` — Run bounded synthetic/internal operations ([source](12-launch-and-operations/02-controlled-internal-launch.md#L84)); dependencies: `LAUNCH-02-T02`
@@ -560,20 +560,20 @@ A task is executable only when every dependency has retained passing evidence fr
 
 420. `SEC-04-T05` — Obtain real-recipient counsel and provider-policy decision ([source](08-security-and-compliance/04-outreach-compliance.md#L105)); dependencies: `SEC-04-T04`, `PRODUCT-01-T02`, `SEC-06-T02`, `SEC-05-T04`
 421. `SEC-01-T05` — Review residual risk before every authority increase ([source](08-security-and-compliance/01-threat-model.md#L127)); dependencies: `SEC-01-T04`, `OBS-04-T05`, `INFRA-04-T06`, `LAUNCH-05-T04`
-422. `PRODUCT-02-T04` — Pre-register the staged M9 decision ([source](00-product-strategy/02-success-metrics.md#L148)); dependencies: `PRODUCT-02-T03`, `SEC-01-T05`
+422. `PRODUCT-02-T04` — Pre-register the staged M9 decision ([source](00-product-strategy/02-success-metrics.md#L133)); dependencies: `PRODUCT-02-T03`, `SEC-01-T05`
 423. `TEST-05-T05` — Verify scanner-safe public unsubscribe ([source](10-testing/05-end-to-end-browser-tests.md#L56)); dependencies: `TEST-05-T04`, `SEC-04-T04`
 424. `TEST-05-T06` — Close browser command mapping ([source](10-testing/05-end-to-end-browser-tests.md#L58)); dependencies: `TEST-05-T05`, `TEST-01-T01`
-425. `LAUNCH-03-T01` — Freeze controlled real-campaign entry ([source](12-launch-and-operations/03-first-real-experiment.md#L72)); dependencies: `LAUNCH-02-T05`, `SEC-01-T05`, `TEST-05-T05`, `DB-02-T03`, `BACKEND-05-T05`, `PROVIDER-01-T03`, `SEC-04-T02`, `SEC-05-T03`, `PRODUCT-02-T04`, `SEC-04-T05`
-426. `LAUNCH-03-T02` — Publish scanner-safe suppression ingress ([source](12-launch-and-operations/03-first-real-experiment.md#L74)); dependencies: `LAUNCH-03-T01`, `INFRA-03-T06`, `BACKEND-02-T05`, `SEC-04-T04`, `SEC-04-T05`
+425. `LAUNCH-03-T01` — Freeze cost-first real-program entry ([source](12-launch-and-operations/03-first-real-experiment.md#L76)); dependencies: `LAUNCH-02-T05`, `SEC-01-T05`, `TEST-05-T05`, `DB-02-T03`, `BACKEND-05-T05`, `PROVIDER-01-T03`, `SEC-04-T02`, `SEC-05-T03`, `PRODUCT-02-T04`, `SEC-04-T05`
+426. `LAUNCH-03-T02` — Publish scanner-safe suppression ingress ([source](12-launch-and-operations/03-first-real-experiment.md#L78)); dependencies: `LAUNCH-03-T01`, `INFRA-03-T06`, `BACKEND-02-T05`, `SEC-04-T04`, `SEC-04-T05`
 427. `OBS-01-T07` — Integrate active public-edge correlation ([source](09-observability-and-evaluation/01-structured-events-and-correlation.md#L122)); dependencies: `OBS-01-T06`, `LAUNCH-03-T02`, `SEC-04-T04`
 428. `TEST-06-T06` — Prove active public route, WAF, and recipient-stop controls ([source](10-testing/06-load-security-and-chaos-tests.md#L70)); dependencies: `TEST-06-T05`, `LAUNCH-03-T02`, `BACKEND-02-T05`, `SEC-04-T04`, `OBS-01-T07`
 429. `SEC-04-T06` — Prove the bounded authority ladder ([source](08-security-and-compliance/04-outreach-compliance.md#L107)); dependencies: `SEC-04-T05`, `TEST-06-T06`, `SEC-05-T04`, `OBS-03-T04`, `TEST-03-T06`
 430. `SEC-05-T05` — Prove earned re-enable ([source](08-security-and-compliance/05-suppression-budgets-and-kill-switch.md#L115)); dependencies: `SEC-05-T04`, `SEC-04-T06`, `TEST-03-T06`, `OBS-05-T06`
-431. `LAUNCH-03-T03` — Execute bounded current-stage conversations ([source](12-launch-and-operations/03-first-real-experiment.md#L76)); dependencies: `LAUNCH-03-T02`, `SEC-04-T02`, `BACKEND-05-T03`, `BACKEND-03-T04`, `SEC-05-T03`, `SEC-04-T06`, `SEC-05-T05`, `TEST-06-T06`
-432. `LAUNCH-03-T04` — Operate booking, recipient stops and exceptions ([source](12-launch-and-operations/03-first-real-experiment.md#L78)); dependencies: `LAUNCH-03-T03`, `INFRA-04-T07`, `INFRA-05-T07`, `BACKEND-01-T08`, `WF-07-T04`
-433. `LAUNCH-03-T05` — Close checkpoints and activate eligible learning ([source](12-launch-and-operations/03-first-real-experiment.md#L80)); dependencies: `LAUNCH-03-T04`, `BACKEND-01-T09`, `BACKEND-01-T10`, `WF-08-T04`, `WF-09-T04`
-434. `LAUNCH-04-T01` — Freeze bounded autonomy contract ([source](12-launch-and-operations/04-earned-autonomy.md#L66)); dependencies: `AGENT-01-T01`, `PROVIDER-02-T01`, `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `PROVIDER-06-T01`, `SEC-05-T03`, `WF-02-T05`, `WF-03-T05`, `WF-04-T05`, `PROVIDER-01-T01`
-435. `LAUNCH-04-T02` — Calculate evidence and economics without selection bias ([source](12-launch-and-operations/04-earned-autonomy.md#L68)); dependencies: `LAUNCH-04-T01`
-436. `LAUNCH-04-T03` — Enable only earned in-envelope execution ([source](12-launch-and-operations/04-earned-autonomy.md#L70)); dependencies: `LAUNCH-04-T02`, `LAUNCH-03-T05`, `AGENT-10-T05`, `LAUNCH-02-T05`, `OBS-04-T05`, `OBS-05-T06`, `INFRA-02-T04`, `BACKEND-01-T08`, `BACKEND-01-T10`, `WF-09-T04`
-437. `LAUNCH-04-T04` — Prove permanent authority boundaries ([source](12-launch-and-operations/04-earned-autonomy.md#L72)); dependencies: `LAUNCH-04-T03`
-438. `LAUNCH-04-T05` — Operate automatic deterioration and boundary rollback ([source](12-launch-and-operations/04-earned-autonomy.md#L74)); dependencies: `LAUNCH-04-T04`
+431. `LAUNCH-03-T03` — Execute bounded current-stage conversations ([source](12-launch-and-operations/03-first-real-experiment.md#L80)); dependencies: `LAUNCH-03-T02`, `SEC-04-T02`, `BACKEND-05-T03`, `BACKEND-03-T04`, `SEC-05-T03`, `SEC-04-T06`, `SEC-05-T05`, `TEST-06-T06`
+432. `LAUNCH-03-T04` — Operate booking, recipient stops, costs and exceptions ([source](12-launch-and-operations/03-first-real-experiment.md#L82)); dependencies: `LAUNCH-03-T03`, `INFRA-04-T07`, `INFRA-05-T07`, `BACKEND-01-T08`, `WF-07-T04`
+433. `LAUNCH-03-T05` — Close stage checkpoints and gate scale/learning ([source](12-launch-and-operations/03-first-real-experiment.md#L84)); dependencies: `LAUNCH-03-T04`, `BACKEND-01-T09`, `BACKEND-01-T10`, `WF-08-T04`, `WF-09-T04`
+434. `LAUNCH-04-T01` — Freeze bounded autonomy contract ([source](12-launch-and-operations/04-earned-autonomy.md#L75)); dependencies: `AGENT-01-T01`, `PROVIDER-02-T01`, `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `PROVIDER-06-T01`, `SEC-05-T03`, `WF-02-T05`, `WF-03-T05`, `WF-04-T05`, `PROVIDER-01-T01`
+435. `LAUNCH-04-T02` — Calculate evidence and economics without selection bias ([source](12-launch-and-operations/04-earned-autonomy.md#L77)); dependencies: `LAUNCH-04-T01`
+436. `LAUNCH-04-T03` — Enable only earned in-envelope execution ([source](12-launch-and-operations/04-earned-autonomy.md#L79)); dependencies: `LAUNCH-04-T02`, `LAUNCH-03-T05`, `AGENT-10-T05`, `LAUNCH-02-T05`, `OBS-04-T05`, `OBS-05-T06`, `INFRA-02-T04`, `BACKEND-01-T08`, `BACKEND-01-T10`, `WF-09-T04`
+437. `LAUNCH-04-T04` — Prove permanent authority boundaries ([source](12-launch-and-operations/04-earned-autonomy.md#L81)); dependencies: `LAUNCH-04-T03`
+438. `LAUNCH-04-T05` — Operate automatic deterioration and boundary rollback ([source](12-launch-and-operations/04-earned-autonomy.md#L83)); dependencies: `LAUNCH-04-T04`

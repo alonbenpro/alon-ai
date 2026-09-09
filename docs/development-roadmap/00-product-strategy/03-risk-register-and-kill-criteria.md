@@ -68,7 +68,7 @@ Any trigger below sets planned `system_controls` outreach authority to `DISABLED
 - applicable jurisdiction or provider-policy requirements are unresolved for queued recipients;
 - authoritative spend cannot be determined or a hard budget cap is exceeded; or
 - monitoring required to observe sends, policy decisions, and reconciliation is unavailable;
-- a stage admits above its exact `100/200/300/400` increment, cumulative delivery exceeds `1,000`, or a recipient identity is reused across stages; or
+- a stage admits above its exact `SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300` increment, cumulative delivery exceeds `1,000`, or a recipient identity is reused across stages; or
 - any later cohort is admitted without the immediately prior authoritative `CONTINUE` checkpoint;
 - a commercial action violates the accepted offer or a send/booking uses stale offer/strategy/control authority;
 - calendar credentials are compromised or an event is created without explicit confirmation; or
@@ -106,7 +106,7 @@ Any failure of restart recovery, cancellation, ambiguous Gmail outcome reconcili
 | Strategy churn | three consecutive `REVISE` decisions produce no qualified commitment or stronger demand evidence | `KILL` or explicitly re-baseline as a new hypothesis |
 | Compliance uncertainty | qualified advice or provider rules do not support the proposed contact method/jurisdiction | `KILL` that route regardless of commercial upside |
 
-Counts are deduplicated and derived from reconciled records. The fixed staged authority is `100/200/300/400` new recipients and `100/300/600/1,000` cumulative maximum; a smaller lawful sample produces `INCONCLUSIVE`, not a fabricated pass, and the `1,000` ceiling is never a quota.
+Counts are deduplicated and derived from reconciled records. The fixed staged authority is `SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300` new recipients and `0/20/50/explicitly-authorized-100-to-300` cumulative maximum; a smaller lawful sample produces `INCONCLUSIVE`, not a fabricated pass, and the `1,000` ceiling is never a quota.
 
 ## Scope and non-goals
 

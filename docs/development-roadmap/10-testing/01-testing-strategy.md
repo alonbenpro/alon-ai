@@ -147,13 +147,13 @@ The coverage registry must include every canonical sales artifact and durable bo
 | all fifteen artifacts, order/lineage, unsupported facts/evidence, approved multi-source dedupe, PRELIMINARY/FINAL, deterministic commercial vectors, conversation states, booking and strategy schema/owner/privacy contracts | T7-CONTRACT-INTEGRATION / TEST-02 |
 | close/freeze/decision/learning trigger, all-agent results, cross-campaign activation, no mid-cohort mutation, weak evidence, rollback and crash/replay at every durable boundary | T7-WORKFLOW-RECOVERY / TEST-03 |
 | EmailWritingAgent/SendGateway separation, inbound cold-stop and durable-suppression distinction, bounded reply/terminal race, Gmail provider uncertainty/caps/history | T7-GMAIL-OFFLINE and separately owned-alias T7-GMAIL-LIVE / TEST-04 |
-| complete funnel, calendar, exception and strategy UI, browser bypass denial, full four-cohort campaign simulation | T7-BROWSER-PRIVATE / TEST-05 |
+| complete funnel, calendar, exception and strategy UI, browser bypass denial, full cost-first staged campaign simulation | T7-BROWSER-PRIVATE / TEST-05 |
 | calendar/write capability isolation, commercial and strategy injection, multi-campaign races, privacy leakage, kill/restore chaos and public abuse | T7-SECURITY-CHAOS, T7-LOAD and existing public-edge commands / TEST-06 |
 | release/rollback/backup/restore preserves offer/strategy/cohort/checkpoint/conversation/booking/suppression and never reopens effects | existing release/restore/DR command rows / INFRA-02/04/05 |
 
 Recorded calendar action fixtures are part of T7-CONTRACT-INTEGRATION and T7-WORKFLOW-RECOVERY; real dedicated-calendar acceptance is WF-07-T04's separately signed M6 provider gate. The Gmail live runner never gains CalendarWritePort. No new live command is inferred from an offline fixture.
 
-Acceptance evidence follows exactly: synthetic agent pipeline → recorded provider fixtures → owned test-inbox conversations → simulated objections and negotiation → test calendar bookings → checkpoint and global-learning simulation → tightly controlled real campaign → earned autonomous sending and negotiation. Phases 1–6 never count as real demand. Existing M1, M6, M8 and M9 gates retain independent authority. The full simulation proves 100/200/300/400 increments, cumulative 100/300/600/1,000, five exact checkpoint decisions and four exact learning results with sole SendGateway/BookingGateway writers.
+Acceptance evidence follows exactly: synthetic agent pipeline → recorded provider fixtures → owned test-inbox conversations → simulated objections and negotiation → test calendar bookings → checkpoint and global-learning simulation → tightly controlled real campaign → earned autonomous sending and negotiation. Phases 1–6 never count as real demand. Existing M1, M6, M8 and M9 gates retain independent authority. The full simulation proves SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300 increments, cumulative 0/20/50/explicitly-authorized-100-to-300, five exact checkpoint decisions and four exact learning results with sole SendGateway/BookingGateway writers.
 
 ## Ordered implementation tasks
 

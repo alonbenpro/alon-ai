@@ -97,7 +97,7 @@ The exact eight-phase launch ladder is ordered and cannot be skipped:
 | 3 | owned test-inbox conversations | LAUNCH-01-T04 and TEST-04-T06: owned-alias only, exact original single-message safety catalog plus separately identified bounded conversation fixtures |
 | 4 | simulated objections and negotiation | TEST-02-T04 and AGENT-08-T04: genuine objection/rejection, stated budget, offer economics, safe terms/round limits and call/purchase distinction |
 | 5 | test calendar bookings | WF-07-T04: owned test calendar/attendees, explicit timezone-aware confirmation, create/reschedule/cancel/notification/reconciliation |
-| 6 | checkpoint and global-learning simulation | WF-08-T04, WF-09-T04 and TEST-05-T02: all four cohorts, exact decisions/results, cross-campaign activation, weak evidence, rollback and full campaign simulation |
+| 6 | checkpoint and global-learning simulation | WF-08-T04, WF-09-T04 and TEST-05-T02: all cost-first stages, exact decisions/results, cross-campaign activation, weak evidence, rollback and full campaign simulation |
 | 7 | tightly controlled real campaign | LAUNCH-03-T01 through LAUNCH-03-T05 after all previous gates and M8 exit: current legal/provider/security/economics/recovery evidence and smaller effective caps |
 | 8 | earned autonomous sending and negotiation | LAUNCH-04-T03 through LAUNCH-04-T05: bounded deterministic sends, replies, negotiation, confirmed bookings and boundary-only learning under retained envelope |
 

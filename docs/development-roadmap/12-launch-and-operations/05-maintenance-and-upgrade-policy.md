@@ -121,7 +121,7 @@ The recovery/release evidence must bind the accepted OfferPackage/economics/clai
 
 Deploy/rollback drains or routes old versions and preserves action attribution, accepted evidence, capacity and suppression. Restore requires current tombstones/stops and Gmail/calendar read reconciliation before any separately authorized re-entry. Calendar API/notification/tzdb changes require explicit slot/confirmation/ETag/create/reschedule/cancel ambiguity regressions; silent local-time reinterpretation is forbidden.
 
-Maintain exact eight-phase evidence applicability and return to the earliest affected phase when behavior or evidence changes. Owned single-message fixtures stay isolated from M9. Routine in-envelope sends/replies/negotiations/bookings and checkpoint learning remain deterministic automatic actions after earned gates; maintenance never reintroduces routine message approval or loosens immutable commercial/safety/legal/source/suppression bounds. No continuation or upgrade can exceed 1,000 recipients in the existing program.
+Maintain exact eight-phase evidence applicability and return to the earliest affected phase when behavior or evidence changes. Owned single-message fixtures stay isolated from M9. Routine in-envelope sends/replies/negotiations/bookings and checkpoint learning remain deterministic automatic actions after earned gates; maintenance never reintroduces routine message approval or loosens immutable commercial/safety/legal/source/suppression bounds. No continuation or upgrade can exceed pre-revenue 300-businesss in the existing program.
 
 ## Ordered implementation tasks
 

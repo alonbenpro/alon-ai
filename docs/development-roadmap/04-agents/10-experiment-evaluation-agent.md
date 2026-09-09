@@ -12,7 +12,7 @@
 
 ## Outcome and timing
 
-CheckpointEvaluationService freezes the bundle before this agent reads it. The agent cannot produce another evidence-bundle or decision artifact type, recalculate authoritative metrics, widen samples or open a cohort. Insufficient/missing/conflicting evidence prevents CONTINUE; safety facts may force SAFETY_STOP independent of model availability. Only deterministic CONTINUE permits eligibility for the next registered stage. Increments 100/200/300/400 and cumulative maxima 100/300/600/1,000 are exact; final CONTINUE is terminal with no fifth cohort. M3 uses synthetic closed-checkpoint fixtures, never dependencies on M9 observations.
+CheckpointEvaluationService freezes the bundle before this agent reads it. The agent cannot produce another evidence-bundle or decision artifact type, recalculate authoritative metrics, widen samples or open a cohort. Insufficient/missing/conflicting evidence prevents CONTINUE; safety facts may force SAFETY_STOP independent of model availability. Only deterministic CONTINUE permits eligibility for the next registered stage. Increments SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300 and cumulative maxima 0/20/50/explicitly-authorized-100-to-300 are exact; final CONTINUE is terminal with no unapproved post-scale stage. M3 uses synthetic closed-checkpoint fixtures, never dependencies on M9 observations.
 
 Filename order is presentation. Stable Document ID/task prefixes survive renames; accepted artifact references and deterministic state guards enforce runtime order. M3 implements this contract against signed fixtures; product runtime and live authority belong to later workflow/provider gates.
 

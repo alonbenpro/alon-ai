@@ -30,7 +30,7 @@ Browser coverage is planned. The current readiness foundation, health client and
 
 Directly forge hidden actions, request bodies, local state, ETags/generations, current-stage snapshot, price/margin, recipient/thread/offer/strategy refs, slot confirmation, callback identity, exception resolution and mid-cohort activation. Each server rejects before unauthorized Gmail/calendar writes. Assert SendGateway and BookingGateway sole-writer call graphs with import/network spies and no provider credentials/SDK in the browser bundle. HTTP 202 is not confirmed send/booking.
 
-Simulate one complete four-stage synthetic campaign with accepted versions: both idea origins, multi-source duplicate/conflict, preliminary pass/fail, research/final qualification, initial send, positive/question/objection/rejection/opt-out, allowed and blocked negotiation, call-only and purchase commitment, labelled booking/reschedule/cancel, checkpoint freeze/learning and cross-campaign boundary activation. Verify increments 100/200/300/400 and cumulative 100/300/600/1,000, no fifth cohort or repeated recipient, immutable historical attribution, weak-evidence no mutation and automatic deterioration rollback. Every provider effect is fixture-spied; this is not real demand.
+Simulate one complete four-stage synthetic campaign with accepted versions: both idea origins, multi-source duplicate/conflict, preliminary pass/fail, research/final qualification, initial send, positive/question/objection/rejection/opt-out, allowed and blocked negotiation, call-only and purchase commitment, labelled booking/reschedule/cancel, checkpoint freeze/learning and cross-campaign boundary activation. Verify increments SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300 and cumulative 0/20/50/explicitly-authorized-100-to-300, no unapproved post-scale stage or repeated recipient, immutable historical attribution, weak-evidence no mutation and automatic deterioration rollback. Every provider effect is fixture-spied; this is not real demand.
 
 ## Accessibility, isolation and command ownership
 
@@ -61,7 +61,7 @@ Public tests run with Next.js absent: scanner/prefetch/GET performs zero DB muta
 
 - [ ] Every required positive/negative/concurrent case has a fixture identity, versioned owner, command, evidence hash and fail action; missing or unavailable evidence is not passing.
 - [ ] Only SendGateway invokes Gmail writes and only BookingGateway invokes calendar create/reschedule/cancel. Crash/replay cannot duplicate effects.
-- [ ] Cohorts remain 100/200/300/400 with cumulative 100/300/600/1,000 and no active-cohort mutation or fifth cohort.
+- [ ] Cohorts remain SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300 with cumulative 0/20/50/explicitly-authorized-100-to-300 and no active-cohort mutation or unapproved post-scale stage.
 - [ ] Decision sets remain CONTINUE/REVISE/KILL/INCONCLUSIVE/SAFETY_STOP and PROMOTE/KEEP/ROLLBACK/INSUFFICIENT_EVIDENCE; weak evidence cannot promote or continue.
 - [ ] Retain signed case/result/command/fixture/schema/provider/strategy/activation hashes, call counts, costs, immutable action history and safe failure traces. Raw PII, message/calendar content, sensitive inferred attributes and credentials are excluded from ordinary telemetry/global learning.
 

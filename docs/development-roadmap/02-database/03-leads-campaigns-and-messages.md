@@ -266,7 +266,7 @@ Direct Gmail acceptance records send.provider_accepted.v1. Exactly one authorize
 
 ## Verification, recovery and acceptance
 
-Retain exact schema/constraint/trigger introspection; every one-field identity, offer, cohort, policy, authorization, activation, recipient/thread, slot, provider-result and consumed-rate splice must fail. Test identity races, phased qualification, full-thread ordering/redaction, STATED/INFERRED/UNKNOWN budget, all four cohorts and cumulative unique-recipient limits. Exercise cold-stop versus durable suppression/rejection/negative-sentiment cases and source-purge-stable opaque suppression refs.
+Retain exact schema/constraint/trigger introspection; every one-field identity, offer, cohort, policy, authorization, activation, recipient/thread, slot, provider-result and consumed-rate splice must fail. Test identity races, phased qualification, full-thread ordering/redaction, STATED/INFERRED/UNKNOWN budget, all cost-first stages and cumulative unique-recipient limits. Exercise cold-stop versus durable suppression/rejection/negative-sentiment cases and source-purge-stable opaque suppression refs.
 
 Crash before/after intent, attempt, provider result, signal/cursor, booking action/confirmation/notification and callback commits. Replay must produce one authoritative effect or explicit unresolved quarantine. Test every DST/expiry/ETag/confirmation/notification conflict, cancellation/reschedule independently, and call agreement without purchase acceptance. No database recovery, pause, rollback or deletion may manufacture proof an external effect did not happen.
 

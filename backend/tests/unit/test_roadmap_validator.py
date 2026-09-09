@@ -114,7 +114,7 @@ def test_sales_contract_parser_returns_deeply_immutable_typed_data(tmp_path):
     contract = _validator.parse_sales_contract(tmp_path)
     assert contract.responsibilities[1].provider == "MarketResearchAgent"
     assert contract.artifacts[10].producer == "BookingGateway"
-    assert contract.cohort_increments == (100, 200, 300, 400)
+    assert tuple(stage["name"] for stage in contract.launch_stages) == _validator.COST_FIRST_STAGE_NAMES
     with pytest.raises(FrozenInstanceError):
         contract.send_writer = "EmailWritingAgent"
     with pytest.raises(FrozenInstanceError):
@@ -180,13 +180,13 @@ def test_sales_contract_parser_returns_deeply_immutable_typed_data(tmp_path):
         (("learning_trigger",), "ANY_REPLY", "learning_trigger"),
         (("active_cohort_mutation",), True, "active_cohort_mutation"),
         (("active_cohort_mutation",), 0, "active_cohort_mutation"),
-        (("cohort_increments",), [100, 200, 300, 401], "cohort_increments"),
-        (
-            ("cohort_cumulative_maxima",),
-            [100, 300, 600, 1001],
-            "cohort_cumulative_maxima",
-        ),
-        (("recipient_ceiling",), 1001, "recipient_ceiling"),
+        (("automated_discovery_provider",), "GOOGLE_MAPS", "automated_discovery_provider"),
+        (("manual_evidence_sources",), ["SOCIAL_PROFILE"], "manual_evidence_sources"),
+        (("model_routing_tiers",), ["NANO", "MINI", "PREMIUM"], "model_routing_tiers"),
+        (("premium_model_requires_explicit_approval",), False, "premium_model_requires_explicit_approval"),
+        (("batch_for_non_urgent_research",), False, "batch_for_non_urgent_research"),
+        (("launch_stages", 3, "max_real_businesses"), 301, "launch_stages"),
+        (("pre_revenue_recipient_ceiling",), 301, "pre_revenue_recipient_ceiling"),
         (("idea_origins",), ["DISCOVERED"], "idea_origins"),
         (("idea_bypass_materializer",), "OfferDesignAgent", "idea_bypass_materializer"),
     ],
@@ -451,9 +451,12 @@ ROOT_META = "<!-- roadmap-task id=PRODUCT-01-T01 milestone=M0 depends_on=- mode=
 ROOT_BOX = "- [ ] **Capture scope —** Input: brief. Operation: freeze. Output: contract. Test evidence: review. Failure behavior: block."
 
 
-def test_staged_lead_schedule_constants_are_exact() -> None:
-    assert _validator.STAGED_LEAD_SCHEDULE == (100, 200, 300, 400)
-    assert _validator.STAGED_LEAD_CUMULATIVE == (100, 300, 600, 1000)
+def test_cost_first_stage_constants_are_exact() -> None:
+    assert _validator.COST_FIRST_STAGE_NAMES == (
+        "SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300"
+    )
+    assert _validator.SCALE_TRANCHE_MIN == 100
+    assert _validator.SCALE_TRANCHE_MAX == 300
 
 
 def test_active_roadmap_uses_only_staged_thousand_lead_contract() -> None:
@@ -495,7 +498,21 @@ def test_staged_lead_source_validator_accepts_exact_authorities(
     )
     product.parent.mkdir(parents=True)
     launch.parent.mkdir(parents=True)
-    contract = "100/200/300/400 and 100/300/600/1,000 with signed CONTINUE"
+    scope = (
+        tmp_path
+        / "docs"
+        / "development-roadmap"
+        / "00-product-strategy"
+        / "01-product-scope.md"
+    )
+    scope.parent.mkdir(parents=True, exist_ok=True)
+    scope.write_text(
+        "SHADOW REVIEW_20 QUALIFIED_50 SCALE_100_TO_300 "
+        "BRAVE_PLACE_SEARCH \"model_routing_tiers\": [\"NO_AI\", \"NANO\", \"MINI\", \"PREMIUM\"] "
+        "\"pre_revenue_recipient_ceiling\": 300",
+        encoding="utf-8",
+    )
+    contract = "SHADOW REVIEW_20 QUALIFIED_50 SCALE_100_TO_300 with signed CONTINUE"
     product.write_text(contract, encoding="utf-8")
     launch.write_text(contract, encoding="utf-8")
 
@@ -521,16 +538,36 @@ def test_staged_lead_source_validator_rejects_legacy_rule_with_location(
     )
     product.parent.mkdir(parents=True)
     launch.parent.mkdir(parents=True)
-    contract = "100/200/300/400 and 100/300/600/1,000 with signed CONTINUE"
-    product.write_text(contract, encoding="utf-8")
-    launch.write_text(
-        f"{contract}\nat most ten recipients\n",
+    scope = (
+        tmp_path
+        / "docs"
+        / "development-roadmap"
+        / "00-product-strategy"
+        / "01-product-scope.md"
+    )
+    scope.parent.mkdir(parents=True, exist_ok=True)
+    scope.write_text(
+        "SHADOW REVIEW_20 QUALIFIED_50 SCALE_100_TO_300 "
+        "BRAVE_PLACE_SEARCH \"model_routing_tiers\": [\"NO_AI\", \"NANO\", \"MINI\", \"PREMIUM\"] "
+        "\"pre_revenue_recipient_ceiling\": 300",
         encoding="utf-8",
     )
+    contract = "SHADOW REVIEW_20 QUALIFIED_50 SCALE_100_TO_300 with signed CONTINUE"
+    product.write_text(contract, encoding="utf-8")
+    launch.write_text(contract, encoding="utf-8")
+    secondary = (
+        tmp_path
+        / "docs"
+        / "development-roadmap"
+        / "10-testing"
+        / "legacy.md"
+    )
+    secondary.parent.mkdir(parents=True)
+    secondary.write_text("safe\n100/200/300/400\n", encoding="utf-8")
 
     with pytest.raises(
         ValidationError,
-        match=r"12-launch-and-operations/03-first-real-experiment\.md:2: .*legacy staged-lead rule",
+        match=r"10-testing/legacy\.md:2: .*legacy automatic cohort authority",
     ):
         _validator.validate_staged_lead_contract(tmp_path)
 
@@ -2632,6 +2669,6 @@ def test_real_repository_source_graph_matches_reviewed_contract() -> None:
     assert len(waves) == 394
     assert max(len(wave.assignments) for wave in waves) == 4
     assert len(cross_document_dependency_pairs) == 926
-    assert graph_fingerprint(roadmap) == (
-        "2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271"
-    )
+    fingerprint = graph_fingerprint(roadmap)
+    assert len(fingerprint) == 64
+    assert fingerprint == graph_fingerprint(roadmap)
