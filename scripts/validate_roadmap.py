@@ -10,7 +10,7 @@ import re
 import sys
 import tempfile
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass, replace
 from heapq import heappop, heappush
 from itertools import pairwise
 from pathlib import Path
@@ -31,6 +31,7 @@ LOCKS = frozenset(
         "agent-artifacts",
         "provider-contracts",
         "gmail-side-effects",
+        "calendar-side-effects",
         "backend-domain",
         "openapi-contract",
         "frontend-client",
@@ -50,6 +51,7 @@ SERIAL_ONLY_LOCKS = frozenset(
     {
         "migration-head",
         "gmail-side-effects",
+        "calendar-side-effects",
         "security-runtime",
         "openapi-contract",
         "frontend-client",
@@ -97,6 +99,300 @@ class SourceLocation:
 class ManifestDocument:
     source: str
     milestone: str
+    gate_description: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class Responsibility:
+    order: int
+    name: str
+    kind: str
+    provider: str
+    inputs: tuple[str, ...]
+    outputs: tuple[str, ...]
+    gate_owner: str | None = None
+    input_phases: tuple[tuple[str, str], ...] = ()
+    optional: bool = False
+
+
+@dataclass(frozen=True, slots=True)
+class ArtifactContract:
+    name: str
+    producer: str
+    responsibility_order: int | tuple[int, ...]
+    phases: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
+class SalesContract:
+    schema_version: str
+    responsibilities: tuple[Responsibility, ...]
+    artifacts: tuple[ArtifactContract, ...]
+    idea_origins: tuple[str, ...]
+    idea_bypass_materializer: str
+    commercial_authority: str
+    checkpoint_decisions: tuple[str, ...]
+    learning_results: tuple[str, ...]
+    no_mutation_learning_results: tuple[str, ...]
+    cohort_increments: tuple[int, ...]
+    cohort_cumulative_maxima: tuple[int, ...]
+    recipient_ceiling: int
+    send_writer: str
+    booking_writer: str
+    strategy_activation_boundary: str
+    learning_trigger: str
+    active_cohort_mutation: bool
+
+
+SALES_SOURCE = "docs/development-roadmap/00-product-strategy/01-product-scope.md"
+
+# This versioned schema is intentionally closed. An authority change requires an
+# explicit validator/schema migration, not merely editing the source document.
+_EXPECTED_SALES_CONTRACT = SalesContract(
+    schema_version="autonomous_sales_contract.v1",
+    responsibilities=(
+        Responsibility(
+            1,
+            "Idea Discovery",
+            "agent",
+            "IdeaDiscoveryAgent",
+            (),
+            ("IdeaBrief",),
+            optional=True,
+        ),
+        Responsibility(
+            2,
+            "Market Research",
+            "agent",
+            "MarketResearchAgent",
+            ("IdeaBrief",),
+            ("MarketResearchReport",),
+        ),
+        Responsibility(
+            3,
+            "Offer Design",
+            "agent",
+            "OfferDesignAgent",
+            ("IdeaBrief", "MarketResearchReport"),
+            ("OfferPackage",),
+        ),
+        Responsibility(
+            4,
+            "Lead Discovery and Preliminary Qualification",
+            "agent_with_deterministic_gate",
+            "LeadDiscoveryAgent",
+            ("OfferPackage",),
+            ("LeadDiscoveryCandidate", "QualificationDecision"),
+            "QualificationService",
+        ),
+        Responsibility(
+            5,
+            "Deep Lead Research",
+            "agent",
+            "LeadResearchAgent",
+            ("OfferPackage", "LeadDiscoveryCandidate", "QualificationDecision"),
+            ("LeadResearchDossier",),
+            input_phases=(("QualificationDecision", "PRELIMINARY"),),
+        ),
+        Responsibility(
+            6,
+            "Final Lead Qualification",
+            "agent_with_deterministic_gate",
+            "LeadQualificationAgent",
+            ("OfferPackage", "LeadResearchDossier"),
+            ("QualificationDecision",),
+            "QualificationService",
+        ),
+        Responsibility(
+            7,
+            "Personalized Email Writing",
+            "agent",
+            "EmailWritingAgent",
+            ("OfferPackage", "LeadResearchDossier", "QualificationDecision"),
+            ("ConversationStrategy", "EmailDraft"),
+            input_phases=(("QualificationDecision", "FINAL"),),
+        ),
+        Responsibility(
+            8,
+            "Deterministic Email Sending",
+            "application_service",
+            "SendGateway",
+            ("OfferPackage", "ConversationStrategy", "EmailDraft"),
+            (),
+        ),
+        Responsibility(
+            9,
+            "Reply Evaluation, Negotiation, and Conversation Control",
+            "agent_with_deterministic_gate",
+            "ReplyEvaluationAgent",
+            ("OfferPackage", "ConversationStrategy", "EmailDraft"),
+            ("ReplyEvaluation", "NegotiationDecision"),
+            "CommercialPolicyEngine",
+        ),
+        Responsibility(
+            10,
+            "Call Booking",
+            "application_service",
+            "BookingGateway",
+            ("OfferPackage", "ReplyEvaluation", "NegotiationDecision"),
+            ("BookingIntent",),
+        ),
+        Responsibility(
+            11,
+            "Checkpoint Experiment Evaluation",
+            "agent_with_deterministic_gate",
+            "ExperimentEvaluationAgent",
+            ("OfferPackage",),
+            ("CheckpointEvidenceBundle",),
+            "CheckpointEvaluationService",
+        ),
+        Responsibility(
+            12,
+            "Global Checkpoint Learning",
+            "agent_with_deterministic_gate",
+            "GlobalLearningEngine",
+            ("CheckpointEvidenceBundle",),
+            ("AgentLearningProposal", "GlobalStrategyPackage", "StrategyActivation"),
+            "StrategyActivationService",
+        ),
+    ),
+    artifacts=(
+        ArtifactContract("IdeaBrief", "IdeaDiscoveryAgent", 1),
+        ArtifactContract("MarketResearchReport", "MarketResearchAgent", 2),
+        ArtifactContract("OfferPackage", "OfferDesignAgent", 3),
+        ArtifactContract("LeadDiscoveryCandidate", "LeadDiscoveryAgent", 4),
+        ArtifactContract("LeadResearchDossier", "LeadResearchAgent", 5),
+        ArtifactContract(
+            "QualificationDecision",
+            "QualificationService",
+            (4, 6),
+            ("PRELIMINARY", "FINAL"),
+        ),
+        ArtifactContract("ConversationStrategy", "EmailWritingAgent", 7),
+        ArtifactContract("EmailDraft", "EmailWritingAgent", 7),
+        ArtifactContract("ReplyEvaluation", "ReplyEvaluationAgent", 9),
+        ArtifactContract("NegotiationDecision", "CommercialPolicyEngine", 9),
+        ArtifactContract("BookingIntent", "BookingGateway", 10),
+        ArtifactContract("CheckpointEvidenceBundle", "CheckpointEvaluationService", 11),
+        ArtifactContract("AgentLearningProposal", "GlobalLearningEngine", 12),
+        ArtifactContract("GlobalStrategyPackage", "StrategyActivationService", 12),
+        ArtifactContract("StrategyActivation", "StrategyActivationService", 12),
+    ),
+    idea_origins=("DISCOVERED", "USER_SUPPLIED"),
+    idea_bypass_materializer="IdeaBriefMaterializer",
+    commercial_authority="OfferPackage",
+    checkpoint_decisions=("CONTINUE", "REVISE", "KILL", "INCONCLUSIVE", "SAFETY_STOP"),
+    learning_results=("PROMOTE", "KEEP", "ROLLBACK", "INSUFFICIENT_EVIDENCE"),
+    no_mutation_learning_results=("KEEP", "INSUFFICIENT_EVIDENCE"),
+    cohort_increments=STAGED_LEAD_SCHEDULE,
+    cohort_cumulative_maxima=STAGED_LEAD_CUMULATIVE,
+    recipient_ceiling=1000,
+    send_writer="SendGateway",
+    booking_writer="BookingGateway",
+    strategy_activation_boundary="CHECKPOINT_ONLY",
+    learning_trigger="CLOSED_CHECKPOINT",
+    active_cohort_mutation=False,
+)
+
+
+def sales_contract_payload(contract: SalesContract) -> dict[str, object]:
+    """Restore the exact wire shape without retaining mutable decoded JSON."""
+    payload = asdict(contract)
+    for row in payload["responsibilities"]:
+        if row["gate_owner"] is None:
+            del row["gate_owner"]
+        if row["input_phases"]:
+            row["input_phases"] = dict(row["input_phases"])
+        else:
+            del row["input_phases"]
+        if not row["optional"]:
+            del row["optional"]
+    for row in payload["artifacts"]:
+        if not row["phases"]:
+            del row["phases"]
+    return payload
+
+
+def parse_sales_contract(root: Path) -> SalesContract:
+    location = SourceLocation(SALES_SOURCE, 1)
+    target = root / SALES_SOURCE
+    if not target.is_file():
+        raise location.error("canonical sales contract authority is missing")
+    source = target.read_text(encoding="utf-8")
+    heading = "## Canonical autonomous sales contract"
+    sections = list(re.finditer(r"^" + re.escape(heading) + r"$", source, re.MULTILINE))
+    if len(sections) != 1:
+        raise location.error("canonical sales contract section must be unique")
+    start = sections[0].end()
+    end = re.search(r"^## ", source[start:], re.MULTILINE)
+    section = source[start : start + end.start() if end else len(source)]
+    blocks = list(
+        re.finditer(r"^```json\n(.*?)\n```[ \t]*$", section, re.MULTILINE | re.DOTALL)
+    )
+    if len(blocks) != 1:
+        raise location.error("canonical sales contract JSON block must be unique")
+    location = SourceLocation(
+        SALES_SOURCE, source.count("\n", 0, start + blocks[0].start()) + 1
+    )
+
+    def unique_object(pairs):
+        value = {}
+        for key, item in pairs:
+            if key in value:
+                raise ValueError(f"duplicate key {key}")
+            value[key] = item
+        return value
+
+    try:
+        payload = json.loads(blocks[0].group(1), object_pairs_hook=unique_object)
+    except ValueError as error:
+        raise location.error(
+            f"canonical sales contract invalid JSON: {error}"
+        ) from error
+    expected = sales_contract_payload(_EXPECTED_SALES_CONTRACT)
+    if not isinstance(payload, dict) or payload.keys() != expected.keys():
+        raise location.error("canonical sales contract has missing or unknown fields")
+    for key, value in expected.items():
+        # Comparing canonical JSON also rejects bool/int and int/float coercion.
+        if json.dumps(payload[key], sort_keys=True) != json.dumps(
+            value, sort_keys=True
+        ):
+            raise location.error(
+                f"canonical sales contract {key} violates the exact v1 contract"
+            )
+    responsibilities = tuple(
+        Responsibility(
+            **{
+                key: value
+                for key, value in row.items()
+                if key not in {"inputs", "outputs", "input_phases"}
+            },
+            inputs=tuple(row["inputs"]),
+            outputs=tuple(row["outputs"]),
+            input_phases=tuple(row.get("input_phases", {}).items()),
+        )
+        for row in payload["responsibilities"]
+    )
+    artifacts = tuple(
+        ArtifactContract(
+            row["name"],
+            row["producer"],
+            tuple(row["responsibility_order"])
+            if isinstance(row["responsibility_order"], list)
+            else row["responsibility_order"],
+            tuple(row.get("phases", ())),
+        )
+        for row in payload["artifacts"]
+    )
+    return SalesContract(
+        **{
+            key: tuple(value) if isinstance(value, list) else value
+            for key, value in payload.items()
+            if key not in {"responsibilities", "artifacts"}
+        },
+        responsibilities=responsibilities,
+        artifacts=artifacts,
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -127,6 +423,7 @@ class Task:
 class Roadmap:
     documents: tuple[ManifestDocument, ...]
     tasks: tuple[Task, ...]
+    sales_contract: SalesContract | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -374,7 +671,11 @@ def parse_manifest(root: Path) -> tuple[ManifestDocument, ...]:
         if not document_path.is_file():
             raise location.error(f"missing manifest document: {relative_path}")
         documents.append(
-            ManifestDocument(f"docs/development-roadmap/{relative_path}", milestone)
+            ManifestDocument(
+                f"docs/development-roadmap/{relative_path}",
+                milestone,
+                " | ".join(cells[2:]),
+            )
         )
     roadmap_root = root / "docs/development-roadmap"
     eligible_paths: set[str] = set()
@@ -416,7 +717,8 @@ def _line_location(source: str, lines: list[str], index: int) -> SourceLocation:
     return SourceLocation(source, index + 1, match.group(1) if match else None)
 
 
-def parse_roadmap(root: Path) -> Roadmap:
+def parse_task_graph(root: Path) -> Roadmap:
+    """Parse structural tasks only; public validation also requires sales semantics."""
     validate_staged_lead_contract(root)
     documents = parse_manifest(root)
     tasks: list[Task] = []
@@ -583,6 +885,84 @@ def parse_roadmap(root: Path) -> Roadmap:
         ):
             raise task.location.error("serial-only lock requires serial mode")
     return Roadmap(documents=documents, tasks=tuple(tasks))
+
+
+def parse_roadmap(root: Path) -> Roadmap:
+    """Validate the mandatory product authority and complete implementation DAG."""
+    contract = parse_sales_contract(root)
+    roadmap = replace(parse_task_graph(root), sales_contract=contract)
+    for document in roadmap.documents:
+        document_tasks = [
+            task for task in roadmap.tasks if task.source == document.source
+        ]
+        if not document_tasks:
+            raise SourceLocation(document.source, 1).error(
+                "manifest document has no tasks"
+            )
+        first_gate = min(task.milestone for task in document_tasks)
+        if document.milestone != first_gate:
+            raise SourceLocation("docs/development-roadmap/README.md", 1).error(
+                f"document gate for {document.source} must be {first_gate}"
+            )
+    validate_sales_dependencies(roadmap)
+    return roadmap
+
+
+def validate_sales_dependencies(roadmap: Roadmap) -> None:
+    """Require provider reachability, independent of filename/scheduler tie breaks.
+
+    M3 agents consume schema contracts, not M5/M6 runtime service completion.
+    Executable workflows additionally require the concrete deterministic services.
+    """
+    ordered = topological_order(roadmap)
+    by_id = {task.id: task for task in ordered}
+    ancestors: dict[str, set[str]] = {}
+    for task in ordered:
+        ancestors[task.id] = set(task.depends_on)
+        for dependency in task.depends_on:
+            ancestors[task.id].update(ancestors[dependency])
+    required = {
+        "AGENT-04-T01": ("AGENT-02-T01",),
+        "AGENT-03-T01": ("AGENT-02-T01", "AGENT-04-T01"),
+        "AGENT-03-T03": ("BACKEND-03-T03",),
+        "AGENT-11-T01": ("AGENT-03-T01",),
+        "AGENT-11-T03": ("PROVIDER-08-T03",),
+        "AGENT-05-T01": ("AGENT-11-T01",),
+        "AGENT-06-T01": ("AGENT-03-T01", "AGENT-05-T01"),
+        "AGENT-07-T01": ("AGENT-03-T01", "AGENT-05-T01", "AGENT-06-T01"),
+        "AGENT-08-T01": ("AGENT-07-T01",),
+        "AGENT-08-T03": ("BACKEND-03-T03",),
+        "AGENT-09-T01": ("AGENT-03-T01",),
+        "AGENT-12-T01": ("AGENT-09-T01",),
+        "AGENT-10-T02": ("AGENT-11-T03", "AGENT-12-T03", "PROVIDER-08-T03"),
+        "BACKEND-01-T07": ("AGENT-11-T03", "AGENT-06-T03"),
+        "BACKEND-01-T08": ("BACKEND-05-T03", "BACKEND-03-T04", "PROVIDER-07-T02"),
+        "BACKEND-01-T09": ("AGENT-09-T04",),
+        "BACKEND-01-T10": ("BACKEND-01-T09", "AGENT-12-T04", "AGENT-10-T06"),
+        "BACKEND-02-T03": ("BACKEND-01-T08", "BACKEND-01-T09", "BACKEND-01-T10"),
+        "BACKEND-03-T03": ("BACKEND-03-T02",),
+        "BACKEND-03-T04": ("BACKEND-05-T03",),
+        "BACKEND-05-T03": ("BACKEND-03-T03",),
+        "BACKEND-04-T03": ("AGENT-07-T04", "BACKEND-05-T03", "BACKEND-03-T03"),
+        "WF-04-T01": ("BACKEND-01-T07", "PROVIDER-08-T03"),
+        "WF-05-T01": ("AGENT-08-T04", "BACKEND-04-T04", "BACKEND-05-T03"),
+        "WF-07-T01": ("BACKEND-01-T08", "AGENT-08-T04"),
+        "WF-07-T03": ("PROVIDER-07-T04",),
+        "WF-08-T01": ("BACKEND-01-T09",),
+        "WF-09-T01": ("WF-08-T03", "BACKEND-01-T10"),
+        "WF-09-T03": ("WF-09-T02",),
+    }
+    for consumer, providers in required.items():
+        for task_id in (consumer, *providers):
+            if task_id not in by_id:
+                raise SourceLocation(SALES_SOURCE, 1, task_id).error(
+                    "required sales contract source task is missing"
+                )
+        for provider in providers:
+            if provider not in ancestors[consumer]:
+                raise by_id[consumer].location.error(
+                    f"required provider ancestor {provider} is not reachable"
+                )
 
 
 def _task_key(roadmap: Roadmap, task: Task) -> tuple[int, int, int, str]:
@@ -831,10 +1211,13 @@ def validate_waves(roadmap: Roadmap, waves: tuple[Wave, ...]) -> None:
 def canonical_fingerprint_bytes(roadmap: Roadmap) -> bytes:
     """Serialize the complete source graph contract into canonical JSON bytes."""
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "milestones": list(MILESTONES),
         "root_task_ids": sorted(ROOT_TASK_IDS),
-        "manifest_documents": [document.source for document in roadmap.documents],
+        "manifest_documents": [asdict(document) for document in roadmap.documents],
+        "sales_contract": sales_contract_payload(roadmap.sales_contract)
+        if roadmap.sales_contract
+        else None,
         "tasks": [
             {
                 "id": task.id,
@@ -893,8 +1276,13 @@ def _source_link(task: Task) -> str:
 
 def render_execution_manifest(roadmap: Roadmap) -> str:
     payload = {
-        "schema_version": 1,
+        "schema_version": 2,
         "milestones": list(MILESTONES),
+        "source_graph_fingerprint": graph_fingerprint(roadmap),
+        "manifest_documents": [asdict(document) for document in roadmap.documents],
+        "sales_contract": sales_contract_payload(roadmap.sales_contract)
+        if roadmap.sales_contract
+        else None,
         "tasks": [_manifest_task(task) for task in topological_order(roadmap)],
     }
     return (
@@ -1099,6 +1487,17 @@ def _validate_rendered_artifacts(
         raise SourceLocation(ARTIFACT_PATHS[0], 1).error(
             "generated manifest task order drift"
         )
+    expected_manifest = json.loads(render_execution_manifest(roadmap))
+    for key in (
+        "sales_contract",
+        "manifest_documents",
+        "source_graph_fingerprint",
+        "schema_version",
+    ):
+        if manifest.get(key) != expected_manifest[key]:
+            raise SourceLocation(ARTIFACT_PATHS[0], 1).error(
+                f"generated sales contract drift: {key}"
+            )
     validate_waves(roadmap, build_waves(roadmap))
     roadmap_root = (root / "docs/development-roadmap").resolve()
     for artifact in ARTIFACT_PATHS[1:]:

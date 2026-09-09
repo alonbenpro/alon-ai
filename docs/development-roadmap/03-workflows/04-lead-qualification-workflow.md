@@ -4,7 +4,7 @@
 **Status:** Planned finite workflow; no implementation exists
 **Milestone:** M5 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `WF-04-T01 -> WF-04-T02 -> WF-04-T03 -> WF-04-T04 -> WF-04-T05`; cross-document task Inputs `WF-04-T01 <- WF-03-T05,DB-02-T03,WF-03-T03; WF-04-T02 <- PROVIDER-08-T03,AGENT-11-T04; WF-04-T03 <- PROVIDER-06-T01,PROVIDER-06-T03,PROVIDER-05-T04,AGENT-05-T04; WF-04-T04 <- AGENT-06-T04,BACKEND-01-T04; WF-04-T05 <- WF-02-T03,PROVIDER-08-T04`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
+**Prerequisites:** exact local order `WF-04-T01 -> WF-04-T02 -> WF-04-T03 -> WF-04-T04 -> WF-04-T05`; cross-document task Inputs `WF-04-T01 <- WF-03-T05,DB-02-T03,WF-03-T03,BACKEND-01-T07,PROVIDER-08-T03; WF-04-T02 <- PROVIDER-08-T03,AGENT-11-T04; WF-04-T03 <- PROVIDER-06-T01,PROVIDER-06-T03,PROVIDER-05-T04,AGENT-05-T04; WF-04-T04 <- AGENT-06-T04,BACKEND-01-T04; WF-04-T05 <- WF-02-T03,PROVIDER-08-T04`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
 **Outputs:** Finite typed inputs/results, immutable artifact/state handoffs, idempotency and recovery evidence
 **Unlocks:** M5 preparation and WF-05 conversation admission
 **Risk:** Critical
@@ -43,7 +43,7 @@ Per-lead stages may run concurrently across different leads, never before that l
 
 ## Ordered implementation tasks
 
-<!-- roadmap-task id=WF-04-T01 milestone=M5 depends_on=WF-03-T05,DB-02-T03,WF-03-T03 mode=parallel locks=workflow-runtime -->
+<!-- roadmap-task id=WF-04-T01 milestone=M5 depends_on=WF-03-T05,DB-02-T03,WF-03-T03,BACKEND-01-T07,PROVIDER-08-T03 mode=parallel locks=workflow-runtime -->
 - [ ] **Freeze source and offer-filter plan —** Input: accepted OfferPackage and source scopes. Operation: pin query/filter/candidate/research budgets and phase schemas. Output: bounded M5 plan. Test evidence: missing/changed offer and unapproved-source denial. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-04-T02 milestone=M5 depends_on=WF-04-T01,PROVIDER-08-T03,AGENT-11-T04 mode=parallel locks=workflow-runtime -->
 - [ ] **Implement discovery and preliminary admission —** Input: approved multi-source fixtures and LeadDiscoveryCandidate. Operation: deduplicate businesses, retain conflicts/provenance and materialize PRELIMINARY QualificationDecision. Output: cheap candidate gate. Test evidence: cross-source duplicates, false identity and preliminary rejection cost checks. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.

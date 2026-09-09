@@ -4,7 +4,7 @@
 **Status:** Planned finite workflow; no implementation exists
 **Milestone:** M6 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `WF-08-T01 -> WF-08-T02 -> WF-08-T03 -> WF-08-T04`; cross-document task Inputs `WF-08-T01 <- WF-05-T04,AGENT-09-T04,ARCH-03-T01`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
+**Prerequisites:** exact local order `WF-08-T01 -> WF-08-T02 -> WF-08-T03 -> WF-08-T04`; cross-document task Inputs `WF-08-T01 <- WF-05-T04,AGENT-09-T04,ARCH-03-T01,BACKEND-01-T09`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
 **Outputs:** Finite typed inputs/results, immutable artifact/state handoffs, idempotency and recovery evidence
 **Unlocks:** WF-09 global learning and deterministic next-stage eligibility
 **Risk:** Critical
@@ -43,7 +43,7 @@ Late observations append to their owning records and attribution, never mutate t
 
 ## Ordered implementation tasks
 
-<!-- roadmap-task id=WF-08-T01 milestone=M6 depends_on=WF-05-T04,AGENT-09-T04,ARCH-03-T01 mode=parallel locks=workflow-runtime,backend-domain -->
+<!-- roadmap-task id=WF-08-T01 milestone=M6 depends_on=WF-05-T04,AGENT-09-T04,ARCH-03-T01,BACKEND-01-T09 mode=parallel locks=workflow-runtime,backend-domain -->
 - [ ] **Encode finite closure and evidence interfaces —** Input: canonical checkpoint states/rules and CheckpointEvaluationService interface. Operation: bind cohort/cutoff/member/offer/strategy/metric/cost versions and stop admission. Output: checkpoint coordinator contract. Test evidence: unknown ordinal, duplicate closure and incomplete outcome cases. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-08-T02 milestone=M6 depends_on=WF-08-T01 mode=parallel locks=workflow-runtime,agent-artifacts -->
 - [ ] **Implement immutable evidence freeze —** Input: synthetic stage observations and minimized transforms. Operation: create one CheckpointEvidenceBundle then evaluate its pinned version. Output: frozen bundle and recommendation handoff. Test evidence: late observation, hash splice, missing cost and denominator cases. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.

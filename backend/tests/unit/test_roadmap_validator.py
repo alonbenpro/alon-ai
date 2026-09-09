@@ -1,7 +1,10 @@
+import json
 import os
+import re
+import shutil
 import subprocess
 import sys
-from dataclasses import replace
+from dataclasses import FrozenInstanceError, replace
 from hashlib import sha256
 from importlib.util import module_from_spec, spec_from_file_location
 from pathlib import Path
@@ -25,18 +28,391 @@ ValidationError = _validator.ValidationError
 Wave = _validator.Wave
 build_waves = _validator.build_waves
 canonical_fingerprint_bytes = _validator.canonical_fingerprint_bytes
-check_artifacts = _validator.check_artifacts
 graph_fingerprint = _validator.graph_fingerprint
-main = _validator.main
 parse_dependency_list = _validator.parse_dependency_list
 parse_manifest = _validator.parse_manifest
-parse_roadmap = _validator.parse_roadmap
 render_agent_plan = _validator.render_agent_plan
 render_execution_manifest = _validator.render_execution_manifest
 render_execution_order = _validator.render_execution_order
 topological_order = _validator.topological_order
 validate_waves = _validator.validate_waves
-write_artifacts = _validator.write_artifacts
+
+
+# Existing miniature corpora test the structural parser and atomic artifact I/O.
+# The public parser is separately exercised against the complete sales corpus below.
+def parse_roadmap(root):
+    return _validator.parse_task_graph(root)
+
+
+def _structural_operation(operation, *args, **kwargs):
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(_validator, "parse_roadmap", parse_roadmap)
+        return operation(*args, **kwargs)
+
+
+def write_artifacts(*args, **kwargs):
+    return _structural_operation(_validator.write_artifacts, *args, **kwargs)
+
+
+def check_artifacts(*args, **kwargs):
+    return _structural_operation(_validator.check_artifacts, *args, **kwargs)
+
+
+def main(*args, **kwargs):
+    return _structural_operation(_validator.main, *args, **kwargs)
+
+
+SALES_SOURCE = "docs/development-roadmap/00-product-strategy/01-product-scope.md"
+
+
+def sales_contract_payload():
+    source = (Path(__file__).resolve().parents[3] / SALES_SOURCE).read_text()
+    return json.loads(re.search(r"```json\n(.*?)\n```", source, re.DOTALL).group(1))
+
+
+def write_sales_contract(root, payload):
+    target = root / SALES_SOURCE
+    target.parent.mkdir(parents=True, exist_ok=True)
+    if target.exists():
+        source = target.read_text()
+        source = re.sub(
+            r"```json\n.*?\n```",
+            lambda _: "```json\n" + json.dumps(payload) + "\n```",
+            source,
+            count=1,
+            flags=re.DOTALL,
+        )
+    else:
+        source = (
+            "## Canonical autonomous sales contract\n\n```json\n"
+            + json.dumps(payload)
+            + "\n```\n"
+        )
+    target.write_text(source)
+
+
+@pytest.fixture
+def sales_tree(tmp_path):
+    repository = Path(__file__).resolve().parents[3]
+    shutil.copytree(
+        repository / "docs/development-roadmap", tmp_path / "docs/development-roadmap"
+    )
+    return tmp_path
+
+
+def test_sales_contract_parser_returns_deeply_immutable_typed_data(tmp_path):
+    write_sales_contract(tmp_path, sales_contract_payload())
+    contract = _validator.parse_sales_contract(tmp_path)
+    assert contract.responsibilities[1].provider == "MarketResearchAgent"
+    assert contract.artifacts[10].producer == "BookingGateway"
+    assert contract.cohort_increments == (100, 200, 300, 400)
+    with pytest.raises(FrozenInstanceError):
+        contract.send_writer = "EmailWritingAgent"
+    with pytest.raises(FrozenInstanceError):
+        contract.responsibilities[0].provider = "OtherAgent"
+    with pytest.raises(TypeError):
+        contract.responsibilities[0].outputs[0] = "OtherArtifact"
+
+
+@pytest.mark.parametrize(
+    ("path", "value", "reason"),
+    [
+        (("responsibilities", 1, "order"), 3, "responsibilities"),
+        (("responsibilities", 1, "name"), "Offer Design", "responsibilities"),
+        (("responsibilities", 1, "provider"), "OfferDesignAgent", "responsibilities"),
+        (("responsibilities", 2, "inputs"), ["IdeaBrief"], "responsibilities"),
+        (("responsibilities", 0, "inputs"), ["OfferPackage"], "responsibilities"),
+        (("responsibilities", 7, "kind"), "agent", "responsibilities"),
+        (
+            ("responsibilities", 9, "kind"),
+            "agent_with_deterministic_gate",
+            "responsibilities",
+        ),
+        (
+            ("responsibilities", 8, "gate_owner"),
+            "ReplyEvaluationAgent",
+            "responsibilities",
+        ),
+        (
+            ("responsibilities", 9, "inputs"),
+            ["OfferPackage", "ReplyEvaluation"],
+            "responsibilities",
+        ),
+        (("responsibilities", 9, "outputs"), [], "responsibilities"),
+        (("responsibilities", 11, "inputs"), ["EmailDraft"], "responsibilities"),
+        (
+            ("responsibilities", 4, "input_phases"),
+            {"QualificationDecision": "FINAL"},
+            "responsibilities",
+        ),
+        (("artifacts", 2, "producer"), "EmailWritingAgent", "artifacts"),
+        (("artifacts", 5, "phases"), ["FINAL", "PRELIMINARY"], "artifacts"),
+        (("artifacts", 9, "producer"), "ReplyEvaluationAgent", "artifacts"),
+        (("artifacts", 10, "name"), "CalendarEvent", "artifacts"),
+        (("commercial_authority",), "ConversationStrategy", "commercial_authority"),
+        (("send_writer",), "EmailWritingAgent", "send_writer"),
+        (("booking_writer",), "ReplyEvaluationAgent", "booking_writer"),
+        (
+            ("checkpoint_decisions",),
+            ["CONTINUE", "REVISE", "KILL", "INCONCLUSIVE"],
+            "checkpoint_decisions",
+        ),
+        (
+            ("learning_results",),
+            ["PROMOTE", "KEEP", "ROLLBACK", "INSUFFICIENT_EVIDENCE", "NO_CHANGE"],
+            "learning_results",
+        ),
+        (("no_mutation_learning_results",), ["KEEP"], "no_mutation_learning_results"),
+        (
+            ("strategy_activation_boundary",),
+            "ANY_ACTION",
+            "strategy_activation_boundary",
+        ),
+        (("learning_trigger",), "ANY_REPLY", "learning_trigger"),
+        (("active_cohort_mutation",), True, "active_cohort_mutation"),
+        (("active_cohort_mutation",), 0, "active_cohort_mutation"),
+        (("cohort_increments",), [100, 200, 300, 401], "cohort_increments"),
+        (
+            ("cohort_cumulative_maxima",),
+            [100, 300, 600, 1001],
+            "cohort_cumulative_maxima",
+        ),
+        (("recipient_ceiling",), 1001, "recipient_ceiling"),
+        (("idea_origins",), ["DISCOVERED"], "idea_origins"),
+        (("idea_bypass_materializer",), "OfferDesignAgent", "idea_bypass_materializer"),
+    ],
+)
+def test_sales_contract_rejects_unsafe_semantic_mutations(
+    sales_tree, path, value, reason
+):
+    payload = sales_contract_payload()
+    cursor = payload
+    for key in path[:-1]:
+        cursor = cursor[key]
+    cursor[path[-1]] = value
+    write_sales_contract(sales_tree, payload)
+    with pytest.raises(ValidationError, match=reason):
+        _validator.parse_roadmap(sales_tree)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["missing", "duplicate", "malformed", "duplicate-key", "unknown-key"]
+)
+def test_sales_contract_fails_closed_on_missing_or_ambiguous_authority(
+    tmp_path, mutation
+):
+    write_sales_contract(tmp_path, sales_contract_payload())
+    target = tmp_path / SALES_SOURCE
+    source = target.read_text()
+    if mutation == "missing":
+        target.unlink()
+    elif mutation == "duplicate":
+        target.write_text(source + source)
+    elif mutation == "malformed":
+        target.write_text(source.replace('"responsibilities":', '"responsibilities"'))
+    elif mutation == "duplicate-key":
+        target.write_text(
+            source.replace('"send_writer":', '"send_writer": "Agent", "send_writer":')
+        )
+    else:
+        payload = sales_contract_payload()
+        payload["allow_stale_activation"] = True
+        write_sales_contract(tmp_path, payload)
+    with pytest.raises(ValidationError, match="canonical sales contract"):
+        _validator.parse_sales_contract(tmp_path)
+
+
+def test_public_sales_parser_and_manifest_bind_complete_contract(sales_tree):
+    roadmap = _validator.parse_roadmap(sales_tree)
+    manifest = json.loads(render_execution_manifest(roadmap))
+    assert manifest["sales_contract"]["send_writer"] == "SendGateway"
+    assert manifest["sales_contract"]["learning_trigger"] == "CLOSED_CHECKPOINT"
+    assert manifest["source_graph_fingerprint"] == graph_fingerprint(roadmap)
+    assert manifest["manifest_documents"][0]["milestone"] == "M0"
+    assert len(manifest["sales_contract"]["artifacts"]) == 15
+
+
+def test_contract_and_document_gate_changes_affect_fingerprint(sales_tree):
+    roadmap = _validator.parse_roadmap(sales_tree)
+    changed = replace(
+        roadmap,
+        sales_contract=replace(roadmap.sales_contract, send_writer="OtherWriter"),
+    )
+    assert graph_fingerprint(changed) != graph_fingerprint(roadmap)
+    changed = replace(
+        roadmap,
+        documents=(
+            replace(roadmap.documents[0], milestone="M1"),
+            *roadmap.documents[1:],
+        ),
+    )
+    assert graph_fingerprint(changed) != graph_fingerprint(roadmap)
+    changed = replace(
+        roadmap,
+        documents=(
+            replace(roadmap.documents[0], gate_description="Changed gate"),
+            *roadmap.documents[1:],
+        ),
+    )
+    assert graph_fingerprint(changed) != graph_fingerprint(roadmap)
+
+
+def test_public_sales_parser_rejects_document_gate_drift(sales_tree):
+    readme = sales_tree / "docs/development-roadmap/README.md"
+    readme.write_text(
+        readme.read_text().replace(
+            "`00-product-strategy/01-product-scope.md` | M0",
+            "`00-product-strategy/01-product-scope.md` | M1",
+        )
+    )
+    with pytest.raises(ValidationError, match="document gate"):
+        _validator.parse_roadmap(sales_tree)
+
+
+def test_sales_api_cannot_build_before_activation_and_booking_services(sales_tree):
+    roadmap = _validator.parse_roadmap(sales_tree)
+    task = next(task for task in roadmap.tasks if task.id == "BACKEND-02-T03")
+    target = sales_tree / task.source
+    target.write_text(
+        re.sub(
+            r"(<!-- roadmap-task id=BACKEND-02-T03 milestone=M6 depends_on=)[^ ]+",
+            r"\g<1>PRODUCT-01-T01",
+            target.read_text(),
+        )
+    )
+    with pytest.raises(ValidationError, match="provider ancestor"):
+        _validator.parse_roadmap(sales_tree)
+
+
+def test_booking_service_requires_fresh_booking_policy_provider(sales_tree):
+    roadmap = _validator.parse_roadmap(sales_tree)
+    task = next(task for task in roadmap.tasks if task.id == "BACKEND-01-T08")
+    target = sales_tree / task.source
+    source = target.read_text()
+    metadata = next(
+        line
+        for line in source.splitlines()
+        if line.startswith("<!-- roadmap-task id=BACKEND-01-T08 ")
+    )
+    target.write_text(source.replace(metadata, metadata.replace(",BACKEND-03-T04", "")))
+    with pytest.raises(ValidationError, match="provider ancestor.*BACKEND-03-T04"):
+        _validator.parse_roadmap(sales_tree)
+
+
+def test_public_sales_parser_rejects_empty_manifest_document(sales_tree):
+    target = sales_tree / "docs/development-roadmap/99-empty/01-empty.md"
+    target.parent.mkdir()
+    target.write_text(
+        "# Empty\n**Document ID:** EMPTY-01\n## Ordered implementation tasks\n## Acceptance\n"
+    )
+    readme = sales_tree / "docs/development-roadmap/README.md"
+    readme.write_text(
+        readme.read_text().replace(
+            "## Launch promotion ladder",
+            "| `99-empty/01-empty.md` | M0 | Empty gate |\n\n## Launch promotion ladder",
+        )
+    )
+    with pytest.raises(ValidationError, match="document.*no tasks"):
+        _validator.parse_roadmap(sales_tree)
+
+
+def test_rendered_contract_drift_fails_before_any_artifact_replacement(
+    sales_tree, monkeypatch
+):
+    real_render = _validator.render_artifacts
+    before = {
+        relative: (sales_tree / relative).read_bytes() for relative in ARTIFACT_PATHS
+    }
+
+    def changed_contract(roadmap):
+        contents = real_render(roadmap)
+        manifest = json.loads(contents[ARTIFACT_PATHS[0]])
+        manifest["sales_contract"]["booking_writer"] = "ReplyEvaluationAgent"
+        contents[ARTIFACT_PATHS[0]] = json.dumps(manifest) + "\n"
+        return contents
+
+    monkeypatch.setattr(_validator, "render_artifacts", changed_contract)
+    with pytest.raises(ValidationError, match="sales contract drift"):
+        _validator.write_artifacts(sales_tree)
+    assert {
+        relative: (sales_tree / relative).read_bytes() for relative in ARTIFACT_PATHS
+    } == before
+
+
+@pytest.mark.parametrize(
+    ("consumer", "provider"),
+    [
+        ("AGENT-03-T01", "AGENT-04-T01"),
+        ("AGENT-05-T01", "AGENT-11-T01"),
+        ("AGENT-11-T03", "PROVIDER-08-T03"),
+        ("WF-04-T01", "BACKEND-01-T07"),
+        ("WF-07-T01", "BACKEND-01-T08"),
+        ("WF-08-T01", "BACKEND-01-T09"),
+        ("WF-09-T01", "BACKEND-01-T10"),
+    ],
+)
+def test_sales_dependencies_require_reachable_providers_even_when_sort_order_looks_safe(
+    sales_tree, consumer, provider
+):
+    roadmap = _validator.parse_roadmap(sales_tree)
+    tasks = {task.id: task for task in roadmap.tasks}
+    # Remove every path to the provider from this consumer while keeping a valid DAG.
+    target = sales_tree / tasks[consumer].source
+    target.write_text(
+        re.sub(
+            r"(<!-- roadmap-task id=" + consumer + r" milestone=\w+ depends_on=)[^ ]+",
+            r"\g<1>PRODUCT-01-T01",
+            target.read_text(),
+        )
+    )
+    structural = _validator.parse_task_graph(sales_tree)
+    # Manifest/milestone tie breaks can put provider first; that is not a dependency.
+    ordered = [task.id for task in topological_order(structural)]
+    if tasks[provider].milestone < tasks[consumer].milestone:
+        assert ordered.index(provider) < ordered.index(consumer)
+    with pytest.raises(ValidationError, match="provider ancestor"):
+        _validator.parse_roadmap(sales_tree)
+
+
+@pytest.mark.parametrize("mutation", ["authority", "source", "strategy"])
+def test_semantic_failure_cannot_replace_generated_artifacts(
+    sales_tree, capsys, mutation
+):
+    for relative in ARTIFACT_PATHS:
+        (sales_tree / relative).write_bytes(b"preserve existing evidence\n")
+    if mutation == "authority":
+        (sales_tree / SALES_SOURCE).unlink()
+    elif mutation == "source":
+        (
+            sales_tree / "docs/development-roadmap/05-providers/07-calendar-provider.md"
+        ).unlink()
+    else:
+        payload = sales_contract_payload()
+        payload["active_cohort_mutation"] = True
+        write_sales_contract(sales_tree, payload)
+    assert _validator.main(["--write"], root=sales_tree) == 1
+    assert "roadmap validation failed" in capsys.readouterr().err
+    assert all(
+        (sales_tree / relative).read_bytes() == b"preserve existing evidence\n"
+        for relative in ARTIFACT_PATHS
+    )
+
+
+@pytest.mark.parametrize("mode", ["serial", "parallel"])
+def test_calendar_write_lock_is_registered_and_serial_only(tmp_path, mode):
+    roadmap = write_tree(tmp_path)
+    target = roadmap / "00-product/01-scope.md"
+    target.write_text(
+        target.read_text()
+        .replace("locks=product-contracts", "locks=calendar-side-effects")
+        .replace("mode=parallel", "mode=" + mode)
+    )
+    if mode == "serial":
+        assert parse_roadmap(tmp_path).tasks[0].locks == ("calendar-side-effects",)
+    else:
+        with pytest.raises(ValidationError, match="serial-only lock"):
+            parse_roadmap(tmp_path)
+
 
 ROOT_ROW = "| `00-product/01-scope.md` | M0 |"
 ROOT_META = "<!-- roadmap-task id=PRODUCT-01-T01 milestone=M0 depends_on=- mode=parallel locks=product-contracts -->"
@@ -1799,9 +2175,10 @@ def test_canonical_fingerprint_bytes_and_digest_are_exact(tmp_path: Path) -> Non
     write_tree(tmp_path)
     roadmap = parse_roadmap(tmp_path)
     expected = (
-        b'{"manifest_documents":["docs/development-roadmap/00-product/01-scope.md"],'
+        b'{"manifest_documents":[{"gate_description":"","milestone":"M0",'
+        b'"source":"docs/development-roadmap/00-product/01-scope.md"}],'
         b'"milestones":["M0","M1","M2","M3","M4","M5","M6","M7","M8","M9"],'
-        b'"root_task_ids":["PRODUCT-01-T01"],"schema_version":1,"tasks":['
+        b'"root_task_ids":["PRODUCT-01-T01"],"sales_contract":null,"schema_version":2,"tasks":['
         b'{"depends_on":[],"document_id":"PRODUCT-01","failure_behavior":"Failure behavior: block.",'
         b'"id":"PRODUCT-01-T01","input":"Input: brief.","line":8,'
         b'"locks":["product-contracts"],"milestone":"M0","mode":"parallel",'
@@ -1867,6 +2244,13 @@ def test_valid_graph_renders_hand_checked_deterministic_artifacts(
     agents = render_agent_plan(roadmap)
 
     expected_manifest = """{
+  "manifest_documents": [
+    {
+      "gate_description": "",
+      "milestone": "M0",
+      "source": "docs/development-roadmap/00-product/01-scope.md"
+    }
+  ],
   "milestones": [
     "M0",
     "M1",
@@ -1879,7 +2263,9 @@ def test_valid_graph_renders_hand_checked_deterministic_artifacts(
     "M8",
     "M9"
   ],
-  "schema_version": 1,
+  "sales_contract": null,
+  "schema_version": 2,
+  "source_graph_fingerprint": "f4ef5d9ca474df829a4142978bbcccbef32c08dbdd677f4a9f02eb94e917637e",
   "tasks": [
     {
       "depends_on": [],
@@ -1903,7 +2289,7 @@ def test_valid_graph_renders_hand_checked_deterministic_artifacts(
 
 - Regenerate: `python3 scripts/validate_roadmap.py --write`
 - Validate: `python3 scripts/validate_roadmap.py --check`
-- Source-graph fingerprint: `f0dc57de7c221d5544df3159f52d50f0a391aea13c9ff65ebdb1431bbf384400`
+- Source-graph fingerprint: `f4ef5d9ca474df829a4142978bbcccbef32c08dbdd677f4a9f02eb94e917637e`
 
 ## Totals
 
@@ -1970,7 +2356,7 @@ No tasks.
 
 > Warning: generated for the source graph below; it does not prove implementation status.
 
-- Source-graph fingerprint: `f0dc57de7c221d5544df3159f52d50f0a391aea13c9ff65ebdb1431bbf384400`
+- Source-graph fingerprint: `f4ef5d9ca474df829a4142978bbcccbef32c08dbdd677f4a9f02eb94e917637e`
 - Regenerate: `python3 scripts/validate_roadmap.py --write`
 - Validate: `python3 scripts/validate_roadmap.py --check`
 
@@ -2193,7 +2579,7 @@ def test_cli_second_replace_failure_returns_one_then_repairs(
 def test_real_repository_source_graph_matches_reviewed_contract() -> None:
     repository_root = Path(__file__).resolve().parents[3]
 
-    roadmap = parse_roadmap(repository_root)
+    roadmap = _validator.parse_roadmap(repository_root)
     ordered = topological_order(roadmap)
     waves = build_waves(roadmap)
     validate_waves(roadmap, waves)
@@ -2205,14 +2591,15 @@ def test_real_repository_source_graph_matches_reviewed_contract() -> None:
         if tasks_by_id[dependency].document_id != task.document_id
     )
 
-    assert len(roadmap.tasks) == 406
-    assert len(ordered) == 406
+    assert len(roadmap.documents) == 84
+    assert len(roadmap.tasks) == 438
+    assert len(ordered) == 438
     assert tuple(task.id for task in roadmap.tasks if not task.depends_on) == (
         "PRODUCT-01-T01",
     )
-    assert len(waves) == 368
-    assert max(len(wave.assignments) for wave in waves) == 3
-    assert len(cross_document_dependency_pairs) == 810
+    assert len(waves) == 394
+    assert max(len(wave.assignments) for wave in waves) == 4
+    assert len(cross_document_dependency_pairs) == 925
     assert graph_fingerprint(roadmap) == (
-        "8962eea55212f5c50dcce29ccbdbfbe1b35200ddab922cc25c75924fae469127"
+        "59fa947a2d5d4cbb507950e2b6d8fd864bb22d094a05667b5b3a99ccdb5c8c88"
     )

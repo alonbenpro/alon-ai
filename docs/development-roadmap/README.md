@@ -144,18 +144,22 @@ The milestone column indicates the first gate that needs the file; later gates m
 | --- | --- | --- |
 | `04-agents/01-agent-runtime-and-contracts.md` | M3 | Consumes artifact records; defines agent envelope |
 | `04-agents/02-idea-discovery-agent.md` | M3 | Produces IdeaBrief or records the equivalent user-idea materialization |
-| `04-agents/03-offer-design-agent.md` | M3 | Produces authoritative OfferPackage after market research |
-| `04-agents/04-market-research-agent.md` | M3 | Produces MarketResearchReport before offer design |
-| `04-agents/05-lead-research-agent.md` | M3 | Produces LeadResearchDossier after preliminary qualification |
-| `04-agents/06-lead-qualification-agent.md` | M3 | Produces final phased QualificationDecision through deterministic gates |
-| `04-agents/07-outreach-drafting-agent.md` | M3 | Produces ConversationStrategy and EmailDraft without send authority |
-| `04-agents/08-reply-classification-agent.md` | M3 | Produces ReplyEvaluation and bounded negotiation proposals |
-| `04-agents/09-experiment-evaluation-agent.md` | M3 | Recommends checkpoint results from frozen evidence |
-| `04-agents/10-agent-evals-and-versioning.md` | M3 | Gates all agent promotion and rollback |
+| `04-agents/03-market-research-agent.md` | M3 | Produces MarketResearchReport before offer design |
+| `04-agents/04-offer-design-agent.md` | M3 | Produces authoritative OfferPackage after market research |
+| `04-agents/05-lead-discovery-agent.md` | M3 | Proposes sourced candidates and preliminary qualification |
+| `04-agents/06-lead-research-agent.md` | M3 | Produces LeadResearchDossier after preliminary qualification |
+| `04-agents/07-lead-qualification-agent.md` | M3 | Produces final phased QualificationDecision through deterministic gates |
+| `04-agents/08-email-writing-agent.md` | M3 | Produces ConversationStrategy and EmailDraft without send authority |
+| `04-agents/09-reply-evaluation-and-negotiation-agent.md` | M3 | Produces ReplyEvaluation and bounded negotiation proposals |
+| `04-agents/10-experiment-evaluation-agent.md` | M3 | Recommends checkpoint results from frozen evidence |
+| `04-agents/11-global-learning-engine.md` | M3 | Proposes global strategy changes only from closed checkpoints |
+| `04-agents/12-agent-evals-and-versioning.md` | M3 | Gates all agent promotion and rollback |
 | `05-providers/03-model-provider.md` | M3 | Replaceable model boundary and recorded fixtures |
 | `05-providers/04-search-provider.md` | M3 | Replaceable search boundary and provenance |
 | `05-providers/05-page-fetching-and-extraction.md` | M3 | Safe evidence extraction boundary |
 | `05-providers/06-enrichment-provider.md` | M3 | Optional bounded enrichment; not required for M4 |
+| `05-providers/07-calendar-provider.md` | M3 | Separate availability/read and BookingGateway-only write ports |
+| `05-providers/08-lead-discovery-provider.md` | M3 | Approved source adapters with provenance and preliminary facts |
 | `03-workflows/02-experiment-lifecycle.md` | M4 | Orchestrates finite experiment state |
 | `03-workflows/03-idea-validation-workflow.md` | M4 | Produces offer and evidence artifacts without outreach |
 | `06-backend/01-domain-services.md` | M3 | Deterministic business behavior |
@@ -170,7 +174,10 @@ The milestone column indicates the first gate that needs the file; later gates m
 | `05-providers/02-gmail-history-sync.md` | M1 | Reconciliation, reply sync, and cursor recovery |
 | `03-workflows/05-outreach-and-reply-workflow.md` | M6 | Finite controlled send/reply loop |
 | `03-workflows/06-pause-cancel-resume-and-recovery.md` | M6 | Operator interruption and recovery semantics |
-| `06-backend/03-policy-engine.md` | M6 | Deterministic suppression, budget, and rate controls |
+| `03-workflows/07-booking-workflow.md` | M6 | Qualified intent, explicit slot confirmation and reconciled calendar actions |
+| `03-workflows/08-checkpoint-evaluation-workflow.md` | M6 | Closed checkpoint evidence and deterministic stage progression |
+| `03-workflows/09-global-learning-workflow.md` | M6 | Global learning and version activation at each campaign checkpoint |
+| `06-backend/03-policy-engine.md` | M3 | Offline deterministic commercial policy; M6 suppression, budget, and rate controls |
 | `06-backend/04-send-gateway.md` | M6 | Sole application path to Gmail |
 | `06-backend/05-approval-and-command-handling.md` | M6 | Idempotent action authorization, exception and protected operator commands |
 | `08-security-and-compliance/03-secrets-and-oauth-token-security.md` | M1 | Protects Gmail credentials |
@@ -232,6 +239,8 @@ The milestone column indicates the first gate that needs the file; later gates m
 The first six phases cannot count as real demand evidence. Signed immutable launch entry/exit records, exact pilot fixtures, immediate abort/demotion, rollback, and fresh re-entry evidence remain mandatory. M8 separately requires the private deployment, real AWS backup/witness, fresh-target restore and incident evidence. The no-send internal stack rehearsal cannot replace the isolated inbox/calendar tests.
 
 Any reply atomically stops its cold sequence. Positive replies, questions, and genuine objections can enter the bounded response loop; rejection closes persuasion, while durable suppression follows only the separately evidenced qualifying signal in [DurableSuppressionTriggerV1](00-product-strategy/01-product-scope.md#rejection-and-durable-suppression-trigger). Booking requires qualified buying intent and explicit timezone-aware slot confirmation. No normal draft, response, negotiation, checkpoint transition, or booking requires per-message approval.
+
+The historical pilot ID `M6-L06_REPLY_SUPPRESSION` is retained for traceability: its ordinary-reply case now proves cold stop without durable suppression. The separate `M6-L07` explicit-opt-out case proves suppression; see the [signed pilot catalog](12-launch-and-operations/01-test-inbox-pilot.md).
 
 Every closed checkpoint freezes a `CheckpointEvidenceBundle`. Global Learning evaluates each applicable agent with exactly `PROMOTE|KEEP|ROLLBACK|INSUFFICIENT_EVIDENCE`; the retaining outcomes `KEEP` and `INSUFFICIENT_EVIDENCE` do not mutate strategies. The triggering campaign adopts an approved `GlobalStrategyPackage` only at its next cohort boundary after `CONTINUE`; other active campaigns wait for their own checkpoints; future campaigns use the newest approved version. Rollback affects future actions and preserves history. Safety/commercial/source/legal bounds cannot be learned away.
 

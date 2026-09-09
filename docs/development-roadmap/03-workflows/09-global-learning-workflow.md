@@ -4,7 +4,7 @@
 **Status:** Planned finite workflow; no implementation exists
 **Milestone:** M6 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `WF-09-T01 -> WF-09-T02 -> WF-09-T03 -> WF-09-T04`; cross-document task Inputs `WF-09-T01 <- WF-08-T03,AGENT-12-T04,AGENT-10-T06,ARCH-03-T01`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
+**Prerequisites:** exact local order `WF-09-T01 -> WF-09-T02 -> WF-09-T03 -> WF-09-T04`; cross-document task Inputs `WF-09-T01 <- WF-08-T03,AGENT-12-T04,AGENT-10-T06,ARCH-03-T01,BACKEND-01-T10`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
 **Outputs:** Finite typed inputs/results, immutable artifact/state handoffs, idempotency and recovery evidence
 **Unlocks:** Global strategy promotion/activation/rollback evidence for M9
 **Risk:** Critical
@@ -46,7 +46,7 @@ Stored deterioration rules immediately block affected future actions. During an 
 
 ## Ordered implementation tasks
 
-<!-- roadmap-task id=WF-09-T01 milestone=M6 depends_on=WF-08-T03,AGENT-12-T04,AGENT-10-T06,ARCH-03-T01 mode=parallel locks=workflow-runtime,agent-artifacts -->
+<!-- roadmap-task id=WF-09-T01 milestone=M6 depends_on=WF-08-T03,AGENT-12-T04,AGENT-10-T06,ARCH-03-T01,BACKEND-01-T10 mode=parallel locks=workflow-runtime,agent-artifacts -->
 - [ ] **Encode checkpoint-only learning trigger —** Input: closed checkpoint/bundle and GlobalLearningEngine contract. Operation: pin primary/secondary/guardrail evidence and applicable-agent set. Output: finite learning run contract. Test evidence: open checkpoint, duplicate trigger, missing agent and invalid evidence denial. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-09-T02 milestone=M6 depends_on=WF-09-T01 mode=parallel locks=workflow-runtime,agent-artifacts -->
 - [ ] **Implement deterministic proposal gate —** Input: AgentLearningProposal and StrategyActivationService interface. Operation: validate exact results, minimum evidence, offline/holdout/transfer gates and immutable bounds. Output: approved/rejected GlobalStrategyPackage handoff. Test evidence: weak evidence, unsafe mutation and self-certified promotion failures. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.

@@ -4,7 +4,7 @@
 **Status:** Planned finite workflow; no implementation exists
 **Milestone:** M6 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `WF-07-T01 -> WF-07-T02 -> WF-07-T03 -> WF-07-T04`; cross-document task Inputs `WF-07-T01 <- WF-05-T04,PROVIDER-07-T02,ARCH-03-T01; WF-07-T02 <- PROVIDER-07-T03; WF-07-T03 <- PROVIDER-07-T04; WF-07-T04 <- LAUNCH-01-T03`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
+**Prerequisites:** exact local order `WF-07-T01 -> WF-07-T02 -> WF-07-T03 -> WF-07-T04`; cross-document task Inputs `WF-07-T01 <- WF-05-T04,PROVIDER-07-T02,ARCH-03-T01,BACKEND-01-T08; WF-07-T02 <- PROVIDER-07-T03; WF-07-T03 <- PROVIDER-07-T04; WF-07-T04 <- LAUNCH-01-T03`. Source authorities: [PRODUCT-01](../00-product-strategy/01-product-scope.md), [ARCH-02](../01-architecture/02-module-boundaries.md), [ARCH-03](../01-architecture/03-domain-events-and-state-machines.md), [runtime selection](00-dbos-selection-and-temporal-fallback.md).
 **Outputs:** Finite typed inputs/results, immutable artifact/state handoffs, idempotency and recovery evidence
 **Unlocks:** Confirmed booking projection and M6/M9 booking evidence
 **Risk:** Critical
@@ -45,7 +45,7 @@ Pause/cancel first denies new writes and invalidates stale authority. It cannot 
 
 ## Ordered implementation tasks
 
-<!-- roadmap-task id=WF-07-T01 milestone=M6 depends_on=WF-05-T04,PROVIDER-07-T02,ARCH-03-T01 mode=parallel locks=workflow-runtime,backend-domain -->
+<!-- roadmap-task id=WF-07-T01 milestone=M6 depends_on=WF-05-T04,PROVIDER-07-T02,ARCH-03-T01,BACKEND-01-T08 mode=parallel locks=workflow-runtime,backend-domain -->
 - [ ] **Encode booking intent and state guards —** Input: canonical BookingIntent/BookingState and fixture-backed BookingGateway interface. Operation: bind qualification, buying intent, call agreement, offer/strategy/activation and optional purchase acceptance separately. Output: finite booking coordinator contract. Test evidence: call without purchase succeeds; no qualification/agreement fails. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
 <!-- roadmap-task id=WF-07-T02 milestone=M6 depends_on=WF-07-T01,PROVIDER-07-T03 mode=parallel locks=workflow-runtime,backend-domain -->
 - [ ] **Implement slot proposal and confirmation —** Input: bounded availability and booking policy. Operation: persist labelled slot-set/expiry and require exact explicit confirmation. Output: confirmed intent with immutable evidence. Test evidence: timezone/DST/ambiguous agreement/stale availability tests. Failure behavior: stop unsafe admission, retain immutable evidence and expose a typed blocked/failed outcome; no provider retry or state change by inference.
