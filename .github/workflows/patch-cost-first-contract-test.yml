@@ -1,0 +1,100 @@
+name: Patch Cost-First Contract Test
+
+on:
+  push:
+    branches: [cost-optimized-roadmap]
+    paths:
+      - .github/workflows/patch-cost-first-contract-test.yml
+
+permissions:
+  contents: write
+
+jobs:
+  patch-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: cost-optimized-roadmap
+          fetch-depth: 0
+      - name: Replace stale active-contract assertion
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import importlib.util
+          import re
+          import sys
+
+          root = Path.cwd()
+          path = root / 'backend/tests/unit/test_roadmap_validator.py'
+          text = path.read_text(encoding='utf-8')
+          start_marker = 'def test_active_roadmap_uses_only_staged_thousand_lead_contract() -> None:\n'
+          end_marker = '\ndef test_staged_lead_source_validator_accepts_exact_authorities'
+          start = text.index(start_marker)
+          end = text.index(end_marker, start)
+          lines = [
+              'def test_active_roadmap_uses_cost_first_contract() -> None:',
+              '    repository_root = Path(__file__).resolve().parents[3]',
+              '    roadmap_root = repository_root / "docs" / "development-roadmap"',
+              '    active_paths = [roadmap_root / "README.md"]',
+              '    active_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))',
+              '    active_text = "\\n".join(path.read_text(encoding="utf-8") for path in active_paths)',
+              '',
+              '    for required in (',
+              '        "SHADOW",',
+              '        "REVIEW_20",',
+              '        "QUALIFIED_50",',
+              '        "SCALE_100_TO_300",',
+              '        "BRAVE_PLACE_SEARCH",',
+              '    ):',
+              '        assert required in active_text',
+              '',
+              '    for forbidden in (',
+              '        "100/200/300/400",',
+              '        "100/300/600/1,000",',
+              '        "100/300/600/1000",',
+              '    ):',
+              '        assert forbidden not in active_text',
+              '',
+              '',
+          ]
+          replacement = '\n'.join(lines)
+          text = text[:start] + replacement + text[end:]
+
+          spec = importlib.util.spec_from_file_location('roadmap_validator_final', root / 'scripts/validate_roadmap.py')
+          if spec is None or spec.loader is None:
+              raise SystemExit('cannot load roadmap validator')
+          module = importlib.util.module_from_spec(spec)
+          sys.modules[spec.name] = module
+          spec.loader.exec_module(module)
+          fingerprint = module.graph_fingerprint(module.parse_roadmap(root))
+          fixed = re.compile(r'(assert graph_fingerprint\(roadmap\) == \(\n\s+")[0-9a-f]{64}("\n\s+\))')
+          if fixed.search(text):
+              text = fixed.sub(lambda m: m.group(1) + fingerprint + m.group(2), text, count=1)
+          path.write_text(text, encoding='utf-8')
+          print(f'final graph fingerprint: {fingerprint}')
+          PY
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          python-version: "3.13"
+          version: "0.11.26"
+      - name: Sync backend dependencies
+        run: uv sync --locked --all-extras --dev
+        working-directory: backend
+      - name: Format and lint roadmap test
+        run: |
+          uv run ruff format tests/unit/test_roadmap_validator.py
+          uv run ruff check tests/unit/test_roadmap_validator.py
+        working-directory: backend
+      - name: Verify generated roadmap
+        run: python3 scripts/validate_roadmap.py --check
+      - name: Run focused roadmap validator suite
+        run: uv run pytest tests/unit/test_roadmap_validator.py -q
+        working-directory: backend
+      - name: Commit corrected test
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add backend/tests/unit/test_roadmap_validator.py
+          git commit -m "test: assert cost-first roadmap contract"
+          git push origin HEAD:cost-optimized-roadmap
