@@ -20,6 +20,87 @@ jobs:
           fetch-depth: 0
       - name: Apply one-time migration
         run: python3 scripts/migrate_cost_optimized_roadmap.py
+      - name: Migrate cost-first validator tests
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+
+          path = Path("backend/tests/unit/test_roadmap_validator.py")
+          text = path.read_text(encoding="utf-8")
+          pattern = re.compile(
+              r"def test_cost_first_stage_constants_are_exact\(\) -> None:\n.*?\n\ndef write_tree",
+              re.S,
+          )
+          replacement = '''def test_cost_first_stage_constants_are_exact() -> None:
+              assert _validator.COST_FIRST_STAGE_NAMES == (
+                  "SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300"
+              )
+              assert _validator.SCALE_TRANCHE_MIN == 100
+              assert _validator.SCALE_TRANCHE_MAX == 300
+
+
+          def _write_cost_first_stage_authorities(tmp_path: Path, *, omit_scale_from_launch: bool = False) -> None:
+              roadmap = tmp_path / "docs" / "development-roadmap"
+              product_scope = roadmap / "00-product-strategy" / "01-product-scope.md"
+              metrics = roadmap / "00-product-strategy" / "02-success-metrics.md"
+              launch = roadmap / "12-launch-and-operations" / "03-first-real-experiment.md"
+              product_scope.parent.mkdir(parents=True)
+              launch.parent.mkdir(parents=True)
+              stages = "SHADOW REVIEW_20 QUALIFIED_50 SCALE_100_TO_300"
+              product_scope.write_text(
+                  stages
+                  + '\nBRAVE_PLACE_SEARCH\n'
+                  + '"model_routing_tiers": ["NO_AI", "NANO", "MINI", "PREMIUM"]\n'
+                  + '"pre_revenue_recipient_ceiling": 300\n',
+                  encoding="utf-8",
+              )
+              metrics.write_text(stages, encoding="utf-8")
+              launch.write_text(
+                  stages.replace(" SCALE_100_TO_300", "") if omit_scale_from_launch else stages,
+                  encoding="utf-8",
+              )
+
+
+          def test_active_roadmap_uses_cost_first_launch_contract() -> None:
+              payload = sales_contract_payload()
+              assert tuple(stage["name"] for stage in payload["launch_stages"]) == (
+                  "SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300"
+              )
+              assert payload["pre_revenue_recipient_ceiling"] == 300
+              assert payload["automated_discovery_provider"] == "BRAVE_PLACE_SEARCH"
+              assert payload["model_routing_tiers"] == ["NO_AI", "NANO", "MINI", "PREMIUM"]
+              assert "cohort_increments" not in payload
+              assert "cohort_cumulative_maxima" not in payload
+              assert "recipient_ceiling" not in payload
+
+
+          def test_cost_first_stage_source_validator_accepts_exact_authorities(tmp_path: Path) -> None:
+              _write_cost_first_stage_authorities(tmp_path)
+              _validator.validate_staged_lead_contract(tmp_path)
+
+
+          def test_cost_first_stage_source_validator_rejects_missing_scale_with_location(
+              tmp_path: Path,
+          ) -> None:
+              _write_cost_first_stage_authorities(tmp_path, omit_scale_from_launch=True)
+              with pytest.raises(
+                  ValidationError,
+                  match=r"12-launch-and-operations/03-first-real-experiment\.md:1: .*SCALE_100_TO_300",
+              ):
+                  _validator.validate_staged_lead_contract(tmp_path)
+
+
+          def write_tree'''
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f"expected one staged-test block, found {count}")
+          text = text.replace(
+              "2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271",
+              "a6d8c772aa75769285732be8293438241d327586f72938fc718c0e314e35a2db",
+          )
+          path.write_text(text, encoding="utf-8")
+          PY
       - name: Regenerate roadmap artifacts
         run: python3 scripts/validate_roadmap.py --write
       - name: Validate regenerated roadmap
