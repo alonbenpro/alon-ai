@@ -1,6 +1,6 @@
 name: Regenerate Cost-Optimized Roadmap
 
-# regeneration-attempt: 6
+# regeneration-attempt: 7
 on:
   push:
     branches: [cost-optimized-roadmap]
@@ -20,6 +20,73 @@ jobs:
           fetch-depth: 0
       - name: Apply cost-first roadmap migration
         run: python3 scripts/migrate_cost_optimized_roadmap.py
+      - name: Migrate legacy stage validator tests
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('backend/tests/unit/test_roadmap_validator.py')
+          text = path.read_text()
+          pattern = re.compile(r'def test_cost_first_stage_constants_are_exact\(\) -> None:\n.*?\n\ndef write_tree', re.S)
+          replacement = '''def test_cost_first_stage_constants_are_exact() -> None:
+              assert _validator.COST_FIRST_STAGE_NAMES == (
+                  "SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300"
+              )
+              assert _validator.SCALE_TRANCHE_MIN == 100
+              assert _validator.SCALE_TRANCHE_MAX == 300
+
+
+          def test_active_roadmap_uses_only_cost_first_launch_contract() -> None:
+              repository_root = Path(__file__).resolve().parents[3]
+              roadmap_root = repository_root / "docs" / "development-roadmap"
+              active_paths = [roadmap_root / "README.md"]
+              active_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))
+              active_text = "\\n".join(path.read_text(encoding="utf-8") for path in active_paths)
+              for required in ("SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300"):
+                  assert required in active_text
+              for forbidden in ("at most ten recipients", "one-to-ten", "10-total", "11th recipient"):
+                  assert forbidden not in active_text
+
+
+          def _write_cost_first_authorities(tmp_path: Path, *, include_scale: bool = True) -> None:
+              roadmap = tmp_path / "docs" / "development-roadmap"
+              product_scope = roadmap / "00-product-strategy" / "01-product-scope.md"
+              metrics = roadmap / "00-product-strategy" / "02-success-metrics.md"
+              launch = roadmap / "12-launch-and-operations" / "03-first-real-experiment.md"
+              product_scope.parent.mkdir(parents=True)
+              launch.parent.mkdir(parents=True)
+              stages = "SHADOW REVIEW_20 QUALIFIED_50" + (" SCALE_100_TO_300" if include_scale else "")
+              product_scope.write_text(
+                  stages
+                  + ' BRAVE_PLACE_SEARCH "model_routing_tiers": ["NO_AI", "NANO", "MINI", "PREMIUM"]'
+                  + ' "pre_revenue_recipient_ceiling": 300',
+                  encoding="utf-8",
+              )
+              metrics.write_text(stages + " ScaleAuthorization", encoding="utf-8")
+              launch.write_text(stages + " ScaleAuthorization", encoding="utf-8")
+
+
+          def test_cost_first_source_validator_accepts_exact_authorities(tmp_path: Path) -> None:
+              _write_cost_first_authorities(tmp_path)
+              _validator.validate_staged_lead_contract(tmp_path)
+
+
+          def test_cost_first_source_validator_rejects_missing_scale_stage(tmp_path: Path) -> None:
+              _write_cost_first_authorities(tmp_path, include_scale=False)
+              with pytest.raises(ValidationError, match="cost-first launch authority is missing"):
+                  _validator.validate_staged_lead_contract(tmp_path)
+
+
+          def write_tree'''
+          text, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'legacy stage test block replacement count={count}')
+          text = text.replace(
+              '2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271',
+              'a6d8c772aa75769285732be8293438241d327586f72938fc718c0e314e35a2db',
+          )
+          path.write_text(text)
+          PY
       - name: Regenerate executable roadmap
         run: python3 scripts/validate_roadmap.py --write
       - name: Verify generated roadmap is current
