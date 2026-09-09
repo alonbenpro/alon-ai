@@ -1,6 +1,6 @@
 name: Regenerate Cost-Optimized Roadmap
 
-# regeneration-attempt: 5
+# regeneration-attempt: 6
 on:
   push:
     branches: [cost-optimized-roadmap]
@@ -20,18 +20,6 @@ jobs:
           fetch-depth: 0
       - name: Apply cost-first roadmap migration
         run: python3 scripts/migrate_cost_optimized_roadmap.py
-      - name: Repair DR serial-lock metadata
-        run: |
-          python3 - <<'PY'
-          from pathlib import Path
-          path = Path('docs/development-roadmap/11-infrastructure/05-monitoring-and-disaster-recovery.md')
-          text = path.read_text()
-          old = 'id=INFRA-05-T05 milestone=M8 depends_on=INFRA-05-T04,INFRA-04-T03 mode=parallel locks=backup-restore,observability'
-          new = 'id=INFRA-05-T05 milestone=M8 depends_on=INFRA-05-T04,INFRA-04-T03 mode=serial locks=backup-restore,observability'
-          if old not in text and new not in text:
-              raise SystemExit('INFRA-05-T05 metadata shape not found')
-          path.write_text(text.replace(old, new))
-          PY
       - name: Regenerate executable roadmap
         run: python3 scripts/validate_roadmap.py --write
       - name: Verify generated roadmap is current
