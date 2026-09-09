@@ -2,7 +2,7 @@
 
 > Warning: generated for the source graph below; it does not prove implementation status.
 
-- Source-graph fingerprint: `2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271`
+- Source-graph fingerprint: `301c6a3af1dc9433f11a2b0f2a6c55cfd84f10bff3ba792989b5ff9c6354e267`
 - Regenerate: `python3 scripts/validate_roadmap.py --write`
 - Validate: `python3 scripts/validate_roadmap.py --check`
 
@@ -30,13 +30,13 @@
 
 ### I1 / R1 — `PRODUCT-01-T01`
 
-- Source: [source](00-product-strategy/01-product-scope.md#L211)
+- Source: [source](00-product-strategy/01-product-scope.md#L181)
 - Dependencies: none
 - Mode: `parallel`
 - Locks: `product-contracts`
 - Branch: `agent/product-01-t01`
 - Worktree: `../alon-ai-task-product-01-t01`
-- Acceptance evidence: [source](00-product-strategy/01-product-scope.md#L211) — Test evidence: schema validation plus operator signature.
+- Acceptance evidence: [source](00-product-strategy/01-product-scope.md#L181) — Test evidence: schema validation plus operator signature.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -50,13 +50,13 @@
 
 ### I1 / R1 — `PRODUCT-01-T02`
 
-- Source: [source](00-product-strategy/01-product-scope.md#L213)
+- Source: [source](00-product-strategy/01-product-scope.md#L183)
 - Dependencies: `PRODUCT-01-T01`
 - Mode: `parallel`
 - Locks: `product-contracts`
 - Branch: `agent/product-01-t02`
 - Worktree: `../alon-ai-task-product-01-t02`
-- Acceptance evidence: [source](00-product-strategy/01-product-scope.md#L213) — Test evidence: completed M0 scope checklist.
+- Acceptance evidence: [source](00-product-strategy/01-product-scope.md#L183) — Test evidence: completed M0 checklist.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -70,13 +70,13 @@
 
 ### I1 / R1 — `PRODUCT-01-T03`
 
-- Source: [source](00-product-strategy/01-product-scope.md#L215)
+- Source: [source](00-product-strategy/01-product-scope.md#L185)
 - Dependencies: `PRODUCT-01-T02`
 - Mode: `parallel`
 - Locks: `product-contracts`, `architecture-contracts`
 - Branch: `agent/product-01-t03`
 - Worktree: `../alon-ai-task-product-01-t03`
-- Acceptance evidence: [source](00-product-strategy/01-product-scope.md#L215) — Test evidence: parsed exact-set/order and provider-before-consumer tests; reject extra artifacts/results, downstream commercial invention, agent side effects, and active-cohort mutation.
+- Acceptance evidence: [source](00-product-strategy/01-product-scope.md#L185) — Test evidence: parsed exact-set/order/authority tests and rejection of legacy cohort semantics, automated social discovery, model-tier self-escalation, or active-stage mutation.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -90,13 +90,13 @@
 
 ### I1 / R1 — `PRODUCT-01-T04`
 
-- Source: [source](00-product-strategy/01-product-scope.md#L217)
+- Source: [source](00-product-strategy/01-product-scope.md#L187)
 - Dependencies: `PRODUCT-01-T03`
 - Mode: `parallel`
 - Locks: `product-contracts`
 - Branch: `agent/product-01-t04`
 - Worktree: `../alon-ai-task-product-01-t04`
-- Acceptance evidence: [source](00-product-strategy/01-product-scope.md#L217) — Test evidence: every planned feature points to a milestone gate.
+- Acceptance evidence: [source](00-product-strategy/01-product-scope.md#L187) — Test evidence: every planned feature points to a gate.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -110,13 +110,13 @@
 
 ### I1 / R1 — `PRODUCT-02-T01`
 
-- Source: [source](00-product-strategy/02-success-metrics.md#L142)
+- Source: [source](00-product-strategy/02-success-metrics.md#L127)
 - Dependencies: `PRODUCT-01-T02`
 - Mode: `parallel`
 - Locks: `product-contracts`
 - Branch: `agent/product-02-t01`
 - Worktree: `../alon-ai-task-product-02-t01`
-- Acceptance evidence: [source](00-product-strategy/02-success-metrics.md#L142) — Test evidence: schema, tuple/set equality, demand-floor boundary, and duplicate-name/version tests.
+- Acceptance evidence: [source](00-product-strategy/02-success-metrics.md#L127) — Test evidence: exact stage/order/bounds, decision enums, removal of legacy 600/1,000 semantics, premium-approval and batch/no-AI attribution tests.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -130,13 +130,13 @@
 
 ### I1 / R1 — `PRODUCT-02-T02`
 
-- Source: [source](00-product-strategy/02-success-metrics.md#L144)
+- Source: [source](00-product-strategy/02-success-metrics.md#L129)
 - Dependencies: `PRODUCT-02-T01`
 - Mode: `parallel`
 - Locks: `product-contracts`
 - Branch: `agent/product-02-t02`
 - Worktree: `../alon-ai-task-product-02-t02`
-- Acceptance evidence: [source](00-product-strategy/02-success-metrics.md#L144) — Test evidence: completeness query and operator signature.
+- Acceptance evidence: [source](00-product-strategy/02-success-metrics.md#L129) — Test evidence: source/time/currency/tier completeness.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -356,7 +356,7 @@
 - Locks: `test-command-registry`
 - Branch: `agent/test-01-t02`
 - Worktree: `../alon-ai-task-test-01-t02`
-- Acceptance evidence: [source](10-testing/01-testing-strategy.md#L163) — Test evidence: `T7-DOC-CONTRACT`, including exact 24 calls/zero runner recursion, `/tmp` positive, malicious handler/runner symlink/wrong-root/hash, unavailable=`30`, target mismatch=`50`, missing artifact=`40`, the reachable `T7-AWS-WITNESS-ACCEPT` row, and set-equality negatives.
+- Acceptance evidence: [source](10-testing/01-testing-strategy.md#L163) — Test evidence: `T7-DOC-CONTRACT`, including exact 24 calls/zero runner recursion, `/tmp` positive, malicious handler/runner symlink/wrong-root/hash, unavailable=`30`, target mismatch=`50`, missing artifact=`40`, the reachable `T7-R2-RECOVERY-ACCEPT` row, and set-equality negatives.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -1502,13 +1502,13 @@
 
 ### I2 / R2 — `PROVIDER-03-T01`
 
-- Source: [source](05-providers/03-model-provider.md#L106)
+- Source: [source](05-providers/03-model-provider.md#L65)
 - Dependencies: `AGENT-01-T01`, `DB-01-T01`
 - Mode: `parallel`
 - Locks: `provider-contracts`
 - Branch: `agent/provider-03-t01`
 - Worktree: `../alon-ai-task-provider-03-t01`
-- Acceptance evidence: [source](05-providers/03-model-provider.md#L106) — Test evidence: `test_model_capability_wire_is_byte_exact_with_agent01`.
+- Acceptance evidence: [source](05-providers/03-model-provider.md#L65) — Test evidence: exact schema, NO_AI/no-call, tier/reason, Mini-shortlist, Premium-approval and batch-mode negatives.
 - Optional acceptance commands: none
 - Merge order: 2
 
@@ -1546,13 +1546,13 @@
 
 ### I2 / R2 — `PROVIDER-03-T02`
 
-- Source: [source](05-providers/03-model-provider.md#L108)
+- Source: [source](05-providers/03-model-provider.md#L67)
 - Dependencies: `PROVIDER-03-T01`
 - Mode: `parallel`
 - Locks: `provider-contracts`
 - Branch: `agent/provider-03-t02`
 - Worktree: `../alon-ai-task-provider-03-t02`
-- Acceptance evidence: [source](05-providers/03-model-provider.md#L108) — Test evidence: fake HTTP status/status-output/refusal/schema/usage matrix; fake-HTTP execution of a fresh unpromoted signed candidate-configuration fixture succeeds under isolated evaluation authority with all ceilings intact; the identical context fails product composition before credential access; missing signature/reservation, drift and non-model/product authority fail closed.
+- Acceptance evidence: [source](05-providers/03-model-provider.md#L67) — Test evidence: fake HTTP/batch status/refusal/schema/usage/partial-result matrix and tier mismatch denial.
 - Optional acceptance commands: none
 - Merge order: 2
 
@@ -1590,13 +1590,13 @@
 
 ### I2 / R2 — `PROVIDER-03-T03`
 
-- Source: [source](05-providers/03-model-provider.md#L110)
+- Source: [source](05-providers/03-model-provider.md#L69)
 - Dependencies: `PROVIDER-03-T02`
 - Mode: `parallel`
 - Locks: `provider-contracts`
 - Branch: `agent/provider-03-t03`
 - Worktree: `../alon-ai-task-provider-03-t03`
-- Acceptance evidence: [source](05-providers/03-model-provider.md#L110) — Test evidence: `test_model_deadline_cancel_rate_token_and_cost_boundaries_have_exact_call_count`.
+- Acceptance evidence: [source](05-providers/03-model-provider.md#L69) — Test evidence: deterministic opportunities make zero model calls; Mini/Premium escalation attempts fail; timeout/cancel/discrepancy exact call counts.
 - Optional acceptance commands: none
 - Merge order: 2
 
@@ -1634,13 +1634,13 @@
 
 ### I2 / R2 — `PROVIDER-03-T04`
 
-- Source: [source](05-providers/03-model-provider.md#L112)
+- Source: [source](05-providers/03-model-provider.md#L71)
 - Dependencies: `PROVIDER-03-T03`
 - Mode: `parallel`
 - Locks: `provider-contracts`
 - Branch: `agent/provider-03-t04`
 - Worktree: `../alon-ai-task-provider-03-t04`
-- Acceptance evidence: [source](05-providers/03-model-provider.md#L112) — Test evidence: tamper/cross-capability/extra-field/zero-network tests.
+- Acceptance evidence: [source](05-providers/03-model-provider.md#L71) — Test evidence: tamper/cross-tier/cross-mode/extra-field/zero-network cases.
 - Optional acceptance commands: none
 - Merge order: 2
 
@@ -1782,13 +1782,13 @@
 
 ### I1 / R1 — `AGENT-11-T01`
 
-- Source: [source](04-agents/05-lead-discovery-agent.md#L56)
+- Source: [source](04-agents/05-lead-discovery-agent.md#L44)
 - Dependencies: `AGENT-03-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-03-T03`
 - Mode: `parallel`
 - Locks: `agent-runtime`
 - Branch: `agent/agent-11-t01`
 - Worktree: `../alon-ai-task-agent-11-t01`
-- Acceptance evidence: [source](04-agents/05-lead-discovery-agent.md#L56) — Test evidence: strict schema, hash/version and missing-provider-input cases.
+- Acceptance evidence: [source](04-agents/05-lead-discovery-agent.md#L44) — Test evidence: strict schema, wrong automated source, missing provider input and unsupported identity cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -1826,13 +1826,13 @@
 
 ### I1 / R1 — `AGENT-11-T02`
 
-- Source: [source](04-agents/05-lead-discovery-agent.md#L58)
+- Source: [source](04-agents/05-lead-discovery-agent.md#L46)
 - Dependencies: `AGENT-11-T01`, `AGENT-01-T02`
 - Mode: `parallel`
 - Locks: `agent-runtime`
 - Branch: `agent/agent-11-t02`
 - Worktree: `../alon-ai-task-agent-11-t02`
-- Acceptance evidence: [source](04-agents/05-lead-discovery-agent.md#L58) — Test evidence: tool denial, timeout, cancellation and all numeric boundary cases.
+- Acceptance evidence: [source](04-agents/05-lead-discovery-agent.md#L46) — Test evidence: no-AI path, Nano routing, Mini/Premium/source escalation denial, timeout/cancellation.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -1902,13 +1902,13 @@
 
 ### I2 / R2 — `PROVIDER-08-T01`
 
-- Source: [source](05-providers/08-lead-discovery-provider.md#L51)
+- Source: [source](05-providers/08-lead-discovery-provider.md#L70)
 - Dependencies: `AGENT-01-T01`, `DB-01-T01`
 - Mode: `parallel`
 - Locks: `provider-contracts`
 - Branch: `agent/provider-08-t01`
 - Worktree: `../alon-ai-task-provider-08-t01`
-- Acceptance evidence: [source](05-providers/08-lead-discovery-provider.md#L51) — Test evidence: schema/hash/timeout/unknown-source/cursor-splice negatives.
+- Acceptance evidence: [source](05-providers/08-lead-discovery-provider.md#L70) — Test evidence: schema/hash/timeout/unknown-source/social-source/cursor-splice negatives.
 - Optional acceptance commands: none
 - Merge order: 2
 
@@ -1934,13 +1934,13 @@
 
 ### I2 / R2 — `PROVIDER-08-T02`
 
-- Source: [source](05-providers/08-lead-discovery-provider.md#L53)
+- Source: [source](05-providers/08-lead-discovery-provider.md#L72)
 - Dependencies: `PROVIDER-08-T01`
 - Mode: `parallel`
 - Locks: `provider-contracts`
 - Branch: `agent/provider-08-t02`
 - Worktree: `../alon-ai-task-provider-08-t02`
-- Acceptance evidence: [source](05-providers/08-lead-discovery-provider.md#L53) — Test evidence: duplicates, conflicting names/locations, missing identities, prompt injection and zero network.
+- Acceptance evidence: [source](05-providers/08-lead-discovery-provider.md#L72) — Test evidence: duplicates, conflicting names/locations, missing identities, injection text, unsupported contact fields and zero network.
 - Optional acceptance commands: none
 - Merge order: 2
 
@@ -2045,8 +2045,8 @@
 
 ## Wave 87 — M3
 
-- Agent count: 2 implementer(s) and 2 reviewer(s)
-- Base prerequisite barrier: `PRODUCT-02-T02`, `DB-03-T04`, `AGENT-01-T01`, `AGENT-10-T01`, `AGENT-03-T01`, `AGENT-07-T01`, `DB-05-T05`
+- Agent count: 3 implementer(s) and 3 reviewer(s)
+- Base prerequisite barrier: `PRODUCT-02-T02`, `DB-03-T04`, `AGENT-01-T01`, `AGENT-10-T01`, `AGENT-03-T01`, `AGENT-07-T01`, `PROVIDER-04-T02`, `DB-04-T03`, `OBS-03-T02`, `DB-05-T05`
 
 ### I1 / R1 — `AGENT-08-T01`
 
@@ -2062,23 +2062,35 @@
 
 ### I2 / R2 — `PRODUCT-02-T03`
 
-- Source: [source](00-product-strategy/02-success-metrics.md#L146)
+- Source: [source](00-product-strategy/02-success-metrics.md#L131)
 - Dependencies: `PRODUCT-02-T02`, `DB-05-T05`
 - Mode: `parallel`
-- Locks: `backend-domain`, `telemetry-catalog`
+- Locks: `product-contracts`, `telemetry-catalog`
 - Branch: `agent/product-02-t03`
 - Worktree: `../alon-ai-task-product-02-t03`
-- Acceptance evidence: [source](00-product-strategy/02-success-metrics.md#L146) — Test evidence: golden datasets including zero denominators, duplicates, late replies, bounces, FX conversion, negotiated margins, cancelled/rescheduled bookings, and cross-campaign strategy attribution.
+- Acceptance evidence: [source](00-product-strategy/02-success-metrics.md#L131) — Test evidence: late/missing/currency/tier/selection-bias cases.
 - Optional acceptance commands: none
 - Merge order: 2
 
-- Newly unlocked tasks: `AGENT-08-T02`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+### I3 / R3 — `PROVIDER-04-T03`
+
+- Source: [source](05-providers/04-search-provider.md#L106)
+- Dependencies: `PROVIDER-04-T02`, `OBS-03-T02`, `DB-04-T03`
+- Mode: `parallel`
+- Locks: `provider-contracts`, `backend-domain`, `agent-artifacts`
+- Branch: `agent/provider-04-t03`
+- Worktree: `../alon-ai-task-provider-04-t03`
+- Acceptance evidence: [source](05-providers/04-search-provider.md#L106) — Test evidence: failure injection and total/hash equality.
+- Optional acceptance commands: none
+- Merge order: 3
+
+- Newly unlocked tasks: `AGENT-08-T02`, `PROVIDER-04-T04`, `PROVIDER-06-T02`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
 ## Wave 88 — M3
 
-- Agent count: 2 implementer(s) and 2 reviewer(s)
-- Base prerequisite barrier: `AGENT-01-T02`, `AGENT-08-T01`, `PROVIDER-04-T02`, `DB-04-T03`, `OBS-03-T02`
+- Agent count: 3 implementer(s) and 3 reviewer(s)
+- Base prerequisite barrier: `AGENT-01-T02`, `AGENT-08-T01`, `OBS-03-T02`, `PROVIDER-04-T03`
 
 ### I1 / R1 — `AGENT-08-T02`
 
@@ -2089,38 +2101,6 @@
 - Branch: `agent/agent-08-t02`
 - Worktree: `../alon-ai-task-agent-08-t02`
 - Acceptance evidence: [source](04-agents/09-reply-evaluation-and-negotiation-agent.md#L60) — Test evidence: tool denial, timeout, cancellation and all numeric boundary cases.
-- Optional acceptance commands: none
-- Merge order: 1
-
-### I2 / R2 — `PROVIDER-04-T03`
-
-- Source: [source](05-providers/04-search-provider.md#L106)
-- Dependencies: `PROVIDER-04-T02`, `OBS-03-T02`, `DB-04-T03`
-- Mode: `parallel`
-- Locks: `provider-contracts`, `backend-domain`, `agent-artifacts`
-- Branch: `agent/provider-04-t03`
-- Worktree: `../alon-ai-task-provider-04-t03`
-- Acceptance evidence: [source](05-providers/04-search-provider.md#L106) — Test evidence: failure injection and total/hash equality.
-- Optional acceptance commands: none
-- Merge order: 2
-
-- Newly unlocked tasks: `PROVIDER-04-T04`, `PROVIDER-06-T02`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
-- Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
-
-## Wave 89 — M3
-
-- Agent count: 3 implementer(s) and 3 reviewer(s)
-- Base prerequisite barrier: `DB-02-T04`, `DB-04-T01`, `AGENT-01-T01`, `AGENT-10-T01`, `AGENT-03-T01`, `OBS-03-T02`, `PROVIDER-04-T03`
-
-### I1 / R1 — `AGENT-09-T01`
-
-- Source: [source](04-agents/10-experiment-evaluation-agent.md#L56)
-- Dependencies: `AGENT-03-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-02-T04`, `DB-04-T01`
-- Mode: `parallel`
-- Locks: `agent-runtime`
-- Branch: `agent/agent-09-t01`
-- Worktree: `../alon-ai-task-agent-09-t01`
-- Acceptance evidence: [source](04-agents/10-experiment-evaluation-agent.md#L56) — Test evidence: strict schema, hash/version and missing-provider-input cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2148,23 +2128,23 @@
 - Optional acceptance commands: none
 - Merge order: 3
 
-- Newly unlocked tasks: `AGENT-09-T02`, `AGENT-12-T01`, `PROVIDER-04-T05`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Newly unlocked tasks: `PROVIDER-04-T05`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 90 — M3
+## Wave 89 — M3
 
 - Agent count: 2 implementer(s) and 2 reviewer(s)
-- Base prerequisite barrier: `AGENT-01-T02`, `AGENT-09-T01`, `PROVIDER-04-T04`
+- Base prerequisite barrier: `DB-02-T04`, `DB-04-T01`, `AGENT-01-T01`, `AGENT-10-T01`, `AGENT-03-T01`, `PROVIDER-04-T04`
 
-### I1 / R1 — `AGENT-09-T02`
+### I1 / R1 — `AGENT-09-T01`
 
-- Source: [source](04-agents/10-experiment-evaluation-agent.md#L58)
-- Dependencies: `AGENT-09-T01`, `AGENT-01-T02`
+- Source: [source](04-agents/10-experiment-evaluation-agent.md#L56)
+- Dependencies: `AGENT-03-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-02-T04`, `DB-04-T01`
 - Mode: `parallel`
 - Locks: `agent-runtime`
-- Branch: `agent/agent-09-t02`
-- Worktree: `../alon-ai-task-agent-09-t02`
-- Acceptance evidence: [source](04-agents/10-experiment-evaluation-agent.md#L58) — Test evidence: tool denial, timeout, cancellation and all numeric boundary cases.
+- Branch: `agent/agent-09-t01`
+- Worktree: `../alon-ai-task-agent-09-t01`
+- Acceptance evidence: [source](04-agents/10-experiment-evaluation-agent.md#L56) — Test evidence: strict schema, hash/version and missing-provider-input cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2180,23 +2160,23 @@
 - Optional acceptance commands: none
 - Merge order: 2
 
-- Newly unlocked tasks: `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Newly unlocked tasks: `AGENT-09-T02`, `AGENT-12-T01`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 91 — M3
+## Wave 90 — M3
 
 - Agent count: 2 implementer(s) and 2 reviewer(s)
-- Base prerequisite barrier: `DB-04-T01`, `AGENT-01-T01`, `AGENT-10-T01`, `AGENT-09-T01`, `DB-04-T03`, `PROVIDER-05-T02`, `OBS-03-T02`
+- Base prerequisite barrier: `AGENT-01-T02`, `AGENT-09-T01`, `DB-04-T03`, `PROVIDER-05-T02`, `OBS-03-T02`
 
-### I1 / R1 — `AGENT-12-T01`
+### I1 / R1 — `AGENT-09-T02`
 
-- Source: [source](04-agents/11-global-learning-engine.md#L57)
-- Dependencies: `AGENT-09-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-04-T01`
+- Source: [source](04-agents/10-experiment-evaluation-agent.md#L58)
+- Dependencies: `AGENT-09-T01`, `AGENT-01-T02`
 - Mode: `parallel`
 - Locks: `agent-runtime`
-- Branch: `agent/agent-12-t01`
-- Worktree: `../alon-ai-task-agent-12-t01`
-- Acceptance evidence: [source](04-agents/11-global-learning-engine.md#L57) — Test evidence: strict schema, hash/version and missing-provider-input cases.
+- Branch: `agent/agent-09-t02`
+- Worktree: `../alon-ai-task-agent-09-t02`
+- Acceptance evidence: [source](04-agents/10-experiment-evaluation-agent.md#L58) — Test evidence: tool denial, timeout, cancellation and all numeric boundary cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2212,23 +2192,23 @@
 - Optional acceptance commands: none
 - Merge order: 2
 
-- Newly unlocked tasks: `AGENT-12-T02`, `PROVIDER-05-T04`, `PROVIDER-08-T03`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Newly unlocked tasks: `PROVIDER-05-T04`, `PROVIDER-08-T03`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 92 — M3
+## Wave 91 — M3
 
 - Agent count: 2 implementer(s) and 2 reviewer(s)
-- Base prerequisite barrier: `AGENT-01-T02`, `AGENT-12-T01`, `PROVIDER-05-T03`
+- Base prerequisite barrier: `DB-04-T01`, `AGENT-01-T01`, `AGENT-10-T01`, `AGENT-09-T01`, `PROVIDER-05-T03`
 
-### I1 / R1 — `AGENT-12-T02`
+### I1 / R1 — `AGENT-12-T01`
 
-- Source: [source](04-agents/11-global-learning-engine.md#L59)
-- Dependencies: `AGENT-12-T01`, `AGENT-01-T02`
+- Source: [source](04-agents/11-global-learning-engine.md#L57)
+- Dependencies: `AGENT-09-T01`, `AGENT-10-T01`, `AGENT-01-T01`, `DB-04-T01`
 - Mode: `parallel`
 - Locks: `agent-runtime`
-- Branch: `agent/agent-12-t02`
-- Worktree: `../alon-ai-task-agent-12-t02`
-- Acceptance evidence: [source](04-agents/11-global-learning-engine.md#L59) — Test evidence: tool denial, timeout, cancellation and all numeric boundary cases.
+- Branch: `agent/agent-12-t01`
+- Worktree: `../alon-ai-task-agent-12-t01`
+- Acceptance evidence: [source](04-agents/11-global-learning-engine.md#L57) — Test evidence: strict schema, hash/version and missing-provider-input cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2244,23 +2224,23 @@
 - Optional acceptance commands: none
 - Merge order: 2
 
-- Newly unlocked tasks: `PROVIDER-05-T05`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Newly unlocked tasks: `AGENT-12-T02`, `PROVIDER-05-T05`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 93 — M3
+## Wave 92 — M3
 
 - Agent count: 2 implementer(s) and 2 reviewer(s)
-- Base prerequisite barrier: `AGENT-01-T02`, `OBS-03-T02`, `PROVIDER-05-T04`
+- Base prerequisite barrier: `AGENT-01-T02`, `AGENT-12-T01`, `PROVIDER-05-T04`
 
-### I1 / R1 — `AGENT-01-T03`
+### I1 / R1 — `AGENT-12-T02`
 
-- Source: [source](04-agents/01-agent-runtime-and-contracts.md#L701)
-- Dependencies: `AGENT-01-T02`, `OBS-03-T02`
+- Source: [source](04-agents/11-global-learning-engine.md#L59)
+- Dependencies: `AGENT-12-T01`, `AGENT-01-T02`
 - Mode: `parallel`
 - Locks: `agent-runtime`
-- Branch: `agent/agent-01-t03`
-- Worktree: `../alon-ai-task-agent-01-t03`
-- Acceptance evidence: [source](04-agents/01-agent-runtime-and-contracts.md#L701) — Test evidence: fake-model/tool timeout/cancel/budget boundary matrix; fake-HTTP execution of a fresh unpromoted signed candidate-configuration fixture succeeds under isolated evaluation authority with all ceilings intact; the identical context fails product composition before credential access; missing signature/reservation, drift and non-model/product authority fail closed.
+- Branch: `agent/agent-12-t02`
+- Worktree: `../alon-ai-task-agent-12-t02`
+- Acceptance evidence: [source](04-agents/11-global-learning-engine.md#L59) — Test evidence: tool denial, timeout, cancellation and all numeric boundary cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2276,23 +2256,23 @@
 - Optional acceptance commands: none
 - Merge order: 2
 
-- Newly unlocked tasks: `AGENT-01-T04`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Newly unlocked tasks: `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 94 — M3
+## Wave 93 — M3
 
 - Agent count: 2 implementer(s) and 2 reviewer(s)
-- Base prerequisite barrier: `PROVIDER-06-T01`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `AGENT-01-T03`, `PROVIDER-04-T03`
+- Base prerequisite barrier: `AGENT-01-T02`, `PROVIDER-06-T01`, `OBS-03-T02`, `PROVIDER-04-T03`
 
-### I1 / R1 — `AGENT-01-T04`
+### I1 / R1 — `AGENT-01-T03`
 
-- Source: [source](04-agents/01-agent-runtime-and-contracts.md#L703)
-- Dependencies: `AGENT-01-T03`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`
+- Source: [source](04-agents/01-agent-runtime-and-contracts.md#L701)
+- Dependencies: `AGENT-01-T02`, `OBS-03-T02`
 - Mode: `parallel`
-- Locks: `agent-artifacts`, `backend-domain`
-- Branch: `agent/agent-01-t04`
-- Worktree: `../alon-ai-task-agent-01-t04`
-- Acceptance evidence: [source](04-agents/01-agent-runtime-and-contracts.md#L703) — Test evidence: failure injection at every write and event payload snapshot.
+- Locks: `agent-runtime`
+- Branch: `agent/agent-01-t03`
+- Worktree: `../alon-ai-task-agent-01-t03`
+- Acceptance evidence: [source](04-agents/01-agent-runtime-and-contracts.md#L701) — Test evidence: fake-model/tool timeout/cancel/budget boundary matrix; fake-HTTP execution of a fresh unpromoted signed candidate-configuration fixture succeeds under isolated evaluation authority with all ceilings intact; the identical context fails product composition before credential access; missing signature/reservation, drift and non-model/product authority fail closed.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2308,13 +2288,45 @@
 - Optional acceptance commands: none
 - Merge order: 2
 
-- Newly unlocked tasks: `AGENT-01-T05`, `AGENT-02-T03`, `AGENT-03-T03`, `AGENT-06-T03`, `AGENT-07-T03`, `AGENT-08-T03`, `AGENT-09-T03`, `AGENT-12-T03`, `AGENT-04-T03`, `PROVIDER-06-T03`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Newly unlocked tasks: `AGENT-01-T04`, `PROVIDER-06-T03`, `BACKEND-01-T02`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
+
+## Wave 94 — M3
+
+- Agent count: 2 implementer(s) and 2 reviewer(s)
+- Base prerequisite barrier: `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `AGENT-01-T03`, `PROVIDER-06-T02`
+
+### I1 / R1 — `AGENT-01-T04`
+
+- Source: [source](04-agents/01-agent-runtime-and-contracts.md#L703)
+- Dependencies: `AGENT-01-T03`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`
+- Mode: `parallel`
+- Locks: `agent-artifacts`, `backend-domain`
+- Branch: `agent/agent-01-t04`
+- Worktree: `../alon-ai-task-agent-01-t04`
+- Acceptance evidence: [source](04-agents/01-agent-runtime-and-contracts.md#L703) — Test evidence: failure injection at every write and event payload snapshot.
+- Optional acceptance commands: none
+- Merge order: 1
+
+### I2 / R2 — `PROVIDER-06-T03`
+
+- Source: [source](05-providers/06-enrichment-provider.md#L105)
+- Dependencies: `PROVIDER-06-T02`
+- Mode: `parallel`
+- Locks: `provider-contracts`
+- Branch: `agent/provider-06-t03`
+- Worktree: `../alon-ai-task-provider-06-t03`
+- Acceptance evidence: [source](05-providers/06-enrichment-provider.md#L105) — Test evidence: tamper, cross-capability, zero-network, usage, and parity tests.
+- Optional acceptance commands: none
+- Merge order: 2
+
+- Newly unlocked tasks: `AGENT-01-T05`, `AGENT-02-T03`, `AGENT-03-T03`, `AGENT-06-T03`, `AGENT-07-T03`, `AGENT-08-T03`, `AGENT-09-T03`, `AGENT-12-T03`, `AGENT-04-T03`, `ARCH-02-T03`, `AGENT-05-T03`, `BACKEND-01-T02`, `PROVIDER-06-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
 ## Wave 95 — M3
 
 - Agent count: 3 implementer(s) and 3 reviewer(s)
-- Base prerequisite barrier: `AGENT-02-T02`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `AGENT-01-T04`, `PROVIDER-06-T02`
+- Base prerequisite barrier: `TEST-04-T01`, `ARCH-02-T02`, `AGENT-02-T02`, `PROVIDER-03-T04`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `AGENT-01-T04`, `PROVIDER-04-T04`, `PROVIDER-05-T04`, `PROVIDER-06-T03`
 
 ### I1 / R1 — `AGENT-01-T05`
 
@@ -2340,25 +2352,25 @@
 - Optional acceptance commands: none
 - Merge order: 2
 
-### I3 / R3 — `PROVIDER-06-T03`
+### I3 / R3 — `ARCH-02-T03`
 
-- Source: [source](05-providers/06-enrichment-provider.md#L105)
-- Dependencies: `PROVIDER-06-T02`
+- Source: [source](01-architecture/02-module-boundaries.md#L118)
+- Dependencies: `ARCH-02-T02`, `PROVIDER-03-T04`, `PROVIDER-04-T04`, `PROVIDER-05-T04`, `PROVIDER-06-T03`, `TEST-04-T01`
 - Mode: `parallel`
-- Locks: `provider-contracts`
-- Branch: `agent/provider-06-t03`
-- Worktree: `../alon-ai-task-provider-06-t03`
-- Acceptance evidence: [source](05-providers/06-enrichment-provider.md#L105) — Test evidence: tamper, cross-capability, zero-network, usage, and parity tests.
+- Locks: `architecture-contracts`, `provider-contracts`
+- Branch: `agent/arch-02-t03`
+- Worktree: `../alon-ai-task-arch-02-t03`
+- Acceptance evidence: [source](01-architecture/02-module-boundaries.md#L118) — Test evidence: each contract suite passes against its signed fixture/simulator and a fake replacement adapter.
 - Optional acceptance commands: none
 - Merge order: 3
 
-- Newly unlocked tasks: `ARCH-02-T03`, `AGENT-05-T03`, `BACKEND-01-T02`, `PROVIDER-06-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Newly unlocked tasks: `BACKEND-01-T02`, `PROVIDER-06-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
 ## Wave 96 — M3
 
-- Agent count: 2 implementer(s) and 2 reviewer(s)
-- Base prerequisite barrier: `TEST-04-T01`, `ARCH-02-T02`, `AGENT-03-T02`, `PROVIDER-03-T04`, `BACKEND-01-T01`, `DB-04-T04`, `BACKEND-03-T03`, `OBS-03-T02`, `AGENT-01-T04`, `PROVIDER-04-T04`, `PROVIDER-05-T04`, `PROVIDER-06-T03`
+- Agent count: 1 implementer(s) and 1 reviewer(s)
+- Base prerequisite barrier: `AGENT-03-T02`, `BACKEND-01-T01`, `DB-04-T04`, `BACKEND-03-T03`, `OBS-03-T02`, `AGENT-01-T04`
 
 ### I1 / R1 — `AGENT-03-T03`
 
@@ -2371,18 +2383,6 @@
 - Acceptance evidence: [source](04-agents/04-offer-design-agent.md#L63) — Test evidence: offer_requires_idea_and_market_versions; complete_commercial_envelope_and_margin_floor; claim_evidence_coverage; downstream_commercial_redefinition_is_rejected.
 - Optional acceptance commands: none
 - Merge order: 1
-
-### I2 / R2 — `ARCH-02-T03`
-
-- Source: [source](01-architecture/02-module-boundaries.md#L118)
-- Dependencies: `ARCH-02-T02`, `PROVIDER-03-T04`, `PROVIDER-04-T04`, `PROVIDER-05-T04`, `PROVIDER-06-T03`, `TEST-04-T01`
-- Mode: `parallel`
-- Locks: `architecture-contracts`, `provider-contracts`
-- Branch: `agent/arch-02-t03`
-- Worktree: `../alon-ai-task-arch-02-t03`
-- Acceptance evidence: [source](01-architecture/02-module-boundaries.md#L118) — Test evidence: each contract suite passes against its signed fixture/simulator and a fake replacement adapter.
-- Optional acceptance commands: none
-- Merge order: 2
 
 - Newly unlocked tasks: `BACKEND-01-T02`, `PROVIDER-06-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
@@ -2534,13 +2534,13 @@
 
 ### I1 / R1 — `PROVIDER-08-T03`
 
-- Source: [source](05-providers/08-lead-discovery-provider.md#L55)
+- Source: [source](05-providers/08-lead-discovery-provider.md#L74)
 - Dependencies: `PROVIDER-08-T02`, `PROVIDER-05-T03`
 - Mode: `parallel`
 - Locks: `provider-contracts`, `agent-artifacts`
 - Branch: `agent/provider-08-t03`
 - Worktree: `../alon-ai-task-provider-08-t03`
-- Acceptance evidence: [source](05-providers/08-lead-discovery-provider.md#L55) — Test evidence: request/result/ledger parity, redaction, cross-source identity conflicts and no qualification/merge writes.
+- Acceptance evidence: [source](05-providers/08-lead-discovery-provider.md#L74) — Test evidence: ledger parity, redaction, dedupe conflicts, manual-source isolation and no qualification writes.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2554,13 +2554,13 @@
 
 ### I1 / R1 — `AGENT-11-T03`
 
-- Source: [source](04-agents/05-lead-discovery-agent.md#L60)
+- Source: [source](04-agents/05-lead-discovery-agent.md#L48)
 - Dependencies: `AGENT-11-T02`, `AGENT-01-T04`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `PROVIDER-08-T03`
 - Mode: `parallel`
 - Locks: `agent-artifacts`, `backend-domain`
 - Branch: `agent/agent-11-t03`
 - Worktree: `../alon-ai-task-agent-11-t03`
-- Acceptance evidence: [source](04-agents/05-lead-discovery-agent.md#L60) — Test evidence: cross_source_deduplication_and_identity_conflict; preliminary_rejection_has_no_deep_research; unknown_required_filter_fails_closed; fabricated_identity_and_unapproved_source_rejected.
+- Acceptance evidence: [source](04-agents/05-lead-discovery-agent.md#L48) — Test evidence: Brave duplicates/conflicts, preliminary rejection no deep research, fabricated owner/contact rejection, social automation rejection, manual-evidence separation.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2694,13 +2694,13 @@
 
 ### I1 / R1 — `AGENT-11-T04`
 
-- Source: [source](04-agents/05-lead-discovery-agent.md#L62)
+- Source: [source](04-agents/05-lead-discovery-agent.md#L50)
 - Dependencies: `AGENT-11-T03`, `AGENT-10-T03`, `AGENT-10-T04`
 - Mode: `serial`
 - Locks: `agent-runtime`, `agent-artifacts`
 - Branch: `agent/agent-11-t04`
 - Worktree: `../alon-ai-task-agent-11-t04`
-- Acceptance evidence: [source](04-agents/05-lead-discovery-agent.md#L62) — Test evidence: missing capture, fixture drift, hard failure and threshold-edge rejection.
+- Acceptance evidence: [source](04-agents/05-lead-discovery-agent.md#L50) — Test evidence: missing capture, fixture drift, unsupported source/model-tier escalation and threshold-edge rejection.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2914,13 +2914,13 @@
 
 ### I1 / R1 — `PROVIDER-03-T05`
 
-- Source: [source](05-providers/03-model-provider.md#L114)
+- Source: [source](05-providers/03-model-provider.md#L73)
 - Dependencies: `PROVIDER-03-T04`, `AGENT-10-T05`
 - Mode: `serial`
 - Locks: `provider-contracts`, `milestone-gate`
 - Branch: `agent/provider-03-t05`
 - Worktree: `../alon-ai-task-provider-03-t05`
-- Acceptance evidence: [source](05-providers/03-model-provider.md#L114) — Test evidence: unpromoted/stale/spliced configuration, disabled evaluation credential, missing reservation and exact promoted positive fixtures.
+- Acceptance evidence: [source](05-providers/03-model-provider.md#L73) — Test evidence: stale/unpromoted/routing-spliced/Premium-without-approval/batch-bypass denial.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -2934,13 +2934,13 @@
 
 ### I1 / R1 — `PROVIDER-03-T06`
 
-- Source: [source](05-providers/03-model-provider.md#L116)
+- Source: [source](05-providers/03-model-provider.md#L75)
 - Dependencies: `PROVIDER-03-T05`
 - Mode: `parallel`
 - Locks: `provider-contracts`
 - Branch: `agent/provider-03-t06`
 - Worktree: `../alon-ai-task-provider-03-t06`
-- Acceptance evidence: [source](05-providers/03-model-provider.md#L116) — Test evidence: provider parity and static/runtime graph.
+- Acceptance evidence: [source](05-providers/03-model-provider.md#L75) — Test evidence: provider parity by tier/mode and authority graph.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -3550,13 +3550,13 @@
 
 ### I1 / R1 — `PROVIDER-08-T04`
 
-- Source: [source](05-providers/08-lead-discovery-provider.md#L57)
+- Source: [source](05-providers/08-lead-discovery-provider.md#L76)
 - Dependencies: `PROVIDER-08-T03`, `OBS-03-T02`
 - Mode: `serial`
 - Locks: `provider-contracts`, `live-environment`
 - Branch: `agent/provider-08-t04`
 - Worktree: `../alon-ai-task-provider-08-t04`
-- Acceptance evidence: [source](05-providers/08-lead-discovery-provider.md#L57) — Test evidence: unreviewed social/directory source denial, cap/cursor/revocation and factual-provenance cases.
+- Acceptance evidence: [source](05-providers/08-lead-discovery-provider.md#L76) — Test evidence: Google Maps/social/directory automation denial, caps, revocation, provenance and zero-result cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5086,13 +5086,13 @@
 
 ### I1 / R1 — `WF-08-T01`
 
-- Source: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L47)
+- Source: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L54)
 - Dependencies: `WF-05-T04`, `AGENT-09-T04`, `ARCH-03-T01`, `BACKEND-01-T09`
 - Mode: `parallel`
 - Locks: `workflow-runtime`, `backend-domain`
 - Branch: `agent/wf-08-t01`
 - Worktree: `../alon-ai-task-wf-08-t01`
-- Acceptance evidence: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L47) — Test evidence: unknown ordinal, duplicate closure and incomplete outcome cases.
+- Acceptance evidence: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L54) — Test evidence: unknown stage, missing manual-review/scale authorization, duplicate closure, incomplete outcomes.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5106,13 +5106,13 @@
 
 ### I1 / R1 — `WF-08-T02`
 
-- Source: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L49)
+- Source: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L56)
 - Dependencies: `WF-08-T01`
 - Mode: `parallel`
 - Locks: `workflow-runtime`, `agent-artifacts`
 - Branch: `agent/wf-08-t02`
 - Worktree: `../alon-ai-task-wf-08-t02`
-- Acceptance evidence: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L49) — Test evidence: late observation, hash splice, missing cost and denominator cases.
+- Acceptance evidence: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L56) — Test evidence: late observation, hash splice, missing cost, wrong denominator and shadow-as-demand cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5126,13 +5126,13 @@
 
 ### I1 / R1 — `WF-08-T03`
 
-- Source: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L51)
+- Source: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L58)
 - Dependencies: `WF-08-T02`
 - Mode: `parallel`
 - Locks: `workflow-runtime`, `backend-domain`
 - Branch: `agent/wf-08-t03`
 - Worktree: `../alon-ai-task-wf-08-t03`
-- Acceptance evidence: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L51) — Test evidence: only CONTINUE advances, terminal 1,000 ceiling and replay uniqueness.
+- Acceptance evidence: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L58) — Test evidence: only CONTINUE progresses; scale requires separate exact authorization; no 600/1,000 path.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5146,13 +5146,13 @@
 
 ### I1 / R1 — `WF-08-T04`
 
-- Source: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L53)
+- Source: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L60)
 - Dependencies: `WF-08-T03`
 - Mode: `serial`
 - Locks: `workflow-runtime`, `milestone-gate`
 - Branch: `agent/wf-08-t04`
 - Worktree: `../alon-ai-task-wf-08-t04`
-- Acceptance evidence: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L53) — Test evidence: no fifth cohort, lost trigger, mutable evidence or double decision.
+- Acceptance evidence: [source](03-workflows/08-checkpoint-evaluation-workflow.md#L60) — Test evidence: shadow no-demand trigger, 20/50 limits, scale authorization, no automatic larger tranche, double-decision prevention.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5166,13 +5166,13 @@
 
 ### I1 / R1 — `WF-09-T01`
 
-- Source: [source](03-workflows/09-global-learning-workflow.md#L50)
+- Source: [source](03-workflows/09-global-learning-workflow.md#L56)
 - Dependencies: `WF-08-T03`, `AGENT-12-T04`, `AGENT-10-T06`, `ARCH-03-T01`, `BACKEND-01-T10`
 - Mode: `parallel`
 - Locks: `workflow-runtime`, `agent-artifacts`
 - Branch: `agent/wf-09-t01`
 - Worktree: `../alon-ai-task-wf-09-t01`
-- Acceptance evidence: [source](03-workflows/09-global-learning-workflow.md#L50) — Test evidence: open checkpoint, duplicate trigger, missing agent and invalid evidence denial.
+- Acceptance evidence: [source](03-workflows/09-global-learning-workflow.md#L56) — Test evidence: shadow/open checkpoint, duplicate trigger, missing agent, invalid evidence.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5186,13 +5186,13 @@
 
 ### I1 / R1 — `WF-09-T02`
 
-- Source: [source](03-workflows/09-global-learning-workflow.md#L52)
+- Source: [source](03-workflows/09-global-learning-workflow.md#L58)
 - Dependencies: `WF-09-T01`
 - Mode: `parallel`
 - Locks: `workflow-runtime`, `agent-artifacts`
 - Branch: `agent/wf-09-t02`
 - Worktree: `../alon-ai-task-wf-09-t02`
-- Acceptance evidence: [source](03-workflows/09-global-learning-workflow.md#L52) — Test evidence: weak evidence, unsafe mutation and self-certified promotion failures.
+- Acceptance evidence: [source](03-workflows/09-global-learning-workflow.md#L58) — Test evidence: weak 20/50 evidence, source expansion, Premium escalation, tranche enlargement and self-certified promotion fail.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5206,13 +5206,13 @@
 
 ### I1 / R1 — `WF-09-T03`
 
-- Source: [source](03-workflows/09-global-learning-workflow.md#L54)
+- Source: [source](03-workflows/09-global-learning-workflow.md#L60)
 - Dependencies: `WF-09-T02`
 - Mode: `parallel`
 - Locks: `workflow-runtime`, `backend-domain`
 - Branch: `agent/wf-09-t03`
 - Worktree: `../alon-ai-task-wf-09-t03`
-- Acceptance evidence: [source](03-workflows/09-global-learning-workflow.md#L54) — Test evidence: mid-cohort race, cross-campaign timing, future initialization and rollback compatibility.
+- Acceptance evidence: [source](03-workflows/09-global-learning-workflow.md#L60) — Test evidence: mid-stage race, 50→scale without authorization, cross-campaign timing, future initialization and rollback compatibility.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5226,13 +5226,13 @@
 
 ### I1 / R1 — `WF-09-T04`
 
-- Source: [source](03-workflows/09-global-learning-workflow.md#L56)
+- Source: [source](03-workflows/09-global-learning-workflow.md#L62)
 - Dependencies: `WF-09-T03`
 - Mode: `serial`
 - Locks: `workflow-runtime`, `milestone-gate`
 - Branch: `agent/wf-09-t04`
 - Worktree: `../alon-ai-task-wf-09-t04`
-- Acceptance evidence: [source](03-workflows/09-global-learning-workflow.md#L56) — Test evidence: no lost result, duplicate promotion, fifth result or historical mutation.
+- Acceptance evidence: [source](03-workflows/09-global-learning-workflow.md#L62) — Test evidence: no shadow demand learning, weak-evidence mutation, duplicate promotion, history rewrite or mid-stage activation.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -5672,7 +5672,7 @@
 - Locks: `frontend-client`
 - Branch: `agent/frontend-03-t04`
 - Worktree: `../alon-ai-task-frontend-03-t04`
-- Acceptance evidence: [source](07-frontend/03-experiment-control-center.md#L34) — Test evidence: weak evidence, late evidence and terminal 1,000 cases.
+- Acceptance evidence: [source](07-frontend/03-experiment-control-center.md#L34) — Test evidence: weak evidence, late evidence and terminal explicitly authorized 100–300 scale cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -6598,13 +6598,13 @@
 
 ### I1 / R1 — `INFRA-03-T01`
 
-- Source: [source](11-infrastructure/03-private-vps-deployment.md#L65)
+- Source: [source](11-infrastructure/03-private-vps-deployment.md#L70)
 - Dependencies: `INFRA-02-T02`
 - Mode: `serial`
 - Locks: `live-environment`
 - Branch: `agent/infra-03-t01`
 - Worktree: `../alon-ai-task-infra-03-t01`
-- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L65) — Test evidence: external port scan, lost-overlay recovery and hardening audit.
+- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L70) — Test evidence: public port scan, reboot/recovery, storage encryption and resource-envelope audit.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -6618,13 +6618,13 @@
 
 ### I1 / R1 — `INFRA-03-T02`
 
-- Source: [source](11-infrastructure/03-private-vps-deployment.md#L67)
+- Source: [source](11-infrastructure/03-private-vps-deployment.md#L72)
 - Dependencies: `INFRA-03-T01`, `INFRA-02-T02`
 - Mode: `serial`
 - Locks: `compose-topology`
 - Branch: `agent/infra-03-t02`
 - Worktree: `../alon-ai-task-infra-03-t02`
-- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L67) — Test evidence: network/capability/read-only/non-root/health/schema/controls tests.
+- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L72) — Test evidence: network/capability/health/schema/memory-pressure tests.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -6638,13 +6638,13 @@
 
 ### I1 / R1 — `INFRA-03-T03`
 
-- Source: [source](11-infrastructure/03-private-vps-deployment.md#L69)
+- Source: [source](11-infrastructure/03-private-vps-deployment.md#L74)
 - Dependencies: `INFRA-03-T02`, `SEC-03-T01`
 - Mode: `serial`
 - Locks: `security-runtime`
 - Branch: `agent/infra-03-t03`
 - Worktree: `../alon-ai-task-infra-03-t03`
-- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L69) — Test evidence: cross-purpose/version/environment denial, rotation/revoke/restart/backup.
+- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L74) — Test evidence: secret leak/cross-purpose/recovery-key-loss/rotation cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -6658,13 +6658,13 @@
 
 ### I1 / R1 — `INFRA-03-T04`
 
-- Source: [source](11-infrastructure/03-private-vps-deployment.md#L71)
+- Source: [source](11-infrastructure/03-private-vps-deployment.md#L76)
 - Dependencies: `INFRA-03-T03`
 - Mode: `serial`
 - Locks: `backup-restore`, `live-environment`
 - Branch: `agent/infra-03-t04`
 - Worktree: `../alon-ai-task-infra-03-t04`
-- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L71) — Test evidence: the complete CAS/Object-Lock/IAM/pgBackRest/account-lockout matrix, Google credential/KMS unavailable restore bootstrap, key rotation/loss and region mismatch; no emulator evidence.
+- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L76) — Test evidence: bad key/credential/bucket/region-like endpoint, truncated object, VPS-loss and cost/egress evidence.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -6678,13 +6678,13 @@
 
 ### I1 / R1 — `INFRA-03-T05`
 
-- Source: [source](11-infrastructure/03-private-vps-deployment.md#L73)
+- Source: [source](11-infrastructure/03-private-vps-deployment.md#L78)
 - Dependencies: `INFRA-03-T04`
 - Mode: `serial`
 - Locks: `live-environment`
 - Branch: `agent/infra-03-t05`
 - Worktree: `../alon-ai-task-infra-03-t05`
-- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L73) — Test evidence: Internet scan, spoofed forwarding, TLS renewal and wrong-host/path cases.
+- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L78) — Test evidence: unauthenticated access, direct-IP scan, wrong-host/path, tunnel-down and identity-recovery cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -6698,13 +6698,13 @@
 
 ### I1 / R1 — `INFRA-04-T01`
 
-- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L169)
+- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L65)
 - Dependencies: `INFRA-03-T04`
 - Mode: `serial`
 - Locks: `backup-restore`
 - Branch: `agent/infra-04-t01`
 - Worktree: `../alon-ai-task-infra-04-t01`
-- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L169) — Test evidence: duplicate, conflict, divergence, network, full-disk, key, clock, timeline, and Object-Lock cases.
+- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L65) — Test evidence: plaintext-object denial, wrong repository/key, WAL gap, credential-scope and upload/retry cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -6718,13 +6718,13 @@
 
 ### I1 / R1 — `INFRA-04-T02`
 
-- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L171)
+- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L67)
 - Dependencies: `INFRA-04-T01`
 - Mode: `serial`
 - Locks: `backup-restore`
 - Branch: `agent/infra-04-t02`
 - Worktree: `../alon-ai-task-infra-04-t02`
-- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L171) — Test evidence: interrupted/corrupt/wrong-version/missing-WAL/manifest/key/repository-divergence cases.
+- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L67) — Test evidence: corrupt/truncated/wrong-key/version/config mismatch.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7178,13 +7178,13 @@
 
 ### I1 / R1 — `INFRA-03-T06`
 
-- Source: [source](11-infrastructure/03-private-vps-deployment.md#L75)
+- Source: [source](11-infrastructure/03-private-vps-deployment.md#L80)
 - Dependencies: `INFRA-03-T05`, `BACKEND-02-T05`, `SEC-01-T02`
 - Mode: `serial`
 - Locks: `live-environment`
 - Branch: `agent/infra-03-t06`
 - Worktree: `../alon-ai-task-infra-03-t06`
-- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L75) — Test evidence: TEST-05/06 scanner/abuse/set-equality matrix.
+- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L80) — Test evidence: private-route isolation, method/path set equality and disabled state.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7218,13 +7218,13 @@
 
 ### I1 / R1 — `INFRA-03-T07`
 
-- Source: [source](11-infrastructure/03-private-vps-deployment.md#L77)
+- Source: [source](11-infrastructure/03-private-vps-deployment.md#L82)
 - Dependencies: `INFRA-03-T06`, `TEST-06-T02`, `INFRA-02-T04`
 - Mode: `serial`
 - Locks: `live-environment`
 - Branch: `agent/infra-03-t07`
 - Worktree: `../alon-ai-task-infra-03-t07`
-- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L77) — Test evidence: no data/authority drift under resource pressure/reboot.
+- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L82) — Test evidence: no data/authority drift under pressure/reboot and exact trigger evidence.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7238,13 +7238,13 @@
 
 ### I1 / R1 — `INFRA-03-T08`
 
-- Source: [source](11-infrastructure/03-private-vps-deployment.md#L79)
+- Source: [source](11-infrastructure/03-private-vps-deployment.md#L84)
 - Dependencies: `INFRA-03-T07`
 - Mode: `serial`
 - Locks: `compose-topology`
 - Branch: `agent/infra-03-t08`
 - Worktree: `../alon-ai-task-infra-03-t08`
-- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L79) — Test evidence: orphan/duplicate and unavailable-provider negatives.
+- Acceptance evidence: [source](11-infrastructure/03-private-vps-deployment.md#L84) — Test evidence: orphan/duplicate/legacy-GCE-or-AWS-mandatory assertions fail.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7258,13 +7258,13 @@
 
 ### I1 / R1 — `INFRA-04-T03`
 
-- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L173)
+- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L69)
 - Dependencies: `INFRA-04-T02`, `SEC-06-T02`
 - Mode: `serial`
 - Locks: `backup-restore`
 - Branch: `agent/infra-04-t03`
 - Worktree: `../alon-ai-task-infra-04-t03`
-- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L173) — Test evidence: P0-P9, exact marker/certificate/head preimages and receipts, one-authority validator, provider-survival truth table, prepared-only quarantine, authorization concurrency/fences, concurrent genesis/update, `200|409|412|timeout` strong-read reconciliation, version/ETag/checksum/Object-Lock/IAM negatives, committed-without-applied replay and applied-without-committed structural negatives.
+- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L69) — Test evidence: stale authorization, replay, concurrent prune/restore and missing audit proof.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7278,13 +7278,13 @@
 
 ### I1 / R1 — `INFRA-04-T04`
 
-- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L175)
+- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L71)
 - Dependencies: `INFRA-04-T03`, `SEC-06-T02`, `DB-06-T05`
 - Mode: `serial`
 - Locks: `backup-restore`
 - Branch: `agent/infra-04-t04`
 - Worktree: `../alon-ai-task-infra-04-t04`
-- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L175) — Test evidence: attempted legal/incident hold extension, chain dependency, wrong bucket/ID, overlong Object Lock and partial-delete replay.
+- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L71) — Test evidence: hold/active-chain/tombstone/replay/race cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7358,13 +7358,13 @@
 
 ### I1 / R1 — `INFRA-04-T05`
 
-- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L177)
+- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L73)
 - Dependencies: `INFRA-04-T04`
 - Mode: `serial`
-- Locks: `backup-restore`
+- Locks: `backup-restore`, `live-environment`
 - Branch: `agent/infra-04-t05`
 - Worktree: `../alon-ai-task-infra-04-t05`
-- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L177) — Test evidence: latest/point-in-time/corrupt/key-loss/expired-session/unresolved-attempt variants.
+- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L73) — Test evidence: latest/time/LSN, wrong key, provider unavailable, stale suppression and unresolved send/booking attempts.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7618,13 +7618,13 @@
 
 ### I1 / R1 — `INFRA-05-T01`
 
-- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L98)
+- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L77)
 - Dependencies: `OBS-02-T01`, `OBS-01-T03`, `BACKEND-06-T02`
-- Mode: `serial`
-- Locks: `live-environment`
+- Mode: `parallel`
+- Locks: `telemetry-catalog`
 - Branch: `agent/infra-05-t01`
 - Worktree: `../alon-ai-task-infra-05-t01`
-- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L98) — Test evidence: label/cardinality/canary/drop/restart/count mismatch cases.
+- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L77) — Test evidence: missing/late/PII/redaction and authoritative-vs-cache divergence cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7638,13 +7638,13 @@
 
 ### I1 / R1 — `INFRA-05-T02`
 
-- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L100)
+- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L79)
 - Dependencies: `INFRA-05-T01`, `OBS-02-T04`, `OBS-05-T01`, `OBS-05-T04`
-- Mode: `serial`
-- Locks: `live-environment`
+- Mode: `parallel`
+- Locks: `telemetry-catalog`
 - Branch: `agent/infra-05-t02`
 - Worktree: `../alon-ai-task-infra-05-t02`
-- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L100) — Test evidence: every positive tuple, cross-pair/unknown and resolution applicability.
+- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L79) — Test evidence: duplicate/suppressed/missing alert and dead-UI cases.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7658,13 +7658,13 @@
 
 ### I1 / R1 — `INFRA-05-T03`
 
-- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L102)
+- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L81)
 - Dependencies: `INFRA-05-T02`
-- Mode: `serial`
-- Locks: `live-environment`
+- Mode: `parallel`
+- Locks: `telemetry-catalog`
 - Branch: `agent/infra-05-t03`
 - Worktree: `../alon-ai-task-infra-05-t03`
-- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L102) — Test evidence: delivery/ack timestamps and no Gmail dependency.
+- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L81) — Test evidence: application Gmail/UI unavailable.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7678,13 +7678,13 @@
 
 ### I1 / R1 — `INFRA-05-T04`
 
-- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L104)
+- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L83)
 - Dependencies: `INFRA-05-T03`, `OBS-05-T01`
-- Mode: `serial`
-- Locks: `live-environment`
+- Mode: `parallel`
+- Locks: `telemetry-catalog`
 - Branch: `agent/infra-05-t04`
 - Worktree: `../alon-ai-task-infra-05-t04`
-- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L104) — Test evidence: every split-stage plus simultaneous Google/PagerDuty/Healthchecks loss.
+- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L83) — Test evidence: process kill, tunnel stop, backup stale, OOM/disk thresholds and telemetry blind spot.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7698,13 +7698,13 @@
 
 ### I1 / R1 — `INFRA-05-T05`
 
-- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L106)
+- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L85)
 - Dependencies: `INFRA-05-T04`, `INFRA-04-T03`
 - Mode: `serial`
-- Locks: `live-environment`
+- Locks: `backup-restore`, `telemetry-catalog`
 - Branch: `agent/infra-05-t05`
 - Worktree: `../alon-ai-task-infra-05-t05`
-- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L106) — Test evidence: normal, GCS-data-only, AWS-S3-data-only, Google-wide and isolated restore paths plus unavailable/ambiguous/stale/forked/missing/version/checksum negatives.
+- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L85) — Test evidence: wrong key, stale manifest, missing WAL/object and expired recovery package.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7718,13 +7718,13 @@
 
 ### I1 / R1 — `INFRA-05-T06`
 
-- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L108)
+- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L87)
 - Dependencies: `INFRA-05-T05`, `INFRA-02-T04`, `SEC-03-T04`, `INFRA-04-T02`
 - Mode: `serial`
-- Locks: `live-environment`
+- Locks: `backup-restore`, `live-environment`
 - Branch: `agent/infra-05-t06`
 - Worktree: `../alon-ai-task-infra-05-t06`
-- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L108) — Test evidence: VPS/DB/WAL/KMS/release/overlay/DNS/telemetry/retention cases.
+- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L87) — Test evidence: scenario set equality and first-failure retention.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7738,13 +7738,13 @@
 
 ### I1 / R1 — `INFRA-04-T06`
 
-- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L179)
+- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L75)
 - Dependencies: `INFRA-04-T05`, `INFRA-05-T06`
 - Mode: `serial`
-- Locks: `backup-restore`
+- Locks: `backup-restore`, `live-environment`
 - Branch: `agent/infra-04-t06`
 - Worktree: `../alon-ai-task-infra-04-t06`
-- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L179) — Test evidence: no provider call, controls/public off and exact data/runtime compatibility.
+- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L75) — Test evidence: missing local host/credential/config scenarios.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7758,13 +7758,13 @@
 
 ### I1 / R1 — `INFRA-04-T07`
 
-- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L181)
+- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L77)
 - Dependencies: `INFRA-04-T06`
 - Mode: `serial`
 - Locks: `backup-restore`
 - Branch: `agent/infra-04-t07`
 - Worktree: `../alon-ai-task-infra-04-t07`
-- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L181) — Test evidence: Google KMS/Secret Manager/GCS unavailable, old/new/lost key, AWS account lockout, S3 Object Lock and simultaneous-failure matrix.
+- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L77) — Test evidence: lost VPS, revoked old key, wrong generation and account-access outage.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7778,13 +7778,13 @@
 
 ### I1 / R1 — `INFRA-04-T08`
 
-- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L183)
+- Source: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L79)
 - Dependencies: `INFRA-04-T07`
 - Mode: `serial`
 - Locks: `backup-restore`
 - Branch: `agent/infra-04-t08`
 - Worktree: `../alon-ai-task-infra-04-t08`
-- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L183) — Test evidence: orphan/duplicate/unavailable/integrity/unsafe/partial negatives.
+- Acceptance evidence: [source](11-infrastructure/04-postgresql-backups-and-restores.md#L79) — Test evidence: orphan/duplicate command, unencrypted backup, hidden second-cloud prerequisite.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7798,13 +7798,13 @@
 
 ### I1 / R1 — `INFRA-05-T07`
 
-- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L110)
+- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L89)
 - Dependencies: `INFRA-05-T06`, `INFRA-04-T06`
 - Mode: `serial`
-- Locks: `live-environment`
+- Locks: `backup-restore`, `live-environment`
 - Branch: `agent/infra-05-t07`
 - Worktree: `../alon-ai-task-infra-05-t07`
-- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L110) — Test evidence: stale/missing/larger-authority/automatic-enable denials.
+- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L89) — Test evidence: stale drill, capacity breach, unresolved send/booking and tunnel-alert failure.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -7838,13 +7838,13 @@
 
 ### I1 / R1 — `INFRA-05-T08`
 
-- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L112)
+- Source: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L91)
 - Dependencies: `INFRA-05-T07`
-- Mode: `serial`
-- Locks: `milestone-gate`
+- Mode: `parallel`
+- Locks: `telemetry-catalog`
 - Branch: `agent/infra-05-t08`
 - Worktree: `../alon-ai-task-infra-05-t08`
-- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L112) — Test evidence: missing/duplicate/unknown/cross-pair and unavailable-path negatives.
+- Acceptance evidence: [source](11-infrastructure/05-monitoring-and-disaster-recovery.md#L91) — Test evidence: orphan/duplicate/hidden-enterprise-dependency negatives.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8098,13 +8098,13 @@
 
 ### I1 / R1 — `PRODUCT-02-T04`
 
-- Source: [source](00-product-strategy/02-success-metrics.md#L148)
+- Source: [source](00-product-strategy/02-success-metrics.md#L133)
 - Dependencies: `PRODUCT-02-T03`, `SEC-01-T05`
 - Mode: `serial`
-- Locks: `product-contracts`, `compliance-policy`, `milestone-gate`
+- Locks: `product-contracts`, `milestone-gate`
 - Branch: `agent/product-02-t04`
 - Worktree: `../alon-ai-task-product-02-t04`
-- Acceptance evidence: [source](00-product-strategy/02-success-metrics.md#L148) — Test evidence: audit query proves it predates the first send intent and boundary/race fixtures prove no later-stage admission without the prior authoritative `CONTINUE`.
+- Acceptance evidence: [source](00-product-strategy/02-success-metrics.md#L133) — Test evidence: legacy cohort schedule, scale without explicit 100..300 authorization, or shadow-as-demand evidence rejected.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8158,13 +8158,13 @@
 
 ### I1 / R1 — `LAUNCH-03-T01`
 
-- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L72)
+- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L76)
 - Dependencies: `LAUNCH-02-T05`, `SEC-01-T05`, `TEST-05-T05`, `DB-02-T03`, `BACKEND-05-T05`, `PROVIDER-01-T03`, `SEC-04-T02`, `SEC-05-T03`, `PRODUCT-02-T04`, `SEC-04-T05`
 - Mode: `serial`
 - Locks: `milestone-gate`
 - Branch: `agent/launch-03-t01`
 - Worktree: `../alon-ai-task-launch-03-t01`
-- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L72) — Test evidence: missing/expired phase, larger cap, second program and raw identity exposure deny.
+- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L76) — Test evidence: legacy 600/1,000 path, missing manual-review stage, larger/unbounded scale, second program and raw identity exposure deny.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8178,13 +8178,13 @@
 
 ### I1 / R1 — `LAUNCH-03-T02`
 
-- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L74)
+- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L78)
 - Dependencies: `LAUNCH-03-T01`, `INFRA-03-T06`, `BACKEND-02-T05`, `SEC-04-T04`, `SEC-04-T05`
 - Mode: `serial`
 - Locks: `live-environment`, `milestone-gate`
 - Branch: `agent/launch-03-t02`
 - Worktree: `../alon-ai-task-launch-03-t02`
-- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L74) — Test evidence: scanner write-zero, explicit POST replay, opaque errors and unsafe-dependency fallback.
+- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L78) — Test evidence: route set equality, scanner write-zero, explicit POST replay and unsafe-dependency fallback.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8278,13 +8278,13 @@
 
 ### I1 / R1 — `LAUNCH-03-T03`
 
-- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L76)
+- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L80)
 - Dependencies: `LAUNCH-03-T02`, `SEC-04-T02`, `BACKEND-05-T03`, `BACKEND-03-T04`, `SEC-05-T03`, `SEC-04-T06`, `SEC-05-T05`, `TEST-06-T06`
 - Mode: `serial`
 - Locks: `gmail-side-effects`, `milestone-gate`
 - Branch: `agent/launch-03-t03`
 - Worktree: `../alon-ai-task-launch-03-t03`
-- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L76) — Test evidence: all current policy denials, final-slot races, terminal/rejection and no gateway bypass.
+- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L80) — Test evidence: >20 pre-review, >50 pre-scale, unapproved scale, Premium escalation, source/policy denials and final-slot races.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8298,13 +8298,13 @@
 
 ### I1 / R1 — `LAUNCH-03-T04`
 
-- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L78)
+- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L82)
 - Dependencies: `LAUNCH-03-T03`, `INFRA-04-T07`, `INFRA-05-T07`, `BACKEND-01-T08`, `WF-07-T04`
 - Mode: `serial`
 - Locks: `gmail-side-effects`, `live-environment`, `milestone-gate`, `calendar-side-effects`
 - Branch: `agent/launch-03-t04`
 - Worktree: `../alon-ai-task-launch-03-t04`
-- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L78) — Test evidence: DST/ambiguity/duplicate callbacks, rejection-vs-opt-out, floor and kill races.
+- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L82) — Test evidence: booking ambiguity/DST, rejection-vs-opt-out, floor/kill and model-budget races.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8318,13 +8318,13 @@
 
 ### I1 / R1 — `LAUNCH-03-T05`
 
-- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L80)
+- Source: [source](12-launch-and-operations/03-first-real-experiment.md#L84)
 - Dependencies: `LAUNCH-03-T04`, `BACKEND-01-T09`, `BACKEND-01-T10`, `WF-08-T04`, `WF-09-T04`
 - Mode: `serial`
 - Locks: `gmail-side-effects`, `milestone-gate`
 - Branch: `agent/launch-03-t05`
 - Worktree: `../alon-ai-task-launch-03-t05`
-- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L80) — Test evidence: weak evidence, cross-campaign timing, late data, active-cohort mutation and fifth-cohort denial.
+- Acceptance evidence: [source](12-launch-and-operations/03-first-real-experiment.md#L84) — Test evidence: weak evidence, shadow-as-demand, cross-campaign timing, mid-stage mutation, scale without approval and 600/1,000 admission denial.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8338,13 +8338,13 @@
 
 ### I1 / R1 — `LAUNCH-04-T01`
 
-- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L66)
+- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L75)
 - Dependencies: `AGENT-01-T01`, `PROVIDER-02-T01`, `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `PROVIDER-06-T01`, `SEC-05-T03`, `WF-02-T05`, `WF-03-T05`, `WF-04-T05`, `PROVIDER-01-T01`
 - Mode: `serial`
 - Locks: `milestone-gate`
 - Branch: `agent/launch-04-t01`
 - Worktree: `../alon-ai-task-launch-04-t01`
-- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L66) — Test evidence: skipped phase, new source/program, unregistered action and cap expansion deny.
+- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L75) — Test evidence: legacy 600/1,000 expansion, new source/program, unregistered action, model-tier escalation and cap expansion deny.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8358,13 +8358,13 @@
 
 ### I1 / R1 — `LAUNCH-04-T02`
 
-- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L68)
+- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L77)
 - Dependencies: `LAUNCH-04-T01`
 - Mode: `serial`
 - Locks: `milestone-gate`
 - Branch: `agent/launch-04-t02`
 - Worktree: `../alon-ai-task-launch-04-t02`
-- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L68) — Test evidence: post-hoc exclusion, stale costs, unknown attendance and weak evidence cannot pass.
+- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L77) — Test evidence: post-hoc exclusion, stale cost, shadow-as-demand, unexplained Premium/Mini and missing revenue/economic evidence cannot pass.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8378,13 +8378,13 @@
 
 ### I1 / R1 — `LAUNCH-04-T03`
 
-- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L70)
+- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L79)
 - Dependencies: `LAUNCH-04-T02`, `LAUNCH-03-T05`, `AGENT-10-T05`, `LAUNCH-02-T05`, `OBS-04-T05`, `OBS-05-T06`, `INFRA-02-T04`, `BACKEND-01-T08`, `BACKEND-01-T10`, `WF-09-T04`
 - Mode: `serial`
 - Locks: `milestone-gate`, `calendar-side-effects`
 - Branch: `agent/launch-04-t03`
 - Worktree: `../alon-ai-task-launch-04-t03`
-- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L70) — Test evidence: per-message gate absent, sole gateways intact, no mid-cohort change or fifth cohort.
+- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L79) — Test evidence: no per-message gate, sole gateways intact, no mid-stage mutation, no population expansion and no Premium bypass.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8398,13 +8398,13 @@
 
 ### I1 / R1 — `LAUNCH-04-T04`
 
-- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L72)
+- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L81)
 - Dependencies: `LAUNCH-04-T03`
 - Mode: `serial`
 - Locks: `security-runtime`, `milestone-gate`
 - Branch: `agent/launch-04-t04`
 - Worktree: `../alon-ai-task-launch-04-t04`
-- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L72) — Test evidence: agents/browser/provider wrapper cannot bypass deterministic owners.
+- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L81) — Test evidence: agents/browser/provider wrappers cannot bypass deterministic owners.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8418,13 +8418,13 @@
 
 ### I1 / R1 — `LAUNCH-04-T05`
 
-- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L74)
+- Source: [source](12-launch-and-operations/04-earned-autonomy.md#L83)
 - Dependencies: `LAUNCH-04-T04`
 - Mode: `serial`
 - Locks: `ci-release`, `milestone-gate`
 - Branch: `agent/launch-04-t05`
 - Worktree: `../alon-ai-task-launch-04-t05`
-- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L74) — Test evidence: cross-campaign race, weak evidence, crash/replay and incompatible rollback remain safe.
+- Acceptance evidence: [source](12-launch-and-operations/04-earned-autonomy.md#L83) — Test evidence: cross-campaign race, weak evidence, model/discovery cost deterioration, crash/replay and incompatible rollback remain safe.
 - Optional acceptance commands: none
 - Merge order: 1
 
@@ -8433,19 +8433,19 @@
 
 ## Cross-document edge appendix
 
-- Provider `PRODUCT-01-T02` — Output: pass or a smaller brief.; Consumer `PRODUCT-02-T01` — Input: this file and the approved `ExperimentBrief`.
-- Provider `PRODUCT-01-T02` — Output: pass or a smaller brief.; Consumer `PRODUCT-03-T01` — Input: scope, metrics, risk table.
-- Provider `PRODUCT-02-T01` — Output: immutable metric registry and `StagedValidationRuleV1` contract for M2 consumers.; Consumer `PRODUCT-03-T01` — Input: scope, metrics, risk table.
-- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk consumed by architecture, data, agents, workflows, providers, services, and UI.; Consumer `WF-00-T01` — Input: PRODUCT-01 frozen artifact/authority vocabulary crosswalk, architecture/ADR, and official runtime sources above.
+- Provider `PRODUCT-01-T02` — Output: pass or smaller brief.; Consumer `PRODUCT-02-T01` — Input: PRODUCT-01 contract and ExperimentBrief.
+- Provider `PRODUCT-01-T02` — Output: pass or smaller brief.; Consumer `PRODUCT-03-T01` — Input: scope, metrics, risk table.
+- Provider `PRODUCT-02-T01` — Output: immutable metric/stage registry.; Consumer `PRODUCT-03-T01` — Input: scope, metrics, risk table.
+- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk.; Consumer `WF-00-T01` — Input: PRODUCT-01 frozen artifact/authority vocabulary crosswalk, architecture/ADR, and official runtime sources above.
 - Provider `PRODUCT-03-T01` — Output: signed risk register.; Consumer `SEC-01-T01` — Input: approved M0 scope/risk posture and the document-local static planned product-table, security-runtime/session, provider/agent/Gmail/runtime/backup/telemetry contracts.
-- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk consumed by architecture, data, agents, workflows, providers, services, and UI.; Consumer `DB-03-T01` — Input: the PRODUCT-01 vocabulary crosswalk, SEC-01 Critical send/credential interface, and the document-local DB-03 table/state contract.
+- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk.; Consumer `DB-03-T01` — Input: the PRODUCT-01 vocabulary crosswalk, SEC-01 Critical send/credential interface, and the document-local DB-03 table/state contract.
 - Provider `SEC-01-T01` — Output: signed planned asset/boundary registry plus approved Critical credential/send threat-control interface.; Consumer `DB-03-T01` — Input: the PRODUCT-01 vocabulary crosswalk, SEC-01 Critical send/credential interface, and the document-local DB-03 table/state contract.
 - Provider `SEC-01-T01` — Output: signed planned asset/boundary registry plus approved Critical credential/send threat-control interface.; Consumer `SEC-03-T01` — Input: secret classes, key hierarchy, canonical AAD, CAS/lease states.
 - Provider `DB-03-T01` — Output: versioned DB-03 composite wire/authority contracts consumed by the M1 Gmail adapters and later M2/M6 persistence.; Consumer `PROVIDER-01-T01` — Input: DB-03 pure composite wire/authority contracts, SEC-03 strict key/object contracts, and document-local Gmail request/result/error/MIME/history/flow specifications with recorded credential fixtures.
-- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `PROVIDER-01-T01` — Input: DB-03 pure composite wire/authority contracts, SEC-03 strict key/object contracts, and document-local Gmail request/result/error/MIME/history/flow specifications with recorded credential fixtures.
+- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, replaceable adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `PROVIDER-01-T01` — Input: DB-03 pure composite wire/authority contracts, SEC-03 strict key/object contracts, and document-local Gmail request/result/error/MIME/history/flow specifications with recorded credential fixtures.
 - Provider `DB-03-T01` — Output: versioned DB-03 composite wire/authority contracts consumed by the M1 Gmail adapters and later M2/M6 persistence.; Consumer `PROVIDER-01-T02` — Input: DB-03 composite intent/attempt and encrypted message fields.
 - Provider `PROVIDER-01-T01` — Output: versioned Gmail OAuth/credential-binding/request/result/error/MIME/history contract bundle and signed disposable fixtures.; Consumer `PROVIDER-02-T01` — Input: the PROVIDER-01 pure Gmail credential-binding/request/history contract bundle and signed recorded mailbox-bound credential/request fixtures.
-- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk consumed by architecture, data, agents, workflows, providers, services, and UI.; Consumer `TEST-01-T01` — Input: the PRODUCT-01 vocabulary crosswalk, canonical roadmap source documents, and exact document-local TEST-02..06 matrices.
+- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk.; Consumer `TEST-01-T01` — Input: the PRODUCT-01 vocabulary crosswalk, canonical roadmap source documents, and exact document-local TEST-02..06 matrices.
 - Provider `PROVIDER-01-T02` — Output: in-memory `GmailSendRequestV1`.; Consumer `TEST-04-T01` — Input: PROVIDER-01/02 request/result/error/MIME/history contracts and TEST-01 reproducible clean test contexts.
 - Provider `TEST-01-T03` — Output: reproducible clean test contexts.; Consumer `TEST-04-T01` — Input: PROVIDER-01/02 request/result/error/MIME/history contracts and TEST-01 reproducible clean test contexts.
 - Provider `PROVIDER-01-T01` — Output: versioned Gmail OAuth/credential-binding/request/result/error/MIME/history contract bundle and signed disposable fixtures.; Consumer `TEST-04-T01` — Input: PROVIDER-01/02 request/result/error/MIME/history contracts and TEST-01 reproducible clean test contexts.
@@ -8480,7 +8480,7 @@
 - Provider `TEST-01-T02` — Output: signed `task7-commands.v1.json`.; Consumer `INFRA-01-T01` — Input: lockfiles, runtime floors, repository root, environment enum and TEST-01 signed task7-commands.v1.json checkout/root/profile contract.
 - Provider `TEST-01-T01` — Output: signed `coverage.v1.json`.; Consumer `INFRA-01-T05` — Input: implemented M1 foundation setup/smoke/reset requirements and TEST-01 signed coverage/command registries.
 - Provider `TEST-01-T02` — Output: signed `task7-commands.v1.json`.; Consumer `INFRA-01-T05` — Input: implemented M1 foundation setup/smoke/reset requirements and TEST-01 signed coverage/command registries.
-- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk consumed by architecture, data, agents, workflows, providers, services, and UI.; Consumer `ARCH-03-T01` — Input: the PRODUCT-01 signed vocabulary crosswalk and the document-local canonical state/guard catalog.
+- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk.; Consumer `ARCH-03-T01` — Input: the PRODUCT-01 signed vocabulary crosswalk and the document-local canonical state/guard catalog.
 - Provider `WF-00-T04` — Output: one signed `SelectedRuntimeDecisionV1` naming `DBOS|TEMPORAL`, the branch gate, evidence hashes, adapter version when applicable, and zero third-runtime authority.; Consumer `ARCH-03-T03` — Input: WF-00 signed `SelectedRuntimeDecisionV1` naming the accepted DBOS runtime or validated mandatory Temporal fallback.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `DB-01-T01` — Input: ARCH-03 enums and identifier rules.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `ARCH-02-T01` — Input: ARCH-03 names and M2 schema.
@@ -8489,10 +8489,10 @@
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `ARCH-01-T02` — Input: ARCH-02/03 contracts; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `ARCH-02-T02` — Input: domain aggregates, events, idempotent command envelope.
 - Provider `WF-00-T04` — Output: one signed `SelectedRuntimeDecisionV1` naming `DBOS|TEMPORAL`, the branch gate, evidence hashes, adapter version when applicable, and zero third-runtime authority.; Consumer `DB-01-T04` — Input: WF-00 signed `SelectedRuntimeDecisionV1` naming the accepted DBOS adapter or the validated mandatory Temporal adapter.
-- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk consumed by architecture, data, agents, workflows, providers, services, and UI.; Consumer `DB-02-T01` — Input: M0 artifact/metric contracts and PRODUCT-02 `100/200/300/400` staged rule.
-- Provider `PRODUCT-02-T01` — Output: immutable metric registry and `StagedValidationRuleV1` contract for M2 consumers.; Consumer `DB-02-T01` — Input: M0 artifact/metric contracts and PRODUCT-02 `100/200/300/400` staged rule.
+- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk.; Consumer `DB-02-T01` — Input: M0 artifact/metric contracts and PRODUCT-02 `SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300` staged rule.
+- Provider `PRODUCT-02-T01` — Output: immutable metric/stage registry.; Consumer `DB-02-T01` — Input: M0 artifact/metric contracts and PRODUCT-02 `SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300` staged rule.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `DB-03-T02` — Input: canonicalization rules and ARCH-03 `LeadState`.
-- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk consumed by architecture, data, agents, workflows, providers, services, and UI.; Consumer `DB-04-T01` — Input: canonical artifact names and Pydantic AI boundary.
+- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk.; Consumer `DB-04-T01` — Input: canonical artifact names and Pydantic AI boundary.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `DB-05-T01` — Input: every ARCH-03 `.v1` name/payload.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `DB-03-T03` — Input: the final DB-03 wire/authority contracts, PRODUCT-02 stage tuples, ARCH-03 lead/campaign/action authorization states, DB-05 policy-table and foreign-key constraints, and document-local canonicalization and static policy rules.
 - Provider `DB-05-T02` — Output: M2 event/audit/idempotency/outbox/policy/cost schema.; Consumer `DB-03-T03` — Input: the final DB-03 wire/authority contracts, PRODUCT-02 stage tuples, ARCH-03 lead/campaign/action authorization states, DB-05 policy-table and foreign-key constraints, and document-local canonicalization and static policy rules.
@@ -8502,7 +8502,7 @@
 - Provider `DB-03-T04` — Output: migrated immutable message/intent/attempt/result/observation/reply/cursor schema and complete ambiguity-chain constraints.; Consumer `DB-06-T01` — Input: DB-01 through DB-05 exact tables/constraints.
 - Provider `DB-04-T02` — Output: M2 schema.; Consumer `DB-06-T01` — Input: DB-01 through DB-05 exact tables/constraints.
 - Provider `DB-05-T02` — Output: M2 event/audit/idempotency/outbox/policy/cost schema.; Consumer `DB-06-T01` — Input: DB-01 through DB-05 exact tables/constraints.
-- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk consumed by architecture, data, agents, workflows, providers, services, and UI.; Consumer `SEC-06-T01` — Input: M0 product vocabulary, the consolidated M2 schema/contracts, and the document-local known provider/agent/Gmail/telemetry surfaces.
+- Provider `PRODUCT-01-T03` — Output: immutable vocabulary crosswalk.; Consumer `SEC-06-T01` — Input: M0 product vocabulary, the consolidated M2 schema/contracts, and the document-local known provider/agent/Gmail/telemetry surfaces.
 - Provider `DB-06-T01` — Output: fresh schema.; Consumer `SEC-06-T01` — Input: M0 product vocabulary, the consolidated M2 schema/contracts, and the document-local known provider/agent/Gmail/telemetry surfaces.
 - Provider `DB-01-T02` — Output: fresh PostgreSQL schema.; Consumer `AGENT-01-T01` — Input: DB-01/04 schemas and the models above.
 - Provider `DB-04-T02` — Output: M2 schema.; Consumer `AGENT-01-T01` — Input: DB-01/04 schemas and the models above.
@@ -8527,12 +8527,12 @@
 - Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `AGENT-03-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
 - Provider `DB-02-T03` — Output: versioned brief/idea/offer.; Consumer `AGENT-03-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
 - Provider `AGENT-01-T02` — Output: immutable `AgentDependenciesV1`.; Consumer `AGENT-03-T02` — Input: verified runtime envelope and exact scoped capabilities.
-- Provider `AGENT-03-T01` — Output: importable contract and schema registry entry.; Consumer `AGENT-11-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
-- Provider `AGENT-10-T01` — Output: signed non-model M3 fixture manifest plus ten exact suites containing 692 versioned cases with frozen rubrics/fixtures/sensitivity review and candidate parameter templates; no implemented candidate configuration is certified here.; Consumer `AGENT-11-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
-- Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `AGENT-11-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
-- Provider `DB-03-T03` — Output: deterministic staged admission substrate over the separately migrated identity/lead schema.; Consumer `AGENT-11-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
-- Provider `AGENT-01-T02` — Output: immutable `AgentDependenciesV1`.; Consumer `AGENT-11-T02` — Input: verified runtime envelope and exact scoped capabilities.
-- Provider `AGENT-11-T01` — Output: importable contract and schema registry entry.; Consumer `AGENT-05-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
+- Provider `AGENT-03-T01` — Output: importable contract and schema registry entry.; Consumer `AGENT-11-T01` — Input: canonical OfferPackage/source/model-routing contracts.
+- Provider `AGENT-10-T01` — Output: signed non-model M3 fixture manifest plus ten exact suites containing 692 versioned cases with frozen rubrics/fixtures/sensitivity review and candidate parameter templates; no implemented candidate configuration is certified here.; Consumer `AGENT-11-T01` — Input: canonical OfferPackage/source/model-routing contracts.
+- Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `AGENT-11-T01` — Input: canonical OfferPackage/source/model-routing contracts.
+- Provider `DB-03-T03` — Output: deterministic staged admission substrate over the separately migrated identity/lead schema.; Consumer `AGENT-11-T01` — Input: canonical OfferPackage/source/model-routing contracts.
+- Provider `AGENT-01-T02` — Output: immutable `AgentDependenciesV1`.; Consumer `AGENT-11-T02` — Input: verified runtime envelope and scoped Brave/evidence capabilities.
+- Provider `AGENT-11-T01` — Output: importable contract/registry entry.; Consumer `AGENT-05-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
 - Provider `AGENT-10-T01` — Output: signed non-model M3 fixture manifest plus ten exact suites containing 692 versioned cases with frozen rubrics/fixtures/sensitivity review and candidate parameter templates; no implemented candidate configuration is certified here.; Consumer `AGENT-05-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
 - Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `AGENT-05-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
 - Provider `DB-03-T03` — Output: deterministic staged admission substrate over the separately migrated identity/lead schema.; Consumer `AGENT-05-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
@@ -8567,8 +8567,8 @@
 - Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `AGENT-12-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
 - Provider `DB-04-T01` — Output: serializable contracts.; Consumer `AGENT-12-T01` — Input: canonical upstream artifact contracts and signed shared fixture templates.
 - Provider `AGENT-01-T02` — Output: immutable `AgentDependenciesV1`.; Consumer `AGENT-12-T02` — Input: verified runtime envelope and exact scoped capabilities.
-- Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `PROVIDER-03-T01` — Input: AGENT-01 family and DB-01 canonicalizer.
-- Provider `DB-01-T01` — Output: inward-facing types.; Consumer `PROVIDER-03-T01` — Input: AGENT-01 family and DB-01 canonicalizer.
+- Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `PROVIDER-03-T01` — Input: AGENT-01 family, DB-01 canonicalizer and PRODUCT-01 routing policy.
+- Provider `DB-01-T01` — Output: inward-facing types.; Consumer `PROVIDER-03-T01` — Input: AGENT-01 family, DB-01 canonicalizer and PRODUCT-01 routing policy.
 - Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `PROVIDER-04-T01` — Input: AGENT-01 models and DB-01 canonicalizer.
 - Provider `DB-01-T01` — Output: inward-facing types.; Consumer `PROVIDER-04-T01` — Input: AGENT-01 models and DB-01 canonicalizer.
 - Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `PROVIDER-05-T01` — Input: AGENT-01 families and DB-01 canonicalizer.
@@ -8578,8 +8578,8 @@
 - Provider `DB-01-T01` — Output: inward-facing types.; Consumer `PROVIDER-06-T01` — Input: AGENT-01 models and DB-01 canonicalizer.
 - Provider `ARCH-02-T01` — Output: stable interfaces.; Consumer `PROVIDER-07-T01` — Input: canonical booking states/authority and provider-neutral types.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `PROVIDER-07-T01` — Input: canonical booking states/authority and provider-neutral types.
-- Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `PROVIDER-08-T01` — Input: shared strict provider contracts and canonical discovery scope.
-- Provider `DB-01-T01` — Output: inward-facing types.; Consumer `PROVIDER-08-T01` — Input: shared strict provider contracts and canonical discovery scope.
+- Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `PROVIDER-08-T01` — Input: shared strict provider contracts and canonical source policy.
+- Provider `DB-01-T01` — Output: inward-facing types.; Consumer `PROVIDER-08-T01` — Input: shared strict provider contracts and canonical source policy.
 - Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `BACKEND-01-T01` — Input: AGENT-01 strict terminal/provider contracts, DB-04 artifact/evidence schema and DB-05 atomic command replay implementation; signed synthetic terminal and evaluation fixtures.
 - Provider `DB-04-T02` — Output: M2 schema.; Consumer `BACKEND-01-T01` — Input: AGENT-01 strict terminal/provider contracts, DB-04 artifact/evidence schema and DB-05 atomic command replay implementation; signed synthetic terminal and evaluation fixtures.
 - Provider `DB-05-T03` — Output: implemented versioned IdempotentCommandExecutor atomic claim/replay/UnitOfWork interface plus one command effect.; Consumer `BACKEND-01-T01` — Input: AGENT-01 strict terminal/provider contracts, DB-04 artifact/evidence schema and DB-05 atomic command replay implementation; signed synthetic terminal and evaluation fixtures.
@@ -8599,7 +8599,7 @@
 - Provider `DB-05-T02` — Output: M2 event/audit/idempotency/outbox/policy/cost schema.; Consumer `OBS-03-T02` — Input: budget account, provider call/result/ledger/price, DB-05's exact allocation branches and existing action attribution.
 - Provider `PROVIDER-03-T04` — Output: deterministic evaluation input.; Consumer `DB-05-T05` — Input: frozen facts/provider usage.
 - Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `DB-05-T05` — Input: frozen facts/provider usage.
-- Provider `DB-05-T05` — Output: explainable gate and cost ledger.; Consumer `PRODUCT-02-T03` — Input: event/audit/cost records introduced from M2 onward.
+- Provider `DB-05-T05` — Output: explainable gate and cost ledger.; Consumer `PRODUCT-02-T03` — Input: immutable event/cost/artifact/strategy/provider data.
 - Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `AGENT-01-T03` — Input: verified typed envelope fixtures, reserved cost-chain fixture and static candidate parameter fixture in an evaluation-only authority context; product invocation later requires an immutable promotion binding.
 - Provider `BACKEND-01-T01` — Output: implemented versioned AgentRunRecordingService, ArtifactCommandService, EvaluationSuiteCommandService and EvaluationExecutionService interfaces with atomic event/replay behavior.; Consumer `AGENT-01-T04` — Input: terminal result and ledger; implemented recording/PRODUCED-insertion, artifact-validation/acceptance and cost-reconciliation service interfaces.
 - Provider `DB-04-T04` — Output: implemented versioned ArtifactValidationService and ArtifactAcceptanceService interfaces plus eligible accepted fixture artifact or retained rejection.; Consumer `AGENT-01-T04` — Input: terminal result and ledger; implemented recording/PRODUCED-insertion, artifact-validation/acceptance and cost-reconciliation service interfaces.
@@ -8656,12 +8656,12 @@
 - Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `AGENT-05-T03` — Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows.
 - Provider `PROVIDER-05-T04` — Output: deterministic evaluation data.; Consumer `AGENT-05-T03` — Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows.
 - Provider `PROVIDER-06-T03` — Output: deterministic M3 enrichment fixture containing frozen provider result/meta/usage plus replacement evidence.; Consumer `AGENT-05-T03` — Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows.
-- Provider `PROVIDER-05-T03` — Output: capture-backed page payload.; Consumer `PROVIDER-08-T03` — Input: source fixtures and EvidenceIngestService interface.
-- Provider `AGENT-01-T04` — Output: tested versioned terminal-result persistence/validation handoff integration contract and immutable reviewable artifact or retained failed-run evidence.; Consumer `AGENT-11-T03` — Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows.
-- Provider `BACKEND-01-T01` — Output: implemented versioned AgentRunRecordingService, ArtifactCommandService, EvaluationSuiteCommandService and EvaluationExecutionService interfaces with atomic event/replay behavior.; Consumer `AGENT-11-T03` — Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows.
-- Provider `DB-04-T04` — Output: implemented versioned ArtifactValidationService and ArtifactAcceptanceService interfaces plus eligible accepted fixture artifact or retained rejection.; Consumer `AGENT-11-T03` — Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows.
-- Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `AGENT-11-T03` — Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows.
-- Provider `PROVIDER-08-T03` — Output: signed discovery capability fixtures for AGENT-11 and AGENT-10.; Consumer `AGENT-11-T03` — Input: terminal outputs, implemented shared recording/validation/cost services and signed fixture rows.
+- Provider `PROVIDER-05-T03` — Output: capture-backed page payload.; Consumer `PROVIDER-08-T03` — Input: Brave fixtures plus manual social/public evidence fixtures and EvidenceIngestService interface.
+- Provider `AGENT-01-T04` — Output: tested versioned terminal-result persistence/validation handoff integration contract and immutable reviewable artifact or retained failed-run evidence.; Consumer `AGENT-11-T03` — Input: terminal outputs, shared validation/cost services and Brave fixtures.
+- Provider `BACKEND-01-T01` — Output: implemented versioned AgentRunRecordingService, ArtifactCommandService, EvaluationSuiteCommandService and EvaluationExecutionService interfaces with atomic event/replay behavior.; Consumer `AGENT-11-T03` — Input: terminal outputs, shared validation/cost services and Brave fixtures.
+- Provider `DB-04-T04` — Output: implemented versioned ArtifactValidationService and ArtifactAcceptanceService interfaces plus eligible accepted fixture artifact or retained rejection.; Consumer `AGENT-11-T03` — Input: terminal outputs, shared validation/cost services and Brave fixtures.
+- Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `AGENT-11-T03` — Input: terminal outputs, shared validation/cost services and Brave fixtures.
+- Provider `PROVIDER-08-T03` — Output: signed discovery fixtures for AGENT-11/AGENT-10.; Consumer `AGENT-11-T03` — Input: terminal outputs, shared validation/cost services and Brave fixtures.
 - Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
 - Provider `PROVIDER-03-T04` — Output: deterministic evaluation input.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
 - Provider `PROVIDER-04-T04` — Output: M3 evaluation inputs.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
@@ -8675,14 +8675,14 @@
 - Provider `AGENT-07-T03` — Output: tested immutable specialist implementation/configuration identity and handoff.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
 - Provider `AGENT-08-T03` — Output: tested immutable specialist implementation/configuration identity and handoff.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
 - Provider `AGENT-09-T03` — Output: tested immutable specialist implementation/configuration identity and handoff.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
-- Provider `AGENT-11-T03` — Output: tested immutable specialist implementation/configuration identity and handoff.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
+- Provider `AGENT-11-T03` — Output: tested specialist identity/handoff.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
 - Provider `AGENT-12-T03` — Output: tested immutable specialist implementation/configuration identity and handoff.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
-- Provider `PROVIDER-08-T03` — Output: signed discovery capability fixtures for AGENT-11 and AGENT-10.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
+- Provider `PROVIDER-08-T03` — Output: signed discovery fixtures for AGENT-11/AGENT-10.; Consumer `AGENT-10-T02` — Input: signed static suite/fixture templates; completed AGENT-02..09/11/12 specialist implementation/configuration identities; recorded model/search/page/business fixtures; AGENT-01 typed capability contracts.
 - Provider `PROVIDER-03-T01` — Output: provider-neutral protocol.; Consumer `AGENT-10-T03` — Input: AGENT-01 terminal/provider schemas, the final AGENT-10 suite cases and exact candidate configuration, signed non-model fixture manifest, and reserved three-repetition budget, and AGENT-01 tested terminal-result persistence handoff integration contract; signed exact implemented candidate configuration manifest and executable isolated candidate-model adapter; implemented AgentRunRecordingService start/close interface from the M3 shared-service owner.
 - Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `AGENT-10-T03` — Input: AGENT-01 terminal/provider schemas, the final AGENT-10 suite cases and exact candidate configuration, signed non-model fixture manifest, and reserved three-repetition budget, and AGENT-01 tested terminal-result persistence handoff integration contract; signed exact implemented candidate configuration manifest and executable isolated candidate-model adapter; implemented AgentRunRecordingService start/close interface from the M3 shared-service owner.
 - Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `AGENT-10-T03` — Input: AGENT-01 terminal/provider schemas, the final AGENT-10 suite cases and exact candidate configuration, signed non-model fixture manifest, and reserved three-repetition budget, and AGENT-01 tested terminal-result persistence handoff integration contract; signed exact implemented candidate configuration manifest and executable isolated candidate-model adapter; implemented AgentRunRecordingService start/close interface from the M3 shared-service owner.
 - Provider `AGENT-01-T04` — Output: tested versioned terminal-result persistence/validation handoff integration contract and immutable reviewable artifact or retained failed-run evidence.; Consumer `AGENT-10-T03` — Input: AGENT-01 terminal/provider schemas, the final AGENT-10 suite cases and exact candidate configuration, signed non-model fixture manifest, and reserved three-repetition budget, and AGENT-01 tested terminal-result persistence handoff integration contract; signed exact implemented candidate configuration manifest and executable isolated candidate-model adapter; implemented AgentRunRecordingService start/close interface from the M3 shared-service owner.
-- Provider `PROVIDER-03-T02` — Output: executable isolated candidate-model adapter and exact result union; no promoted product activation.; Consumer `AGENT-10-T03` — Input: AGENT-01 terminal/provider schemas, the final AGENT-10 suite cases and exact candidate configuration, signed non-model fixture manifest, and reserved three-repetition budget, and AGENT-01 tested terminal-result persistence handoff integration contract; signed exact implemented candidate configuration manifest and executable isolated candidate-model adapter; implemented AgentRunRecordingService start/close interface from the M3 shared-service owner.
+- Provider `PROVIDER-03-T02` — Output: exact typed result/ledger; no business authority.; Consumer `AGENT-10-T03` — Input: AGENT-01 terminal/provider schemas, the final AGENT-10 suite cases and exact candidate configuration, signed non-model fixture manifest, and reserved three-repetition budget, and AGENT-01 tested terminal-result persistence handoff integration contract; signed exact implemented candidate configuration manifest and executable isolated candidate-model adapter; implemented AgentRunRecordingService start/close interface from the M3 shared-service owner.
 - Provider `BACKEND-01-T01` — Output: implemented versioned AgentRunRecordingService, ArtifactCommandService, EvaluationSuiteCommandService and EvaluationExecutionService interfaces with atomic event/replay behavior.; Consumer `AGENT-10-T03` — Input: AGENT-01 terminal/provider schemas, the final AGENT-10 suite cases and exact candidate configuration, signed non-model fixture manifest, and reserved three-repetition budget, and AGENT-01 tested terminal-result persistence handoff integration contract; signed exact implemented candidate configuration manifest and executable isolated candidate-model adapter; implemented AgentRunRecordingService start/close interface from the M3 shared-service owner.
 - Provider `AGENT-10-T03` — Output: exactly `case_count*3` signed `CandidateGenerationCaptureV1` records plus the complete signed capture-set manifest.; Consumer `AGENT-02-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
 - Provider `AGENT-10-T04` — Output: versioned deterministic scorer package with exact AGENT-10 functions plus `EvaluationScoresV1`, three independently auditable `RepetitionSummaryV1` records, and `SuiteRunSummaryV1`.; Consumer `AGENT-02-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
@@ -8690,8 +8690,8 @@
 - Provider `AGENT-10-T04` — Output: versioned deterministic scorer package with exact AGENT-10 functions plus `EvaluationScoresV1`, three independently auditable `RepetitionSummaryV1` records, and `SuiteRunSummaryV1`.; Consumer `AGENT-04-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
 - Provider `AGENT-10-T03` — Output: exactly `case_count*3` signed `CandidateGenerationCaptureV1` records plus the complete signed capture-set manifest.; Consumer `AGENT-03-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
 - Provider `AGENT-10-T04` — Output: versioned deterministic scorer package with exact AGENT-10 functions plus `EvaluationScoresV1`, three independently auditable `RepetitionSummaryV1` records, and `SuiteRunSummaryV1`.; Consumer `AGENT-03-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
-- Provider `AGENT-10-T03` — Output: exactly `case_count*3` signed `CandidateGenerationCaptureV1` records plus the complete signed capture-set manifest.; Consumer `AGENT-11-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
-- Provider `AGENT-10-T04` — Output: versioned deterministic scorer package with exact AGENT-10 functions plus `EvaluationScoresV1`, three independently auditable `RepetitionSummaryV1` records, and `SuiteRunSummaryV1`.; Consumer `AGENT-11-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
+- Provider `AGENT-10-T03` — Output: exactly `case_count*3` signed `CandidateGenerationCaptureV1` records plus the complete signed capture-set manifest.; Consumer `AGENT-11-T04` — Input: signed repeated fixture sets/scores.
+- Provider `AGENT-10-T04` — Output: versioned deterministic scorer package with exact AGENT-10 functions plus `EvaluationScoresV1`, three independently auditable `RepetitionSummaryV1` records, and `SuiteRunSummaryV1`.; Consumer `AGENT-11-T04` — Input: signed repeated fixture sets/scores.
 - Provider `AGENT-10-T03` — Output: exactly `case_count*3` signed `CandidateGenerationCaptureV1` records plus the complete signed capture-set manifest.; Consumer `AGENT-05-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
 - Provider `AGENT-10-T04` — Output: versioned deterministic scorer package with exact AGENT-10 functions plus `EvaluationScoresV1`, three independently auditable `RepetitionSummaryV1` records, and `SuiteRunSummaryV1`.; Consumer `AGENT-05-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
 - Provider `AGENT-10-T03` — Output: exactly `case_count*3` signed `CandidateGenerationCaptureV1` records plus the complete signed capture-set manifest.; Consumer `AGENT-06-T04` — Input: AGENT-10 signed three-capture sets and deterministic scores for the exact declared suite.
@@ -8712,18 +8712,18 @@
 - Provider `AGENT-07-T04` — Output: specialist acceptance evidence for shared promotion; no second promotion writer.; Consumer `AGENT-10-T05` — Input: signed candidate/baseline capture manifests, three full repetition summaries, suite summary, dependency/authority/cost evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `AGENT-08-T04` — Output: specialist acceptance evidence for shared promotion; no second promotion writer.; Consumer `AGENT-10-T05` — Input: signed candidate/baseline capture manifests, three full repetition summaries, suite summary, dependency/authority/cost evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `AGENT-09-T04` — Output: specialist acceptance evidence for shared promotion; no second promotion writer.; Consumer `AGENT-10-T05` — Input: signed candidate/baseline capture manifests, three full repetition summaries, suite summary, dependency/authority/cost evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `AGENT-11-T04` — Output: specialist acceptance evidence for shared promotion; no second promotion writer.; Consumer `AGENT-10-T05` — Input: signed candidate/baseline capture manifests, three full repetition summaries, suite summary, dependency/authority/cost evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `AGENT-11-T04` — Output: acceptance evidence.; Consumer `AGENT-10-T05` — Input: signed candidate/baseline capture manifests, three full repetition summaries, suite summary, dependency/authority/cost evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `AGENT-12-T04` — Output: specialist acceptance evidence for shared promotion; no second promotion writer.; Consumer `AGENT-10-T05` — Input: signed candidate/baseline capture manifests, three full repetition summaries, suite summary, dependency/authority/cost evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `AGENT-10-T05` — Output: versioned sole-owner promotion-gate interface plus immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and one eligible configuration or rejection.; Consumer `DB-04-T05` — Input: the AGENT-10 immutable evaluation/configuration decision binding suite identity, PromotionManifestV1 and registry version.
 - Provider `ARCH-02-T01` — Output: stable interfaces.; Consumer `ARCH-01-T03` — Input: product records and provider ports; completed immutable promotion decision, persisted registry evidence and replaceable recorded provider boundaries.
 - Provider `AGENT-10-T05` — Output: versioned sole-owner promotion-gate interface plus immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and one eligible configuration or rejection.; Consumer `ARCH-01-T03` — Input: product records and provider ports; completed immutable promotion decision, persisted registry evidence and replaceable recorded provider boundaries.
 - Provider `DB-04-T05` — Output: persisted immutable promotion decision and DB registry evidence.; Consumer `ARCH-01-T03` — Input: product records and provider ports; completed immutable promotion decision, persisted registry evidence and replaceable recorded provider boundaries.
 - Provider `ARCH-02-T03` — Output: replaceable M3 provider adapter boundaries with no live authority.; Consumer `ARCH-01-T03` — Input: product records and provider ports; completed immutable promotion decision, persisted registry evidence and replaceable recorded provider boundaries.
-- Provider `AGENT-10-T05` — Output: versioned sole-owner promotion-gate interface plus immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and one eligible configuration or rejection.; Consumer `PROVIDER-03-T05` — Input: implemented candidate adapter, recorded fixture compatibility, and AGENT-10 immutable approved PromotionManifestV1/configuration/registry binding; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `AGENT-10-T05` — Output: versioned sole-owner promotion-gate interface plus immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and one eligible configuration or rejection.; Consumer `PROVIDER-03-T05` — Input: promoted agent/model configurations plus routing policy and cost evidence.
 - Provider `AGENT-10-T05` — Output: versioned sole-owner promotion-gate interface plus immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and one eligible configuration or rejection.; Consumer `WF-03-T01` — Input: canonical IdeaBrief and accepted scope.
 - Provider `DB-02-T03` — Output: versioned brief/idea/offer.; Consumer `WF-03-T01` — Input: canonical IdeaBrief and accepted scope.
 - Provider `DB-02-T04` — Output: reproducible decision input.; Consumer `WF-03-T01` — Input: canonical IdeaBrief and accepted scope.
-- Provider `PRODUCT-02-T01` — Output: immutable metric registry and `StagedValidationRuleV1` contract for M2 consumers.; Consumer `WF-03-T01` — Input: canonical IdeaBrief and accepted scope.
+- Provider `PRODUCT-02-T01` — Output: immutable metric/stage registry.; Consumer `WF-03-T01` — Input: canonical IdeaBrief and accepted scope.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `BACKEND-01-T02` — Input: ARCH-03 enums/guards/events and DB constraints.
 - Provider `DB-06-T01` — Output: fresh schema.; Consumer `BACKEND-01-T02` — Input: ARCH-03 enums/guards/events and DB constraints.
 - Provider `ARCH-02-T01` — Output: stable interfaces.; Consumer `BACKEND-01-T03` — Input: strict command envelope and expected version; implemented atomic IdempotentCommandExecutor/UnitOfWork claim-replay interface.
@@ -8768,18 +8768,18 @@
 - Provider `TEST-01-T02` — Output: signed `task7-commands.v1.json`.; Consumer `INFRA-01-T08` — Input: clean reset product environment, generated no-send client/schema truth, TEST-01 signed command/coverage registries and exact product setup/smoke/reset requirements.
 - Provider `OBS-03-T01` — Output: reproducible maximum/actual cost.; Consumer `PROVIDER-06-T04` — Input: the disabled provider-neutral port, proposed field mask, current external provider terms/privacy record, OBS-03 cost ceiling, explicit operator approval, key, request, and reservation.
 - Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `PROVIDER-06-T04` — Input: the disabled provider-neutral port, proposed field mask, current external provider terms/privacy record, OBS-03 cost ceiling, explicit operator approval, key, request, and reservation.
-- Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `PROVIDER-08-T04` — Input: current adapter/terms/fields/privacy/attribution/retention review, pre-run operator source allowlist and bounded cost/query/page plan.
+- Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `PROVIDER-08-T04` — Input: current Brave terms/fields/privacy/attribution/retention review, operator source allowlist and bounded cost/query/result plan.
 - Provider `DB-03-T02` — Output: deduplicated M5-ready schema.; Consumer `BACKEND-01-T07` — Input: accepted discovery/final proposals, approved source evidence, immutable OfferPackage filters and recorded identity fixtures.
 - Provider `DB-04-T04` — Output: implemented versioned ArtifactValidationService and ArtifactAcceptanceService interfaces plus eligible accepted fixture artifact or retained rejection.; Consumer `BACKEND-01-T07` — Input: accepted discovery/final proposals, approved source evidence, immutable OfferPackage filters and recorded identity fixtures.
-- Provider `AGENT-11-T03` — Output: tested immutable specialist implementation/configuration identity and handoff.; Consumer `BACKEND-01-T07` — Input: accepted discovery/final proposals, approved source evidence, immutable OfferPackage filters and recorded identity fixtures.
+- Provider `AGENT-11-T03` — Output: tested specialist identity/handoff.; Consumer `BACKEND-01-T07` — Input: accepted discovery/final proposals, approved source evidence, immutable OfferPackage filters and recorded identity fixtures.
 - Provider `AGENT-06-T03` — Output: tested immutable specialist implementation/configuration identity and handoff.; Consumer `BACKEND-01-T07` — Input: accepted discovery/final proposals, approved source evidence, immutable OfferPackage filters and recorded identity fixtures.
 - Provider `WF-03-T05` — Output: M4 gate bundle.; Consumer `WF-04-T01` — Input: accepted OfferPackage and source scopes.
 - Provider `DB-02-T03` — Output: versioned brief/idea/offer.; Consumer `WF-04-T01` — Input: accepted OfferPackage and source scopes.
 - Provider `WF-03-T03` — Output: accepted commercial package and READY_FOR_LEADS.; Consumer `WF-04-T01` — Input: accepted OfferPackage and source scopes.
 - Provider `BACKEND-01-T07` — Output: exact BusinessIdentityService and QualificationService interfaces with single identity/decision ownership.; Consumer `WF-04-T01` — Input: accepted OfferPackage and source scopes.
-- Provider `PROVIDER-08-T03` — Output: signed discovery capability fixtures for AGENT-11 and AGENT-10.; Consumer `WF-04-T01` — Input: accepted OfferPackage and source scopes.
-- Provider `PROVIDER-08-T03` — Output: signed discovery capability fixtures for AGENT-11 and AGENT-10.; Consumer `WF-04-T02` — Input: approved multi-source fixtures and LeadDiscoveryCandidate.
-- Provider `AGENT-11-T04` — Output: specialist acceptance evidence for shared promotion; no second promotion writer.; Consumer `WF-04-T02` — Input: approved multi-source fixtures and LeadDiscoveryCandidate.
+- Provider `PROVIDER-08-T03` — Output: signed discovery fixtures for AGENT-11/AGENT-10.; Consumer `WF-04-T01` — Input: accepted OfferPackage and source scopes.
+- Provider `PROVIDER-08-T03` — Output: signed discovery fixtures for AGENT-11/AGENT-10.; Consumer `WF-04-T02` — Input: approved multi-source fixtures and LeadDiscoveryCandidate.
+- Provider `AGENT-11-T04` — Output: acceptance evidence.; Consumer `WF-04-T02` — Input: approved multi-source fixtures and LeadDiscoveryCandidate.
 - Provider `PROVIDER-06-T01` — Output: provider-neutral port plus disabled adapter.; Consumer `WF-04-T03` — Input: accepted preliminary artifacts and bounded evidence ports.
 - Provider `PROVIDER-06-T03` — Output: deterministic M3 enrichment fixture containing frozen provider result/meta/usage plus replacement evidence.; Consumer `WF-04-T03` — Input: accepted preliminary artifacts and bounded evidence ports.
 - Provider `PROVIDER-05-T04` — Output: deterministic evaluation data.; Consumer `WF-04-T03` — Input: accepted preliminary artifacts and bounded evidence ports.
@@ -8801,7 +8801,7 @@
 - Provider `DB-01-T01` — Output: inward-facing types.; Consumer `BACKEND-05-T01` — Input: DB-01/05 hashes/tables and registry above.
 - Provider `DB-01-T02` — Output: fresh PostgreSQL schema.; Consumer `BACKEND-05-T01` — Input: DB-01/05 hashes/tables and registry above.
 - Provider `SEC-06-T01` — Output: versioned early privacy/minimization/redaction/retention-class contract.; Consumer `SEC-04-T01` — Input: approved Israeli solo-business scope, SEC-06 early minimization contract, operator-attested owned test project/mailbox/aliases/scopes and the document-local prohibited-recipient rules; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `PRODUCT-01-T02` — Output: pass or a smaller brief.; Consumer `SEC-04-T01` — Input: approved Israeli solo-business scope, SEC-06 early minimization contract, operator-attested owned test project/mailbox/aliases/scopes and the document-local prohibited-recipient rules; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `PRODUCT-01-T02` — Output: pass or smaller brief.; Consumer `SEC-04-T01` — Input: approved Israeli solo-business scope, SEC-06 early minimization contract, operator-attested owned test project/mailbox/aliases/scopes and the document-local prohibited-recipient rules; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `AGENT-07-T03` — Output: tested immutable specialist implementation/configuration identity and handoff.; Consumer `SEC-04-T03` — Input: accepted draft and template/policy versions.
 - Provider `DB-05-T02` — Output: M2 event/audit/idempotency/outbox/policy/cost schema.; Consumer `SEC-05-T01` — Input: the DB-01 M2 separated default-off control contract plus canonical DB-05 rows, ARCH-03 events, and SEC-04 signed isolated-test/prohibited-recipient control gate.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `SEC-05-T01` — Input: the DB-01 M2 separated default-off control contract plus canonical DB-05 rows, ARCH-03 events, and SEC-04 signed isolated-test/prohibited-recipient control gate.
@@ -8813,17 +8813,17 @@
 - Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `SEC-05-T03` — Input: provider/run/experiment/campaign/mailbox policies, and OBS-03 complete reservation/reconciliation cost chain.
 - Provider `DB-01-T02` — Output: fresh PostgreSQL schema.; Consumer `SEC-02-T01` — Input: DB-01 operators and the normative DDL; early privacy/retention-class contract and document-local exact operational expiry/restore fixtures.
 - Provider `SEC-06-T01` — Output: versioned early privacy/minimization/redaction/retention-class contract.; Consumer `SEC-02-T01` — Input: DB-01 operators and the normative DDL; early privacy/retention-class contract and document-local exact operational expiry/restore fixtures.
-- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `SEC-02-T02` — Input: exact config, return path, Origin, anonymous key, and SEC-03 versioned key/object encryption contracts.
+- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, replaceable adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `SEC-02-T02` — Input: exact config, return path, Origin, anonymous key, and SEC-03 versioned key/object encryption contracts.
 - Provider `BACKEND-02-T01` — Output: versioned private route-boundary and HTTP-metadata contract usable with fixture actors before OIDC integration.; Consumer `SEC-02-T04` — Input: session plus HTTP metadata.
 - Provider `SEC-02-T04` — Output: implemented versioned authenticated private-request boundary interface plus authenticated generated API call.; Consumer `PROVIDER-07-T03` — Input: neutral ports, scoped credential policy and fake HTTP fixtures.
-- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `PROVIDER-07-T03` — Input: neutral ports, scoped credential policy and fake HTTP fixtures.
+- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, replaceable adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `PROVIDER-07-T03` — Input: neutral ports, scoped credential policy and fake HTTP fixtures.
 - Provider `SEC-02-T04` — Output: implemented versioned authenticated private-request boundary interface plus authenticated generated API call.; Consumer `WF-06-T01` — Input: SEC-02 real authenticated operator context, expected versions, reason, command key and BACKEND-05 implemented command bus.
 - Provider `BACKEND-05-T01` — Output: command bus.; Consumer `WF-06-T01` — Input: SEC-02 real authenticated operator context, expected versions, reason, command key and BACKEND-05 implemented command bus.
 - Provider `BACKEND-05-T01` — Output: command bus.; Consumer `WF-02-T05` — Input: current product control and cohort fixtures.
 - Provider `WF-06-T03` — Output: implemented versioned guarded resume/retry transition and acknowledgement handler interface plus exact ARCH-03 states/events.; Consumer `WF-02-T05` — Input: current product control and cohort fixtures.
 - Provider `SEC-02-T04` — Output: implemented versioned authenticated private-request boundary interface plus authenticated generated API call.; Consumer `BACKEND-05-T02` — Input: SEC-02 session/reauthentication, SEC-03 signing/encryption, DB-03 content and PROVIDER-01 deterministic MIME construction.
 - Provider `SEC-02-T05` — Output: implemented versioned session lifecycle/reauthentication/emergency-revocation interface plus bounded invalidation evidence.; Consumer `BACKEND-05-T02` — Input: SEC-02 session/reauthentication, SEC-03 signing/encryption, DB-03 content and PROVIDER-01 deterministic MIME construction.
-- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `BACKEND-05-T02` — Input: SEC-02 session/reauthentication, SEC-03 signing/encryption, DB-03 content and PROVIDER-01 deterministic MIME construction.
+- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, replaceable adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `BACKEND-05-T02` — Input: SEC-02 session/reauthentication, SEC-03 signing/encryption, DB-03 content and PROVIDER-01 deterministic MIME construction.
 - Provider `DB-03-T04` — Output: migrated immutable message/intent/attempt/result/observation/reply/cursor schema and complete ambiguity-chain constraints.; Consumer `BACKEND-05-T02` — Input: SEC-02 session/reauthentication, SEC-03 signing/encryption, DB-03 content and PROVIDER-01 deterministic MIME construction.
 - Provider `PROVIDER-01-T02` — Output: in-memory `GmailSendRequestV1`.; Consumer `BACKEND-05-T02` — Input: SEC-02 session/reauthentication, SEC-03 signing/encryption, DB-03 content and PROVIDER-01 deterministic MIME construction.
 - Provider `BACKEND-03-T03` — Output: implemented versioned PolicyEvaluationService interface plus immutable DB-05 policy authority.; Consumer `BACKEND-05-T03` — Input: ActionAuthorityScopeV1, accepted offer/strategy/activation/member/thread/evidence, deterministic commercial result, current policy facts and generations.
@@ -8853,7 +8853,7 @@
 - Provider `WF-04-T05` — Output: M5 gate bundle.; Consumer `LAUNCH-01-T01` — Input: current signed M0-M5 passing gates, risk register, restored M2 schema evidence, selected-runtime acceptance and WF-01 signed isolation/schema manifest; immutable release/config bindings, operator-provisioned isolated project/mailbox/owned-alias resources, exact catalog/allocation and hard send/cost/time caps; both controls false; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `WF-01-T01` — Output: signed isolation/schema manifest referencing the external resource attestation.; Consumer `LAUNCH-01-T01` — Input: current signed M0-M5 passing gates, risk register, restored M2 schema evidence, selected-runtime acceptance and WF-01 signed isolation/schema manifest; immutable release/config bindings, operator-provisioned isolated project/mailbox/owned-alias resources, exact catalog/allocation and hard send/cost/time caps; both controls false; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `WF-00-T04` — Output: one signed `SelectedRuntimeDecisionV1` naming `DBOS|TEMPORAL`, the branch gate, evidence hashes, adapter version when applicable, and zero third-runtime authority.; Consumer `LAUNCH-01-T01` — Input: current signed M0-M5 passing gates, risk register, restored M2 schema evidence, selected-runtime acceptance and WF-01 signed isolation/schema manifest; immutable release/config bindings, operator-provisioned isolated project/mailbox/owned-alias resources, exact catalog/allocation and hard send/cost/time caps; both controls false; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `PROVIDER-01-T03` — Input: authenticated start command, signed/encrypted flow state, secret-store TTL/PKCE, callback code, preallocated mailbox/version; real authenticated request boundary, registered Gmail start command, mailbox/idempotency schema and atomic command replay service; signed isolated target/resource/cap credential-construction attestation, with no live-send authority.
+- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, replaceable adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `PROVIDER-01-T03` — Input: authenticated start command, signed/encrypted flow state, secret-store TTL/PKCE, callback code, preallocated mailbox/version; real authenticated request boundary, registered Gmail start command, mailbox/idempotency schema and atomic command replay service; signed isolated target/resource/cap credential-construction attestation, with no live-send authority.
 - Provider `SEC-02-T04` — Output: implemented versioned authenticated private-request boundary interface plus authenticated generated API call.; Consumer `PROVIDER-01-T03` — Input: authenticated start command, signed/encrypted flow state, secret-store TTL/PKCE, callback code, preallocated mailbox/version; real authenticated request boundary, registered Gmail start command, mailbox/idempotency schema and atomic command replay service; signed isolated target/resource/cap credential-construction attestation, with no live-send authority.
 - Provider `BACKEND-05-T01` — Output: command bus.; Consumer `PROVIDER-01-T03` — Input: authenticated start command, signed/encrypted flow state, secret-store TTL/PKCE, callback code, preallocated mailbox/version; real authenticated request boundary, registered Gmail start command, mailbox/idempotency schema and atomic command replay service; signed isolated target/resource/cap credential-construction attestation, with no live-send authority.
 - Provider `DB-03-T04` — Output: migrated immutable message/intent/attempt/result/observation/reply/cursor schema and complete ambiguity-chain constraints.; Consumer `PROVIDER-01-T03` — Input: authenticated start command, signed/encrypted flow state, secret-store TTL/PKCE, callback code, preallocated mailbox/version; real authenticated request boundary, registered Gmail start command, mailbox/idempotency schema and atomic command replay service; signed isolated target/resource/cap credential-construction attestation, with no live-send authority.
@@ -8966,11 +8966,11 @@
 - Provider `PROVIDER-07-T03` — Output: disabled-by-default first adapter.; Consumer `WF-07-T02` — Input: bounded availability and booking policy.
 - Provider `PROVIDER-07-T04` — Output: adapter acceptance interface for WF-07 live test gate.; Consumer `WF-07-T03` — Input: BookingGateway action authorization and provider fixtures.
 - Provider `LAUNCH-01-T03` — Output: complete signed immutable pilot-entry authorization satisfying every original entry prerequisite; bounded owned-alias live window only, never product outreach.; Consumer `WF-07-T04` — Input: complete isolated pilot entry and dedicated test calendar/attendees.
-- Provider `WF-05-T04` — Output: bounded conversation/negotiation history.; Consumer `WF-08-T01` — Input: canonical checkpoint states/rules and CheckpointEvaluationService interface.
-- Provider `AGENT-09-T04` — Output: specialist acceptance evidence for shared promotion; no second promotion writer.; Consumer `WF-08-T01` — Input: canonical checkpoint states/rules and CheckpointEvaluationService interface.
-- Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `WF-08-T01` — Input: canonical checkpoint states/rules and CheckpointEvaluationService interface.
-- Provider `BACKEND-01-T09` — Output: implemented CheckpointEvaluationService for WF-08 and next-stage eligibility.; Consumer `WF-08-T01` — Input: canonical checkpoint states/rules and CheckpointEvaluationService interface.
-- Provider `WF-08-T03` — Output: authoritative decision/eligibility interface.; Consumer `WF-09-T01` — Input: closed checkpoint/bundle and GlobalLearningEngine contract.
+- Provider `WF-05-T04` — Output: bounded conversation/negotiation history.; Consumer `WF-08-T01` — Input: cost-first stage registry and CheckpointEvaluationService.
+- Provider `AGENT-09-T04` — Output: specialist acceptance evidence for shared promotion; no second promotion writer.; Consumer `WF-08-T01` — Input: cost-first stage registry and CheckpointEvaluationService.
+- Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `WF-08-T01` — Input: cost-first stage registry and CheckpointEvaluationService.
+- Provider `BACKEND-01-T09` — Output: implemented CheckpointEvaluationService for WF-08 and next-stage eligibility.; Consumer `WF-08-T01` — Input: cost-first stage registry and CheckpointEvaluationService.
+- Provider `WF-08-T03` — Output: decision/eligibility interface.; Consumer `WF-09-T01` — Input: closed checkpoint/bundle and GlobalLearningEngine contract.
 - Provider `AGENT-12-T04` — Output: specialist acceptance evidence for shared promotion; no second promotion writer.; Consumer `WF-09-T01` — Input: closed checkpoint/bundle and GlobalLearningEngine contract.
 - Provider `AGENT-10-T06` — Output: reproducible selection and bounded recovery.; Consumer `WF-09-T01` — Input: closed checkpoint/bundle and GlobalLearningEngine contract.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `WF-09-T01` — Input: closed checkpoint/bundle and GlobalLearningEngine contract.
@@ -8998,7 +8998,7 @@
 - Provider `TEST-04-T06` — Output: signed M6 bundle including live command-ownership evidence.; Consumer `WF-05-T06` — Input: inbox, negotiation, test booking and checkpoint/global-learning simulations.
 - Provider `WF-07-T04` — Output: signed booking gate evidence.; Consumer `WF-05-T06` — Input: inbox, negotiation, test booking and checkpoint/global-learning simulations.
 - Provider `WF-08-T04` — Output: M6 checkpoint evidence.; Consumer `WF-05-T06` — Input: inbox, negotiation, test booking and checkpoint/global-learning simulations.
-- Provider `WF-09-T04` — Output: M6 learning/activation evidence.; Consumer `WF-05-T06` — Input: inbox, negotiation, test booking and checkpoint/global-learning simulations.
+- Provider `WF-09-T04` — Output: M6 learning evidence.; Consumer `WF-05-T06` — Input: inbox, negotiation, test booking and checkpoint/global-learning simulations.
 - Provider `BACKEND-03-T01` — Output: pure policy interfaces and denial enum.; Consumer `BACKEND-06-T01` — Input: canonical tables/states/events/metrics, BACKEND-03 dedicated final-SEND reasons, exact compliance evidence tuples, and `incident.catalog.v1`.
 - Provider `SEC-04-T02` — Output: exact final-SEND compliance facts.; Consumer `BACKEND-06-T01` — Input: canonical tables/states/events/metrics, BACKEND-03 dedicated final-SEND reasons, exact compliance evidence tuples, and `incident.catalog.v1`.
 - Provider `DB-05-T02` — Output: M2 event/audit/idempotency/outbox/policy/cost schema.; Consumer `BACKEND-06-T01` — Input: canonical tables/states/events/metrics, BACKEND-03 dedicated final-SEND reasons, exact compliance evidence tuples, and `incident.catalog.v1`.
@@ -9012,7 +9012,7 @@
 - Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `ARCH-02-T05` — Input: OpenAPI and route needs.
 - Provider `BACKEND-06-T02` — Output: operator diagnosis through exact BACKEND-02 routes.; Consumer `BACKEND-03-T05` — Input: frozen policy fixtures and report projection.
 - Provider `BACKEND-06-T04` — Output: replayable report/recovery API.; Consumer `BACKEND-03-T05` — Input: frozen policy fixtures and report projection.
-- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `BACKEND-05-T07` — Input: versioned flow/credential objects, ACTIVE proofs, command/OpenAPI fixtures; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, replaceable adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `BACKEND-05-T07` — Input: versioned flow/credential objects, ACTIVE proofs, command/OpenAPI fixtures; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `PROVIDER-01-T03` — Output: implemented versioned OAuth secret-store saga/command interface plus stored opaque redirect and mailbox referencing one exact ACTIVE credential generation.; Consumer `BACKEND-05-T07` — Input: versioned flow/credential objects, ACTIVE proofs, command/OpenAPI fixtures; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `BACKEND-02-T03` — Output: authenticated M6 owned-inbox command/query/preview API and generated contract; later M7 full private/report manifest remains separate.; Consumer `BACKEND-05-T07` — Input: versioned flow/credential objects, ACTIVE proofs, command/OpenAPI fixtures; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `BACKEND-05-T07` — Input: versioned flow/credential objects, ACTIVE proofs, command/OpenAPI fixtures; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
@@ -9033,7 +9033,7 @@
 - Provider `BACKEND-06-T04` — Output: replayable report/recovery API.; Consumer `FRONTEND-03-T05` — Input: StrategyActivationService/WF-09 projections.
 - Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `FRONTEND-03-T05` — Input: StrategyActivationService/WF-09 projections.
 - Provider `BACKEND-01-T10` — Output: implemented StrategyActivationService promotion/activation/rollback interface for WF-09 with immutable action attribution.; Consumer `FRONTEND-03-T05` — Input: StrategyActivationService/WF-09 projections.
-- Provider `WF-09-T04` — Output: M6 learning/activation evidence.; Consumer `FRONTEND-03-T05` — Input: StrategyActivationService/WF-09 projections.
+- Provider `WF-09-T04` — Output: M6 learning evidence.; Consumer `FRONTEND-03-T05` — Input: StrategyActivationService/WF-09 projections.
 - Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `FRONTEND-04-T01` — Input: canonical fifteen-artifact contract and generated DTOs.
 - Provider `BACKEND-06-T04` — Output: replayable report/recovery API.; Consumer `FRONTEND-04-T02` — Input: accepted artifact refs and normalized input snapshots.
 - Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `FRONTEND-04-T03` — Input: offer/dossier/qualification responses.
@@ -9105,7 +9105,7 @@
 - Provider `FRONTEND-03-T03` — Output: campaign control center.; Consumer `FRONTEND-09-T05` — Input: all frontend views plus implemented booking/checkpoint/learning owners.
 - Provider `WF-07-T04` — Output: signed booking gate evidence.; Consumer `FRONTEND-09-T05` — Input: all frontend views plus implemented booking/checkpoint/learning owners.
 - Provider `WF-08-T04` — Output: M6 checkpoint evidence.; Consumer `FRONTEND-09-T05` — Input: all frontend views plus implemented booking/checkpoint/learning owners.
-- Provider `WF-09-T04` — Output: M6 learning/activation evidence.; Consumer `FRONTEND-09-T05` — Input: all frontend views plus implemented booking/checkpoint/learning owners.
+- Provider `WF-09-T04` — Output: M6 learning evidence.; Consumer `FRONTEND-09-T05` — Input: all frontend views plus implemented booking/checkpoint/learning owners.
 - Provider `OBS-01-T01` — Output: valid `OperationalEventV1`.; Consumer `OBS-02-T01` — Input: OBS-01 and every application boundary.
 - Provider `OBS-01-T03` — Output: implemented bounded M6 telemetry instrumentation and its exact correlated boundary/alert evidence.; Consumer `OBS-02-T01` — Input: OBS-01 and every application boundary.
 - Provider `AGENT-10-T01` — Output: signed non-model M3 fixture manifest plus ten exact suites containing 692 versioned cases with frozen rubrics/fixtures/sensitivity review and candidate parameter templates; no implemented candidate configuration is certified here.; Consumer `OBS-04-T01` — Input: AGENT-10 exact suite/rubric/provider sets.
@@ -9132,26 +9132,26 @@
 - Provider `TEST-01-T01` — Output: signed `coverage.v1.json`.; Consumer `TEST-06-T01` — Input: the TEST-01 signed coverage manifest plus document-local planned VPS resources, SLOs, pools/queues/caps, and an operator-selected disposable target.
 - Provider `TEST-01-T01` — Output: signed `coverage.v1.json`.; Consumer `INFRA-02-T01` — Input: TEST coverage manifest and current jobs.
 - Provider `INFRA-02-T02` — Output: digest-addressed candidate.; Consumer `TEST-06-T02` — Input: representative synthetic dataset and candidate image.
-- Provider `INFRA-02-T02` — Output: digest-addressed candidate.; Consumer `INFRA-03-T01` — Input: supported image, 4/8/160 resources, operator recovery device and immutable release.
-- Provider `INFRA-02-T02` — Output: digest-addressed candidate.; Consumer `INFRA-03-T02` — Input: signed image digests, internal networks/volumes/roles/resource limits.
-- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, managed-adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `INFRA-03-T03` — Input: SEC-03 contract and provider feature evidence.
-- Provider `INFRA-03-T04` — Output: signed acceptance and repository/bootstrap evidence.; Consumer `INFRA-04-T01` — Input: INFRA-03 signed accepted repository/bootstrap evidence plus the document-local explicit cluster/system ID, pgBackRest version, backup role, GCS repository, accepted S3 repository, client keys, and five-minute objective.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `SEC-03-T05` — Input: encrypted object/DB backups and separate recovery artifacts; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-02-T02` — Output: digest-addressed candidate.; Consumer `INFRA-03-T01` — Input: supported provider/region/image, 2-vCPU/4-GB target, measured disk requirement, operator recovery path and immutable release.
+- Provider `INFRA-02-T02` — Output: digest-addressed candidate.; Consumer `INFRA-03-T02` — Input: signed image digests, internal networks/volumes/roles and 2/4 resource budget.
+- Provider `SEC-03-T01` — Output: versioned strict secret/key/object models, replaceable adapter ports and authenticated-encryption contract plus versioned encrypted objects.; Consumer `INFRA-03-T03` — Input: SEC-03 lifecycle plus off-host recovery-key procedure.
+- Provider `INFRA-03-T04` — Output: accepted sole pre-revenue off-host repository.; Consumer `INFRA-04-T01` — Input: INFRA-03 accepted R2/encryption bootstrap and PostgreSQL target.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `SEC-03-T05` — Input: encrypted object/DB backups and separate recovery artifacts; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `SEC-01-T02` — Input: the planned registry, BACKEND-02 exact disabled-public private-plus-two-public manifest, implemented import/call/dataflow graphs, privacy-safe telemetry evidence, private service configuration, and independently restorable encrypted backup chains.
 - Provider `OBS-01-T06` — Output: trace evidence with zero sensitive match.; Consumer `SEC-01-T02` — Input: the planned registry, BACKEND-02 exact disabled-public private-plus-two-public manifest, implemented import/call/dataflow graphs, privacy-safe telemetry evidence, private service configuration, and independently restorable encrypted backup chains.
 - Provider `INFRA-03-T02` — Output: private service.; Consumer `SEC-01-T02` — Input: the planned registry, BACKEND-02 exact disabled-public private-plus-two-public manifest, implemented import/call/dataflow graphs, privacy-safe telemetry evidence, private service configuration, and independently restorable encrypted backup chains.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `SEC-01-T02` — Input: the planned registry, BACKEND-02 exact disabled-public private-plus-two-public manifest, implemented import/call/dataflow graphs, privacy-safe telemetry evidence, private service configuration, and independently restorable encrypted backup chains.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `SEC-01-T02` — Input: the planned registry, BACKEND-02 exact disabled-public private-plus-two-public manifest, implemented import/call/dataflow graphs, privacy-safe telemetry evidence, private service configuration, and independently restorable encrypted backup chains.
 - Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `OBS-02-T02` — Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup; implemented API/schema/workflow/agent/control/cost/backup boundaries and their record schemas.
 - Provider `DB-06-T01` — Output: fresh schema.; Consumer `OBS-02-T02` — Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup; implemented API/schema/workflow/agent/control/cost/backup boundaries and their record schemas.
 - Provider `WF-05-T05` — Output: M6 control/recovery evidence.; Consumer `OBS-02-T02` — Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup; implemented API/schema/workflow/agent/control/cost/backup boundaries and their record schemas.
 - Provider `AGENT-10-T05` — Output: versioned sole-owner promotion-gate interface plus immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and one eligible configuration or rejection.; Consumer `OBS-02-T02` — Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup; implemented API/schema/workflow/agent/control/cost/backup boundaries and their record schemas.
 - Provider `SEC-05-T04` — Output: implemented versioned deterministic stop/incident/alert handler interface plus bounded stop with visible acknowledgement.; Consumer `OBS-02-T02` — Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup; implemented API/schema/workflow/agent/control/cost/backup boundaries and their record schemas.
 - Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `OBS-02-T02` — Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup; implemented API/schema/workflow/agent/control/cost/backup boundaries and their record schemas.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `OBS-02-T02` — Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup; implemented API/schema/workflow/agent/control/cost/backup boundaries and their record schemas.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `OBS-02-T02` — Input: API/DB/runtime/agent/provider/Gmail/policy/control/cost/eval/backup; implemented API/schema/workflow/agent/control/cost/backup boundaries and their record schemas.
 - Provider `SEC-01-T02` — Output: signed complete implementation-closure registry plus deny-by-default/private-deployment ingress/security/load/log evidence.; Consumer `SEC-06-T02` — Input: the early privacy interface; completed SEC-02 session lifecycle, SEC-03 secret/key inventory, OBS-02 telemetry operations, OBS-04 evaluation operations, all final provider implementation evidence bundles, including approved discovery and calendar, independently restorable backup/object-store chains, and external provisional schedule, recipient jurisdictions, counsel, and accounting decisions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `SEC-02-T05` — Output: implemented versioned session lifecycle/reauthentication/emergency-revocation interface plus bounded invalidation evidence.; Consumer `SEC-06-T02` — Input: the early privacy interface; completed SEC-02 session lifecycle, SEC-03 secret/key inventory, OBS-02 telemetry operations, OBS-04 evaluation operations, all final provider implementation evidence bundles, including approved discovery and calendar, independently restorable backup/object-store chains, and external provisional schedule, recipient jurisdictions, counsel, and accounting decisions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `SEC-03-T04` — Output: current inventory, retired-key proof, and signed offline recovery-key package.; Consumer `SEC-06-T02` — Input: the early privacy interface; completed SEC-02 session lifecycle, SEC-03 secret/key inventory, OBS-02 telemetry operations, OBS-04 evaluation operations, all final provider implementation evidence bundles, including approved discovery and calendar, independently restorable backup/object-store chains, and external provisional schedule, recipient jurisdictions, counsel, and accounting decisions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `SEC-06-T02` — Input: the early privacy interface; completed SEC-02 session lifecycle, SEC-03 secret/key inventory, OBS-02 telemetry operations, OBS-04 evaluation operations, all final provider implementation evidence bundles, including approved discovery and calendar, independently restorable backup/object-store chains, and external provisional schedule, recipient jurisdictions, counsel, and accounting decisions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `SEC-06-T02` — Input: the early privacy interface; completed SEC-02 session lifecycle, SEC-03 secret/key inventory, OBS-02 telemetry operations, OBS-04 evaluation operations, all final provider implementation evidence bundles, including approved discovery and calendar, independently restorable backup/object-store chains, and external provisional schedule, recipient jurisdictions, counsel, and accounting decisions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `PROVIDER-01-T06` — Output: M6 provider evidence.; Consumer `SEC-06-T02` — Input: the early privacy interface; completed SEC-02 session lifecycle, SEC-03 secret/key inventory, OBS-02 telemetry operations, OBS-04 evaluation operations, all final provider implementation evidence bundles, including approved discovery and calendar, independently restorable backup/object-store chains, and external provisional schedule, recipient jurisdictions, counsel, and accounting decisions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `PROVIDER-02-T05` — Output: retained M6 read/recovery evidence.; Consumer `SEC-06-T02` — Input: the early privacy interface; completed SEC-02 session lifecycle, SEC-03 secret/key inventory, OBS-02 telemetry operations, OBS-04 evaluation operations, all final provider implementation evidence bundles, including approved discovery and calendar, independently restorable backup/object-store chains, and external provisional schedule, recipient jurisdictions, counsel, and accounting decisions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `PROVIDER-03-T06` — Output: replaceable least-authority boundary.; Consumer `SEC-06-T02` — Input: the early privacy interface; completed SEC-02 session lifecycle, SEC-03 secret/key inventory, OBS-02 telemetry operations, OBS-04 evaluation operations, all final provider implementation evidence bundles, including approved discovery and calendar, independently restorable backup/object-store chains, and external provisional schedule, recipient jurisdictions, counsel, and accounting decisions; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
@@ -9165,7 +9165,7 @@
 - Provider `SEC-06-T02` — Output: signed complete `DataInventoryV1` plus versioned `retention.policy.v1` and executable durations, holds, key-overlap, and backup schedule projected to every consumer.; Consumer `DB-06-T05` — Input: SEC-06 authoritative `retention.policy.v1`, mechanically resolved DataInventoryV1 field rules, exact table/field set equality, cutoffs, holds, and the current database dependency graph.
 - Provider `SEC-06-T02` — Output: signed complete `DataInventoryV1` plus versioned `retention.policy.v1` and executable durations, holds, key-overlap, and backup schedule projected to every consumer.; Consumer `TEST-02-T03` — Input: SEC-06 policy, DB-06 deletion graph and backup chains.
 - Provider `DB-06-T05` — Output: versioned database retention/recovery graph plus minimized data or explicitly owned deferral.; Consumer `TEST-02-T03` — Input: SEC-06 policy, DB-06 deletion graph and backup chains.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `TEST-02-T03` — Input: SEC-06 policy, DB-06 deletion graph and backup chains.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `TEST-02-T03` — Input: SEC-06 policy, DB-06 deletion graph and backup chains.
 - Provider `PROVIDER-01-T04` — Output: implemented versioned one-call Gmail adapter/result interface plus recorded accepted, conclusive-rejection or unknown evidence; no live-send acceptance claim.; Consumer `TEST-02-T04` — Input: fifteen-artifact set, current capability/suite manifests and costs.
 - Provider `PROVIDER-02-T01` — Output: strict versioned Gmail read/history result contracts plus signed recorded provider results.; Consumer `TEST-02-T04` — Input: fifteen-artifact set, current capability/suite manifests and costs.
 - Provider `PROVIDER-03-T04` — Output: deterministic evaluation input.; Consumer `TEST-02-T04` — Input: fifteen-artifact set, current capability/suite manifests and costs.
@@ -9181,27 +9181,27 @@
 - Provider `BACKEND-03-T01` — Output: pure policy interfaces and denial enum.; Consumer `TEST-02-T06` — Input: BACKEND-03 reasons and incident.catalog.v1.
 - Provider `OBS-05-T01` — Output: versioned incident.catalog.v1 and secure signable IncidentEvidenceBundle contracts plus authoritative incident record.; Consumer `TEST-02-T06` — Input: BACKEND-03 reasons and incident.catalog.v1.
 - Provider `SEC-01-T02` — Output: signed complete implementation-closure registry plus deny-by-default/private-deployment ingress/security/load/log evidence.; Consumer `TEST-06-T03` — Input: SEC-01 closure matrix, secret/PII/hash canaries and candidate artifacts.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `INFRA-02-T03` — Input: verified candidate, exact target, backup and runtime state.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `TEST-06-T04` — Input: disposable environment, fault schedule, backup and last release.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `INFRA-02-T03` — Input: verified candidate, exact target, backup and runtime state.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `TEST-06-T04` — Input: disposable environment, fault schedule, backup and last release.
 - Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `TEST-06-T04` — Input: disposable environment, fault schedule, backup and last release.
 - Provider `TEST-01-T01` — Output: signed `coverage.v1.json`.; Consumer `TEST-06-T05` — Input: every capacity/security/privacy/public/fault requirement and TEST-01 registry.
-- Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `INFRA-03-T06` — Input: the exact BACKEND-02 disabled-public private-plus-two-public route manifest, SEC-01 closure evidence, and the document-local static M9 activation condition and Cloudflare policy.
-- Provider `SEC-01-T02` — Output: signed complete implementation-closure registry plus deny-by-default/private-deployment ingress/security/load/log evidence.; Consumer `INFRA-03-T06` — Input: the exact BACKEND-02 disabled-public private-plus-two-public route manifest, SEC-01 closure evidence, and the document-local static M9 activation condition and Cloudflare policy.
+- Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `INFRA-03-T06` — Input: disabled-public route manifest and exact M9 activation condition.
+- Provider `SEC-01-T02` — Output: signed complete implementation-closure registry plus deny-by-default/private-deployment ingress/security/load/log evidence.; Consumer `INFRA-03-T06` — Input: disabled-public route manifest and exact M9 activation condition.
 - Provider `SEC-05-T02` — Output: implemented versioned RecipientSignalSuppressionService sole-writer interface with unconditional suppression precedence and purge-stable projection.; Consumer `SEC-04-T04` — Input: Gmail history observations, unconditional precedence for an existing suppression, the exact disabled-public private-plus-two-public manifest/client, SEC-01 implementation-closure evidence, and the disabled M8 ingress profile.
 - Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `SEC-04-T04` — Input: Gmail history observations, unconditional precedence for an existing suppression, the exact disabled-public private-plus-two-public manifest/client, SEC-01 implementation-closure evidence, and the disabled M8 ingress profile.
 - Provider `SEC-01-T02` — Output: signed complete implementation-closure registry plus deny-by-default/private-deployment ingress/security/load/log evidence.; Consumer `SEC-04-T04` — Input: Gmail history observations, unconditional precedence for an existing suppression, the exact disabled-public private-plus-two-public manifest/client, SEC-01 implementation-closure evidence, and the disabled M8 ingress profile.
-- Provider `INFRA-03-T06` — Output: staged, disabled, and independently switchable two-operation public ingress configuration.; Consumer `SEC-04-T04` — Input: Gmail history observations, unconditional precedence for an existing suppression, the exact disabled-public private-plus-two-public manifest/client, SEC-01 implementation-closure evidence, and the disabled M8 ingress profile.
+- Provider `INFRA-03-T06` — Output: independently switchable staged public ingress.; Consumer `SEC-04-T04` — Input: Gmail history observations, unconditional precedence for an existing suppression, the exact disabled-public private-plus-two-public manifest/client, SEC-01 implementation-closure evidence, and the disabled M8 ingress profile.
 - Provider `PROVIDER-02-T01` — Output: strict versioned Gmail read/history result contracts plus signed recorded provider results.; Consumer `SEC-04-T04` — Input: Gmail history observations, unconditional precedence for an existing suppression, the exact disabled-public private-plus-two-public manifest/client, SEC-01 implementation-closure evidence, and the disabled M8 ingress profile.
-- Provider `TEST-06-T02` — Output: safe envelope or smaller/resized recommendation.; Consumer `INFRA-03-T07` — Input: TEST-06 envelope and INFRA-02 manifests.
-- Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `INFRA-03-T07` — Input: TEST-06 envelope and INFRA-02 manifests.
-- Provider `SEC-06-T02` — Output: signed complete `DataInventoryV1` plus versioned `retention.policy.v1` and executable durations, holds, key-overlap, and backup schedule projected to every consumer.; Consumer `INFRA-04-T03` — Input: retention command, authoritative policy, exact target snapshot, two healthy repositories and existing idempotency/audit tables.
-- Provider `SEC-06-T02` — Output: signed complete `DataInventoryV1` plus versioned `retention.policy.v1` and executable durations, holds, key-overlap, and backup schedule projected to every consumer.; Consumer `INFRA-04-T04` — Input: exact recovery dependency graph, DB-06/SEC-06 policy and live-record holds.
-- Provider `DB-06-T05` — Output: versioned database retention/recovery graph plus minimized data or explicitly owned deferral.; Consumer `INFRA-04-T04` — Input: exact recovery dependency graph, DB-06/SEC-06 policy and live-record holds.
+- Provider `TEST-06-T02` — Output: safe envelope or smaller/resized recommendation.; Consumer `INFRA-03-T07` — Input: TEST-06 envelope and release manifests.
+- Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `INFRA-03-T07` — Input: TEST-06 envelope and release manifests.
+- Provider `SEC-06-T02` — Output: signed complete `DataInventoryV1` plus versioned `retention.policy.v1` and executable durations, holds, key-overlap, and backup schedule projected to every consumer.; Consumer `INFRA-04-T03` — Input: accepted backup chain and SEC-06 inventory.
+- Provider `SEC-06-T02` — Output: signed complete `DataInventoryV1` plus versioned `retention.policy.v1` and executable durations, holds, key-overlap, and backup schedule projected to every consumer.; Consumer `INFRA-04-T04` — Input: retention rules, holds, restore dependencies and signed deletion ledger.
+- Provider `DB-06-T05` — Output: versioned database retention/recovery graph plus minimized data or explicitly owned deferral.; Consumer `INFRA-04-T04` — Input: retention rules, holds, restore dependencies and signed deletion ledger.
 - Provider `DB-06-T05` — Output: versioned database retention/recovery graph plus minimized data or explicitly owned deferral.; Consumer `SEC-06-T03` — Input: DB-06 graph, object store, expiry/holds/tombstones.
-- Provider `INFRA-04-T04` — Output: exact 14-daily/4-weekly sets with no older personal-data recovery point.; Consumer `SEC-06-T03` — Input: DB-06 graph, object store, expiry/holds/tombstones.
+- Provider `INFRA-04-T04` — Output: bounded repository state.; Consumer `SEC-06-T03` — Input: DB-06 graph, object store, expiry/holds/tombstones.
 - Provider `OBS-05-T01` — Output: versioned incident.catalog.v1 and secure signable IncidentEvidenceBundle contracts plus authoritative incident record.; Consumer `WF-06-T05` — Input: incident, product/runtime/provider comparison, signed evidence.
-- Provider `INFRA-04-T05` — Output: executable versioned isolated PITR/full-restore runner interface plus signed restore report.; Consumer `WF-06-T05` — Input: incident, product/runtime/provider comparison, signed evidence.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `TEST-03-T06` — Input: WF-06 auditable recovery service/evidence, corrupted projection/outbox/runtime-mapping fixtures, and an independently verified backup chain.
+- Provider `INFRA-04-T05` — Output: verified restored snapshot.; Consumer `WF-06-T05` — Input: incident, product/runtime/provider comparison, signed evidence.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `TEST-03-T06` — Input: WF-06 auditable recovery service/evidence, corrupted projection/outbox/runtime-mapping fixtures, and an independently verified backup chain.
 - Provider `WF-06-T05` — Output: implemented versioned idempotent typed recovery/repair command interface and auditable recovery evidence without SQL.; Consumer `TEST-03-T06` — Input: WF-06 auditable recovery service/evidence, corrupted projection/outbox/runtime-mapping fixtures, and an independently verified backup chain.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
 - Provider `DB-05-T01` — Output: executable catalog.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
@@ -9228,7 +9228,7 @@
 - Provider `TEST-04-T05` — Output: terminal or explicit unresolved state plus only evidence-qualified durable suppression; completed executable versioned Gmail history/suppression suite with its recorded-fixture/scenario manifest.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
 - Provider `WF-07-T04` — Output: signed booking gate evidence.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
 - Provider `WF-08-T04` — Output: M6 checkpoint evidence.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
-- Provider `WF-09-T04` — Output: M6 learning/activation evidence.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
+- Provider `WF-09-T04` — Output: M6 learning evidence.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
 - Provider `BACKEND-01-T08` — Output: implemented BookingGateway sole writer and AvailabilityService/BookingReconciliationService read interfaces for WF-07/PROVIDER-07.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
 - Provider `BACKEND-01-T09` — Output: implemented CheckpointEvaluationService for WF-08 and next-stage eligibility.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
 - Provider `BACKEND-01-T10` — Output: implemented StrategyActivationService promotion/activation/rollback interface for WF-09 with immutable action attribution.; Consumer `OBS-04-T04` — Input: WF-07/08/09 and existing M1/Gmail/restore harnesses.
@@ -9236,7 +9236,7 @@
 - Provider `SEC-02-T05` — Output: implemented versioned session lifecycle/reauthentication/emergency-revocation interface plus bounded invalidation evidence.; Consumer `OBS-05-T03` — Input: M6 containment services and StopControlV1; SEC-02 session invalidation, SEC-03 key/credential rotation, INFRA-02 rollback release, INFRA-04 restore implementation and WF-06 typed recovery service.
 - Provider `SEC-03-T04` — Output: current inventory, retired-key proof, and signed offline recovery-key package.; Consumer `OBS-05-T03` — Input: M6 containment services and StopControlV1; SEC-02 session invalidation, SEC-03 key/credential rotation, INFRA-02 rollback release, INFRA-04 restore implementation and WF-06 typed recovery service.
 - Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `OBS-05-T03` — Input: M6 containment services and StopControlV1; SEC-02 session invalidation, SEC-03 key/credential rotation, INFRA-02 rollback release, INFRA-04 restore implementation and WF-06 typed recovery service.
-- Provider `INFRA-04-T05` — Output: executable versioned isolated PITR/full-restore runner interface plus signed restore report.; Consumer `OBS-05-T03` — Input: M6 containment services and StopControlV1; SEC-02 session invalidation, SEC-03 key/credential rotation, INFRA-02 rollback release, INFRA-04 restore implementation and WF-06 typed recovery service.
+- Provider `INFRA-04-T05` — Output: verified restored snapshot.; Consumer `OBS-05-T03` — Input: M6 containment services and StopControlV1; SEC-02 session invalidation, SEC-03 key/credential rotation, INFRA-02 rollback release, INFRA-04 restore implementation and WF-06 typed recovery service.
 - Provider `WF-06-T05` — Output: implemented versioned idempotent typed recovery/repair command interface and auditable recovery evidence without SQL.; Consumer `OBS-05-T03` — Input: M6 containment services and StopControlV1; SEC-02 session invalidation, SEC-03 key/credential rotation, INFRA-02 rollback release, INFRA-04 restore implementation and WF-06 typed recovery service.
 - Provider `SEC-05-T04` — Output: implemented versioned deterministic stop/incident/alert handler interface plus bounded stop with visible acknowledgement.; Consumer `PRODUCT-03-T04` — Input: synthetic incident scenarios R01-R27 plus SEC-05 bounded-stop evidence and OBS-05 typed containment/recovery services; completed IR-01..13 typed recovery/restore/rollback runbook services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `OBS-05-T02` — Output: implemented M6 IR-01/02/03/12 bounded containment services with typed acknowledgements; later full restore/rollback runbooks remain separate.; Consumer `PRODUCT-03-T04` — Input: synthetic incident scenarios R01-R27 plus SEC-05 bounded-stop evidence and OBS-05 typed containment/recovery services; completed IR-01..13 typed recovery/restore/rollback runbook services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
@@ -9249,71 +9249,71 @@
 - Provider `TEST-04-T06` — Output: signed M6 bundle including live command-ownership evidence.; Consumer `TEST-01-T05` — Input: deterministic, recovery, browser, security, restore and provider evidence, including TEST-03 signed command mapping and TEST-06 signed command-coverage report.
 - Provider `TEST-03-T07` — Output: one signed command mapping.; Consumer `TEST-01-T05` — Input: deterministic, recovery, browser, security, restore and provider evidence, including TEST-03 signed command mapping and TEST-06 signed command-coverage report.
 - Provider `TEST-06-T05` — Output: signed command-coverage report.; Consumer `TEST-01-T05` — Input: deterministic, recovery, browser, security, restore and provider evidence, including TEST-03 signed command mapping and TEST-06 signed command-coverage report.
-- Provider `OBS-02-T01` — Output: versioned telemetry package.; Consumer `INFRA-05-T01` — Input: exact OBS-01/02 registries and product queries.
-- Provider `OBS-01-T03` — Output: implemented bounded M6 telemetry instrumentation and its exact correlated boundary/alert evidence.; Consumer `INFRA-05-T01` — Input: exact OBS-01/02 registries and product queries.
-- Provider `BACKEND-06-T02` — Output: operator diagnosis through exact BACKEND-02 routes.; Consumer `INFRA-05-T01` — Input: exact OBS-01/02 registries and product queries.
-- Provider `OBS-02-T04` — Output: actionable alerts.; Consumer `INFRA-05-T02` — Input: OBS-02 alerts and OBS-05 tuples/objectives.
-- Provider `OBS-05-T01` — Output: versioned incident.catalog.v1 and secure signable IncidentEvidenceBundle contracts plus authoritative incident record.; Consumer `INFRA-05-T02` — Input: OBS-02 alerts and OBS-05 tuples/objectives.
-- Provider `OBS-05-T04` — Output: actionable one-operator coordination.; Consumer `INFRA-05-T02` — Input: OBS-02 alerts and OBS-05 tuples/objectives.
-- Provider `OBS-05-T01` — Output: versioned incident.catalog.v1 and secure signable IncidentEvidenceBundle contracts plus authoritative incident record.; Consumer `INFRA-05-T04` — Input: every redacted Critical incident and daily fixed canary.
-- Provider `INFRA-04-T03` — Output: canonical deletion authority head/version, signed deletion certificate chain, refreshed recovery package, and evidence that privacy deletion survives PITR.; Consumer `INFRA-05-T05` — Input: independent recovery package, authority head exact version/ETag/checksum, certificate chain and canonical backup/restore alert route.
-- Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `INFRA-05-T06` — Input: clean candidate host, signed releases/backups/keys and exact scenario.
-- Provider `SEC-03-T04` — Output: current inventory, retired-key proof, and signed offline recovery-key package.; Consumer `INFRA-05-T06` — Input: clean candidate host, signed releases/backups/keys and exact scenario.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `INFRA-05-T06` — Input: clean candidate host, signed releases/backups/keys and exact scenario.
-- Provider `INFRA-05-T06` — Output: executable DR01-DR11 scenario harness plus signed scenario report.; Consumer `INFRA-04-T06` — Input: newest eligible chain and clean host; implemented executable DR01-DR11 scenario harness.
-- Provider `INFRA-04-T06` — Output: M8/ongoing restore evidence.; Consumer `INFRA-05-T07` — Input: daily backup/telemetry checks, monthly alert test, quarterly IR rotation/contact/channel test and <=90-day clean restore.
-- Provider `INFRA-03-T07` — Output: measured limits and recovery evidence.; Consumer `ARCH-01-T06` — Input: complete private product; measured private deployment/load-rehearsal limits, clean restore evidence, current monitoring readiness and implemented full incident recovery services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-04-T06` — Output: M8/ongoing restore evidence.; Consumer `ARCH-01-T06` — Input: complete private product; measured private deployment/load-rehearsal limits, clean restore evidence, current monitoring readiness and implemented full incident recovery services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-05-T07` — Output: ongoing readiness.; Consumer `ARCH-01-T06` — Input: complete private product; measured private deployment/load-rehearsal limits, clean restore evidence, current monitoring readiness and implemented full incident recovery services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `OBS-02-T01` — Output: versioned telemetry package.; Consumer `INFRA-05-T01` — Input: OBS registries and reporting projections.
+- Provider `OBS-01-T03` — Output: implemented bounded M6 telemetry instrumentation and its exact correlated boundary/alert evidence.; Consumer `INFRA-05-T01` — Input: OBS registries and reporting projections.
+- Provider `BACKEND-06-T02` — Output: operator diagnosis through exact BACKEND-02 routes.; Consumer `INFRA-05-T01` — Input: OBS registries and reporting projections.
+- Provider `OBS-02-T04` — Output: actionable alerts.; Consumer `INFRA-05-T02` — Input: alert rules/runbooks and incident registry.
+- Provider `OBS-05-T01` — Output: versioned incident.catalog.v1 and secure signable IncidentEvidenceBundle contracts plus authoritative incident record.; Consumer `INFRA-05-T02` — Input: alert rules/runbooks and incident registry.
+- Provider `OBS-05-T04` — Output: actionable one-operator coordination.; Consumer `INFRA-05-T02` — Input: alert rules/runbooks and incident registry.
+- Provider `OBS-05-T01` — Output: versioned incident.catalog.v1 and secure signable IncidentEvidenceBundle contracts plus authoritative incident record.; Consumer `INFRA-05-T04` — Input: health/capacity/control signals.
+- Provider `INFRA-04-T03` — Output: auditable deletion/hold lineage.; Consumer `INFRA-05-T05` — Input: INFRA-04 manifest/deletion/hold ledger.
+- Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `INFRA-05-T06` — Input: current small-VPS release, encrypted R2 chain and runbooks.
+- Provider `SEC-03-T04` — Output: current inventory, retired-key proof, and signed offline recovery-key package.; Consumer `INFRA-05-T06` — Input: current small-VPS release, encrypted R2 chain and runbooks.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `INFRA-05-T06` — Input: current small-VPS release, encrypted R2 chain and runbooks.
+- Provider `INFRA-05-T06` — Output: signed DR evidence.; Consumer `INFRA-04-T06` — Input: current release and independently retained recovery package.
+- Provider `INFRA-04-T06` — Output: signed drill evidence.; Consumer `INFRA-05-T07` — Input: current DR/restore/alert/capacity evidence.
+- Provider `INFRA-03-T07` — Output: measured pre-revenue limits/upgrade trigger.; Consumer `ARCH-01-T06` — Input: complete private product; measured private deployment/load-rehearsal limits, clean restore evidence, current monitoring readiness and implemented full incident recovery services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-04-T06` — Output: signed drill evidence.; Consumer `ARCH-01-T06` — Input: complete private product; measured private deployment/load-rehearsal limits, clean restore evidence, current monitoring readiness and implemented full incident recovery services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-05-T07` — Output: bounded operations gate.; Consumer `ARCH-01-T06` — Input: complete private product; measured private deployment/load-rehearsal limits, clean restore evidence, current monitoring readiness and implemented full incident recovery services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `OBS-05-T03` — Output: complete implemented IR-01..13 bounded-harm/typed-recovery service and runbook set with all original first-action evidence.; Consumer `ARCH-01-T06` — Input: complete private product; measured private deployment/load-rehearsal limits, clean restore evidence, current monitoring readiness and implemented full incident recovery services; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `LAUNCH-01-T06` — Output: M6 gate record with no residual authority.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-04-T06` — Output: M8/ongoing restore evidence.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-04-T06` — Output: signed drill evidence.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `OBS-02-T05` — Output: signed M8 SLO baseline.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-05-T07` — Output: ongoing readiness.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-05-T07` — Output: bounded operations gate.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `ARCH-01-T05` — Output: signed M7 private-operator architecture gate referencing distinct retained M6 and M7 evidence.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `TEST-01-T02` — Output: signed `task7-commands.v1.json`.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `TEST-01-T05` — Output: promotion decision, never authority enable.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-03-T08` — Output: signed coverage.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-03-T08` — Output: signed M8 topology coverage.; Consumer `LAUNCH-02-T01` — Input: current M0-M7 gates, release/target/recovery/visibility evidence and closed catalogs, completed TEST-01 M8 consolidation evidence and INFRA-03 private deployment command-ownership evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `INFRA-02-T02` — Output: digest-addressed candidate.; Consumer `LAUNCH-02-T02` — Input: signed candidate, additive migration and current backup; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `LAUNCH-02-T02` — Input: signed candidate, additive migration and current backup; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-03-T04` — Output: signed acceptance and repository/bootstrap evidence.; Consumer `LAUNCH-02-T04` — Input: Task-7 profiles, isolated targets, accepted AWS S3 identity, INFRA-04 restore evidence, INFRA-05 DR harness/report, and TEST-06 recovery-time/data-loss measurements; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-04-T06` — Output: M8/ongoing restore evidence.; Consumer `LAUNCH-02-T04` — Input: Task-7 profiles, isolated targets, accepted AWS S3 identity, INFRA-04 restore evidence, INFRA-05 DR harness/report, and TEST-06 recovery-time/data-loss measurements; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-05-T06` — Output: executable DR01-DR11 scenario harness plus signed scenario report.; Consumer `LAUNCH-02-T04` — Input: Task-7 profiles, isolated targets, accepted AWS S3 identity, INFRA-04 restore evidence, INFRA-05 DR harness/report, and TEST-06 recovery-time/data-loss measurements; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `LAUNCH-02-T02` — Input: signed candidate, additive migration and current backup; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-03-T04` — Output: accepted sole pre-revenue off-host repository.; Consumer `LAUNCH-02-T04` — Input: Task-7 profiles, isolated targets, accepted AWS S3 identity, INFRA-04 restore evidence, INFRA-05 DR harness/report, and TEST-06 recovery-time/data-loss measurements; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-04-T06` — Output: signed drill evidence.; Consumer `LAUNCH-02-T04` — Input: Task-7 profiles, isolated targets, accepted AWS S3 identity, INFRA-04 restore evidence, INFRA-05 DR harness/report, and TEST-06 recovery-time/data-loss measurements; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-05-T06` — Output: signed DR evidence.; Consumer `LAUNCH-02-T04` — Input: Task-7 profiles, isolated targets, accepted AWS S3 identity, INFRA-04 restore evidence, INFRA-05 DR harness/report, and TEST-06 recovery-time/data-loss measurements; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `TEST-06-T04` — Output: recovery-time/data-loss measurements.; Consumer `LAUNCH-02-T04` — Input: Task-7 profiles, isolated targets, accepted AWS S3 identity, INFRA-04 restore evidence, INFRA-05 DR harness/report, and TEST-06 recovery-time/data-loss measurements; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `WF-07-T04` — Output: signed booking gate evidence.; Consumer `LAUNCH-02-T05` — Input: all windows/commands/incidents/cost and release pointers; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `WF-08-T04` — Output: M6 checkpoint evidence.; Consumer `LAUNCH-02-T05` — Input: all windows/commands/incidents/cost and release pointers; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `WF-09-T04` — Output: M6 learning/activation evidence.; Consumer `LAUNCH-02-T05` — Input: all windows/commands/incidents/cost and release pointers; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `WF-09-T04` — Output: M6 learning evidence.; Consumer `LAUNCH-02-T05` — Input: all windows/commands/incidents/cost and release pointers; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `TEST-05-T02` — Output: private-route coverage and server receipts.; Consumer `LAUNCH-02-T05` — Input: all windows/commands/incidents/cost and release pointers; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `INFRA-02-T02` — Output: digest-addressed candidate.; Consumer `LAUNCH-05-T01` — Input: locks, image/action digests, SBOM, direct official release/advisory candidates discovered from owner feeds and EOL registry.
 - Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `LAUNCH-05-T04` — Input: signed candidate, clean target, backup and rollback target.
-- Provider `INFRA-04-T02` — Output: two independently restorable encrypted chains.; Consumer `LAUNCH-05-T04` — Input: signed candidate, clean target, backup and rollback target.
-- Provider `PRODUCT-01-T02` — Output: pass or a smaller brief.; Consumer `SEC-04-T05` — Input: the PRODUCT-01 approved Israeli solo-business use case, SEC-06 early privacy/minimization contract, and external Google account/scopes, recipient cohorts/sources/content, and applicable jurisdictions. Completed SEC-06 authoritative inventory/retention policy and implemented suppression/control evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-04-T02` — Output: retained backup chain.; Consumer `LAUNCH-05-T04` — Input: signed candidate, clean target, backup and rollback target.
+- Provider `PRODUCT-01-T02` — Output: pass or smaller brief.; Consumer `SEC-04-T05` — Input: the PRODUCT-01 approved Israeli solo-business use case, SEC-06 early privacy/minimization contract, and external Google account/scopes, recipient cohorts/sources/content, and applicable jurisdictions. Completed SEC-06 authoritative inventory/retention policy and implemented suppression/control evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `SEC-06-T02` — Output: signed complete `DataInventoryV1` plus versioned `retention.policy.v1` and executable durations, holds, key-overlap, and backup schedule projected to every consumer.; Consumer `SEC-04-T05` — Input: the PRODUCT-01 approved Israeli solo-business use case, SEC-06 early privacy/minimization contract, and external Google account/scopes, recipient cohorts/sources/content, and applicable jurisdictions. Completed SEC-06 authoritative inventory/retention policy and implemented suppression/control evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `SEC-05-T04` — Output: implemented versioned deterministic stop/incident/alert handler interface plus bounded stop with visible acknowledgement.; Consumer `SEC-04-T05` — Input: the PRODUCT-01 approved Israeli solo-business use case, SEC-06 early privacy/minimization contract, and external Google account/scopes, recipient cohorts/sources/content, and applicable jurisdictions. Completed SEC-06 authoritative inventory/retention policy and implemented suppression/control evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `OBS-04-T05` — Output: automatic rollback/exception evidence.; Consumer `SEC-01-T05` — Input: current threat register, release/provider/policy/eval/restore evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `INFRA-04-T06` — Output: M8/ongoing restore evidence.; Consumer `SEC-01-T05` — Input: current threat register, release/provider/policy/eval/restore evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `INFRA-04-T06` — Output: signed drill evidence.; Consumer `SEC-01-T05` — Input: current threat register, release/provider/policy/eval/restore evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `LAUNCH-05-T04` — Output: signed acceptance or rejection.; Consumer `SEC-01-T05` — Input: current threat register, release/provider/policy/eval/restore evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `SEC-01-T05` — Output: signed gate record.; Consumer `PRODUCT-02-T04` — Input: safety gates, exact `100/200/300/400` increments, `100/300/600/1,000` cumulative maxima, stage reply windows, subsegment allocation, price, delivery-cost assumptions, and the default-or-stricter demand floors; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
+- Provider `SEC-01-T05` — Output: signed gate record.; Consumer `PRODUCT-02-T04` — Input: current risk/legal/provider/economic evidence.
 - Provider `SEC-04-T04` — Output: activation-ready reply/public-stop implementation with exact trigger-backed suppression, no public activation authority.; Consumer `TEST-05-T05` — Input: M9 synthetic token and FastAPI two-operation fixture.
 - Provider `TEST-01-T01` — Output: signed `coverage.v1.json`.; Consumer `TEST-05-T06` — Input: all private/public journeys and exact operations.
-- Provider `LAUNCH-02-T05` — Output: M8 gate record.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `SEC-01-T05` — Output: signed gate record.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `TEST-05-T05` — Output: public edge/browser evidence.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `DB-02-T03` — Output: versioned brief/idea/offer.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `BACKEND-05-T05` — Output: one immutable cohort membership snapshot.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `PROVIDER-01-T03` — Output: implemented versioned OAuth secret-store saga/command interface plus stored opaque redirect and mailbox referencing one exact ACTIVE credential generation.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `SEC-04-T02` — Output: exact final-SEND compliance facts.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `SEC-05-T03` — Output: versioned hierarchical budget/rate-admission service contract plus no-over-admission evidence.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `PRODUCT-02-T04` — Output: signed staged decision-rule version.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `SEC-04-T05` — Output: immutable `LegalReviewRecordV1` and `CompliancePolicyV1`.; Consumer `LAUNCH-03-T01` — Input: all six phase exits, M0–M8 gates and exact legal/provider/economic envelope.
-- Provider `INFRA-03-T06` — Output: staged, disabled, and independently switchable two-operation public ingress configuration.; Consumer `LAUNCH-03-T02` — Input: signed M9 route authorization, staged edge and current SEC-04 implementation.
-- Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `LAUNCH-03-T02` — Input: signed M9 route authorization, staged edge and current SEC-04 implementation.
-- Provider `SEC-04-T04` — Output: activation-ready reply/public-stop implementation with exact trigger-backed suppression, no public activation authority.; Consumer `LAUNCH-03-T02` — Input: signed M9 route authorization, staged edge and current SEC-04 implementation.
-- Provider `SEC-04-T05` — Output: immutable `LegalReviewRecordV1` and `CompliancePolicyV1`.; Consumer `LAUNCH-03-T02` — Input: signed M9 route authorization, staged edge and current SEC-04 implementation.
-- Provider `LAUNCH-03-T02` — Output: public capability and recovery evidence.; Consumer `OBS-01-T07` — Input: bounded private telemetry contract, LAUNCH-03 activated two-operation capability and SEC-04 public-stop implementation.
+- Provider `LAUNCH-02-T05` — Output: M8 gate record.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `SEC-01-T05` — Output: signed gate record.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `TEST-05-T05` — Output: public edge/browser evidence.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `DB-02-T03` — Output: versioned brief/idea/offer.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `BACKEND-05-T05` — Output: one immutable cohort membership snapshot.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `PROVIDER-01-T03` — Output: implemented versioned OAuth secret-store saga/command interface plus stored opaque redirect and mailbox referencing one exact ACTIVE credential generation.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `SEC-04-T02` — Output: exact final-SEND compliance facts.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `SEC-05-T03` — Output: versioned hierarchical budget/rate-admission service contract plus no-over-admission evidence.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `PRODUCT-02-T04` — Output: immutable M9 decision definition.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `SEC-04-T05` — Output: immutable `LegalReviewRecordV1` and `CompliancePolicyV1`.; Consumer `LAUNCH-03-T01` — Input: shadow/technical exits, M0–M8 gates and exact legal/provider/economic/model-routing/source envelope.
+- Provider `INFRA-03-T06` — Output: independently switchable staged public ingress.; Consumer `LAUNCH-03-T02` — Input: signed M9 route authorization, staged Cloudflare edge and current SEC-04 implementation.
+- Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `LAUNCH-03-T02` — Input: signed M9 route authorization, staged Cloudflare edge and current SEC-04 implementation.
+- Provider `SEC-04-T04` — Output: activation-ready reply/public-stop implementation with exact trigger-backed suppression, no public activation authority.; Consumer `LAUNCH-03-T02` — Input: signed M9 route authorization, staged Cloudflare edge and current SEC-04 implementation.
+- Provider `SEC-04-T05` — Output: immutable `LegalReviewRecordV1` and `CompliancePolicyV1`.; Consumer `LAUNCH-03-T02` — Input: signed M9 route authorization, staged Cloudflare edge and current SEC-04 implementation.
+- Provider `LAUNCH-03-T02` — Output: public opt-out capability/recovery evidence.; Consumer `OBS-01-T07` — Input: bounded private telemetry contract, LAUNCH-03 activated two-operation capability and SEC-04 public-stop implementation.
 - Provider `SEC-04-T04` — Output: activation-ready reply/public-stop implementation with exact trigger-backed suppression, no public activation authority.; Consumer `OBS-01-T07` — Input: bounded private telemetry contract, LAUNCH-03 activated two-operation capability and SEC-04 public-stop implementation.
-- Provider `LAUNCH-03-T02` — Output: public capability and recovery evidence.; Consumer `TEST-06-T06` — Input: the SEC-04 activation-ready stop path, LAUNCH-03 recipient-opaque activated public capability, BACKEND-02 exact disabled-public private-plus-two-public manifest, and TEST-06-owned synthetic unsubscribe tokens; active-public safe correlation/redaction evidence.
+- Provider `LAUNCH-03-T02` — Output: public opt-out capability/recovery evidence.; Consumer `TEST-06-T06` — Input: the SEC-04 activation-ready stop path, LAUNCH-03 recipient-opaque activated public capability, BACKEND-02 exact disabled-public private-plus-two-public manifest, and TEST-06-owned synthetic unsubscribe tokens; active-public safe correlation/redaction evidence.
 - Provider `BACKEND-02-T05` — Output: one API source of truth plus exact disabled-public private-plus-two-public route map and generated client.; Consumer `TEST-06-T06` — Input: the SEC-04 activation-ready stop path, LAUNCH-03 recipient-opaque activated public capability, BACKEND-02 exact disabled-public private-plus-two-public manifest, and TEST-06-owned synthetic unsubscribe tokens; active-public safe correlation/redaction evidence.
 - Provider `SEC-04-T04` — Output: activation-ready reply/public-stop implementation with exact trigger-backed suppression, no public activation authority.; Consumer `TEST-06-T06` — Input: the SEC-04 activation-ready stop path, LAUNCH-03 recipient-opaque activated public capability, BACKEND-02 exact disabled-public private-plus-two-public manifest, and TEST-06-owned synthetic unsubscribe tokens; active-public safe correlation/redaction evidence.
 - Provider `OBS-01-T07` — Output: complete active-public correlation/redaction evidence for the exact bounded GET/POST pair.; Consumer `TEST-06-T06` — Input: the SEC-04 activation-ready stop path, LAUNCH-03 recipient-opaque activated public capability, BACKEND-02 exact disabled-public private-plus-two-public manifest, and TEST-06-owned synthetic unsubscribe tokens; active-public safe correlation/redaction evidence.
@@ -9324,38 +9324,38 @@
 - Provider `SEC-04-T06` — Output: M9 stage eligibility, not send.; Consumer `SEC-05-T05` — Input: closed incident/current gate/policy/eval/restore/cohort evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `TEST-03-T06` — Output: executable versioned typed-repair/isolated-restore recovery-matrix suite interface plus signed recovery proof.; Consumer `SEC-05-T05` — Input: closed incident/current gate/policy/eval/restore/cohort evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
 - Provider `OBS-05-T06` — Output: lessons and bounded eligibility.; Consumer `SEC-05-T05` — Input: closed incident/current gate/policy/eval/restore/cohort evidence; fresh operator-signed spend/time/failed-gate/product-signal review snapshot for this gate.
-- Provider `SEC-04-T02` — Output: exact final-SEND compliance facts.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/member facts and remaining effective cap.
-- Provider `BACKEND-05-T03` — Output: implemented ActionAuthorizationService with immutable authority and append-only consumption receipts; gateways still rebuild fresh facts.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/member facts and remaining effective cap.
-- Provider `BACKEND-03-T04` — Output: denied terminal suppression or exact pre-call authority.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/member facts and remaining effective cap.
-- Provider `SEC-05-T03` — Output: versioned hierarchical budget/rate-admission service contract plus no-over-admission evidence.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/member facts and remaining effective cap.
-- Provider `SEC-04-T06` — Output: M9 stage eligibility, not send.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/member facts and remaining effective cap.
-- Provider `SEC-05-T05` — Output: eligibility only plus signed expected-version control-enable evidence, without creating downstream rows or provider calls.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/member facts and remaining effective cap.
-- Provider `TEST-06-T06` — Output: scanner-safe active public-ingress and recipient-suppression evidence.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/member facts and remaining effective cap.
-- Provider `INFRA-04-T07` — Output: independent data-recovery proof, not a live service.; Consumer `LAUNCH-03-T04` — Input: reply/calendar observations and implemented BookingGateway/current controls.
-- Provider `INFRA-05-T07` — Output: ongoing readiness.; Consumer `LAUNCH-03-T04` — Input: reply/calendar observations and implemented BookingGateway/current controls.
-- Provider `BACKEND-01-T08` — Output: implemented BookingGateway sole writer and AvailabilityService/BookingReconciliationService read interfaces for WF-07/PROVIDER-07.; Consumer `LAUNCH-03-T04` — Input: reply/calendar observations and implemented BookingGateway/current controls.
-- Provider `WF-07-T04` — Output: signed booking gate evidence.; Consumer `LAUNCH-03-T04` — Input: reply/calendar observations and implemented BookingGateway/current controls.
-- Provider `BACKEND-01-T09` — Output: implemented CheckpointEvaluationService for WF-08 and next-stage eligibility.; Consumer `LAUNCH-03-T05` — Input: frozen stage/cumulative outcomes and verified costs/time plus global-learning owners.
-- Provider `BACKEND-01-T10` — Output: implemented StrategyActivationService promotion/activation/rollback interface for WF-09 with immutable action attribution.; Consumer `LAUNCH-03-T05` — Input: frozen stage/cumulative outcomes and verified costs/time plus global-learning owners.
-- Provider `WF-08-T04` — Output: M6 checkpoint evidence.; Consumer `LAUNCH-03-T05` — Input: frozen stage/cumulative outcomes and verified costs/time plus global-learning owners.
-- Provider `WF-09-T04` — Output: M6 learning/activation evidence.; Consumer `LAUNCH-03-T05` — Input: frozen stage/cumulative outcomes and verified costs/time plus global-learning owners.
-- Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `PROVIDER-02-T01` — Output: strict versioned Gmail read/history result contracts plus signed recorded provider results.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `PROVIDER-03-T01` — Output: provider-neutral protocol.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `PROVIDER-04-T01` — Output: `MarketSearchPort`.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `PROVIDER-05-T01` — Output: two read-only ports.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `PROVIDER-06-T01` — Output: provider-neutral port plus disabled adapter.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `SEC-05-T03` — Output: versioned hierarchical budget/rate-admission service contract plus no-over-admission evidence.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `WF-02-T05` — Output: M6 lifecycle control contract.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `WF-03-T05` — Output: M4 gate bundle.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `WF-04-T05` — Output: M5 gate bundle.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `PROVIDER-01-T01` — Output: versioned Gmail OAuth/credential-binding/request/result/error/MIME/history contract bundle and signed disposable fixtures.; Consumer `LAUNCH-04-T01` — Input: canonical sales owners and complete eight-phase ladder.
-- Provider `LAUNCH-03-T05` — Output: immutable checkpoint/package/activation/rollback evidence.; Consumer `LAUNCH-04-T03` — Input: current phase-7 checkpoint and all retained safety/recovery/strategy evidence.
-- Provider `AGENT-10-T05` — Output: versioned sole-owner promotion-gate interface plus immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and one eligible configuration or rejection.; Consumer `LAUNCH-04-T03` — Input: current phase-7 checkpoint and all retained safety/recovery/strategy evidence.
-- Provider `LAUNCH-02-T05` — Output: M8 gate record.; Consumer `LAUNCH-04-T03` — Input: current phase-7 checkpoint and all retained safety/recovery/strategy evidence.
-- Provider `OBS-04-T05` — Output: automatic rollback/exception evidence.; Consumer `LAUNCH-04-T03` — Input: current phase-7 checkpoint and all retained safety/recovery/strategy evidence.
-- Provider `OBS-05-T06` — Output: lessons and bounded eligibility.; Consumer `LAUNCH-04-T03` — Input: current phase-7 checkpoint and all retained safety/recovery/strategy evidence.
-- Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `LAUNCH-04-T03` — Input: current phase-7 checkpoint and all retained safety/recovery/strategy evidence.
-- Provider `BACKEND-01-T08` — Output: implemented BookingGateway sole writer and AvailabilityService/BookingReconciliationService read interfaces for WF-07/PROVIDER-07.; Consumer `LAUNCH-04-T03` — Input: current phase-7 checkpoint and all retained safety/recovery/strategy evidence.
-- Provider `BACKEND-01-T10` — Output: implemented StrategyActivationService promotion/activation/rollback interface for WF-09 with immutable action attribution.; Consumer `LAUNCH-04-T03` — Input: current phase-7 checkpoint and all retained safety/recovery/strategy evidence.
-- Provider `WF-09-T04` — Output: M6 learning/activation evidence.; Consumer `LAUNCH-04-T03` — Input: current phase-7 checkpoint and all retained safety/recovery/strategy evidence.
+- Provider `SEC-04-T02` — Output: exact final-SEND compliance facts.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/stage/member facts, Brave evidence and model-routing budget.
+- Provider `BACKEND-05-T03` — Output: implemented ActionAuthorizationService with immutable authority and append-only consumption receipts; gateways still rebuild fresh facts.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/stage/member facts, Brave evidence and model-routing budget.
+- Provider `BACKEND-03-T04` — Output: denied terminal suppression or exact pre-call authority.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/stage/member facts, Brave evidence and model-routing budget.
+- Provider `SEC-05-T03` — Output: versioned hierarchical budget/rate-admission service contract plus no-over-admission evidence.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/stage/member facts, Brave evidence and model-routing budget.
+- Provider `SEC-04-T06` — Output: M9 stage eligibility, not send.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/stage/member facts, Brave evidence and model-routing budget.
+- Provider `SEC-05-T05` — Output: eligibility only plus signed expected-version control-enable evidence, without creating downstream rows or provider calls.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/stage/member facts, Brave evidence and model-routing budget.
+- Provider `TEST-06-T06` — Output: scanner-safe active public-ingress and recipient-suppression evidence.; Consumer `LAUNCH-03-T03` — Input: fresh authority/offer/strategy/stage/member facts, Brave evidence and model-routing budget.
+- Provider `INFRA-04-T07` — Output: rotation/recovery evidence.; Consumer `LAUNCH-03-T04` — Input: reply/calendar/provider/model observations and controls.
+- Provider `INFRA-05-T07` — Output: bounded operations gate.; Consumer `LAUNCH-03-T04` — Input: reply/calendar/provider/model observations and controls.
+- Provider `BACKEND-01-T08` — Output: implemented BookingGateway sole writer and AvailabilityService/BookingReconciliationService read interfaces for WF-07/PROVIDER-07.; Consumer `LAUNCH-03-T04` — Input: reply/calendar/provider/model observations and controls.
+- Provider `WF-07-T04` — Output: signed booking gate evidence.; Consumer `LAUNCH-03-T04` — Input: reply/calendar/provider/model observations and controls.
+- Provider `BACKEND-01-T09` — Output: implemented CheckpointEvaluationService for WF-08 and next-stage eligibility.; Consumer `LAUNCH-03-T05` — Input: frozen current-stage outcomes, meetings/revenue/economics, provider/model/operator costs and global-learning owners.
+- Provider `BACKEND-01-T10` — Output: implemented StrategyActivationService promotion/activation/rollback interface for WF-09 with immutable action attribution.; Consumer `LAUNCH-03-T05` — Input: frozen current-stage outcomes, meetings/revenue/economics, provider/model/operator costs and global-learning owners.
+- Provider `WF-08-T04` — Output: M6 checkpoint evidence.; Consumer `LAUNCH-03-T05` — Input: frozen current-stage outcomes, meetings/revenue/economics, provider/model/operator costs and global-learning owners.
+- Provider `WF-09-T04` — Output: M6 learning evidence.; Consumer `LAUNCH-03-T05` — Input: frozen current-stage outcomes, meetings/revenue/economics, provider/model/operator costs and global-learning owners.
+- Provider `AGENT-01-T01` — Output: importable versioned contracts.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `PROVIDER-02-T01` — Output: strict versioned Gmail read/history result contracts plus signed recorded provider results.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `PROVIDER-03-T01` — Output: provider-neutral protocol.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `PROVIDER-04-T01` — Output: `MarketSearchPort`.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `PROVIDER-05-T01` — Output: two read-only ports.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `PROVIDER-06-T01` — Output: provider-neutral port plus disabled adapter.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `SEC-05-T03` — Output: versioned hierarchical budget/rate-admission service contract plus no-over-admission evidence.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `WF-02-T05` — Output: M6 lifecycle control contract.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `WF-03-T05` — Output: M4 gate bundle.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `WF-04-T05` — Output: M5 gate bundle.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `PROVIDER-01-T01` — Output: versioned Gmail OAuth/credential-binding/request/result/error/MIME/history contract bundle and signed disposable fixtures.; Consumer `LAUNCH-04-T01` — Input: canonical authorities and cost-first launch ladder.
+- Provider `LAUNCH-03-T05` — Output: immutable decision/package/activation/scale evidence.; Consumer `LAUNCH-04-T03` — Input: current LAUNCH-03 stage/tranche authority and retained safety/recovery/strategy evidence.
+- Provider `AGENT-10-T05` — Output: versioned sole-owner promotion-gate interface plus immutable promotion decision binding suite/configuration identity, `PromotionManifestV1`, registry version, and one eligible configuration or rejection.; Consumer `LAUNCH-04-T03` — Input: current LAUNCH-03 stage/tranche authority and retained safety/recovery/strategy evidence.
+- Provider `LAUNCH-02-T05` — Output: M8 gate record.; Consumer `LAUNCH-04-T03` — Input: current LAUNCH-03 stage/tranche authority and retained safety/recovery/strategy evidence.
+- Provider `OBS-04-T05` — Output: automatic rollback/exception evidence.; Consumer `LAUNCH-04-T03` — Input: current LAUNCH-03 stage/tranche authority and retained safety/recovery/strategy evidence.
+- Provider `OBS-05-T06` — Output: lessons and bounded eligibility.; Consumer `LAUNCH-04-T03` — Input: current LAUNCH-03 stage/tranche authority and retained safety/recovery/strategy evidence.
+- Provider `INFRA-02-T04` — Output: signed rollback release.; Consumer `LAUNCH-04-T03` — Input: current LAUNCH-03 stage/tranche authority and retained safety/recovery/strategy evidence.
+- Provider `BACKEND-01-T08` — Output: implemented BookingGateway sole writer and AvailabilityService/BookingReconciliationService read interfaces for WF-07/PROVIDER-07.; Consumer `LAUNCH-04-T03` — Input: current LAUNCH-03 stage/tranche authority and retained safety/recovery/strategy evidence.
+- Provider `BACKEND-01-T10` — Output: implemented StrategyActivationService promotion/activation/rollback interface for WF-09 with immutable action attribution.; Consumer `LAUNCH-04-T03` — Input: current LAUNCH-03 stage/tranche authority and retained safety/recovery/strategy evidence.
+- Provider `WF-09-T04` — Output: M6 learning evidence.; Consumer `LAUNCH-04-T03` — Input: current LAUNCH-03 stage/tranche authority and retained safety/recovery/strategy evidence.

@@ -1,7 +1,7 @@
 # Maintenance and Upgrade Policy
 
 **Document ID:** LAUNCH-05
-**Status:** Planned M8-M9 operating control; current foundation CI/locks exist, but no production release, advisory automation, canary, backup, AWS witness, legal refresh or maintenance evidence exists
+**Status:** Planned M8-M9 operating control; current foundation CI/locks exist, but no production release, advisory automation, canary, encrypted R2 backup/restore, legal refresh or maintenance evidence exists
 **Milestone:** M8 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator; qualified counsel owns legal conclusions and each provider owner supplies external change evidence
 **Prerequisites:** exact task Inputs `LAUNCH-05-T01 <- INFRA-02-T02; LAUNCH-05-T02 <- LAUNCH-05-T01; LAUNCH-05-T03 <- LAUNCH-05-T02; LAUNCH-05-T04 <- LAUNCH-05-T03,INFRA-02-T04,INFRA-04-T02; LAUNCH-05-T05 <- LAUNCH-05-T04`; descriptive contract sources are linked in this document and do not imply whole-document completion dependencies
@@ -28,7 +28,7 @@ Non-goals: automatic dependency merging/deployment, mutable tags in release evid
 
 ## Exact planned implementation surfaces
 
-No new product endpoint, table, event, artifact, provider capability, service, metric, incident, DR scenario or Task 7 command is introduced. `MaintenanceAdvisoryBaselineV1` below is a signed immutable release-evidence schema, not a product table or agent artifact. Maintenance uses existing lockfiles/workflows; `ReleaseManifestV1`, `PromotionManifestV1`, `BackupManifestV1` and signed gate records; the 24 Task 7 command IDs; exact table/API/metric/incident/policy/provider/DR01..DR11 set hashes; and canonical release/incident/repair owners. Planned INFRA-02 release scripts own candidate/preflight/apply/rollback; AGENT-10/OBS-04 own agent/provider evaluation; INFRA-04/05 own restore/AWS witness/DR.
+No new product endpoint, table, event, artifact, provider capability, service, metric, incident, DR scenario or Task 7 command is introduced. `MaintenanceAdvisoryBaselineV1` below is a signed immutable release-evidence schema, not a product table or agent artifact. Maintenance uses existing lockfiles/workflows; `ReleaseManifestV1`, `PromotionManifestV1`, `BackupManifestV1` and signed gate records; the 24 Task 7 command IDs; exact table/API/metric/incident/policy/provider/DR01..DR11 set hashes; and canonical release/incident/repair owners. Planned INFRA-02 release scripts own candidate/preflight/apply/rollback; AGENT-10/OBS-04 own agent/provider evaluation; INFRA-04/05 own encrypted R2 restore/account-recovery/DR.
 
 ### Dated primary-source advisory baseline
 
@@ -98,7 +98,7 @@ The GitHub Advisory Database, OS/base-image vendor advisories, lockfile ecosyste
 | DBOS/runtime | isolated DBOS system-schema migration, M1 `K0..K8`, all eight criteria, queue/rate/version/recovery and application-level Gmail ambiguity matrix | any disqualifying DBOS result permanently selects Temporal before product workflow work |
 | Pydantic AI/model/prompt/tool/schema/validator/provider | all affected exact suites × three fresh captures, deterministic scoring twice, provider fixture/result/ledger/cost/privacy parity, operator `PromotionManifestV1` | prior compatible promoted pointer; pause stage when compatibility uncertain |
 | Gmail/search/page/enrichment API or terms/price/quota | recorded fixture refresh, exact six-family contract, scope/terms/legal/cost review, zero-hidden-retry and bounded live capture where authorized | select `DISABLED`/prior operation for new runs; preserve observations and reconcile possible calls |
-| AWS S3 SDK/IAM/bucket/Object-Lock/conditional-write/account | full non-emulator `T7-AWS-WITNESS-ACCEPT`, repo-2 backup/WAL/restore, package/account-lockout and head ambiguity matrix | no fallback authority; unavailable=`30`, integrity=`40`, remain off |
+| Cloudflare R2 API/credential/bucket/encryption/account | full real `T7-R2-RECOVERY-ACCEPT`, application-encrypted backup/WAL/restore, off-host recovery-package and account-lockout/ambiguity matrix | no plaintext or unverified fallback; unavailable=`30`, integrity=`40`, remain off |
 | legal/policy/source/disclosure/consent schema | counsel-scoped review, fresh sources/access dates, new immutable policy/templates and fresh deterministic authorization of affected actions at eligible cohort boundaries | product control false; old policy remains historical only |
 
 Every candidate first runs deterministic/offline lanes, then isolated real-database/recovery lanes, then private canary with both send controls/public off. A Gmail/provider canary uses only explicitly authorized owned test resources; it creates no M9 evidence. A real-recipient version change requires a current compatible LAUNCH-03 envelope and fresh deterministic action authority at the eligible boundary; changed source/legal/program scope needs a new entry.
@@ -121,7 +121,7 @@ The recovery/release evidence must bind the accepted OfferPackage/economics/clai
 
 Deploy/rollback drains or routes old versions and preserves action attribution, accepted evidence, capacity and suppression. Restore requires current tombstones/stops and Gmail/calendar read reconciliation before any separately authorized re-entry. Calendar API/notification/tzdb changes require explicit slot/confirmation/ETag/create/reschedule/cancel ambiguity regressions; silent local-time reinterpretation is forbidden.
 
-Maintain exact eight-phase evidence applicability and return to the earliest affected phase when behavior or evidence changes. Owned single-message fixtures stay isolated from M9. Routine in-envelope sends/replies/negotiations/bookings and checkpoint learning remain deterministic automatic actions after earned gates; maintenance never reintroduces routine message approval or loosens immutable commercial/safety/legal/source/suppression bounds. No continuation or upgrade can exceed 1,000 recipients in the existing program.
+Maintain exact eight-phase evidence applicability and return to the earliest affected phase when behavior or evidence changes. Owned single-message fixtures stay isolated from M9. Routine in-envelope sends/replies/negotiations/bookings and checkpoint learning remain deterministic automatic actions after earned gates; maintenance never reintroduces routine message approval or loosens immutable commercial/safety/legal/source/suppression bounds. No continuation or upgrade can exceed pre-revenue 300-businesss in the existing program.
 
 ## Ordered implementation tasks
 

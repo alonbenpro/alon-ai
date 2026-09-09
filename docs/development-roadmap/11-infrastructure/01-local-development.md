@@ -59,7 +59,7 @@ All setup/migration/generation/smoke requirements map exactly to `T7-LOCAL-SMOKE
 
 ## Local autonomous-sales fixture topology
 
-All new product capabilities remain planned. Extend the existing loopback Compose topology with the same application workers/services and isolated fixtures; no additional product backend is introduced. Seed both idea origins, accepted offer economics, source/candidate/dossier/PRELIMINARY/FINAL records, conversations/negotiations, calendar intents/slots/actions, four cohorts/checkpoints and multiple global-strategy activations using deterministic synthetic identities.
+All new product capabilities remain planned. Extend the existing loopback Compose topology with the same application workers/services and isolated fixtures; no additional product backend is introduced. Seed both idea origins, accepted offer economics, source/candidate/dossier/PRELIMINARY/FINAL records, conversations/negotiations, calendar intents/slots/actions, cost-first stages/checkpoints and multiple global-strategy activations using deterministic synthetic identities.
 
 The recovery/release evidence must bind the accepted OfferPackage/economics/claim hashes; approved agent configurations and GlobalStrategyPackage/StrategyActivation/rollback lineage; campaign/cohort ordinals, membership/query/hash, caps and frozen qualification/causal/evidence/metric versions; CheckpointEvidenceBundle/cutoff/decision/learning triggers; full conversation/reply/negotiation state and counters; BookingIntent/slot/confirmation/action/attempt/result/observation/notification state; current suppression/tombstones/legal-policy; immutable action authorizations/consumptions; costs/reservations; and all current control/checkpoint generations.
 

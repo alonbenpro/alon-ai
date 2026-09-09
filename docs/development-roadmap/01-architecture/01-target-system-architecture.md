@@ -81,7 +81,7 @@ flowchart TB
 | `ActionAuthorizationService` | immutable `ActionAuthorityScopeV1`, evidence and version bindings, fresh deterministic action admission | accepting a proposal as permission or bypassing provider/control gates | M2 contracts; M6 send/booking composition |
 | `QualificationService` | preliminary/final decisions from proposals and offer filters; independent identity, suppression, legal and cohort admission checks | fabricated identities or agent-overridden admission | M3 fixtures; M5 workflow |
 | `BookingGateway` | qualified intent, explicit confirmation, timezone/availability recheck, sole calendar write path, idempotency/reconciliation | interpreting ambiguous agreement as confirmation; model calendar writes | M3 recorded port; M6 test calendar |
-| `CheckpointEvaluationService` | close stage admission, freeze `CheckpointEvidenceBundle`, validate evaluation recommendation, commit exact result and next-stage eligibility | adding a fifth cohort, approving on missing evidence, confusing engineering fixtures with demand | M2 contract; M7 simulation; M9 real evidence |
+| `CheckpointEvaluationService` | close stage admission, freeze `CheckpointEvidenceBundle`, validate evaluation recommendation, commit exact result and next-stage eligibility | adding a unapproved post-scale stage, approving on missing evidence, confusing engineering fixtures with demand | M2 contract; M7 simulation; M9 real evidence |
 | `StrategyActivationService` | guarded `GlobalStrategyPackage` promotion, checkpoint-only `StrategyActivation`, monitoring/rollback with immutable lineage | mid-cohort mutation, rewriting historical attribution, changing safety/commercial bounds | M3 offline evaluation; M7 simulation |
 | Observability | safe correlation, metrics, traces, alerts, cost/evaluation outputs | source-of-truth state or secrets/PII copies | current request logs; M6-M8 expansion |
 
@@ -115,7 +115,7 @@ Agent proposals remain advisory until deterministic schema, provenance, evidence
 
 ### Checkpoint and strategy flow
 
-At each exact cumulative checkpoint `100/300/600/1,000`, `CheckpointEvaluationService` freezes the completed stage's evidence, validates the evaluation agent's recommendation, and records exactly `CONTINUE|REVISE|KILL|INCONCLUSIVE|SAFETY_STOP`. Only `CONTINUE` makes the next registered `100/200/300/400` incremental cohort eligible after all deterministic checks; final `CONTINUE` cannot exceed 1,000.
+At each exact cumulative checkpoint `0/20/50/explicitly-authorized-100-to-300`, `CheckpointEvaluationService` freezes the completed stage's evidence, validates the evaluation agent's recommendation, and records exactly `CONTINUE|REVISE|KILL|INCONCLUSIVE|SAFETY_STOP`. Only `CONTINUE` makes the next registered `SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300` incremental cohort eligible after all deterministic checks; final `CONTINUE` cannot exceed 1,000.
 
 Global Learning consumes only closed checkpoint evidence. Triggering campaign/stage evidence is primary, similar campaigns secondary, and relevant history/failures/incidents guardrails. Every applicable agent produces `PROMOTE|KEEP|ROLLBACK|INSUFFICIENT_EVIDENCE`; retaining results do not mutate. `StrategyActivationService` requires lineage, minimum evidence, offline baseline comparison, protected holdouts, cross-campaign guardrails, expected metrics/confidence, and rollback conditions before promotion.
 

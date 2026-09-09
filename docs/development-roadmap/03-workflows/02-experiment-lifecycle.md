@@ -31,7 +31,7 @@ No product workflow, persistent artifact/aggregate or provider implementation de
 | CHECKPOINT_EVALUATION | Closed-stage admission/cutoff and immutable evidence | CheckpointEvaluationService freezes CheckpointEvidenceBundle and records one exact result |
 | GLOBAL_LEARNING | Closed checkpoint and frozen bundle | GlobalLearningEngine proposes; StrategyActivationService promotes/activates only at eligible boundaries |
 
-The campaign program is STAGE_1_SIGNAL(100), STAGE_2_CONFIRM(200), STAGE_3_REPEAT(300), STAGE_4_ESTIMATE(400); cumulative maxima are 100/300/600/1,000. Unique membership, offer, strategy/activation, qualification, causal variables and evidence definitions freeze before each cohort starts. Only CONTINUE at stages 1-3 can make the next cohort eligible. Final CONTINUE closes positively with no fifth cohort; REVISE, KILL, INCONCLUSIVE and SAFETY_STOP cannot open more admission.
+The campaign program is STAGE_1_SIGNAL(100), STAGE_2_CONFIRM(200), STAGE_3_REPEAT(300), STAGE_4_ESTIMATE(400); cumulative maxima are 0/20/50/explicitly-authorized-100-to-300. Unique membership, offer, strategy/activation, qualification, causal variables and evidence definitions freeze before each cohort starts. Only CONTINUE at stages 1-3 can make the next cohort eligible. Final CONTINUE closes positively with no unapproved post-scale stage; REVISE, KILL, INCONCLUSIVE and SAFETY_STOP cannot open more admission.
 
 Normal artifact acceptance, in-envelope sends/replies/negotiations/bookings and checkpoint decisions do not wait for per-message approval. Unsafe/stale/ambiguous/out-of-envelope inputs pause into exceptions. Source/legal/provider/launch authority, current budget/rate/capacity and kill switches still gate each action.
 

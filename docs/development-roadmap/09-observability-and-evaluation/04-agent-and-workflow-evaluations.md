@@ -31,7 +31,7 @@ Each of the three repetitions independently passes exact quality, evidence, hard
 | writing/reply | writer has no send credentials; exact sanitized full thread and objective; inbound cold stop before classification; rejection versus genuine objection; durable suppression only from qualifying signal; bounded round/message/window and terminal behavior |
 | commercial | accepted OfferPackage authority; STATED/INFERRED/UNKNOWN; exact min-price/margin/tax/fee/FX/rounding vectors; allowed variant/pilot/discount/payment/bundle; no guarantee/legal-term invention |
 | booking | qualified CALL_NEXT_STEP without purchase acceptance, explicit timezone/slot confirmation, DST, expiry, conflicts, notifications, create/reschedule/cancel idempotency and ambiguous positive reconciliation |
-| checkpoint | frozen newly closed stage as primary evidence; exact CONTINUE/REVISE/KILL/INCONCLUSIVE/SAFETY_STOP; missing costs/denominators and safety overrides; increments 100/200/300/400, cumulative 100/300/600/1,000 and no fifth cohort |
+| checkpoint | frozen newly closed stage as primary evidence; exact CONTINUE/REVISE/KILL/INCONCLUSIVE/SAFETY_STOP; missing costs/denominators and safety overrides; increments SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300, cumulative 0/20/50/explicitly-authorized-100-to-300 and no unapproved post-scale stage |
 | global learning | every applicable agent gets PROMOTE/KEEP/ROLLBACK/INSUFFICIENT_EVIDENCE; minimum evidence, offline comparison, protected holdout, transfer/guardrail/confidence and stored rollback rules; weak evidence changes nothing |
 | activation | trigger campaign next boundary only after CONTINUE; other active campaigns at their own checkpoint; future campaigns newest approved baseline; frozen offer/strategy/qualification/causal/evidence definitions never change mid-cohort |
 | recovery | M1 K0–K8/eight disqualifiers, finite transactions/outbox/cancel/pause/version drain, Gmail six-point OAuth/fourteen-step gateway and history ambiguity, booking/checkpoint/learning kill points, restore and tombstone replay |
@@ -64,7 +64,7 @@ Every required workflow matrix is executed on isolated PostgreSQL and the select
 
 - [ ] Every required positive/negative/concurrent case has a fixture identity, versioned owner, command, evidence hash and fail action; missing or unavailable evidence is not passing.
 - [ ] Only SendGateway invokes Gmail writes and only BookingGateway invokes calendar create/reschedule/cancel. Crash/replay cannot duplicate effects.
-- [ ] Cohorts remain 100/200/300/400 with cumulative 100/300/600/1,000 and no active-cohort mutation or fifth cohort.
+- [ ] Cohorts remain SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300 with cumulative 0/20/50/explicitly-authorized-100-to-300 and no active-cohort mutation or unapproved post-scale stage.
 - [ ] Decision sets remain CONTINUE/REVISE/KILL/INCONCLUSIVE/SAFETY_STOP and PROMOTE/KEEP/ROLLBACK/INSUFFICIENT_EVIDENCE; weak evidence cannot promote or continue.
 - [ ] Retain signed case/result/command/fixture/schema/provider/strategy/activation hashes, call counts, costs, immutable action history and safe failure traces. Raw PII, message/calendar content, sensitive inferred attributes and credentials are excluded from ordinary telemetry/global learning.
 

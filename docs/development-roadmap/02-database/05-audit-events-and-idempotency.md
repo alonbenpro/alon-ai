@@ -20,7 +20,7 @@ Current structured logs carry request IDs and secret-safe operational failures. 
 
 ## Scope and non-goals
 
-The M9 audit/idempotency boundary treats stage admission and barrier recording as authoritative commands. Keys bind experiment version, stage ordinal, exact `100/200/300/400` increment, `100/300/600/1,000` cumulative maximum, membership-set hash, prior decision reference, and expected control/policy versions. Replaying the same key returns the stored result; a different payload conflicts. Concurrent final-slot requests serialize, and no audit/event replay can create Stage 2-4 authority without the immediately prior authoritative `CONTINUE`.
+The M9 audit/idempotency boundary treats stage admission and barrier recording as authoritative commands. Keys bind experiment version, stage ordinal, exact `SHADOW/REVIEW_20/QUALIFIED_50/SCALE_100_TO_300` increment, `0/20/50/explicitly-authorized-100-to-300` cumulative maximum, membership-set hash, prior decision reference, and expected control/policy versions. Replaying the same key returns the stored result; a different payload conflicts. Concurrent final-slot requests serialize, and no audit/event replay can create Stage 2-4 authority without the immediately prior authoritative `CONTINUE`.
 
 In scope: ARCH-03 envelopes/names, security denials, exact command scope/key replay, transactional outbox, at-least-once consumer dedupe, policy fact hashes, cost reserve/reconcile, supersession, and repair evidence. Non-goals: full event sourcing, global event order, exactly-once network delivery, putting full PII/bodies/secrets in payloads, treating timestamps as dedupe, Kafka, or generic workflow history replication.
 

@@ -17,8 +17,9 @@ from pathlib import Path
 
 _PATH = re.compile(r"(?:[0-9]{2}-[a-z0-9-]+/)+[0-9]{2}-[a-z0-9-]+\.md")
 ROOT_TASK_IDS = frozenset({"PRODUCT-01-T01"})
-STAGED_LEAD_SCHEDULE = (100, 200, 300, 400)
-STAGED_LEAD_CUMULATIVE = (100, 300, 600, 1000)
+COST_FIRST_STAGE_NAMES = ("SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300")
+SCALE_TRANCHE_MIN = 100
+SCALE_TRANCHE_MAX = 300
 LOCKS = frozenset(
     {
         "roadmap-root",
@@ -134,9 +135,13 @@ class SalesContract:
     checkpoint_decisions: tuple[str, ...]
     learning_results: tuple[str, ...]
     no_mutation_learning_results: tuple[str, ...]
-    cohort_increments: tuple[int, ...]
-    cohort_cumulative_maxima: tuple[int, ...]
-    recipient_ceiling: int
+    automated_discovery_provider: str
+    manual_evidence_sources: tuple[str, ...]
+    model_routing_tiers: tuple[str, ...]
+    premium_model_requires_explicit_approval: bool
+    batch_for_non_urgent_research: bool
+    launch_stages: tuple[dict[str, object], ...]
+    pre_revenue_recipient_ceiling: int
     send_writer: str
     booking_writer: str
     strategy_activation_boundary: str
@@ -149,7 +154,7 @@ SALES_SOURCE = "docs/development-roadmap/00-product-strategy/01-product-scope.md
 # This versioned schema is intentionally closed. An authority change requires an
 # explicit validator/schema migration, not merely editing the source document.
 _EXPECTED_SALES_CONTRACT = SalesContract(
-    schema_version="autonomous_sales_contract.v1",
+    schema_version="autonomous_sales_contract.v2",
     responsibilities=(
         Responsibility(
             1,
@@ -284,9 +289,40 @@ _EXPECTED_SALES_CONTRACT = SalesContract(
     checkpoint_decisions=("CONTINUE", "REVISE", "KILL", "INCONCLUSIVE", "SAFETY_STOP"),
     learning_results=("PROMOTE", "KEEP", "ROLLBACK", "INSUFFICIENT_EVIDENCE"),
     no_mutation_learning_results=("KEEP", "INSUFFICIENT_EVIDENCE"),
-    cohort_increments=STAGED_LEAD_SCHEDULE,
-    cohort_cumulative_maxima=STAGED_LEAD_CUMULATIVE,
-    recipient_ceiling=1000,
+    automated_discovery_provider="BRAVE_PLACE_SEARCH",
+    manual_evidence_sources=("SOCIAL_PROFILE", "PUBLIC_BUSINESS_PAGE"),
+    model_routing_tiers=("NO_AI", "NANO", "MINI", "PREMIUM"),
+    premium_model_requires_explicit_approval=True,
+    batch_for_non_urgent_research=True,
+    launch_stages=(
+        {
+            "name": "SHADOW",
+            "max_real_businesses": 0,
+            "manual_review_required": False,
+            "real_demand_learning": False,
+        },
+        {
+            "name": "REVIEW_20",
+            "max_real_businesses": 20,
+            "manual_review_required": True,
+            "real_demand_learning": True,
+        },
+        {
+            "name": "QUALIFIED_50",
+            "max_real_businesses": 50,
+            "manual_review_required": False,
+            "real_demand_learning": True,
+        },
+        {
+            "name": "SCALE_100_TO_300",
+            "min_real_businesses": 100,
+            "max_real_businesses": 300,
+            "manual_review_required": False,
+            "real_demand_learning": True,
+            "explicit_operator_authorization": True,
+        },
+    ),
+    pre_revenue_recipient_ceiling=300,
     send_writer="SendGateway",
     booking_writer="BookingGateway",
     strategy_activation_boundary="CHECKPOINT_ONLY",
@@ -358,7 +394,7 @@ def parse_sales_contract(root: Path) -> SalesContract:
             value, sort_keys=True
         ):
             raise location.error(
-                f"canonical sales contract {key} violates the exact v1 contract"
+                f"canonical sales contract {key} violates the exact v2 contract"
             )
     responsibilities = tuple(
         Responsibility(
@@ -445,39 +481,50 @@ class Wave:
 def validate_staged_lead_contract(root: Path) -> None:
     roadmap_root = root / "docs" / "development-roadmap"
     authorities = (
+        roadmap_root / "00-product-strategy" / "01-product-scope.md",
         roadmap_root / "00-product-strategy" / "02-success-metrics.md",
         roadmap_root / "12-launch-and-operations" / "03-first-real-experiment.md",
     )
     if not all(path.is_file() for path in authorities):
         return
 
-    forbidden = (
-        "at most ten recipients",
-        "one-to-ten",
-        "10-total",
-        "11th recipient",
-        "50 delivered unique recipients",
-    )
-    active_paths = [path for path in (roadmap_root / "README.md",) if path.is_file()]
-    active_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))
-    for path in active_paths:
+    required_tokens = ("SHADOW", "REVIEW_20", "QUALIFIED_50", "SCALE_100_TO_300")
+    for path in authorities:
+        text = path.read_text(encoding="utf-8")
+        relative = path.relative_to(roadmap_root).as_posix()
+        for token in required_tokens:
+            if token not in text:
+                raise SourceLocation(relative, 1).error(
+                    f"cost-first launch authority is missing {token!r}"
+                )
+    product_text = authorities[0].read_text(encoding="utf-8")
+    for token in (
+        "BRAVE_PLACE_SEARCH",
+        '"model_routing_tiers": ["NO_AI", "NANO", "MINI", "PREMIUM"]',
+        '"pre_revenue_recipient_ceiling": 300',
+    ):
+        if token not in product_text:
+            raise SourceLocation(
+                authorities[0].relative_to(roadmap_root).as_posix(), 1
+            ).error(f"cost-first authority is missing {token!r}")
+
+    secondary_paths = [roadmap_root / "README.md"]
+    secondary_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))
+    primary = {path.resolve() for path in authorities}
+    for path in secondary_paths:
+        if not path.is_file() or path.resolve() in primary:
+            continue
         relative = path.relative_to(roadmap_root).as_posix()
         for line_number, line in enumerate(
             path.read_text(encoding="utf-8").splitlines(), start=1
         ):
-            if any(legacy in line for legacy in forbidden):
+            if (
+                "100/200/300/400" in line
+                or "100/300/600/1,000" in line
+                or "100/300/600/1000" in line
+            ):
                 raise SourceLocation(relative, line_number).error(
-                    "legacy staged-lead rule is forbidden"
-                )
-
-    required = ("100/200/300/400", "100/300/600/1,000", "CONTINUE")
-    for path in authorities:
-        text = path.read_text(encoding="utf-8")
-        relative = path.relative_to(roadmap_root).as_posix()
-        for token in required:
-            if token not in text:
-                raise SourceLocation(relative, 1).error(
-                    f"staged-lead authority is missing {token!r}"
+                    "legacy automatic cohort authority remains in an active secondary roadmap document"
                 )
 
 
