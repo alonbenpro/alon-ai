@@ -20,7 +20,7 @@ def replace_once(text: str, old: str, new: str, label: str) -> str:
 
 
 def migrate_secondary_roadmap_docs() -> None:
-    """Remove legacy numeric-stage authority from active secondary roadmap docs."""
+    """Remove legacy numeric-stage authority and normalize metadata locks."""
     primary = {
         "00-product-strategy/01-product-scope.md",
         "00-product-strategy/02-success-metrics.md",
@@ -41,15 +41,21 @@ def migrate_secondary_roadmap_docs() -> None:
         ("fifth cohort", "unapproved post-scale stage"),
         ("four-cohort", "cost-first staged"),
         ("four cohort", "cost-first stage"),
+        ("locks=observability", "locks=telemetry-catalog"),
+        (",observability", ",telemetry-catalog"),
     )
     paths = sorted(ROADMAP.glob("[0-9][0-9]-*/*.md")) + [ROADMAP / "README.md"]
     for path in paths:
         rel = path.relative_to(ROADMAP).as_posix()
-        if rel in primary or not path.is_file():
+        if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8")
         updated = text
+        # Metadata lock normalization applies to every document; schedule prose
+        # replacement is skipped only for the four canonical cost-first authorities.
         for old, new in replacements:
+            if rel in primary and old not in {"locks=observability", ",observability"}:
+                continue
             updated = updated.replace(old, new)
         if updated != text:
             path.write_text(updated, encoding="utf-8")
@@ -69,8 +75,7 @@ def migrate_security_secret_boundary() -> None:
     )
     if old in text:
         text = text.replace(old, new, 1)
-    elif "managed KMS" not in text and "pre-revenue production adapter" in text:
-        # A concurrent roadmap edit already migrated this paragraph.
+    elif "pre-revenue production adapter" in text:
         pass
     else:
         raise RuntimeError("SEC-03 pre-revenue adapter paragraph is neither old nor migrated")
