@@ -4,48 +4,48 @@
 **Status:** Planned gate definition
 **Milestone:** M0 (exact scope and prerequisites are declared per task)
 **Owner:** Solo operator
-**Prerequisites:** exact local order `PRODUCT-01-T01 -> PRODUCT-01-T02 -> PRODUCT-01-T03 -> PRODUCT-01-T04`; cross-document task Inputs `none`. Descriptive source authorities/resources (not whole-document completion dependencies): Approved roadmap design and [master milestone order](../README.md#authoritative-milestone-order)
-**Outputs:** Canonical autonomous sales contract, ordered artifact authority, commercial and learning boundaries, experiment brief, and non-goals
+**Prerequisites:** exact local order `PRODUCT-01-T01 -> PRODUCT-01-T02 -> PRODUCT-01-T03 -> PRODUCT-01-T04`; cross-document task Inputs `none`. Descriptive source authorities/resources (not whole-document completion dependencies): [approved cost-first design](../../superpowers/specs/2026-09-09-cost-optimized-validation-roadmap-design.md) and [master milestone order](../README.md#authoritative-milestone-order)
+**Outputs:** Canonical autonomous sales contract, ordered artifact authority, commercial and learning boundaries, cost-first launch program, experiment brief, and non-goals
 **Unlocks:** PRODUCT-02 success metrics and PRODUCT-03 risk gate
 **Risk:** High
 **Complexity:** M
 
 ## Outcome and timing
 
-M0 defines a falsifiable product bet before infrastructure expands. Alon AI is a private, bounded autonomous sales-validation system for one Israeli software-developer solopreneur. It turns a discovered or user-supplied idea into market evidence, an authoritative offer, qualified prospects, evidence-backed email conversations and negotiation, qualified commitments, confirmed booked calls, checkpoint decisions, and reversible global strategy improvements.
+M0 defines a falsifiable product bet before infrastructure or provider spend expands. Alon AI is a private, bounded autonomous sales-validation system for one solopreneur. It turns a discovered or user-supplied idea into market evidence, an authoritative offer, qualified prospects, evidence-backed conversations and negotiation, qualified commitments, confirmed booked calls, checkpoint decisions, and reversible global strategy improvements.
 
-The product must conserve the operator's attention, cash, and reputation. Its autonomy is earned through retained M0-M9 evidence and bounded by deterministic policy. Normal in-envelope actions do not wait for individual operator approval. Unsafe, ambiguous, stale, or out-of-envelope cases enter an exception and incident queue.
+The product must conserve operator attention, cash, and reputation. Autonomy is earned through retained evidence and deterministic policy. Normal in-envelope actions do not wait for per-message approval. Unsafe, ambiguous, stale, or out-of-envelope cases enter the exception/incident queue.
+
+The pre-revenue operating posture is deliberately cheap: Brave Place Search is the only automated v1 place/business discovery source; obvious filters use no model; model work is routed from Nano to Mini with premium models default-denied; infrastructure starts on one small private VPS with Cloudflare private ingress and encrypted R2 backups; launch expands only from shadow mode to 20 reviewed businesses, then 50 qualified businesses, then an explicitly authorized 100–300 tranche if meetings/revenue/economics justify it.
 
 ## Current repository state
 
-Implemented today: a readiness dashboard, health API, database connection boundary, empty migration base, idle worker, default-off outreach configuration, and typed guarded-send interfaces. Missing today: every product record and workflow named in this document, research/model integrations, lead discovery, Gmail OAuth/adapter/history sync, operator controls beyond readiness, authentication, deployment, and real-experiment evidence.
-
-The headline copy on the current page describes intended value. It is not proof that the workflow exists.
+Implemented today: readiness dashboard, health API, database connection boundary, empty migration base, idle worker, default-off outreach configuration, and typed guarded-send interfaces. Missing today: the product records/workflows named below, research/model integrations, Brave place discovery adapter, Gmail OAuth/adapter/history sync, complete operator controls, deployment, and real-experiment evidence. This document is roadmap authority, not implementation evidence.
 
 ## Product job and user promise
 
-Given a clearly bounded customer and problem hypothesis, Alon AI helps the operator:
+Given a bounded customer/problem hypothesis, Alon AI helps the operator:
 
-1. register experiment bounds in an `ExperimentBrief` product record;
+1. register experiment bounds in an `ExperimentBrief`;
 2. discover or materialize a user-supplied idea into `IdeaBrief`;
 3. research the market before designing one immutable `OfferPackage`;
-4. discover businesses through approved sources and admit preliminarily qualified candidates to deep research;
-5. apply final qualification using immutable offer filters and the accepted dossier;
-6. write initial emails and responses without giving the writer send capability;
+4. discover businesses using the approved Brave Place Search adapter and apply inexpensive preliminary qualification before deep research;
+5. apply final qualification using immutable offer filters and accepted evidence;
+6. write personalized initial/reply messages without giving the writer send capability;
 7. authorize sends deterministically, evaluate replies, and negotiate inside the commercial envelope;
 8. book qualified calls after explicit timezone-aware slot confirmation;
-9. evaluate every closed cohort through a deterministic checkpoint decision; and
-10. learn from immutable checkpoint evidence and activate approved global strategies only at eligible boundaries.
+9. evaluate every closed real-validation stage/tranche through a deterministic checkpoint decision; and
+10. learn from immutable checkpoint evidence and activate approved global strategies only at eligible stage boundaries.
 
-The promise is control and better evidence, not guaranteed revenue. If an experiment cannot state what would disprove it, the system must reject it as not ready.
+The promise is control and better evidence, not guaranteed revenue.
 
 ## Canonical autonomous sales contract
 
-This single machine-readable block is the authority consumed by roadmap validation and the generated execution fingerprint. Array order is normative. `provider` names the responsible agent or application service; gate-backed outputs become usable only after their deterministic owner accepts them. `inputs` are accepted artifact references. Conditional conversation/booking paths and concurrent per-lead execution cannot violate provider-before-consumer order.
+This single machine-readable block is the authority consumed by roadmap validation and the generated execution fingerprint. Array order is normative. `provider` names the responsible agent or deterministic application service; gate-backed outputs become usable only after their deterministic owner accepts them.
 
 ```json
 {
-  "schema_version": "autonomous_sales_contract.v1",
+  "schema_version": "autonomous_sales_contract.v2",
   "responsibilities": [
     {"order": 1, "name": "Idea Discovery", "kind": "agent", "provider": "IdeaDiscoveryAgent", "optional": true, "inputs": [], "outputs": ["IdeaBrief"]},
     {"order": 2, "name": "Market Research", "kind": "agent", "provider": "MarketResearchAgent", "inputs": ["IdeaBrief"], "outputs": ["MarketResearchReport"]},
@@ -83,9 +83,18 @@ This single machine-readable block is the authority consumed by roadmap validati
   "checkpoint_decisions": ["CONTINUE", "REVISE", "KILL", "INCONCLUSIVE", "SAFETY_STOP"],
   "learning_results": ["PROMOTE", "KEEP", "ROLLBACK", "INSUFFICIENT_EVIDENCE"],
   "no_mutation_learning_results": ["KEEP", "INSUFFICIENT_EVIDENCE"],
-  "cohort_increments": [100, 200, 300, 400],
-  "cohort_cumulative_maxima": [100, 300, 600, 1000],
-  "recipient_ceiling": 1000,
+  "automated_discovery_provider": "BRAVE_PLACE_SEARCH",
+  "manual_evidence_sources": ["SOCIAL_PROFILE", "PUBLIC_BUSINESS_PAGE"],
+  "model_routing_tiers": ["NO_AI", "NANO", "MINI", "PREMIUM"],
+  "premium_model_requires_explicit_approval": true,
+  "batch_for_non_urgent_research": true,
+  "launch_stages": [
+    {"name": "SHADOW", "max_real_businesses": 0, "manual_review_required": false, "real_demand_learning": false},
+    {"name": "REVIEW_20", "max_real_businesses": 20, "manual_review_required": true, "real_demand_learning": true},
+    {"name": "QUALIFIED_50", "max_real_businesses": 50, "manual_review_required": false, "real_demand_learning": true},
+    {"name": "SCALE_100_TO_300", "min_real_businesses": 100, "max_real_businesses": 300, "manual_review_required": false, "real_demand_learning": true, "explicit_operator_authorization": true}
+  ],
+  "pre_revenue_recipient_ceiling": 300,
   "send_writer": "SendGateway",
   "booking_writer": "BookingGateway",
   "strategy_activation_boundary": "CHECKPOINT_ONLY",
@@ -94,150 +103,96 @@ This single machine-readable block is the authority consumed by roadmap validati
 }
 ```
 
-The fifteen-artifact registry includes agent proposals and deterministic outputs. `QualificationService` materializes phased decisions from discovery/final-qualification proposals; `CommercialPolicyEngine` materializes negotiation decisions. `CheckpointEvaluationService` freezes evidence before the evaluation agent reads it and commits the result after evaluating its recommendation. `StrategyActivationService` validates/promotes packages and materializes activations; the learning agent has no mutation authority. These services operate within their numbered responsibility and cannot reverse runtime order.
+The optional user-supplied idea remains the only normal pipeline bypass. `OfferPackage` remains the sole downstream commercial authority. Every artifact/action retains immutable version/hash/evidence lineage and governing strategy activation.
 
-The optional user-supplied idea is the only normal pipeline bypass: `IdeaBriefMaterializer` creates the same validated immutable shape with `USER_SUPPLIED` origin, user provenance, and a bypass record. Market Research always consumes `IdeaBrief`; Offer Design consumes both upstream artifacts. The resulting `OfferPackage` provides no input upstream to Idea Discovery or Market Research.
+## Cost-first discovery and model authority
 
-Every artifact carries immutable ID, schema version, producer, producer strategy version, input snapshot ID/hash, output hash, evidence references, creation timestamp, disposition, and supersession linkage. Consumers pin accepted provider versions/hashes. Per-agent snapshots differ when their inputs differ; workflow lineage does not require snapshot equality. Every action records its governing offer, global strategy version, and activation. An approved baseline supplies strategy attribution before the first learning checkpoint.
+Automated v1 place/business discovery uses `BravePlaceSearchAdapter` only. Google Maps, Instagram, TikTok, social networks, directories, and arbitrary crawling are not automated discovery targets. A social profile may be attached only as manually reviewed evidence with source URL/capture, reviewer/time, permitted fields, provenance, retention, and redaction; it never expands provider capability or supplies an unevidenced owner/contact identity.
 
-## Commercial, conversation, and learning authority
+`ModelRoutingPolicy` is deterministic application policy. Agents may request a declared task capability but cannot choose a model tier.
 
-`OfferPackage` is the sole downstream commercial authority: target customer, problem, solution, positioning, scope, deliverables, base price, cost assumptions, currency/rounding version, minimum price, margin floor, discount bands, payment terms, qualification filters, approved pilots/scope variants, negotiation options, exclusions, proof, claim-to-evidence mappings, outreach claims, booking constraints, validity interval, version, and content hash. The operator may configure or tighten pre-run economics, source allowlist, commercial envelope, legal-policy facts, budgets, and kill switches. Downstream agents cannot independently redefine those terms.
+- `NO_AI`: obvious filtering, dedupe, arithmetic, policy/commercial checks, and deterministic eligibility.
+- `NANO`: structured extraction, normalization, classification, and initial scoring where code is insufficient.
+- `MINI`: only after shortlist/preliminary admission for deeper synthesis/research or higher-value writing/reasoning.
+- `PREMIUM`: default denied. It requires explicit operator approval binding exact task/run, model/config, maximum spend, expiry, and reason. Approval never weakens safety/artifact gates.
+- `BATCH`: non-urgent research uses provider batch processing when the selected provider/tier supports it and no user-facing latency requirement applies.
 
-Discovery uses approved adapters and source-specific scopes, initially Google Maps and reviewed public business sources. Social/directory sources require their own adapter, terms review, and evidence tests. Candidates retain identity/provenance, source time, query/filter version, deduplication keys, preliminary facts, unknowns, and preliminary qualification. Deep research runs only for preliminarily qualified candidates; business, decision-maker, services, size, problems, events, technologies, reputation, and personalization fields are `FACT`, `ESTIMATE`, or `UNKNOWN` with source/confidence. Names, roles, contacts, and linkages are never fabricated. Final qualification reapplies the immutable offer filters; identity, suppression, legal-policy, capacity, and cohort admission remain separate deterministic gates.
+Every model call retains routing decision/reason, tier, batch/urgency mode, configuration, usage/cost, and strategy attribution.
 
-`ConversationStrategy` selects permitted messaging objectives and references the offer. The writer receives accepted dossier/final qualification, sanitized complete thread state, offer/strategy versions, and precise reply-evaluation instructions. It has no credentials or write capability. Any inbound reply atomically stops the cold sequence; it does not itself create permanent suppression. Positive intent, questions, and genuine objections can continue inside registered round, frequency, message, and time limits. A clear rejection closes the current persuasion loop. Durable suppression is a separate decision governed only by [DurableSuppressionTriggerV1](#rejection-and-durable-suppression-trigger); an offer decline alone does not satisfy it. Ambiguous or unsafe intent pauses into the exception queue.
+## Commercial, conversation, booking, and learning authority
 
-`CommercialPolicyEngine` computes allowed proposals: explain the offer, answer supported objections, select approved variants/pilots/discounts, adjust timing/bundle/payment schedule within the package, request missing decision information, or propose a call. Stored versions govern taxes, fees, delivery cost, FX, rounding, margin, and discounts. Budget assertions are `STATED`, `INFERRED`, or `UNKNOWN` with currency/range, source span, confidence, and time; only `STATED` satisfies a stated-budget condition. Unsupported claims, unauthorized legal terms/deliverables/guarantees, below-floor economics, fabricated urgency/budget/familiarity, and unaccepted commitments are forbidden.
+`CommercialPolicyEngine` deterministically computes allowed commercial proposals from `OfferPackage`; agents cannot go below minimum price/margin, invent budget, create unsupported claims/deliverables/legal terms, or represent an unaccepted proposal as a deal.
 
-`ActionAuthorizationService` creates immutable `ActionAuthorityScopeV1` binding action/content, recipient/thread, campaign/cohort/member, offer, strategy activation, policy/commercial decision, expiry, and control generation. Fresh deterministic checks precede each send and booking write. `SendGateway` alone invokes Gmail writes; `BookingGateway` alone creates/reschedules/cancels calendar events after qualified buying intent and explicit slot confirmation. Bounded timezone-aware availability and Gmail history/Sent reads have separate ports from writes. Google Calendar is the first planned calendar adapter; ambiguity requires reconciliation before retry. A finally qualified prospect in `INTERESTED` or `NEGOTIATING` may accept a call as the next commercial step and enter booking without accepting the purchase proposal, price, or scope. The booking records buying-intent and explicit call-agreement evidence separately from any purchase-acceptance evidence; actual event creation still requires explicit slot confirmation.
+`ActionAuthorizationService` binds exact action/content/recipient/thread/campaign/stage/member/offer/strategy/policy/commercial facts/expiry/control generation. `SendGateway` alone invokes Gmail writes. Provider ambiguity remains quarantined and reconciled before retry.
 
-One global learning mechanism runs only when a checkpoint closes. The new stage's immutable `CheckpointEvidenceBundle` is primary evidence; similar campaigns are secondary; relevant history, failures, and incidents provide guardrails. Every applicable agent receives exactly `PROMOTE`, `KEEP`, `ROLLBACK`, or `INSUFFICIENT_EVIDENCE`. `KEEP` and `INSUFFICIENT_EVIDENCE` perform no mutation; `NO_CHANGE` is explanatory behavior, never another serialized result. Promotion requires minimum evidence, immutable lineage, offline comparison, protected holdouts, cross-campaign guardrails, expected metrics/confidence, and rollback rules. Safety, legal-policy, suppression, source, and commercial bounds are not learnable.
+`BookingGateway` alone creates/reschedules/cancels calendar events after qualified intent and explicit timezone-aware slot confirmation. Ambiguous provider outcomes reconcile before retry.
 
-The triggering campaign adopts an approved strategy at its next cohort boundary only after `CONTINUE`; other active campaigns wait for their own next checkpoint; future campaigns use the newest approved global version. A running cohort freezes offer, strategy, qualification criteria, causal variables, and evidence definitions. Deterioration triggers automatic rollback for future actions, never historical rewriting; if triggered during a cohort, pause affected actions and close its checkpoint before rollback activation. Operational conversation memory is not learning.
+Global learning runs only from closed checkpoint evidence. `SHADOW` can feed offline agent/provider evaluation but is not real-demand evidence. `REVIEW_20`, `QUALIFIED_50`, and each explicitly authorized `SCALE_100_TO_300` tranche close an immutable checkpoint. Weak evidence yields `KEEP` or `INSUFFICIENT_EVIDENCE`; it cannot promote strategy. A running stage/tranche freezes offer, strategy, qualification criteria, evidence definitions, and admission membership until closure.
 
-`ExperimentBrief`, metrics, policy decisions, send intents/attempts, provider observations, and incidents are product records outside the fifteen-artifact registry. The deterministic compliance registry remains `{CompliancePolicyV1, RecipientIdentityEvidenceV1, RecipientJurisdictionEvidenceV1, AffirmativeConsentEvidenceV1, CounselExceptionRecordV1, LegalReviewRecordV1, DisclosureSenderTemplateV1, GooglePolicyReviewV1}`; agents never author or accept protected legal-policy evidence. Source/jurisdiction-specific requirements fail closed.
+## Pre-revenue infrastructure posture
 
-### Rejection and durable suppression trigger
+M8 targets one provider-neutral **2-vCPU / 4-GB Linux VPS** with resource-limited modular-monolith containers and PostgreSQL. Operator access is through **Cloudflare Tunnel + Cloudflare Access**. Product API/UI/database/SSH are not exposed directly to the Internet. PostgreSQL/application state uses encrypted local VPS storage. Backups are encrypted by the application/backup tooling before upload to **Cloudflare R2** and must pass clean-host restore drills. Recovery key/config material is stored off-host under operator control.
 
-`DurableSuppressionTriggerV1` is a deterministic predicate contract, not an additional inter-agent artifact. `RecipientSignalSuppressionService` may create durable suppression only when current identity/scope evidence and the applicable policy version establish one of: `EXPLICIT_OPT_OUT`, `COMPLAINT`, `HARD_BOUNCE`, `SOFT_BOUNCE_LIMIT_REACHED`, or `LEGAL_STOP`. The decision retains the qualifying reason, source observation/span or provider evidence, affected contact scope, policy version, and timestamp. An unknown identity/scope or ambiguous signal pauses the relevant conversation into the exception queue instead of inventing a suppression reason.
+Managed KMS/Secret Manager, multi-provider backup witnesses, dedicated 160-GB data disks, larger hosts, and enterprise hardening are deferred until revenue or measured capacity/recovery evidence justifies an architecture amendment. They are not M8 prerequisites.
 
-A rejection closes persuasion for that conversation; it is not itself a qualifying suppression reason. Rejection with no permitted future contact requires separate evidence of that restriction, such as an explicit do-not-contact request (`EXPLICIT_OPT_OUT`) or an applicable legal prohibition (`LEGAL_STOP`). Declining the current offer, negative sentiment, lack of budget, or an ordinary reply cannot establish that restriction by inference. For example, “Not interested in this offer” closes the conversation without durable suppression, while “Do not contact me again” closes it and creates scope-appropriate opt-out suppression. Closing a conversation never automatically reopens contact; any future contact would still need independent current authority and must obey existing stops and policy.
+## Cost-first first-real-validation program
 
-### Signed operator-time evidence without another product table
+The former automatic `100/200/300/400` and cumulative `100/300/600/1,000` program is superseded.
 
-`OperatorTimeEvidenceV1` is release/experiment evidence, not a product record or new API resource. Its exact RFC 8785 JSON object is `{schema_version:"operator_time_evidence.v1", evidence_id, experiment_id, interval_start, interval_end, duration_seconds, activity_code, source_kind, source_ref, recorded_at, operator_id, key_id}` where UUIDs are lowercase canonical text, instants are UTC RFC 3339 with exactly six fractional digits and `Z`, `duration_seconds` is a positive integer equal to the half-open interval length and at most `86400`, `activity_code` is one of `DISCOVERY|BUILD|RESEARCH|OUTREACH_REVIEW|DELIVERY|OPERATIONS`, and `source_kind` is `MANUAL_TIMER|SIGNED_IMPORT`. JSON null, unknown keys, overlapping intervals for one operator, future intervals, and mutable/free-text activity are invalid.
+| Stage | Real-business bound | Entry/exit authority |
+| --- | ---: | --- |
+| `SHADOW` | `0` | Full pipeline and policy/cost simulation; no real sends; no real-demand learning. |
+| `REVIEW_20` | up to `20` | Every business is manually reviewed before admission. Stage closes and records a checkpoint before expansion. |
+| `QUALIFIED_50` | up to `50` | Only finally qualified businesses under the same bounded program. Stage closes before expansion. |
+| `SCALE_100_TO_300` | one explicitly authorized tranche `100..300` | Entry requires the 50-stage to justify scale using meetings, revenue/paid-commitment evidence where available, contribution economics, provider cost, operator time, deliverability/reputation, and all safety gates. The operator signs the exact tranche size. No automatic 600/1,000 path exists pre-revenue. |
 
-Canonical bytes are UTF-8 RFC 8785 JSON. `payload_sha256` is lowercase SHA-256 of those bytes. The operator signs `UTF8("alon-ai:operator-time-evidence:v1\n") || hex_decode(payload_sha256)` with Ed25519; the retained envelope is `{payload,payload_sha256,signature_algorithm:"Ed25519",signature_base64url,key_id}`. The solo operator owns the signing key; the release/evidence verifier owns key-status lookup and signature validation. Valid envelopes enter only the existing content-addressed audit/evidence paths referenced by the experiment/release bundle; they never create a product row or raw-time API. Aggregation deduplicates by `evidence_id` plus payload hash, sorts by `(interval_start,evidence_id)`, rejects any overlap/hash reuse/signature/key/clock mismatch, sums exact `duration_seconds`, and converts to hours only for presentation using decimal division by `3600`. Missing intervals or an invalid envelope make operator-time cost `UNAVAILABLE` and block any economics success claim; they are never imputed.
+Checkpoint decisions remain exactly `CONTINUE|REVISE|KILL|INCONCLUSIVE|SAFETY_STOP`. `CONTINUE` alone never manufactures the next population: the scale stage additionally requires explicit operator scope authorization. A smaller cap always wins.
+
+## M0 experiment brief
+
+Before M1, create one versioned `ExperimentBrief` containing at least: experiment code; narrow customer/problem hypothesis; idea origin; jurisdictions; baseline method; total/model/discovery/operator-time budget caps; research/qualification/contact/concurrency caps; accepted model-routing policy version; automated discovery source `BRAVE_PLACE_SEARCH`; manual-evidence policy; launch program `SHADOW -> REVIEW_20 -> QUALIFIED_50 -> SCALE_100_TO_300`; conversation/booking limits; accepted baseline strategy; success/economic rules; kill rules; and evidence-based decision condition.
+
+Store no Gmail secret, unnecessary personal data, or unverified legal conclusion in the brief.
 
 ## Scope by vertical milestone
 
 | Milestone | In scope | Explicitly outside the gate |
 | --- | --- | --- |
-| M0 | one customer/problem bet, baseline, metrics, budget, authority, stop rules | provider implementation or outreach |
-| M1 | DBOS production acceptance using operator-owned Gmail test inboxes and the smallest disposable recovery schema | product schema, real prospects, polished UI |
+| M0 | one customer/problem bet, baseline, metrics, budgets, source/model/launch authority, stop rules | provider implementation or outreach |
+| M1 | durable-workflow production acceptance using operator-owned Gmail test inboxes | product schema and real prospects |
 | M2 | first product data model, audit history, idempotency, restore | agents and external providers |
-| M3 | offline provider contracts, typed agent fixtures, quality/cost promotion | live model or Gmail dependence in required tests |
+| M3 | offline provider contracts, typed agent fixtures, model-routing and quality/cost promotion | product outreach |
 | M4 | synthetic idea → market research → offer workflow | lead outreach |
-| M5 | approved discovery, preliminary qualification, deep research, final qualification, and dedupe | sending |
-| M6 | owned-inbox conversations, objection/negotiation simulation, test calendar bookings, reconciliation, suppression, kill/restart evidence | real prospects |
-| M7 | offer, conversation, negotiation, booking, checkpoint, strategy, and exception dashboard | customer-facing application |
-| M8 | private access, VPS operations, monitoring, encrypted backup and restore | public launch |
-| M9 | controlled real cohorts, then earned bounded sending/negotiation/booking and checkpoint learning | unregistered cohort, new market/source/legal authority, payment collection |
-
-## M0 experiment brief
-
-Before M1 begins, create one versioned `ExperimentBrief` with all of these fields:
-
-| Field | Required content |
-| --- | --- |
-| `experiment_code` | stable human-readable code, unique in the repository evidence bundle |
-| `customer_segment` | a narrow business type and geography; broad labels such as “SMBs” fail validation |
-| `problem_hypothesis` | observable costly problem, who experiences it, and current workaround |
-| `idea_origin` | exactly `DISCOVERED` or `USER_SUPPLIED`, with accepted `IdeaBrief` and bypass provenance where applicable |
-| `offer_hypothesis` | pre-run hypothesis/economic constraints; downstream commercial terms come only from the accepted `OfferPackage` |
-| `operator_advantage` | why one Israeli software developer can credibly deliver or test it |
-| `jurisdictions` | operator and recipient jurisdictions; unknown jurisdiction blocks sending |
-| `baseline_method` | current manual time/cost/quality measurements or an explicit zero-history baseline |
-| `budget_caps` | total ILS cash cap, model/search/enrichment cap, and operator-hours cap |
-| `sample_caps` | maximum researched, qualified, contacted, and concurrently active leads |
-| `authority_level` | no-send through M5, isolated owned resources at M6, bounded real recipients only after all M8/M9 evidence; no per-message approval |
-| `cohort_program` | increments `100/200/300/400`, cumulative maxima `100/300/600/1,000`, unique membership, frozen cohort versions and checkpoint ownership |
-| `conversation_booking_policy` | round/message/frequency/time limits, terminal stops, permitted calendar/timezones, explicit confirmation and exception conditions |
-| `strategy_baseline` | accepted global strategy version and activation, applicable agents, checkpoint learning/rollback rules |
-| `success_rule` | demand, delivery-feasibility, and economics thresholds from PRODUCT-02 |
-| `kill_rule` | product and safety triggers from PRODUCT-03 |
-| `decision_date_condition` | evidence condition such as completed sample or elapsed reply window, not a fictional build date |
-
-Store no actual Gmail secret, prospect personal data, or unverified legal conclusion in the M0 brief.
+| M5 | Brave place discovery, preliminary qualification, deep research, final qualification, dedupe | sending |
+| M6 | owned-inbox conversations, negotiation simulation, test bookings, reconciliation, suppression, kill/restart evidence | real prospects |
+| M7 | operator dashboard for offers/leads/conversations/booking/checkpoints/strategy/cost | public customer application |
+| M8 | small private VPS, monitoring, encrypted local data, encrypted R2 backup/restore | enterprise-scale infrastructure |
+| M9 | shadow → reviewed 20 → qualified 50 → explicitly authorized 100–300 scale tranche and earned bounded autonomy | automatic 600/1,000 expansion, new market/source/legal authority, payment collection |
 
 ## Scope and non-goals
 
-### In scope for the first product loop
+In scope: one operator/private deployment; finite experiments; Brave-based business discovery with provenance; deterministic acceptance/policy/state/side effects; Gmail only through SendGateway after earned gates; complete bounded conversations/negotiation/bookings; checkpoint decisions/global learning; raw counts/uncertainty/cost attribution.
 
-- one operator and one privately controlled deployment;
-- finite experiments with explicit budgets and sample caps;
-- business-to-business evidence gathering with source provenance;
-- deterministically accepted artifacts, pre-run operator configuration, and auditable exception corrections;
-- deterministic policy, state transitions, side effects, and audit history;
-- Gmail sending only after test-inbox evidence and only within earned authority;
-- complete redacted conversations, bounded negotiation, and explicitly confirmed bookings;
-- deterministic checkpoint decisions and global learning from closed evidence; and
-- decision support that preserves raw counts and uncertainty.
-
-### Non-goals before M9 evidence
-
-- multi-tenancy, teams, public sign-up, billing, subscription management, or any general-purpose public API; the sole later exception is BACKEND-02's two scanner-safe M9-gated unsubscribe operations, while the operator product remains private;
-- a generic CRM, marketing automation suite, inbox client, or agent-building platform;
-- unrestricted data scraping, mass-email volume, purchased lists, or consumer outreach;
-- legal-compliance automation presented as legal advice;
-- commercial terms outside the immutable offer envelope, unbounded spending, unregistered campaign expansion, and autonomous sensitive-data deletion;
-- immortal agents, direct agent access to Gmail/calendar writes, uncontrolled prompt rewriting, or unbounded retries;
-- payment collection; version one ends at qualified commitments and confirmed booked calls;
-- infrastructure introduced for hypothetical scale; and
-- vanity analytics without a decision consequence.
-
-## Exact implementation surfaces this scope drives
-
-The canonical contract above provides downstream authority. DB-01..06 owns the complete table, foreign-key, lineage, and retention inventories; BACKEND-01..06 owns deterministic services, commands, queries, and API operations; FRONTEND-01 owns the route/consumer inventory. Every closed inventory must be updated atomically for offer economics, discovery/evidence/qualification, conversations/negotiation, booking, checkpoint learning, and strategy attribution. No obsolete exact count limits the approved system.
-
-The dashboard exposes idea origin, research, offer/economics, approved sources, dossiers and phased qualification, automatic-send blocks, a redacted conversation/negotiation/booking timeline, `INTERESTED`, `NEGOTIATING`, `COMMITTED`, `BOOKED`, calendar, checkpoint evidence/results, per-agent learning/evidence/activations/rollback, and exceptions/incidents. The server owns policy, capacity, economics, and authority. The public unsubscribe pair remains FastAPI-owned and independently gated.
-
-These implementation surfaces are planned. Their consumers may not invent extra artifacts, pricing authority, write paths, or learning mechanisms.
+Non-goals before revenue evidence: multi-tenancy/public signup/billing; generic CRM/agent platform; automated social scraping; purchased lists/consumer outreach; unrestricted premium-model use; infrastructure for hypothetical scale; managed KMS/multi-cloud backup requirements; automatic expansion beyond an explicitly approved 100–300 tranche; payment collection; or any direct agent Gmail/calendar write.
 
 ## Ordered implementation tasks
 
 <!-- roadmap-task id=PRODUCT-01-T01 milestone=M0 depends_on=- mode=parallel locks=product-contracts -->
-- [ ] **Capture the M0 bet —** Input: operator interview notes and any prior manual evidence. Operation: create the versioned `ExperimentBrief` with every required field, marking absence as `zero-history baseline` rather than inventing data. Output: reviewable brief. Test evidence: schema validation plus operator signature. Failure behavior: block M1 when any scope, budget, jurisdiction, success, or kill field is missing.
+- [ ] **Capture the M0 bet —** Input: operator interview notes and prior evidence. Operation: create the versioned `ExperimentBrief` including cost-first source/model/infrastructure/launch policy, marking absence as `zero-history baseline` rather than inventing data. Output: reviewable brief. Test evidence: schema validation plus operator signature. Failure behavior: block M1 when required scope, budget, jurisdiction, success, kill, source, model-routing, or stage fields are missing.
 <!-- roadmap-task id=PRODUCT-01-T02 milestone=M0 depends_on=PRODUCT-01-T01 mode=parallel locks=product-contracts -->
-- [ ] **Run the narrowness test —** Input: the brief. Operation: ask whether one person can name the customer, problem, offer, evidence channel, and cap without “and/or” branches. Output: pass or a smaller brief. Test evidence: completed M0 scope checklist. Failure behavior: split the hypothesis; never build one workflow for multiple untested markets.
+- [ ] **Run the narrowness test —** Input: the brief. Operation: verify one operator can name customer, problem, offer, evidence channel, source, model budget, launch stage, and cap without branching into multiple untested markets. Output: pass or smaller brief. Test evidence: completed M0 checklist. Failure behavior: split the hypothesis.
 <!-- roadmap-task id=PRODUCT-01-T03 milestone=M0 depends_on=PRODUCT-01-T02 mode=parallel locks=product-contracts,architecture-contracts -->
-- [ ] **Register artifact and authority vocabulary —** Input: the canonical JSON contract and accepted design. Operation: register the exact twelve responsibilities, fifteen artifacts, producer/gate ownership, inputs, offer authority, cohort schedule, decisions, and checkpoint-only strategy activation. Output: immutable vocabulary crosswalk consumed by architecture, data, agents, workflows, providers, services, and UI. Test evidence: parsed exact-set/order and provider-before-consumer tests; reject extra artifacts/results, downstream commercial invention, agent side effects, and active-cohort mutation. Failure behavior: M0 remains open and M1 is blocked.
+- [ ] **Register artifact and authority vocabulary —** Input: canonical JSON contract and approved design. Operation: register exact responsibilities/artifacts/producers/gates, Brave discovery authority, deterministic model-routing tiers, cost-first launch stages, decisions, side-effect writers, and checkpoint-only activation. Output: immutable vocabulary crosswalk. Test evidence: parsed exact-set/order/authority tests and rejection of legacy cohort semantics, automated social discovery, model-tier self-escalation, or active-stage mutation. Failure behavior: M0 remains open.
 <!-- roadmap-task id=PRODUCT-01-T04 milestone=M0 depends_on=PRODUCT-01-T03 mode=parallel locks=product-contracts -->
-- [ ] **Freeze non-goals for the first experiment —** Input: operator wishlist. Operation: classify each item as required by the next gate or deferred. Output: signed non-goal list. Test evidence: every planned feature points to a milestone gate. Failure behavior: remove work that has no next-gate evidence purpose.
+- [ ] **Freeze non-goals for the first experiment —** Input: operator wishlist. Operation: classify each item as next-gate required, post-revenue upgrade, or deferred. Output: signed non-goal list including managed KMS/multi-cloud/larger-host/automated-social/premium-by-default exclusions. Test evidence: every planned feature points to a gate. Failure behavior: remove work with no next-gate evidence purpose.
 
-## Test strategy
+## Test strategy and acceptance
 
-- **Contract test `test_experiment_brief_rejects_unbounded_scope`:** broad customer segments, absent budget, absent jurisdiction, or absent stop rules fail validation.
-- **Contract test `test_agent_artifacts_have_no_side_effect_authority`:** every artifact schema lacks provider credentials and send methods.
-- **Traceability test `test_scope_vocabulary_equals_canonical_sales_contract`:** the exact responsibility order/kinds, fifteen artifact names/producers, phased qualification, offer authority, decision/result sets, cohorts, side-effect writers, and strategy boundaries equal the canonical contract.
-- **Evidence test `test_operator_time_evidence_signature_interval_dedupe_and_failure_are_closed`:** independent golden bytes/signature/hash pass; null/unknown keys, overlap, gap, replay with changed bytes, invalid/revoked key, bad clock/duration and imputation fail closed without a product row.
-- **Contract test `test_checkpoint_learning_activation_and_rollback_are_bounded`:** weak evidence cannot mutate strategies, active cohorts cannot change, cross-campaign activation waits for each checkpoint, and rollback retains historical attribution.
-- **Review test `test_m0_brief_is_operator_signed`:** retained evidence contains version, timestamp, hash, and explicit approval.
+- `test_scope_vocabulary_equals_canonical_sales_contract`: exact 12 responsibilities, 15 artifacts, authority, Brave source, model routing, launch stages, sole writers, decisions/results, and checkpoint boundaries match the JSON contract.
+- `test_cost_first_launch_rejects_legacy_600_1000_or_unapproved_scale`: no old cohort progression and no scale population without explicit size/evidence approval.
+- `test_model_routing_cannot_self_escalate`: agents cannot choose Mini/Premium and premium approval is exact/expiring/cost-bounded.
+- `test_discovery_source_is_brave_and_social_is_manual_evidence_only`: automated source set is exact.
+- `test_agent_artifacts_have_no_side_effect_authority`: artifacts contain no write credentials/capability.
+- `test_checkpoint_learning_activation_and_rollback_are_bounded`: shadow is not demand learning, weak evidence cannot mutate strategy, and active stages cannot change.
 
-## Safety, privacy, compliance, observability, and cost
-
-Outreach is disabled throughout M0-M5. The experiment brief stores budgets and jurisdiction facts but does not claim those facts establish legal compliance. Before real outreach, the operator must document the applicable rules for the chosen recipient jurisdictions and obtain qualified legal advice when the interpretation is uncertain. Logs record identifiers, versions, decisions, and counts; they must not copy secrets, full message bodies, or unnecessary personal data. Every cash and operator-time cap is denominated explicitly, with ILS as the reporting currency and original provider currency retained for reconciliation.
-
-## Failure, rollback, and recovery
-
-If the bet is too broad, evidence-free, unaffordable, legally uncertain, or operationally beyond one person, park it before M1. Recovery is a new immutable brief version with the changed assumption and a link to the rejected version. Never rewrite the rejected brief because the change history is product evidence.
-
-## Acceptance and retained evidence
-
-- [ ] One operator, customer segment, problem, offer, jurisdiction set, budget, sample cap, success rule, and kill rule are explicit.
-- [ ] Each canonical artifact has one producer, authority boundary, and versioning rule.
-- [ ] Non-goals exclude platform work and direct agent side effects.
-- [ ] The current-state section remains accurate against source and tests.
-
-Retain the signed `ExperimentBrief`, canonical contract hash, scope checklist, assumption log, artifact crosswalk, offer bounds, and initial strategy activation. Passing this document unlocks [success metrics](02-success-metrics.md); it does not unlock sending.
+Retain the signed `ExperimentBrief`, canonical contract hash, scope checklist, assumption log, artifact crosswalk, offer bounds, model-routing/source policy versions, launch-stage authorization, and initial strategy activation. Passing this document unlocks [success metrics](02-success-metrics.md); it does not unlock sending.
