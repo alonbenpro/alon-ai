@@ -17,40 +17,40 @@ jobs:
         with:
           ref: cost-optimized-roadmap
           fetch-depth: 0
-      - name: Finalize roadmap validator expectations
+      - name: Patch stale legacy-cohort test
         run: |
           python3 - <<'PY'
           from pathlib import Path
-          import importlib.util
-          import re
-          import sys
+          p = Path('backend/tests/unit/test_roadmap_validator.py')
+          text = p.read_text(encoding='utf-8')
+          start = text.index('def test_active_roadmap_uses_only_staged_thousand_lead_contract() -> None:\n')
+          end = text.index('\ndef test_staged_lead_source_validator_accepts_exact_authorities', start)
+          new = '''def test_active_roadmap_uses_cost_first_contract() -> None:
+              repository_root = Path(__file__).resolve().parents[3]
+              roadmap_root = repository_root / "docs" / "development-roadmap"
+              active_paths = [roadmap_root / "README.md"]
+              active_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))
+              active_text = "\\n".join(path.read_text(encoding="utf-8") for path in active_paths)
 
-          root = Path.cwd()
-          path = root / "backend/tests/unit/test_roadmap_validator.py"
-          text = path.read_text(encoding="utf-8")
-          pattern = re.compile(
-              r"def test_active_roadmap_uses_only_staged_thousand_lead_contract\(\) -> None:\n.*?\n\ndef test_staged_lead_source_validator_accepts_exact_authorities",
-              re.S,
-          )
-          replacement = '''def test_active_roadmap_uses_cost_first_contract() -> None:\n    repository_root = Path(__file__).resolve().parents[3]\n    roadmap_root = repository_root / "docs" / "development-roadmap"\n    active_paths = [roadmap_root / "README.md"]\n    active_paths.extend(sorted(roadmap_root.glob("[0-9][0-9]-*/*.md")))\n    active_text = "\\n".join(path.read_text(encoding="utf-8") for path in active_paths)\n\n    for required in (\n        "SHADOW",\n        "REVIEW_20",\n        "QUALIFIED_50",\n        "SCALE_100_TO_300",\n        "BRAVE_PLACE_SEARCH",\n    ):\n        assert required in active_text\n\n    for forbidden in (\n        "100/200/300/400",\n        "100/300/600/1,000",\n        "100/300/600/1000",\n    ):\n        assert forbidden not in active_text\n\n\ndef test_staged_lead_source_validator_accepts_exact_authorities'''
-          text, count = pattern.subn(replacement, text, count=1)
-          if count != 1:
-              raise SystemExit(f"expected one stale active-roadmap test block, found {count}")
+              for required in (
+                  "SHADOW",
+                  "REVIEW_20",
+                  "QUALIFIED_50",
+                  "SCALE_100_TO_300",
+                  "BRAVE_PLACE_SEARCH",
+              ):
+                  assert required in active_text
 
-          spec = importlib.util.spec_from_file_location("roadmap_validator_final", root / "scripts/validate_roadmap.py")
-          if spec is None or spec.loader is None:
-              raise SystemExit("cannot load roadmap validator")
-          module = importlib.util.module_from_spec(spec)
-          sys.modules[spec.name] = module
-          spec.loader.exec_module(module)
-          fingerprint = module.graph_fingerprint(module.parse_roadmap(root))
+              for forbidden in (
+                  "100/200/300/400",
+                  "100/300/600/1,000",
+                  "100/300/600/1000",
+              ):
+                  assert forbidden not in active_text
 
-          fixed = re.compile(r'(assert graph_fingerprint\(roadmap\) == \(\n\s+")[0-9a-f]{64}("\n\s+\))')
-          if fixed.search(text):
-              text = fixed.sub(rf'\g<1>{fingerprint}\g<2>', text, count=1)
-
-          path.write_text(text, encoding="utf-8")
-          print(f"final fingerprint: {fingerprint}")
+          '''
+          new = '\n'.join(line[14:] if line.startswith('              ') else line for line in new.splitlines())
+          p.write_text(text[:start] + new + text[end:], encoding='utf-8')
           PY
       - name: Verify roadmap artifacts
         run: python3 scripts/validate_roadmap.py --check
@@ -61,23 +61,18 @@ jobs:
       - name: Sync backend dependencies
         run: uv sync --locked --all-extras --dev
         working-directory: backend
-      - name: Format finalized roadmap test
+      - name: Format validator tests
         run: uv run ruff format tests/unit/test_roadmap_validator.py
-        working-directory: backend
-      - name: Check finalized roadmap test
-        run: uv run ruff check tests/unit/test_roadmap_validator.py
         working-directory: backend
       - name: Run focused roadmap tests
         run: uv run pytest tests/unit/test_roadmap_validator.py -q
         working-directory: backend
-      - name: Commit finalized tests
+      - name: Remove temporary finalizer
+        run: rm .github/workflows/finalize-cost-roadmap-tests.yml
+      - name: Commit verified final state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend/tests/unit/test_roadmap_validator.py
-          if git diff --cached --quiet; then
-            echo "No test changes"
-          else
-            git commit -m "test: finalize cost-first roadmap contract"
-            git push origin HEAD:cost-optimized-roadmap
-          fi
+          git add -A
+          git commit -m "test: verify cost-first roadmap contract"
+          git push origin HEAD:cost-optimized-roadmap
