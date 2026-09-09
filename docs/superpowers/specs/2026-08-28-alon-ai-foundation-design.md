@@ -1,7 +1,9 @@
 # Alon AI Repository Foundation Design
 
+> **Historical design record — superseded and non-governing.** This document records the 2026-08-28 foundation design and must not be used to direct current implementation, approval policy, or stage decisions. The authoritative sources are the [Autonomous Sales-Validation Roadmap Design](2026-09-08-autonomous-sales-validation-roadmap-design.md) and the governing [development roadmap](../../development-roadmap/README.md). Their autonomous conversation authority and checkpoint model supersede any legacy per-message approval or `SCALE`/`REVISE`/`KILL` wording retained below.
+
 **Date:** 2026-08-28  
-**Status:** Approved
+**Status:** Approved on 2026-08-28 (historical; superseded and non-governing)
 **Product name:** Alon AI  
 **GitHub repository:** `alonbenpro/alon-ai` (private)
 

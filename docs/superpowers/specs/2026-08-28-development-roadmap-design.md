@@ -1,7 +1,9 @@
 # Alon AI Development Roadmap Documentation Design
 
-**Date:** 2026-08-28  
-**Status:** Approved  
+> **Historical design record — superseded and non-governing.** This document records the 2026-08-28 roadmap decisions and must not be used to direct current implementation, approval policy, or stage decisions. The authoritative sources are the [Autonomous Sales-Validation Roadmap Design](2026-09-08-autonomous-sales-validation-roadmap-design.md) and the governing [development roadmap](../../development-roadmap/README.md). In particular, their autonomous conversation authority and checkpoint model supersede any legacy per-message approval or `SCALE`/`REVISE`/`KILL` wording retained below.
+
+**Date:** 2026-08-28
+**Status:** Approved on 2026-08-28 (historical; superseded and non-governing)
 **Audience:** The solo developer operating Alon AI
 
 ## Purpose
