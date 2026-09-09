@@ -73,21 +73,21 @@ The default response to pressure is first to lower concurrency, model/provider p
 
 ## Ordered implementation tasks
 
-<!-- roadmap-task id=INFRA-05-T01 milestone=M8 depends_on=OBS-02-T01,OBS-01-T03,BACKEND-06-T02 mode=parallel locks=observability -->
+<!-- roadmap-task id=INFRA-05-T01 milestone=M8 depends_on=OBS-02-T01,OBS-01-T03,BACKEND-06-T02 mode=parallel locks=telemetry-catalog -->
 - [ ] **Implement telemetry and authoritative comparisons —** Input: OBS registries and reporting projections. Operation: expose safe small-VPS, Cloudflare, PostgreSQL, R2, provider/model, stage/checkpoint and action-control metrics with authoritative query links. Output: private monitoring view. Test evidence: missing/late/PII/redaction and authoritative-vs-cache divergence cases. Failure behavior: unknown truth blocks positive readiness.
-<!-- roadmap-task id=INFRA-05-T02 milestone=M8 depends_on=INFRA-05-T01,OBS-02-T04,OBS-05-T01,OBS-05-T04 mode=parallel locks=observability -->
+<!-- roadmap-task id=INFRA-05-T02 milestone=M8 depends_on=INFRA-05-T01,OBS-02-T04,OBS-05-T01,OBS-05-T04 mode=parallel locks=telemetry-catalog -->
 - [ ] **Implement exact alert/incident routing —** Input: alert rules/runbooks and incident registry. Operation: map critical VPS/R2/tunnel/safety/provider-action/cost conditions to typed incidents and independent operator alert. Output: tested routing. Test evidence: duplicate/suppressed/missing alert and dead-UI cases. Failure behavior: M8 freshness expires.
-<!-- roadmap-task id=INFRA-05-T03 milestone=M8 depends_on=INFRA-05-T02 mode=parallel locks=observability -->
+<!-- roadmap-task id=INFRA-05-T03 milestone=M8 depends_on=INFRA-05-T02 mode=parallel locks=telemetry-catalog -->
 - [ ] **Establish independent operator alert path —** Input: one non-application channel/account. Operation: configure and exercise dead-VPS/private-UI-unreachable notification and recovery contact data. Output: signed independent alert evidence. Test evidence: application Gmail/UI unavailable. Failure behavior: operations gate blocked.
-<!-- roadmap-task id=INFRA-05-T04 milestone=M8 depends_on=INFRA-05-T03,OBS-05-T01 mode=parallel locks=observability -->
+<!-- roadmap-task id=INFRA-05-T04 milestone=M8 depends_on=INFRA-05-T03,OBS-05-T01 mode=parallel locks=telemetry-catalog -->
 - [ ] **Implement Critical watchdog and capacity alarms —** Input: health/capacity/control signals. Operation: independently detect tunnel/product/backup/OOM/disk/provider ambiguity and missing heartbeat states. Output: Critical signal evidence. Test evidence: process kill, tunnel stop, backup stale, OOM/disk thresholds and telemetry blind spot. Failure behavior: fail closed/reduce authority.
-<!-- roadmap-task id=INFRA-05-T05 milestone=M8 depends_on=INFRA-05-T04,INFRA-04-T03 mode=parallel locks=backup-restore,observability -->
+<!-- roadmap-task id=INFRA-05-T05 milestone=M8 depends_on=INFRA-05-T04,INFRA-04-T03 mode=serial locks=backup-restore,telemetry-catalog -->
 - [ ] **Monitor R2 backup, retention and recovery-package freshness —** Input: INFRA-04 manifest/deletion/hold ledger. Operation: alert on missing/corrupt/stale chain, expiring credentials/key package and failed retention jobs. Output: restore-readiness metric. Test evidence: wrong key, stale manifest, missing WAL/object and expired recovery package. Failure behavior: backup/re-enable credit revoked.
 <!-- roadmap-task id=INFRA-05-T06 milestone=M8 depends_on=INFRA-05-T05,INFRA-02-T04,SEC-03-T04,INFRA-04-T02 mode=serial locks=backup-restore,live-environment -->
 - [ ] **Execute every pre-revenue DR scenario —** Input: current small-VPS release, encrypted R2 chain and runbooks. Operation: perform documented crash/loss/tunnel/R2/restore/action-ambiguity/control-generation scenarios and measure actual RPO/RTO. Output: signed DR evidence. Test evidence: scenario set equality and first-failure retention. Failure behavior: M8 remains blocked.
 <!-- roadmap-task id=INFRA-05-T07 milestone=M8 depends_on=INFRA-05-T06,INFRA-04-T06 mode=serial locks=backup-restore,live-environment -->
 - [ ] **Operate freshness and re-enable gates —** Input: current DR/restore/alert/capacity evidence. Operation: expire old evidence, deny re-enable on missing R2/Cloudflare/action reconciliation and require fresh command authority. Output: bounded operations gate. Test evidence: stale drill, capacity breach, unresolved send/booking and tunnel-alert failure. Failure behavior: relevant authority remains off.
-<!-- roadmap-task id=INFRA-05-T08 milestone=M8 depends_on=INFRA-05-T07 mode=parallel locks=observability -->
+<!-- roadmap-task id=INFRA-05-T08 milestone=M8 depends_on=INFRA-05-T07 mode=parallel locks=telemetry-catalog -->
 - [ ] **Close command/DR scenario sets and deferred enterprise upgrades —** Input: all M8 ops requirements. Operation: prove exact coverage and mark multi-cloud/managed-KMS/HA/enterprise-on-call scenarios post-revenue rather than hidden prerequisites. Output: signed coverage. Test evidence: orphan/duplicate/hidden-enterprise-dependency negatives. Failure behavior: M8 remains open.
 
 ## Acceptance
