@@ -2,6 +2,12 @@
 
 These instructions apply to the entire checkout.
 
+## Roadmap authority
+
+[Founder OS](https://www.notion.so/3d6caf700cba81a7a26bcb3b258f6ee1) is the sole authority for current roadmap tasks, specifications, dependencies, milestones, and acceptance gates. GitHub is authoritative for implemented code, tests, migrations, schemas, ADRs, runbooks, and retained implementation evidence.
+
+Before starting new roadmap-dependent work, read the current Founder OS task and its specification, dependencies, milestone, and acceptance gate. If Founder OS cannot be accessed, stop and report the blocker. The retained repository roadmap, generated planning artifacts, roadmap validator and its tests, planning history, historical roadmap commits, caches, remembered planning content, and Graphify output are non-authoritative planning references and cannot override Founder OS.
+
 ## Graphify-first repository discovery
 
 Use Graphify before broad discovery whenever the task asks how the repository works, where behavior lives, what depends on what, or which files implement an architectural concept.

@@ -8,7 +8,9 @@ This repository is a foundation, not the finished product. It currently proves a
 
 It **does not** send production outreach, implement Gmail OAuth/adapter/history sync, run the planned durable product workflows, call production model/discovery/enrichment providers, deploy the planned VPS, or prove real demand. Roadmap documents are implementation plans, not implementation evidence.
 
-The authoritative [M0–M9 development roadmap](docs/development-roadmap/README.md), [cost-first design](docs/superpowers/specs/2026-09-09-cost-optimized-validation-roadmap-design.md), and [canonical sales contract](docs/development-roadmap/00-product-strategy/01-product-scope.md#canonical-autonomous-sales-contract) govern current planning.
+[Founder OS](https://www.notion.so/3d6caf700cba81a7a26bcb3b258f6ee1) is the sole authority for current roadmap tasks, specifications, dependencies, milestones, and acceptance gates. The repository [development roadmap](docs/development-roadmap/README.md), generated artifacts, validator, tests, and planning history are retained as a non-authoritative reference snapshot; GitHub remains authoritative for implemented code and retained implementation evidence.
+
+Terms such as “canonical,” “authoritative,” and “governing” inside the retained roadmap snapshot describe its historical source semantics and do not override Founder OS.
 
 ## Cost-first pre-revenue strategy
 
@@ -93,6 +95,6 @@ Any disqualifying restart/cancellation/ambiguity/duplicate/versioning/observabil
 
 ## Roadmap
 
-Follow the [development roadmap](docs/development-roadmap/README.md) in validated dependency order. Build only the current executable frontier; later planning documents do not establish implementation completion or provider/legal/live-send authority.
+The [development roadmap](docs/development-roadmap/README.md) is retained for reference. Follow the current task, dependency order, and executable frontier in [Founder OS](https://www.notion.so/3d6caf700cba81a7a26bcb3b258f6ee1); planning documents do not establish implementation completion or provider/legal/live-send authority.
 
-Execution order and parallel dispatch are generated from the canonical task graph in [execution-manifest.json](docs/development-roadmap/execution-manifest.json), [EXECUTION_ORDER.md](docs/development-roadmap/EXECUTION_ORDER.md), and [AGENT_EXECUTION_PLAN.md](docs/development-roadmap/AGENT_EXECUTION_PLAN.md).
+The reference execution graph is preserved in [execution-manifest.json](docs/development-roadmap/execution-manifest.json), [EXECUTION_ORDER.md](docs/development-roadmap/EXECUTION_ORDER.md), and [AGENT_EXECUTION_PLAN.md](docs/development-roadmap/AGENT_EXECUTION_PLAN.md). Current execution order and parallel dispatch requirements belong to Founder OS.
