@@ -1,0 +1,46 @@
+name: Format Final Cost Roadmap Tests
+
+# format-attempt: final
+on:
+  push:
+    branches: [cost-optimized-roadmap]
+    paths:
+      - .github/workflows/final-format-cost-roadmap.yml
+
+permissions:
+  contents: write
+
+jobs:
+  format-and-verify:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          ref: cost-optimized-roadmap
+          fetch-depth: 0
+      - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d
+        with:
+          python-version: "3.13"
+          version: "0.11.26"
+      - name: Sync backend dependencies
+        run: uv sync --locked --all-extras --dev
+        working-directory: backend
+      - name: Format validator tests
+        run: uv run ruff format tests/unit/test_roadmap_validator.py
+        working-directory: backend
+      - name: Verify roadmap artifacts
+        run: python3 scripts/validate_roadmap.py --check
+      - name: Run validator tests
+        run: uv run pytest tests/unit/test_roadmap_validator.py -q
+        working-directory: backend
+      - name: Remove temporary workflows and commit
+        run: |
+          rm -f .github/workflows/final-format-cost-roadmap.yml
+          rm -f .github/workflows/finalize-cost-roadmap-tests.yml
+          rm -f .github/workflows/finalize-cost-tests.yml
+          rm -f .github/workflows/cost-roadmap-audit.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "test: format and clean cost-first roadmap validation"
+          git push origin HEAD:cost-optimized-roadmap
