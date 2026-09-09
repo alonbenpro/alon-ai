@@ -944,6 +944,7 @@ def validate_sales_dependencies(roadmap: Roadmap) -> None:
         "BACKEND-03-T04": ("BACKEND-05-T03",),
         "BACKEND-05-T03": ("BACKEND-03-T03",),
         "BACKEND-04-T03": ("AGENT-07-T04", "BACKEND-05-T03", "BACKEND-03-T03"),
+        "WF-03-T02": ("BACKEND-01-T04",),
         "WF-04-T01": ("BACKEND-01-T07", "PROVIDER-08-T03"),
         "WF-05-T01": ("AGENT-08-T04", "BACKEND-04-T04", "BACKEND-05-T03"),
         "WF-07-T01": ("BACKEND-01-T08", "AGENT-08-T04"),

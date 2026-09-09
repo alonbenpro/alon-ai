@@ -299,6 +299,29 @@ def test_booking_service_requires_fresh_booking_policy_provider(sales_tree):
         _validator.parse_roadmap(sales_tree)
 
 
+def test_idea_workflow_requires_materializer_before_accepted_artifacts(sales_tree):
+    target = (
+        sales_tree
+        / "docs/development-roadmap/03-workflows/03-idea-validation-workflow.md"
+    )
+    source = target.read_text()
+    metadata = next(
+        line
+        for line in source.splitlines()
+        if line.startswith("<!-- roadmap-task id=WF-03-T02 ")
+    )
+    without_provider = metadata.replace(",BACKEND-01-T04", "")
+    with_provider = without_provider.replace(" mode=", ",BACKEND-01-T04 mode=")
+    target.write_text(source.replace(metadata, with_provider))
+    _validator.parse_roadmap(sales_tree)
+
+    target.write_text(source.replace(metadata, without_provider))
+    with pytest.raises(
+        ValidationError, match="WF-03-T02:.*provider ancestor BACKEND-01-T04"
+    ):
+        _validator.parse_roadmap(sales_tree)
+
+
 def test_public_sales_parser_rejects_empty_manifest_document(sales_tree):
     target = sales_tree / "docs/development-roadmap/99-empty/01-empty.md"
     target.parent.mkdir()
@@ -2599,7 +2622,7 @@ def test_real_repository_source_graph_matches_reviewed_contract() -> None:
     )
     assert len(waves) == 394
     assert max(len(wave.assignments) for wave in waves) == 4
-    assert len(cross_document_dependency_pairs) == 925
+    assert len(cross_document_dependency_pairs) == 926
     assert graph_fingerprint(roadmap) == (
-        "59fa947a2d5d4cbb507950e2b6d8fd864bb22d094a05667b5b3a99ccdb5c8c88"
+        "2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271"
     )

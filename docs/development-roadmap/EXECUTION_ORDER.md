@@ -4,7 +4,7 @@
 
 - Regenerate: `python3 scripts/validate_roadmap.py --write`
 - Validate: `python3 scripts/validate_roadmap.py --check`
-- Source-graph fingerprint: `59fa947a2d5d4cbb507950e2b6d8fd864bb22d094a05667b5b3a99ccdb5c8c88`
+- Source-graph fingerprint: `2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271`
 
 ## Totals
 
@@ -286,14 +286,14 @@ A task is executable only when every dependency has retained passing evidence fr
 ## M4
 
 162. `WF-03-T01` — Freeze origin and input contracts ([source](03-workflows/03-idea-validation-workflow.md#L48)); dependencies: `AGENT-10-T05`, `DB-02-T03`, `DB-02-T04`, `PRODUCT-02-T01`
-163. `WF-03-T02` — Implement idea then research ([source](03-workflows/03-idea-validation-workflow.md#L50)); dependencies: `WF-03-T01`, `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `OBS-03-T02`, `BACKEND-01-T01`, `DB-04-T04`
-164. `BACKEND-01-T02` — Implement pure domain values/transitions ([source](06-backend/01-domain-services.md#L88)); dependencies: `BACKEND-01-T01`, `ARCH-03-T01`, `DB-06-T01`
-165. `BACKEND-01-T03` — Implement unit of work/idempotent executor ([source](06-backend/01-domain-services.md#L90)); dependencies: `BACKEND-01-T02`, `ARCH-02-T01`, `DB-05-T03`
-166. `BACKEND-01-T04` — Implement M2/M4/M5 sole-writer authority ([source](06-backend/01-domain-services.md#L92)); dependencies: `BACKEND-01-T03`, `DB-06-T01`, `BACKEND-03-T03`
-167. `WF-02-T01` — Encode finite stage registry ([source](03-workflows/02-experiment-lifecycle.md#L49)); dependencies: `BACKEND-01-T04`, `AGENT-10-T05`, `PROVIDER-03-T06`, `PROVIDER-04-T05`, `PROVIDER-05-T05`, `WF-01-T05`, `WF-00-T04`
-168. `WF-02-T02` — Implement idempotent start and completion ([source](03-workflows/02-experiment-lifecycle.md#L51)); dependencies: `WF-02-T01`
-169. `WF-02-T03` — Implement failure and resume guards ([source](03-workflows/02-experiment-lifecycle.md#L53)); dependencies: `WF-02-T02`
-170. `WF-02-T04` — Verify no-send lifecycle ([source](03-workflows/02-experiment-lifecycle.md#L55)); dependencies: `WF-02-T03`
+163. `BACKEND-01-T02` — Implement pure domain values/transitions ([source](06-backend/01-domain-services.md#L88)); dependencies: `BACKEND-01-T01`, `ARCH-03-T01`, `DB-06-T01`
+164. `BACKEND-01-T03` — Implement unit of work/idempotent executor ([source](06-backend/01-domain-services.md#L90)); dependencies: `BACKEND-01-T02`, `ARCH-02-T01`, `DB-05-T03`
+165. `BACKEND-01-T04` — Implement M2/M4/M5 sole-writer authority ([source](06-backend/01-domain-services.md#L92)); dependencies: `BACKEND-01-T03`, `DB-06-T01`, `BACKEND-03-T03`
+166. `WF-02-T01` — Encode finite stage registry ([source](03-workflows/02-experiment-lifecycle.md#L49)); dependencies: `BACKEND-01-T04`, `AGENT-10-T05`, `PROVIDER-03-T06`, `PROVIDER-04-T05`, `PROVIDER-05-T05`, `WF-01-T05`, `WF-00-T04`
+167. `WF-02-T02` — Implement idempotent start and completion ([source](03-workflows/02-experiment-lifecycle.md#L51)); dependencies: `WF-02-T01`
+168. `WF-02-T03` — Implement failure and resume guards ([source](03-workflows/02-experiment-lifecycle.md#L53)); dependencies: `WF-02-T02`
+169. `WF-02-T04` — Verify no-send lifecycle ([source](03-workflows/02-experiment-lifecycle.md#L55)); dependencies: `WF-02-T03`
+170. `WF-03-T02` — Implement idea then research ([source](03-workflows/03-idea-validation-workflow.md#L50)); dependencies: `WF-03-T01`, `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `OBS-03-T02`, `BACKEND-01-T01`, `DB-04-T04`, `BACKEND-01-T04`
 171. `WF-03-T03` — Implement authoritative offer handoff ([source](03-workflows/03-idea-validation-workflow.md#L52)); dependencies: `WF-03-T02`, `DB-04-T04`, `BACKEND-01-T04`, `AGENT-02-T03`, `AGENT-03-T03`, `AGENT-04-T03`
 172. `WF-03-T04` — Prove crash and cancel recovery ([source](03-workflows/03-idea-validation-workflow.md#L54)); dependencies: `WF-03-T03`, `WF-02-T03`
 173. `WF-03-T05` — Retain the synthetic M4 gate ([source](03-workflows/03-idea-validation-workflow.md#L56)); dependencies: `WF-03-T04`

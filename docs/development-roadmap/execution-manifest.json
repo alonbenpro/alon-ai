@@ -733,7 +733,7 @@
     "strategy_activation_boundary": "CHECKPOINT_ONLY"
   },
   "schema_version": 2,
-  "source_graph_fingerprint": "59fa947a2d5d4cbb507950e2b6d8fd864bb22d094a05667b5b3a99ccdb5c8c88",
+  "source_graph_fingerprint": "2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271",
   "tasks": [
     {
       "depends_on": [],
@@ -3550,29 +3550,6 @@
     },
     {
       "depends_on": [
-        "WF-03-T01",
-        "PROVIDER-03-T01",
-        "PROVIDER-04-T01",
-        "PROVIDER-05-T01",
-        "OBS-03-T02",
-        "BACKEND-01-T01",
-        "DB-04-T04"
-      ],
-      "document_id": "WF-03",
-      "id": "WF-03-T02",
-      "line": 50,
-      "locks": [
-        "workflow-runtime",
-        "backend-domain",
-        "agent-artifacts"
-      ],
-      "milestone": "M4",
-      "mode": "parallel",
-      "source": "docs/development-roadmap/03-workflows/03-idea-validation-workflow.md",
-      "title": "Implement idea then research"
-    },
-    {
-      "depends_on": [
         "BACKEND-01-T01",
         "ARCH-03-T01",
         "DB-06-T01"
@@ -3687,6 +3664,30 @@
       "mode": "parallel",
       "source": "docs/development-roadmap/03-workflows/02-experiment-lifecycle.md",
       "title": "Verify no-send lifecycle"
+    },
+    {
+      "depends_on": [
+        "WF-03-T01",
+        "PROVIDER-03-T01",
+        "PROVIDER-04-T01",
+        "PROVIDER-05-T01",
+        "OBS-03-T02",
+        "BACKEND-01-T01",
+        "DB-04-T04",
+        "BACKEND-01-T04"
+      ],
+      "document_id": "WF-03",
+      "id": "WF-03-T02",
+      "line": 50,
+      "locks": [
+        "workflow-runtime",
+        "backend-domain",
+        "agent-artifacts"
+      ],
+      "milestone": "M4",
+      "mode": "parallel",
+      "source": "docs/development-roadmap/03-workflows/03-idea-validation-workflow.md",
+      "title": "Implement idea then research"
     },
     {
       "depends_on": [

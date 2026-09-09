@@ -2,7 +2,7 @@
 
 > Warning: generated for the source graph below; it does not prove implementation status.
 
-- Source-graph fingerprint: `59fa947a2d5d4cbb507950e2b6d8fd864bb22d094a05667b5b3a99ccdb5c8c88`
+- Source-graph fingerprint: `2e061a5b5b83a4a18b5f3de88896a2b32e5e7cdf4870145b17be44dea4a63271`
 - Regenerate: `python3 scripts/validate_roadmap.py --write`
 - Validate: `python3 scripts/validate_roadmap.py --check`
 
@@ -2976,30 +2976,10 @@
 - Optional acceptance commands: none
 - Merge order: 2
 
-- Newly unlocked tasks: `WF-03-T02`, `BACKEND-01-T03`, `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Newly unlocked tasks: `BACKEND-01-T03`, `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
 ## Wave 126 — M4
-
-- Agent count: 1 implementer(s) and 1 reviewer(s)
-- Base prerequisite barrier: `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `WF-03-T01`
-
-### I1 / R1 — `WF-03-T02`
-
-- Source: [source](03-workflows/03-idea-validation-workflow.md#L50)
-- Dependencies: `WF-03-T01`, `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `OBS-03-T02`, `BACKEND-01-T01`, `DB-04-T04`
-- Mode: `parallel`
-- Locks: `workflow-runtime`, `backend-domain`, `agent-artifacts`
-- Branch: `agent/wf-03-t02`
-- Worktree: `../alon-ai-task-wf-03-t02`
-- Acceptance evidence: [source](03-workflows/03-idea-validation-workflow.md#L50) — Test evidence: bypass equivalence, missing idea, stale source and injection cases.
-- Optional acceptance commands: none
-- Merge order: 1
-
-- Newly unlocked tasks: `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
-- Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
-
-## Wave 127 — M4
 
 - Agent count: 1 implementer(s) and 1 reviewer(s)
 - Base prerequisite barrier: `ARCH-02-T01`, `DB-05-T03`, `BACKEND-01-T02`
@@ -3019,7 +2999,7 @@
 - Newly unlocked tasks: `BACKEND-01-T04`, `BACKEND-02-T01`, `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 128 — M4
+## Wave 127 — M4
 
 - Agent count: 1 implementer(s) and 1 reviewer(s)
 - Base prerequisite barrier: `DB-06-T01`, `BACKEND-03-T03`, `BACKEND-01-T03`
@@ -3036,10 +3016,10 @@
 - Optional acceptance commands: none
 - Merge order: 1
 
-- Newly unlocked tasks: `WF-02-T01`, `WF-03-T03`, `BACKEND-01-T05`, `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Newly unlocked tasks: `WF-02-T01`, `WF-03-T02`, `BACKEND-01-T05`, `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 129 — M4
+## Wave 128 — M4
 
 - Agent count: 2 implementer(s) and 2 reviewer(s)
 - Base prerequisite barrier: `WF-01-T05`, `WF-00-T04`, `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `OBS-03-T02`, `PROVIDER-04-T05`, `PROVIDER-05-T05`, `AGENT-10-T05`, `PROVIDER-03-T06`, `BACKEND-01-T04`
@@ -3071,7 +3051,7 @@
 - Newly unlocked tasks: `WF-02-T02`, `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-01-T06`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 130 — M4
+## Wave 129 — M4
 
 - Agent count: 1 implementer(s) and 1 reviewer(s)
 - Base prerequisite barrier: `WF-02-T01`
@@ -3091,7 +3071,7 @@
 - Newly unlocked tasks: `WF-02-T03`, `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-01-T06`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 131 — M4
+## Wave 130 — M4
 
 - Agent count: 1 implementer(s) and 1 reviewer(s)
 - Base prerequisite barrier: `WF-02-T02`
@@ -3111,7 +3091,7 @@
 - Newly unlocked tasks: `WF-02-T04`, `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-01-T06`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
-## Wave 132 — M4
+## Wave 131 — M4
 
 - Agent count: 1 implementer(s) and 1 reviewer(s)
 - Base prerequisite barrier: `WF-02-T03`
@@ -3131,10 +3111,30 @@
 - Newly unlocked tasks: `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-01-T06`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
 - Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
 
+## Wave 132 — M4
+
+- Agent count: 1 implementer(s) and 1 reviewer(s)
+- Base prerequisite barrier: `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `BACKEND-01-T01`, `DB-04-T04`, `OBS-03-T02`, `WF-03-T01`, `BACKEND-01-T04`
+
+### I1 / R1 — `WF-03-T02`
+
+- Source: [source](03-workflows/03-idea-validation-workflow.md#L50)
+- Dependencies: `WF-03-T01`, `PROVIDER-03-T01`, `PROVIDER-04-T01`, `PROVIDER-05-T01`, `OBS-03-T02`, `BACKEND-01-T01`, `DB-04-T04`, `BACKEND-01-T04`
+- Mode: `parallel`
+- Locks: `workflow-runtime`, `backend-domain`, `agent-artifacts`
+- Branch: `agent/wf-03-t02`
+- Worktree: `../alon-ai-task-wf-03-t02`
+- Acceptance evidence: [source](03-workflows/03-idea-validation-workflow.md#L50) — Test evidence: bypass equivalence, missing idea, stale source and injection cases.
+- Optional acceptance commands: none
+- Merge order: 1
+
+- Newly unlocked tasks: `WF-03-T03`, `PROVIDER-06-T04`, `PROVIDER-08-T04`, `BACKEND-01-T06`, `BACKEND-04-T01`, `BACKEND-05-T01`, `SEC-04-T01`, `SEC-02-T01`, `OBS-05-T01`, `OBS-03-T04`, `OBS-04-T01`, `TEST-06-T01`, `INFRA-02-T01`
+- Barrier: all assignments above must be reviewed, merged in order, retested, and recorded before the next wave starts.
+
 ## Wave 133 — M4
 
 - Agent count: 1 implementer(s) and 1 reviewer(s)
-- Base prerequisite barrier: `DB-04-T04`, `AGENT-02-T03`, `AGENT-03-T03`, `AGENT-04-T03`, `WF-03-T02`, `BACKEND-01-T04`
+- Base prerequisite barrier: `DB-04-T04`, `AGENT-02-T03`, `AGENT-03-T03`, `AGENT-04-T03`, `BACKEND-01-T04`, `WF-03-T02`
 
 ### I1 / R1 — `WF-03-T03`
 
@@ -8724,12 +8724,6 @@
 - Provider `DB-02-T03` — Output: versioned brief/idea/offer.; Consumer `WF-03-T01` — Input: canonical IdeaBrief and accepted scope.
 - Provider `DB-02-T04` — Output: reproducible decision input.; Consumer `WF-03-T01` — Input: canonical IdeaBrief and accepted scope.
 - Provider `PRODUCT-02-T01` — Output: immutable metric registry and `StagedValidationRuleV1` contract for M2 consumers.; Consumer `WF-03-T01` — Input: canonical IdeaBrief and accepted scope.
-- Provider `PROVIDER-03-T01` — Output: provider-neutral protocol.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
-- Provider `PROVIDER-04-T01` — Output: `MarketSearchPort`.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
-- Provider `PROVIDER-05-T01` — Output: two read-only ports.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
-- Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
-- Provider `BACKEND-01-T01` — Output: implemented versioned AgentRunRecordingService, ArtifactCommandService, EvaluationSuiteCommandService and EvaluationExecutionService interfaces with atomic event/replay behavior.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
-- Provider `DB-04-T04` — Output: implemented versioned ArtifactValidationService and ArtifactAcceptanceService interfaces plus eligible accepted fixture artifact or retained rejection.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
 - Provider `ARCH-03-T01` — Output: canonical `.v1` names and payload schemas, versioned states, guards, legal transition tables, typed decisions, and event intents.; Consumer `BACKEND-01-T02` — Input: ARCH-03 enums/guards/events and DB constraints.
 - Provider `DB-06-T01` — Output: fresh schema.; Consumer `BACKEND-01-T02` — Input: ARCH-03 enums/guards/events and DB constraints.
 - Provider `ARCH-02-T01` — Output: stable interfaces.; Consumer `BACKEND-01-T03` — Input: strict command envelope and expected version; implemented atomic IdempotentCommandExecutor/UnitOfWork claim-replay interface.
@@ -8743,6 +8737,13 @@
 - Provider `PROVIDER-05-T05` — Output: least-authority provider evidence.; Consumer `WF-02-T01` — Input: canonical states/accepted runtime.
 - Provider `WF-01-T05` — Output: interoperable gate bundle with no promoted product data.; Consumer `WF-02-T01` — Input: canonical states/accepted runtime.
 - Provider `WF-00-T04` — Output: one signed `SelectedRuntimeDecisionV1` naming `DBOS|TEMPORAL`, the branch gate, evidence hashes, adapter version when applicable, and zero third-runtime authority.; Consumer `WF-02-T01` — Input: canonical states/accepted runtime.
+- Provider `PROVIDER-03-T01` — Output: provider-neutral protocol.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
+- Provider `PROVIDER-04-T01` — Output: `MarketSearchPort`.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
+- Provider `PROVIDER-05-T01` — Output: two read-only ports.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
+- Provider `OBS-03-T02` — Output: implemented versioned budget-reservation and ProviderCostReconciliationService interfaces with atomic replay semantics, including distinct calendar-read and booking-write cost chains.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
+- Provider `BACKEND-01-T01` — Output: implemented versioned AgentRunRecordingService, ArtifactCommandService, EvaluationSuiteCommandService and EvaluationExecutionService interfaces with atomic event/replay behavior.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
+- Provider `DB-04-T04` — Output: implemented versioned ArtifactValidationService and ArtifactAcceptanceService interfaces plus eligible accepted fixture artifact or retained rejection.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
+- Provider `BACKEND-01-T04` — Output: versioned validated-actor, sole-writer service, repository-owner, command-registry, and table/event authority contracts plus no-send product operations, accepted deterministic offer economics and StrategyActivationService.initialize_baseline without provider leakage.; Consumer `WF-03-T02` — Input: typed origin, IdeaBriefMaterializer and source fixtures.
 - Provider `DB-04-T04` — Output: implemented versioned ArtifactValidationService and ArtifactAcceptanceService interfaces plus eligible accepted fixture artifact or retained rejection.; Consumer `WF-03-T03` — Input: both accepted upstream artifacts and frozen economics.
 - Provider `BACKEND-01-T04` — Output: versioned validated-actor, sole-writer service, repository-owner, command-registry, and table/event authority contracts plus no-send product operations, accepted deterministic offer economics and StrategyActivationService.initialize_baseline without provider leakage.; Consumer `WF-03-T03` — Input: both accepted upstream artifacts and frozen economics.
 - Provider `AGENT-02-T03` — Output: tested immutable specialist implementation/configuration identity and handoff.; Consumer `WF-03-T03` — Input: both accepted upstream artifacts and frozen economics.
