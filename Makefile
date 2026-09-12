@@ -1,4 +1,7 @@
-.PHONY: setup roadmap generate format lint typecheck test build containers dev down
+.PHONY: setup roadmap generate format lint typecheck test test-integration build containers dev down database migrate api worker frontend
+
+COMPOSE ?= docker compose
+COMPOSE_ARGS ?= --env-file .env.example -f infra/compose.yaml
 
 setup:
 	cd backend && uv sync --locked --all-extras --dev
@@ -27,16 +30,35 @@ test: roadmap
 	cd backend && uv run pytest tests/unit -q
 	npm --prefix frontend test -- --run
 
+test-integration:
+	cd backend && uv run --locked pytest tests/integration -q
+
 build:
 	cd backend && uv build
 	npm --prefix frontend run build
 
 containers:
-	docker compose --env-file .env.example -f infra/compose.yaml config
-	docker compose --env-file .env.example -f infra/compose.yaml build api worker frontend
+	$(COMPOSE) $(COMPOSE_ARGS) config --quiet
+	$(COMPOSE) $(COMPOSE_ARGS) build api worker frontend
 
-dev:
-	docker compose --env-file .env.example -f infra/compose.yaml up --build
+database:
+	$(COMPOSE) $(COMPOSE_ARGS) up --detach --wait postgres
+
+migrate:
+	cd backend && uv run --locked alembic upgrade head
+
+api:
+	cd backend && uv run --locked uvicorn alon_ai.api.app:app --host 127.0.0.1 --port 8000 --no-access-log
+
+worker:
+	cd backend && uv run --locked python -m alon_ai.worker.main
+
+frontend:
+	npm --prefix frontend run dev -- --hostname 127.0.0.1
+
+dev: database
+	$(COMPOSE) $(COMPOSE_ARGS) run --build --rm api alembic upgrade head
+	$(COMPOSE) $(COMPOSE_ARGS) up --build
 
 down:
-	docker compose --env-file .env.example -f infra/compose.yaml down
+	$(COMPOSE) $(COMPOSE_ARGS) down

@@ -1,6 +1,6 @@
-FROM ghcr.io/astral-sh/uv:0.11.26 AS uv
+FROM ghcr.io/astral-sh/uv:0.11.26@sha256:3d868e555f8f1dbc324afa005066cd11e1053fc4743b9808ca8025283e65efa5 AS uv
 
-FROM python:3.13-slim-bookworm
+FROM python:3.13-slim-bookworm@sha256:ed86c82274b3c69b52fb5820f358f0bd7df0b603332063cb5c6e32bd220c3e6e
 
 ENV UV_COMPILE_BYTECODE=1
 ENV UV_LINK_MODE=copy

@@ -230,7 +230,9 @@ def test_rejects_unknown_blank_and_non_strict_values(
 ) -> None:
     target = synthetic_brief
     for part in path[:-1]:
-        target = target[part]  # type: ignore[index,assignment]
+        nested = target[part]
+        assert isinstance(nested, dict)
+        target = nested
     target[path[-1]] = value
 
     with pytest.raises(ValidationError):

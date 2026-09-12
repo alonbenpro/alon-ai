@@ -1,92 +1,98 @@
-# Local development runbook
+# Local development
 
-This runbook is for the repository foundation. It does not deploy anything and it does not authorize production outreach.
+Run commands from the repository root. The current acceptance scope is [L01](https://app.notion.com/p/3d6caf700cba81b1b657eb90c9a930de): a working foundation, not a completed private production application.
 
 ## Prerequisites
 
-- Python 3.13 and [uv 0.11.26](https://docs.astral.sh/uv/)
-- Node.js 24 and npm
-- PostgreSQL 18 for host-based integration testing, or Docker Engine with Docker Compose for the local stack
+- Python 3.13 and uv **0.11.26** (`uv --version`). `uv sync` selects a compatible Python interpreter; application packages come from the committed lockfile.
+- Node **24** and npm (`node --version`, `npm --version`). The audit used Node 24.18.0 and npm 11.16.0.
+- A running Docker engine and Compose (`docker info`, `docker compose version`). Installing a Docker CLI alone does not start an engine.
+- Free loopback ports 3000 and 8000. PostgreSQL uses host port 5432 by default and can use a different port below.
 
-## Setup and checks
+On macOS, Docker Desktop or Colima can supply the engine. This audit installed Homebrew `colima`, `docker` and `docker-compose` and started a dedicated profile:
 
-From the repository root:
+```sh
+colima start --profile alon-ai --cpu 2 --memory 4 --disk 20 --activate=false
+export DOCKER_HOST="unix://$HOME/.colima/alon-ai/docker.sock"
+export COMPOSE=docker-compose
+```
+
+The standalone `docker-compose` override avoids changing an existing Docker CLI configuration to discover Homebrew's Compose plugin. Use the same environment for all subsequent Make/Compose commands. A Docker Desktop installation with a working plugin uses the default `docker compose` command instead. No automatic start-at-login service is required.
+
+## Container stack
 
 ```sh
 make setup
-make generate
-make lint
-make typecheck
-make test
-make build
-```
-
-`make setup` uses the committed Python and npm lockfiles. `make generate` exports FastAPI's OpenAPI document and regenerates `frontend/src/lib/api/schema.d.ts`; generated changes are deliberate review items. Check accidental drift with:
-
-```sh
-git diff --exit-code -- frontend/openapi.json frontend/src/lib/api/schema.d.ts
-```
-
-## Host PostgreSQL and backend migration
-
-The safe local example values are in `.env.example`. They point at a database and role both named `alon_ai` on port 5432. Do not put real provider credentials in that file.
-
-For a local PostgreSQL instance matching that example, export the connection string and run migrations:
-
-```sh
-export ALON_AI_DATABASE_URL=postgresql+psycopg://alon_ai:alon_ai@localhost:5432/alon_ai
-cd backend && uv run alembic upgrade head
-```
-
-Run the API against that database in a second terminal:
-
-```sh
-cd backend && uv run uvicorn alon_ai.api.app:app --reload --host 127.0.0.1 --port 8000
-```
-
-Run the frontend in another terminal:
-
-```sh
-npm --prefix frontend run dev
-```
-
-The health endpoints are `http://127.0.0.1:8000/health/live` and `http://127.0.0.1:8000/health/ready`. The dashboard default is `http://localhost:3000`.
-
-## Docker Compose
-
-For a Docker-capable environment, use the committed local configuration:
-
-```sh
-docker compose --env-file .env.example -f infra/compose.yaml config
-docker compose --env-file .env.example -f infra/compose.yaml run --rm api alembic upgrade head
 make dev
 ```
 
-Stop the stack with:
+`make setup` installs locked host dependencies for tests and API generation. `make dev` starts the PostgreSQL 18 container, waits for its health check, runs `alembic upgrade head`, then builds/starts the API, idle worker and frontend. Alembic currently has no product revisions; successful execution is migration-tool connectivity evidence only.
+
+The safe `.env.example` is Compose's interpolation file. Containers have explicit database/local configuration and hard-code outreach off; they do not load `backend/.env` or provider credentials. API/frontend/DB ports bind only to `127.0.0.1`. The local stack has no application authentication yet and must not be exposed publicly.
+
+If port 5432 is occupied:
+
+```sh
+export ALON_AI_POSTGRES_PORT=55432
+make dev
+```
+
+Only the host port changes; API/worker still use `postgres:5432` inside Compose. This does not modify the existing host PostgreSQL server.
+
+Open <http://localhost:3000>. Expected API results:
+
+```sh
+curl --fail http://127.0.0.1:8000/health/live
+# {"status":"ok","service":"api"}
+curl --fail http://127.0.0.1:8000/health/ready
+# {"status":"ready","database":"up"}
+```
+
+Readiness executes a real database query. If the DB is unavailable, it returns HTTP 503 with `{"status":"not_ready","database":"down"}`. The worker logs `worker_ready` and waits for SIGINT/SIGTERM; that does not prove durable workflow execution.
 
 ```sh
 make down
 ```
 
-Docker is unavailable in this local environment, so these Compose commands and image builds have not been executed locally.
+Shutdown retains the PostgreSQL volume. Do not add `--volumes` to ordinary shutdown; it deletes local database data.
 
-### Auditable remote evidence
+## Host development with a container database
 
-On 2026-08-28, [GitHub Actions run 33178960731](https://github.com/alonbenpro/alon-ai/actions/runs/33178960731) passed at commit `f3e615710f51ab59ab883720dcf1d8c25d5e710b`. Its `containers` job validated the Compose configuration, built both application images, initialized PostgreSQL 18, ran the Alembic migration, started the stack, checked API and frontend health plus the live, ready, and frontend HTTP endpoints, verified the worker was running as a non-root user with outreach disabled, and removed the stack and volumes. That is remote CI coverage only: it does not establish a local Docker run, a read-only root filesystem, or real Gmail sending.
+```sh
+make setup
+make database
+export ALON_AI_DATABASE_URL=postgresql+psycopg://alon_ai:alon_ai@127.0.0.1:5432/alon_ai
+export ALON_AI_OUTREACH_ENABLED=false
+make migrate
+```
 
-## Common database failures
+Use `55432` in this URL if `ALON_AI_POSTGRES_PORT=55432`. In three terminals, retaining those variables, run `make api`, `make worker`, and `make frontend`. Do not run host API/frontend on ports already occupied by the full Compose stack.
 
-| Symptom | Likely cause | Action |
-| --- | --- | --- |
-| `connection refused` | PostgreSQL is not running or port 5432 is not reachable | Start PostgreSQL/Compose and confirm the host and port in `ALON_AI_DATABASE_URL`. |
-| `password authentication failed` | Role/password does not match the example | Create/use the `alon_ai` role and database, or update the environment variable for your local instance. |
-| `/health/ready` returns 503 | API cannot complete its database check | Read API logs and verify the database URL, role, database name, and PostgreSQL availability. |
-| Alembic cannot connect | Migration command lacks `ALON_AI_DATABASE_URL` | Export it in the terminal running Alembic; do not rely on another shell's variables. |
-| Port 5432 is already in use | Another local PostgreSQL instance owns the port | Stop the conflicting service or select a different port and update every local connection string consistently. |
+Python settings read `backend/.env` when launched by these Make targets, because they run from `backend/`. Root `.env.example` is not automatically a host-process environment file. Keep secrets only in ignored local files; do not paste credentials into commands, committed templates or logs. L01 needs no provider keys.
 
-## Secrets and safety
+## Verification
 
-- Keep `.env`, OAuth refresh tokens, private keys, and provider credentials out of Git.
-- `.env.example` contains safe local placeholders only. Copy values into an ignored local environment file or inject them through your shell/secret manager.
-- Keep `ALON_AI_OUTREACH_ENABLED=false`. The foundation has no Gmail adapter and does not send real outreach.
-- Never give an agent direct Gmail credentials. The next milestone must implement the deterministic gateway and prove crash recovery with operator-controlled test inboxes.
+```sh
+make generate
+make lint
+make typecheck
+make test
+make build
+make test-integration
+make containers
+python3 scripts/check_secrets.py
+```
+
+- `make generate` requires backend setup first and regenerates `frontend/openapi.json` and `frontend/src/lib/api/schema.d.ts`. Inspect `git diff --exit-code -- frontend/openapi.json frontend/src/lib/api/schema.d.ts` for drift.
+- `make test` runs backend unit and frontend tests without provider credentials. `make test-integration` requires the explicit database URL above and a real running PostgreSQL server.
+- Run frontend typecheck/build sequentially; Next generates types in `.next` during its build.
+- `make containers` validates Compose and builds images. It does not start the stack or prove live readiness.
+- `make roadmap` checks only retained historical planning artifacts. It does not read or validate the current Notion roadmap.
+
+## Diagnosing setup failures
+
+- **Docker command/daemon missing:** check both Compose and `docker info`; start the selected engine/profile. Do not substitute the host's unrelated PostgreSQL installation for the configured PostgreSQL 18 container.
+- **Database connection refused:** confirm the container is healthy, check the host port override, and set `ALON_AI_DATABASE_URL` for host tests. Do not use container hostname `postgres` in host commands.
+- **npm EACCES in a shared cache:** use an isolated writable cache, e.g. `npm_config_cache="$(mktemp -d)" make setup`. Do not use sudo npm or recursively change ownership of unrelated user data.
+- **Frontend API error:** confirm the API responds on port 8000 and that the browser uses the matching `NEXT_PUBLIC_API_BASE_URL`. Container frontend configuration is built into the image; rebuild after changing it.
+- **Network-sandbox failures:** DNS or package-registry failures under an agent sandbox are not proof of invalid credentials or a broken lockfile. Repeat only the necessary authorized network operation with the appropriate permission.
