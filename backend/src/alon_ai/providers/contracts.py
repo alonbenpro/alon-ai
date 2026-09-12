@@ -29,10 +29,31 @@ from pydantic import (
     field_validator,
     model_validator,
 )
-from pydantic_core import core_schema
+from pydantic_core import SchemaValidator, core_schema
 
 if TYPE_CHECKING:
     from alon_ai.providers.rights import RuntimeContent
+
+
+def _native_json_schema(schema: Any) -> Any:
+    """Remove only our Python error wrappers for the sanitized JSON entry point.
+
+    Core wrap validators materialize JSON input as Python values and break strict
+    Decimal/datetime JSON hydration. Removing them here preserves Pydantic's own
+    JSON validation, including nested models and discriminated unions. The caller
+    catches and sanitizes all JSON parser/validation errors instead.
+    """
+    if isinstance(schema, dict):
+        if schema.get("type") == "function-wrap" and schema.get("metadata", {}).get(
+            "provider_python_error_wrapper"
+        ):
+            return _native_json_schema(schema["schema"])
+        return {key: _native_json_schema(value) for key, value in schema.items()}
+    if isinstance(schema, list):
+        return [_native_json_schema(value) for value in schema]
+    if isinstance(schema, tuple):
+        return tuple(_native_json_schema(value) for value in schema)
+    return schema
 
 
 class StrictDTO(BaseModel):
@@ -53,7 +74,12 @@ class StrictDTO(BaseModel):
         by_name: bool | None = None,
     ) -> Self:
         try:
-            return super().model_validate_json(
+            # Only the error wrappers installed below are removed. User field/
+            # model validators and strict native JSON conversion remain intact.
+            validator = SchemaValidator(
+                _native_json_schema(cls.__pydantic_core_schema__)
+            )
+            return validator.validate_json(
                 json_data,
                 strict=strict,
                 extra=extra,
@@ -96,7 +122,11 @@ class StrictDTO(BaseModel):
                     hide_input=True,
                 ) from None
 
-        return core_schema.no_info_wrap_validator_function(sanitize, handler(source))
+        return core_schema.no_info_wrap_validator_function(
+            sanitize,
+            handler(source),
+            metadata={"provider_python_error_wrapper": True},
+        )
 
 
 class Provider(StrEnum):

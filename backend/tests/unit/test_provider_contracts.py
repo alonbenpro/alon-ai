@@ -102,6 +102,8 @@ def test_attribution_requires_explicit_actor_and_forbids_selected_budgets():
         **values, actor=SystemActor(service="provider-executor")
     )
     assert attribution.actor.kind == "system"
+    restored = CallAttribution.model_validate_json(attribution.model_dump_json())
+    assert restored == attribution
     with pytest.raises(ValidationError):
         CallAttribution.model_validate(
             values
@@ -466,3 +468,86 @@ async def test_fake_wrong_capability_method_denies_before_invocation():
             cast(Any, FirecrawlMapRequest(url="https://example.test"))
         )
     assert session.invocations == ()
+
+
+def test_strict_dto_json_roundtrip_preserves_decimal_uuid_and_aware_datetime():
+    from uuid import UUID
+
+    from pydantic import AwareDatetime, field_validator
+
+    from alon_ai.providers.contracts import StrictDTO
+
+    class ExactValue(StrictDTO):
+        record_id: UUID
+        amount: Decimal
+        observed_at: AwareDatetime
+
+        @field_validator("amount")
+        @classmethod
+        def positive_amount(cls, amount: Decimal) -> Decimal:
+            if amount <= 0:
+                raise ValueError("positive amount required")
+            return amount
+
+    class Envelope(StrictDTO):
+        value: ExactValue
+        history: tuple[ExactValue, ...]
+
+    record_id = UUID("00000000-0000-4000-8000-000000000042")
+    observed_at = datetime(2026, 9, 12, 18, 0, tzinfo=UTC)
+    value = ExactValue(
+        record_id=record_id,
+        amount=Decimal("0.000000000123"),
+        observed_at=observed_at,
+    )
+    envelope = Envelope(value=value, history=(value,))
+    restored_value = ExactValue.model_validate_json(value.model_dump_json())
+    restored_envelope = Envelope.model_validate_json(envelope.model_dump_json())
+    assert restored_value.record_id == record_id
+    assert restored_value.amount == Decimal("0.000000000123")
+    assert restored_value.observed_at == observed_at
+    assert restored_envelope.value == value
+    assert restored_envelope.history == (value,)
+    assert restored_envelope.value.observed_at.utcoffset() is not None
+    invalid_json = value.model_dump_json().replace('"1.23E-10"', '"-1"')
+    with pytest.raises(ValidationError):
+        ExactValue.model_validate_json(invalid_json)
+
+
+@pytest.mark.parametrize("amount", [0.1, True, False])
+def test_strict_dto_python_ingress_still_rejects_float_and_bool_money(amount):
+    from pydantic import TypeAdapter
+
+    from alon_ai.providers.contracts import StrictDTO
+
+    class ExactMoney(StrictDTO):
+        amount: Decimal
+
+    for parse in (
+        lambda: ExactMoney(amount=amount),
+        lambda: ExactMoney.model_validate({"amount": amount}),
+        lambda: TypeAdapter(ExactMoney).validate_python({"amount": amount}),
+    ):
+        with pytest.raises(ValidationError):
+            parse()
+
+
+def test_nested_strict_dto_json_errors_hide_fields_input_and_context():
+    from alon_ai.providers.contracts import StrictDTO
+
+    class ExactMoney(StrictDTO):
+        amount: Decimal
+
+    class Envelope(StrictDTO):
+        value: ExactMoney
+
+    sentinel = "unique-nested-source-secret"
+    for raw_json in (
+        '{"value":{"amount":"' + sentinel + '"}}',
+        '{"value":{"amount":"1.25","' + sentinel + '":"' + sentinel + '"}}',
+    ):
+        with pytest.raises(ValidationError) as caught:
+            Envelope.model_validate_json(raw_json)
+        assert sentinel not in str(caught.value)
+        assert sentinel not in repr(caught.value.errors())
+        assert sentinel not in caught.value.json()
