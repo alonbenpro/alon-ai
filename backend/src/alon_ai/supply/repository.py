@@ -333,62 +333,80 @@ class CampaignSupplyRepository:
     ) -> str:
         async with self.engine.begin() as c:
             candidate = await row(c, s.candidates, "id", candidate_id)
-            root = await locked(c, candidate["experiment_id"])
-            prior = await maybe(c, s.contacts, "candidate_id", candidate_id)
-            if prior:
-                if (
-                    prior["source_id"] != source_id
-                    or prior["verification_id"] != verification_id
-                ):
-                    raise SupplyDenied("CONTACT_CONFLICT")
-                return prior["outcome"]
-            active(root, self.clock())
-            source = await row(c, s.facts, "id", source_id)
-            clearance = await row(c, s.facts, "id", candidate["clearance_id"])
-            identity = await row(c, s.identities, "id", candidate["identity_id"])
-            proofs = [identity, clearance, source]
-            outcome = {
-                "EMAIL_ABSENT": "EMAIL_NOT_FOUND",
-                "SOURCE_FAILURE": "SOURCE_FAILURE",
-            }.get(source["kind"])
-            if verification_id is not None:
-                verification = await row(c, s.facts, "id", verification_id)
-                proofs.append(verification)
-                outcome = {
-                    "VERIFIED": "SUPPORTED",
-                    "VERIFICATION_REJECTED": "VERIFICATION_REJECTED",
-                }.get(verification["kind"])
-            for proof in proofs:
-                valid(proof, self.clock())
-            if outcome is None:
-                raise SupplyDenied("CONTACT_EVIDENCE")
-            if outcome == "SOURCE_FAILURE":
-                prior_failure = await maybe(
-                    c, s.contact_failures, "source_id", source_id
-                )
-                if prior_failure and prior_failure["candidate_id"] != candidate_id:
-                    raise SupplyDenied("FAILURE_CONFLICT")
-                if not prior_failure:
-                    await c.execute(
-                        insert(s.contact_failures).values(
-                            source_id=source_id,
-                            candidate_id=candidate_id,
-                            experiment_id=candidate["experiment_id"],
-                        )
-                    )
-                return outcome
-            await c.execute(
-                insert(s.contacts).values(
-                    candidate_id=candidate_id,
-                    experiment_id=candidate["experiment_id"],
-                    source_id=source_id,
-                    verification_id=verification_id,
-                    outcome=outcome,
-                    resolved_at=self.clock(),
-                    valid_until=min(p["valid_until"] for p in proofs),
-                )
+            await locked(c, candidate["experiment_id"])
+            return await self._resolve_contact(
+                c,
+                candidate_id,
+                source_id,
+                verification_id,
+                now=self.clock(),
             )
+
+    async def _resolve_contact(
+        self,
+        c: AsyncConnection,
+        candidate_id: UUID,
+        source_id: UUID,
+        verification_id: UUID | None = None,
+        *,
+        now: datetime,
+    ) -> str:
+        """Materialize a contact while the caller holds the experiment fence."""
+        candidate = await row(c, s.candidates, "id", candidate_id)
+        root = await row(c, s.plans, "experiment_id", candidate["experiment_id"])
+        prior = await maybe(c, s.contacts, "candidate_id", candidate_id)
+        if prior:
+            if (
+                prior["source_id"] != source_id
+                or prior["verification_id"] != verification_id
+            ):
+                raise SupplyDenied("CONTACT_CONFLICT")
+            return prior["outcome"]
+        active(root, now)
+        source = await row(c, s.facts, "id", source_id)
+        clearance = await row(c, s.facts, "id", candidate["clearance_id"])
+        identity = await row(c, s.identities, "id", candidate["identity_id"])
+        proofs = [identity, clearance, source]
+        outcome = {
+            "EMAIL_ABSENT": "EMAIL_NOT_FOUND",
+            "SOURCE_FAILURE": "SOURCE_FAILURE",
+        }.get(source["kind"])
+        if verification_id is not None:
+            verification = await row(c, s.facts, "id", verification_id)
+            proofs.append(verification)
+            outcome = {
+                "VERIFIED": "SUPPORTED",
+                "VERIFICATION_REJECTED": "VERIFICATION_REJECTED",
+            }.get(verification["kind"])
+        for proof in proofs:
+            valid(proof, now)
+        if outcome is None:
+            raise SupplyDenied("CONTACT_EVIDENCE")
+        if outcome == "SOURCE_FAILURE":
+            prior_failure = await maybe(c, s.contact_failures, "source_id", source_id)
+            if prior_failure and prior_failure["candidate_id"] != candidate_id:
+                raise SupplyDenied("FAILURE_CONFLICT")
+            if not prior_failure:
+                await c.execute(
+                    insert(s.contact_failures).values(
+                        source_id=source_id,
+                        candidate_id=candidate_id,
+                        experiment_id=candidate["experiment_id"],
+                    )
+                )
             return outcome
+        await c.execute(
+            insert(s.contacts).values(
+                candidate_id=candidate_id,
+                experiment_id=candidate["experiment_id"],
+                source_id=source_id,
+                verification_id=verification_id,
+                outcome=outcome,
+                resolved_at=now,
+                valid_until=min(p["valid_until"] for p in proofs),
+            )
+        )
+        return outcome
 
     async def _supported(self, c, exp, now):
         contacts = (
