@@ -18,6 +18,7 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 import alon_ai.contact as contact_schema  # noqa: F401
+import alon_ai.records.schema as records_schema  # noqa: F401
 from alon_ai.accounting.schema import metadata as target_metadata
 from alon_ai.supply import schema as supply_schema  # noqa: F401
 

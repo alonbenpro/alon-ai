@@ -12,10 +12,11 @@ Alon AI is a private client-acquisition application for one operator. The intend
 - Reviewed PostgreSQL migrations for provider governance and bounded campaign supply, with real database concurrency and replay tests.
 - Encrypted consumer-scoped secrets, capability/usage-grant checks, offline provider adapters, and durable native-currency/ILS reservations, reconciliation, quotas and circuit state.
 - Fixed 50/100/3 supply rules, evidence-backed retry feedback, contactability-first admission and atomic stopping of untouched paid supply work.
+- Initial product records for immutable experiment/idea artifacts and seeded research lineage, with exact input references, guarded acceptance and conflicting-retry detection.
 - Deterministic outbound authorization/idempotency contracts tested with fake providers, plus an offline historical experiment-brief validator.
 - Locked dependencies, unit and PostgreSQL integration tests, container definitions and GitHub Actions checks.
 
-Private authentication, product records, durable workflows, shared AI execution, accepted research/offer artifacts, lead acquisition, Gmail/Calendar integrations, learning and deployment remain work for their owning Notion tasks. Installed DBOS and Pydantic AI packages are not proof that these capabilities exist. A local research prototype is separate from accepted product research and does not complete L07 or L08.
+Private authentication, the remaining product records, durable workflows, shared AI execution, live research/offer generation, lead acquisition, Gmail/Calendar integrations, learning and deployment remain work for their owning Notion tasks. Installed DBOS and Pydantic AI packages are not proof that these capabilities exist. A local research prototype is separate from accepted product research and does not complete L07 or L08.
 
 See the [L01 baseline evidence](docs/implementation/l01-baseline.md) for the audited source scope, exact results and remaining gaps.
 
