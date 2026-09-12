@@ -103,7 +103,7 @@ jobs:
         run: docker compose --env-file .env.example -f infra/compose.yaml build api worker frontend
       - name: Migrate and smoke-test the running stack
         env:
-          ALON_AI_ENVIRONMENT: production
+          ALON_AI_ENVIRONMENT: test
         run: |
           set -Eeuo pipefail
 

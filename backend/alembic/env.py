@@ -11,7 +11,7 @@ from alon_ai.config import get_settings
 config = context.config
 config.set_main_option(
     "sqlalchemy.url",
-    get_settings().database_url.replace("%", "%%"),
+    get_settings().database_url.get_secret_value().replace("%", "%%"),
 )
 
 if config.config_file_name is not None:
