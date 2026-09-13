@@ -167,57 +167,11 @@ class ProductRecordsRepository:
     async def register_profile(
         self, profile: OperatorCapabilityProfile, *, command_key: UUID
     ) -> CommandReceipt:
-        async with self.engine.begin() as connection:
-            request_hash = _request_hash(profile=profile)
-            old = await _existing(
-                connection, command_key, "REGISTER_PROFILE", request_hash
-            )
-            if old:
-                if old["result_id"] != profile.id:
-                    raise ProductRecordsDenied("COMMAND_CONFLICT")
-                stored = (
-                    (
-                        await connection.execute(
-                            select(s.operator_profiles).where(
-                                s.operator_profiles.c.id == profile.id,
-                                s.operator_profiles.c.version == profile.version,
-                            )
-                        )
-                    )
-                    .mappings()
-                    .one_or_none()
-                )
-                if stored is None or any(
-                    (
-                        stored["operator_id"] != profile.operator_id,
-                        stored["capabilities"] != list(profile.capabilities),
-                        stored["constraints"] != list(profile.constraints),
-                        stored["created_at"] != profile.created_at,
-                    )
-                ):
-                    raise ProductRecordsDenied("COMMAND_CONFLICT")
-                return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
-            await connection.execute(
-                insert(s.operator_profiles).values(
-                    id=profile.id,
-                    version=profile.version,
-                    operator_id=profile.operator_id,
-                    capabilities=list(profile.capabilities),
-                    constraints=list(profile.constraints),
-                    created_at=profile.created_at,
-                )
-            )
-            command_id = await _complete(
-                connection,
-                command_key=command_key,
-                experiment_id=None,
-                kind="REGISTER_PROFILE",
-                request_hash=request_hash,
-                result_type="OPERATOR_PROFILE",
-                result_id=profile.id,
-                now=self.clock(),
-            )
-            return CommandReceipt(command_id=command_id, result_id=profile.id)
+        from alon_ai.records.operators import OperatorRepository
+
+        return await OperatorRepository(self.engine, clock=self.clock).register_profile(
+            profile, command_key=command_key
+        )
 
     @safe_records
     async def bind_roots(
@@ -450,18 +404,97 @@ class ProductRecordsRepository:
             )
 
     @safe_records
+    async def select_idea_candidate(
+        self,
+        experiment_id: UUID,
+        candidate: ArtifactInput,
+        *,
+        selected_by: UUID,
+        reason: str,
+        command_key: UUID,
+    ) -> CommandReceipt:
+        async with self.engine.begin() as connection:
+            await lock_experiment(connection, experiment_id)
+            request_hash = _request_hash(
+                experiment_id=experiment_id,
+                candidate=candidate,
+                selected_by=selected_by,
+                reason=reason,
+            )
+            old = await _existing(
+                connection, command_key, "SELECT_IDEA_CANDIDATE", request_hash
+            )
+            if old:
+                return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
+            artifact = (
+                (
+                    await connection.execute(
+                        select(s.artifacts).where(
+                            s.artifacts.c.id == candidate.artifact_id
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            experiment = (
+                (
+                    await connection.execute(
+                        select(s.experiments).where(s.experiments.c.id == experiment_id)
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            result_id = uuid4()
+            await connection.execute(
+                insert(s.candidate_selections).values(
+                    id=result_id,
+                    experiment_id=experiment_id,
+                    artifact_id=candidate.artifact_id,
+                    artifact_kind=candidate.kind,
+                    artifact_version=candidate.version,
+                    artifact_hash=candidate.content_hash,
+                    workflow_id=artifact["workflow_id"],
+                    agent_id=artifact["agent_id"],
+                    profile_id=experiment["operator_profile_id"],
+                    profile_version=experiment["operator_profile_version"],
+                    selected_by=selected_by,
+                    reason=reason,
+                    created_at=self.clock(),
+                )
+            )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=experiment_id,
+                kind="SELECT_IDEA_CANDIDATE",
+                request_hash=request_hash,
+                result_type="CANDIDATE_SELECTION",
+                result_id=result_id,
+                now=self.clock(),
+            )
+            return CommandReceipt(command_id=command_id, result_id=result_id)
+
+    @safe_records
     async def create_cycle(
         self,
         experiment_id: UUID,
         *,
-        seed: ArtifactInput,
+        seed: ArtifactInput | None = None,
+        candidate: ArtifactInput | None = None,
+        selection_id: UUID | None = None,
         command_key: UUID,
         parent_cycle_id: UUID | None = None,
     ) -> CycleReceipt:
         async with self.engine.begin() as connection:
             await lock_experiment(connection, experiment_id)
             request_hash = _request_hash(
-                experiment_id=experiment_id, seed=seed, parent_cycle_id=parent_cycle_id
+                experiment_id=experiment_id,
+                seed=seed,
+                candidate=candidate,
+                selection_id=selection_id,
+                parent_cycle_id=parent_cycle_id,
             )
             old = await _existing(connection, command_key, "CREATE_CYCLE", request_hash)
             if old:
@@ -481,6 +514,10 @@ class ProductRecordsRepository:
                     experiment_id=row["experiment_id"],
                     ordinal=row["ordinal"],
                 )
+            if (seed is None) == (candidate is None):
+                raise ProductRecordsDenied("EXACT_ORIGIN_REQUIRED")
+            origin = seed if seed is not None else candidate
+            assert origin is not None
             ordinal = (
                 await connection.scalar(
                     select(func.count())
@@ -496,10 +533,16 @@ class ProductRecordsRepository:
                     experiment_id=experiment_id,
                     ordinal=ordinal,
                     parent_cycle_id=parent_cycle_id,
-                    seed_artifact_id=seed.artifact_id,
-                    seed_kind=seed.kind,
-                    seed_version=seed.version,
-                    seed_hash=seed.content_hash,
+                    idea_mode="USER_SEEDED_REFINEMENT"
+                    if seed is not None
+                    else "SYSTEM_DISCOVERY",
+                    selection_id=selection_id,
+                    purpose="INITIAL",
+                    episode_id=result_id,
+                    seed_artifact_id=origin.artifact_id,
+                    seed_kind=origin.kind,
+                    seed_version=origin.version,
+                    seed_hash=origin.content_hash,
                     created_at=self.clock(),
                 )
             )
@@ -868,12 +911,34 @@ class ProductRecordsRepository:
                 verdict=verdict,
             )
 
-    @safe_records
     async def return_to_refinement(
         self,
         verdict_id: UUID,
         *,
         feedback: ArtifactInput,
+        command_key: UUID,
+    ) -> CycleReceipt:
+        async with self.engine.connect() as connection:
+            verdict = await connection.scalar(
+                select(s.verdicts.c.verdict).where(s.verdicts.c.id == verdict_id)
+            )
+        kind = (
+            "MATERIAL_PIVOT"
+            if verdict == "MATERIAL_PIVOT_RECOMMENDED"
+            else "SAME_INTENT"
+        )
+        return await self.return_to_research(
+            verdict_id, kind=kind, feedback=feedback, command_key=command_key
+        )
+
+    @safe_records
+    async def return_to_research(
+        self,
+        verdict_id: UUID,
+        *,
+        kind: str,
+        feedback: ArtifactInput,
+        offer_input_bundle_id: UUID | None = None,
         command_key: UUID,
     ) -> CycleReceipt:
         async with self.engine.begin() as connection:
@@ -887,9 +952,14 @@ class ProductRecordsRepository:
                 .one()
             )
             await lock_experiment(connection, verdict["experiment_id"])
-            request_hash = _request_hash(verdict_id=verdict_id, feedback=feedback)
+            request_hash = _request_hash(
+                verdict_id=verdict_id,
+                kind=kind,
+                feedback=feedback,
+                offer_input_bundle_id=offer_input_bundle_id,
+            )
             old = await _existing(
-                connection, command_key, "RETURN_TO_REFINEMENT", request_hash
+                connection, command_key, "RETURN_TO_RESEARCH", request_hash
             )
             if old:
                 row = (
@@ -926,12 +996,73 @@ class ProductRecordsRepository:
                 .mappings()
                 .one()
             )
+            idea = (
+                (
+                    await connection.execute(
+                        select(s.idea_acceptances).where(
+                            s.idea_acceptances.c.cycle_id == parent["id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            root = (
+                (
+                    await connection.execute(
+                        select(s.cycles).where(
+                            s.cycles.c.experiment_id == verdict["experiment_id"],
+                            s.cycles.c.ordinal == 1,
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            if kind == "SAME_INTENT":
+                scope_id = (
+                    parent["seed_artifact_id"]
+                    if parent["idea_mode"] == "USER_SEEDED_REFINEMENT"
+                    else await connection.scalar(
+                        select(s.idea_acceptances.c.artifact_id).where(
+                            s.idea_acceptances.c.cycle_id == root["id"]
+                        )
+                    )
+                )
+            elif kind == "OFFER_GAP":
+                scope_id = idea["artifact_id"]
+            else:
+                scope_id = parent["episode_id"]
+            return_ordinal = (
+                await connection.scalar(
+                    select(func.count())
+                    .select_from(s.returns)
+                    .where(
+                        s.returns.c.experiment_id == verdict["experiment_id"],
+                        s.returns.c.kind == kind,
+                        s.returns.c.applicable_scope_id == scope_id,
+                    )
+                )
+                or 0
+            ) + 1
+            purposes = {
+                "SAME_INTENT": "SAME_INTENT_RETURN",
+                "MATERIAL_PIVOT": "MATERIAL_PIVOT_RETURN",
+                "INCONCLUSIVE_SUPPLEMENT": "INCONCLUSIVE_SUPPLEMENT",
+                "OFFER_GAP": "OFFER_GAP_RETURN",
+            }
+            if kind not in purposes:
+                raise ProductRecordsDenied("RETURN_KIND")
             await connection.execute(
                 insert(s.cycles).values(
                     id=result_id,
                     experiment_id=verdict["experiment_id"],
                     ordinal=ordinal,
                     parent_cycle_id=verdict["cycle_id"],
+                    idea_mode=parent["idea_mode"],
+                    selection_id=parent["selection_id"],
+                    purpose=purposes[kind],
+                    episode_id=parent["episode_id"],
                     seed_artifact_id=parent["seed_artifact_id"],
                     seed_kind=parent["seed_kind"],
                     seed_version=parent["seed_version"],
@@ -946,7 +1077,11 @@ class ProductRecordsRepository:
                     from_cycle_id=verdict["cycle_id"],
                     verdict_id=verdict_id,
                     to_cycle_id=result_id,
-                    ordinal=ordinal - 1,
+                    ordinal=return_ordinal,
+                    kind=kind,
+                    applicable_scope_id=scope_id,
+                    idea_artifact_id=idea["artifact_id"],
+                    offer_input_bundle_id=offer_input_bundle_id,
                     feedback_artifact_id=feedback.artifact_id,
                     feedback_kind=feedback.kind,
                     feedback_version=feedback.version,
@@ -954,11 +1089,25 @@ class ProductRecordsRepository:
                     created_at=self.clock(),
                 )
             )
+            if kind in {"INCONCLUSIVE_SUPPLEMENT", "OFFER_GAP"}:
+                await connection.execute(
+                    insert(s.idea_acceptances).values(
+                        id=uuid4(),
+                        experiment_id=verdict["experiment_id"],
+                        cycle_id=result_id,
+                        artifact_id=idea["artifact_id"],
+                        artifact_kind=idea["artifact_kind"],
+                        artifact_version=idea["artifact_version"],
+                        artifact_hash=idea["artifact_hash"],
+                        accepted_by=idea["accepted_by"],
+                        accepted_at=self.clock(),
+                    )
+                )
             command_id = await _complete(
                 connection,
                 command_key=command_key,
                 experiment_id=verdict["experiment_id"],
-                kind="RETURN_TO_REFINEMENT",
+                kind="RETURN_TO_RESEARCH",
                 request_hash=request_hash,
                 result_type="CYCLE",
                 result_id=result_id,

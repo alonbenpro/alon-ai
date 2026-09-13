@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260912_04"
+    "20260913_06"
   ],
   "columns": [
     {
@@ -91,6 +91,16 @@
       "not_null": true,
       "ordinal": 6,
       "table_name": "gov_authorities",
+      "type": "integer"
+    },
+    {
+      "default_expression": "1",
+      "generated": "",
+      "identity": "",
+      "name": "profile_schema_version",
+      "not_null": true,
+      "ordinal": 8,
+      "table_name": "record_operator_profiles",
       "type": "integer"
     },
     {
@@ -317,6 +327,16 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "agent_id",
+      "not_null": true,
+      "ordinal": 8,
+      "table_name": "record_candidate_selections",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "aggregate_id",
       "not_null": true,
       "ordinal": 5,
@@ -387,11 +407,31 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "applicable_scope_id",
+      "not_null": true,
+      "ordinal": 13,
+      "table_name": "record_returns",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "approved_at",
       "not_null": true,
       "ordinal": 9,
       "table_name": "record_pivot_decisions",
       "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "approved_by",
+      "not_null": false,
+      "ordinal": 11,
+      "table_name": "record_operator_profiles",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -411,6 +451,16 @@
       "not_null": true,
       "ordinal": 6,
       "table_name": "record_artifact_dispositions",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "artifact_hash",
+      "not_null": true,
+      "ordinal": 6,
+      "table_name": "record_candidate_selections",
       "type": "character varying(64)"
     },
     {
@@ -459,6 +509,16 @@
       "identity": "",
       "name": "artifact_id",
       "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_candidate_selections",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "artifact_id",
+      "not_null": true,
       "ordinal": 4,
       "table_name": "record_idea_acceptances",
       "type": "uuid"
@@ -489,6 +549,16 @@
       "identity": "",
       "name": "artifact_kind",
       "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_candidate_selections",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "artifact_kind",
+      "not_null": true,
       "ordinal": 5,
       "table_name": "record_idea_acceptances",
       "type": "character varying(64)"
@@ -511,6 +581,16 @@
       "not_null": true,
       "ordinal": 5,
       "table_name": "record_artifact_dispositions",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "artifact_version",
+      "not_null": true,
+      "ordinal": 5,
+      "table_name": "record_candidate_selections",
       "type": "integer"
     },
     {
@@ -552,6 +632,16 @@
       "ordinal": 9,
       "table_name": "gov_calls",
       "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "auth_subject",
+      "not_null": false,
+      "ordinal": 2,
+      "table_name": "record_operators",
+      "type": "character varying(255)"
     },
     {
       "default_expression": null,
@@ -1007,6 +1097,16 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "commercial",
+      "not_null": false,
+      "ordinal": 10,
+      "table_name": "record_operator_profiles",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "committed_at",
       "not_null": true,
       "ordinal": 15,
@@ -1289,6 +1389,16 @@
       "identity": "",
       "name": "created_at",
       "not_null": true,
+      "ordinal": 13,
+      "table_name": "record_candidate_selections",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
       "ordinal": 19,
       "table_name": "gov_calls",
       "type": "timestamp with time zone"
@@ -1331,6 +1441,16 @@
       "not_null": true,
       "ordinal": 6,
       "table_name": "record_audit",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "ordinal": 6,
+      "table_name": "record_operators",
       "type": "timestamp with time zone"
     },
     {
@@ -1597,6 +1717,16 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "delivery",
+      "not_null": false,
+      "ordinal": 9,
+      "table_name": "record_operator_profiles",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "dimension",
       "not_null": false,
       "ordinal": 5,
@@ -1612,6 +1742,16 @@
       "ordinal": 20,
       "table_name": "gov_calls",
       "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "display_name",
+      "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_operators",
+      "type": "character varying(120)"
     },
     {
       "default_expression": null,
@@ -1662,6 +1802,16 @@
       "ordinal": 8,
       "table_name": "gov_prices",
       "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "episode_id",
+      "not_null": true,
+      "ordinal": 13,
+      "table_name": "record_cycles",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -1881,6 +2031,16 @@
       "not_null": true,
       "ordinal": 2,
       "table_name": "record_artifact_dispositions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "ordinal": 2,
+      "table_name": "record_candidate_selections",
       "type": "uuid"
     },
     {
@@ -2690,6 +2850,16 @@
       "name": "id",
       "not_null": true,
       "ordinal": 1,
+      "table_name": "record_candidate_selections",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "ordinal": 1,
       "table_name": "record_commands",
       "type": "uuid"
     },
@@ -2731,6 +2901,16 @@
       "not_null": true,
       "ordinal": 1,
       "table_name": "record_operator_profiles",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "ordinal": 1,
+      "table_name": "record_operators",
       "type": "uuid"
     },
     {
@@ -2877,6 +3057,26 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "idea_artifact_id",
+      "not_null": true,
+      "ordinal": 14,
+      "table_name": "record_returns",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "idea_mode",
+      "not_null": true,
+      "ordinal": 10,
+      "table_name": "record_cycles",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "idempotency_key",
       "not_null": true,
       "ordinal": 2,
@@ -2922,6 +3122,16 @@
       "ordinal": 8,
       "table_name": "record_commands",
       "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "kind",
+      "not_null": true,
+      "ordinal": 12,
+      "table_name": "record_returns",
+      "type": "character varying(32)"
     },
     {
       "default_expression": null,
@@ -3272,6 +3482,16 @@
       "ordinal": 9,
       "table_name": "contact_attempts",
       "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_input_bundle_id",
+      "not_null": false,
+      "ordinal": 15,
+      "table_name": "record_returns",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -3687,6 +3907,26 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "profile_id",
+      "not_null": true,
+      "ordinal": 9,
+      "table_name": "record_candidate_selections",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_version",
+      "not_null": true,
+      "ordinal": 10,
+      "table_name": "record_candidate_selections",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "provenance_ref",
       "not_null": true,
       "ordinal": 3,
@@ -3702,6 +3942,16 @@
       "ordinal": 6,
       "table_name": "gov_budget_accounts",
       "type": "character varying"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "purpose",
+      "not_null": true,
+      "ordinal": 12,
+      "table_name": "record_cycles",
+      "type": "character varying(32)"
     },
     {
       "default_expression": null,
@@ -3742,6 +3992,16 @@
       "ordinal": 6,
       "table_name": "gov_audit",
       "type": "character varying"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "reason",
+      "not_null": true,
+      "ordinal": 12,
+      "table_name": "record_candidate_selections",
+      "type": "character varying(4000)"
     },
     {
       "default_expression": null,
@@ -4127,6 +4387,26 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "selected_by",
+      "not_null": true,
+      "ordinal": 11,
+      "table_name": "record_candidate_selections",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "selection_id",
+      "not_null": false,
+      "ordinal": 11,
+      "table_name": "record_cycles",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "service",
       "not_null": false,
       "ordinal": 6,
@@ -4207,11 +4487,31 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "status",
+      "not_null": true,
+      "ordinal": 5,
+      "table_name": "record_operators",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "supersedes_id",
       "not_null": false,
       "ordinal": 10,
       "table_name": "gov_usage",
       "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "timezone",
+      "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_operators",
+      "type": "character varying(100)"
     },
     {
       "default_expression": null,
@@ -4262,6 +4562,16 @@
       "ordinal": 6,
       "table_name": "gov_prices",
       "type": "numeric"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "updated_at",
+      "not_null": true,
+      "ordinal": 7,
+      "table_name": "record_operators",
+      "type": "timestamp with time zone"
     },
     {
       "default_expression": null,
@@ -4542,6 +4852,16 @@
       "ordinal": 5,
       "table_name": "gov_calls",
       "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "workflow_id",
+      "not_null": true,
+      "ordinal": 7,
+      "table_name": "record_candidate_selections",
+      "type": "uuid"
     }
   ],
   "constraints": [
@@ -4623,6 +4943,16 @@
       "kind": "c",
       "name": "supply_references_check",
       "table_name": "supply_references",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK ((kind::text = 'OFFER_GAP'::text) = (offer_input_bundle_id IS NOT NULL))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_returns_check2",
+      "table_name": "record_returns",
       "validated": true
     },
     {
@@ -4823,6 +5153,26 @@
       "kind": "c",
       "name": "record_pivot_decisions_artifact_kind_check",
       "table_name": "record_pivot_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (artifact_kind::text = 'IDEA_CANDIDATE'::text AND length(btrim(reason::text)) >= 1 AND length(btrim(reason::text)) <= 4000)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_candidate_selections_check",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (auth_subject IS NULL OR auth_subject::text ~ '^[^[:space:][:cntrl:]]{1,255}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "ck_record_operator_subject",
+      "table_name": "record_operators",
       "validated": true
     },
     {
@@ -5087,6 +5437,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (idea_mode::text = 'USER_SEEDED_REFINEMENT'::text AND seed_kind::text = 'IDEA_SEED'::text AND selection_id IS NULL OR idea_mode::text = 'SYSTEM_DISCOVERY'::text AND seed_kind::text = 'IDEA_CANDIDATE'::text AND selection_id IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "ck_record_cycle_origin",
+      "table_name": "record_cycles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (isfinite(deadline))",
       "enforced": true,
       "initially_deferred": false,
@@ -5147,6 +5507,26 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (kind::text = 'OFFER_GAP'::text AND feedback_kind::text = 'OFFER_RESEARCH_GAP_BRIEF'::text OR kind::text <> 'OFFER_GAP'::text AND feedback_kind::text = 'RESEARCH_FEEDBACK_BRIEF'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_returns_check1",
+      "table_name": "record_returns",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (kind::text = 'SAME_INTENT'::text AND ordinal >= 1 AND ordinal <= 2 OR (kind::text = ANY (ARRAY['INCONCLUSIVE_SUPPLEMENT'::character varying, 'OFFER_GAP'::character varying]::text[])) AND ordinal = 1 OR kind::text = 'MATERIAL_PIVOT'::text AND ordinal > 0)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_returns_check",
+      "table_name": "record_returns",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (kind::text = ANY (ARRAY['DISCOVERY'::character varying, 'CONTACT'::character varying, 'DEEP'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -5157,7 +5537,7 @@
     },
     {
       "deferrable": false,
-      "definition": "CHECK (kind::text = ANY (ARRAY['EXPERIMENT_BRIEF'::character varying, 'IDEA_SEED'::character varying, 'IDEA_CANDIDATE'::character varying, 'IDEA_BRIEF'::character varying, 'RESEARCH_PLAN'::character varying, 'RESEARCH_EVIDENCE'::character varying, 'COMPETITOR_PROFILE'::character varying, 'SERVICE_PROFILE'::character varying, 'PRICE_OBSERVATION'::character varying, 'MARKET_RESEARCH_REPORT'::character varying, 'MARKET_RESEARCH_RECOMMENDATION'::character varying, 'RESEARCH_FEEDBACK_BRIEF'::character varying, 'VALIDATION_RESULT'::character varying, 'ACCEPTANCE_RECEIPT'::character varying]::text[]))",
+      "definition": "CHECK (kind::text = ANY (ARRAY['EXPERIMENT_BRIEF'::character varying, 'IDEA_SEED'::character varying, 'IDEA_CANDIDATE'::character varying, 'IDEA_BRIEF'::character varying, 'RESEARCH_PLAN'::character varying, 'RESEARCH_EVIDENCE'::character varying, 'COMPETITOR_PROFILE'::character varying, 'SERVICE_PROFILE'::character varying, 'PRICE_OBSERVATION'::character varying, 'MARKET_RESEARCH_REPORT'::character varying, 'MARKET_RESEARCH_RECOMMENDATION'::character varying, 'RESEARCH_FEEDBACK_BRIEF'::character varying, 'OFFER_RESEARCH_GAP_BRIEF'::character varying, 'VALIDATION_RESULT'::character varying, 'ACCEPTANCE_RECEIPT'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
@@ -5253,6 +5633,16 @@
       "kind": "c",
       "name": "gov_usage_knowledge_check",
       "table_name": "gov_usage",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (length(btrim(display_name::text)) >= 1 AND length(btrim(display_name::text)) <= 120)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "ck_record_operator_name",
+      "table_name": "record_operators",
       "validated": true
     },
     {
@@ -5387,6 +5777,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (ordinal > 0)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "ck_record_cycle_ordinal",
+      "table_name": "record_cycles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (ordinal >= 1 AND ordinal <= 100)",
       "enforced": true,
       "initially_deferred": false,
@@ -5397,32 +5797,12 @@
     },
     {
       "deferrable": false,
-      "definition": "CHECK (ordinal >= 1 AND ordinal <= 2 AND feedback_kind::text = 'RESEARCH_FEEDBACK_BRIEF'::text)",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "c",
-      "name": "record_returns_check",
-      "table_name": "record_returns",
-      "validated": true
-    },
-    {
-      "deferrable": false,
       "definition": "CHECK (ordinal >= 1 AND ordinal <= 3 AND plan_kind::text = 'RESEARCH_PLAN'::text)",
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
       "name": "record_research_attempts_check",
       "table_name": "record_research_attempts",
-      "validated": true
-    },
-    {
-      "deferrable": false,
-      "definition": "CHECK (ordinal >= 1 AND ordinal <= 3 AND seed_kind::text = 'IDEA_SEED'::text)",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "c",
-      "name": "record_cycles_check",
-      "table_name": "record_cycles",
       "validated": true
     },
     {
@@ -5497,12 +5877,32 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (profile_schema_version = 1 OR profile_schema_version = 2 AND delivery IS NOT NULL AND commercial IS NOT NULL AND approved_by IS NOT NULL AND approved_by = operator_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "ck_record_profile_shape",
+      "table_name": "record_operator_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (provider::text = ANY (ARRAY['OPENAI'::character varying, 'BRAVE'::character varying, 'FIRECRAWL'::character varying, 'HUNTER'::character varying, 'GMAIL'::character varying, 'GOOGLE_CALENDAR'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
       "name": "gov_budget_accounts_provider_check",
       "table_name": "gov_budget_accounts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (purpose::text = ANY (ARRAY['INITIAL'::character varying, 'SAME_INTENT_RETURN'::character varying, 'MATERIAL_PIVOT_RETURN'::character varying, 'INCONCLUSIVE_SUPPLEMENT'::character varying, 'OFFER_GAP_RETURN'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "ck_record_cycle_purpose",
+      "table_name": "record_cycles",
       "validated": true
     },
     {
@@ -5657,6 +6057,26 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (status::text <> 'ACTIVE'::text OR auth_subject IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "ck_record_operator_bound",
+      "table_name": "record_operators",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (status::text = ANY (ARRAY['ACTIVE'::character varying, 'DISABLED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "ck_record_operator_status",
+      "table_name": "record_operators",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (unit_price >= 0::numeric AND unit_price < '1000000000000000000000000'::numeric AND scale(unit_price) <= 12)",
       "enforced": true,
       "initially_deferred": false,
@@ -5777,6 +6197,26 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (agent_id, workflow_id) REFERENCES record_agents(id, workflow_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_candidate_selections_agent_id_workflow_id_fkey",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (approved_by) REFERENCES record_operators(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "fk_record_profile_approver",
+      "table_name": "record_operator_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (artifact_id, experiment_id) REFERENCES record_artifacts(id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -5793,6 +6233,16 @@
       "kind": "f",
       "name": "record_artifact_dispositions_artifact_id_experiment_id_art_fkey",
       "table_name": "record_artifact_dispositions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (artifact_id, experiment_id, artifact_kind, artifact_version, artifact_hash) REFERENCES record_artifacts(id, experiment_id, kind, version, content_hash)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_candidate_selections_artifact_id_experiment_id_arti_fkey",
+      "table_name": "record_candidate_selections",
       "validated": true
     },
     {
@@ -6197,6 +6647,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (episode_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_cycles_episode_id_experiment_id_fkey",
+      "table_name": "record_cycles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (evidence_id) REFERENCES gov_evidence(id)",
       "enforced": true,
       "initially_deferred": false,
@@ -6537,12 +6997,32 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (idea_artifact_id, experiment_id) REFERENCES record_artifacts(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_returns_idea_artifact_id_experiment_id_fkey",
+      "table_name": "record_returns",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (identity_id, experiment_id) REFERENCES supply_identities(id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
       "name": "supply_facts_identity_id_experiment_id_fkey",
       "table_name": "supply_facts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (offer_input_bundle_id, experiment_id) REFERENCES record_artifacts(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_returns_offer_input_bundle_id_experiment_id_fkey",
+      "table_name": "record_returns",
       "validated": true
     },
     {
@@ -6603,6 +7083,16 @@
       "kind": "f",
       "name": "supply_operations_operation_id_workflow_id_experiment_id_c_fkey",
       "table_name": "supply_operations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (operator_id) REFERENCES record_operators(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "fk_record_profile_operator",
+      "table_name": "record_operator_profiles",
       "validated": true
     },
     {
@@ -6717,6 +7207,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (profile_id, profile_version) REFERENCES record_operator_profiles(id, version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_candidate_selections_profile_id_profile_version_fkey",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (provenance_ref, experiment_id) REFERENCES supply_references(id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -6772,6 +7272,16 @@
       "initially_deferred": false,
       "kind": "f",
       "name": "record_cycles_seed_artifact_id_experiment_id_seed_kind_see_fkey",
+      "table_name": "record_cycles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (selection_id, experiment_id) REFERENCES record_candidate_selections(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_cycles_selection_id_experiment_id_fkey",
       "table_name": "record_cycles",
       "validated": true
     },
@@ -6947,6 +7457,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (workflow_id, experiment_id) REFERENCES record_workflows(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_candidate_selections_workflow_id_experiment_id_fkey",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL \"limit\"",
       "enforced": true,
       "initially_deferred": false,
@@ -7097,6 +7617,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL agent_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_candidate_selections_agent_id_not_null",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL aggregate_id",
       "enforced": true,
       "initially_deferred": false,
@@ -7167,6 +7697,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL applicable_scope_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_returns_applicable_scope_id_not_null",
+      "table_name": "record_returns",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL approved_at",
       "enforced": true,
       "initially_deferred": false,
@@ -7201,6 +7741,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_candidate_selections_artifact_hash_not_null",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL artifact_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_idea_acceptances_artifact_hash_not_null",
       "table_name": "record_idea_acceptances",
       "validated": true
@@ -7223,6 +7773,16 @@
       "kind": "n",
       "name": "record_artifact_dispositions_artifact_id_not_null",
       "table_name": "record_artifact_dispositions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL artifact_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_candidate_selections_artifact_id_not_null",
+      "table_name": "record_candidate_selections",
       "validated": true
     },
     {
@@ -7271,6 +7831,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_candidate_selections_artifact_kind_not_null",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL artifact_kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_idea_acceptances_artifact_kind_not_null",
       "table_name": "record_idea_acceptances",
       "validated": true
@@ -7293,6 +7863,16 @@
       "kind": "n",
       "name": "record_artifact_dispositions_artifact_version_not_null",
       "table_name": "record_artifact_dispositions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL artifact_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_candidate_selections_artifact_version_not_null",
+      "table_name": "record_candidate_selections",
       "validated": true
     },
     {
@@ -8021,6 +8601,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_candidate_selections_created_at_not_null",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_cycles_created_at_not_null",
       "table_name": "record_cycles",
       "validated": true
@@ -8043,6 +8633,16 @@
       "kind": "n",
       "name": "record_operator_profiles_created_at_not_null",
       "table_name": "record_operator_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_operators_created_at_not_null",
+      "table_name": "record_operators",
       "validated": true
     },
     {
@@ -8307,6 +8907,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL display_name",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_operators_display_name_not_null",
+      "table_name": "record_operators",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL disposition",
       "enforced": true,
       "initially_deferred": false,
@@ -8373,6 +8983,16 @@
       "kind": "n",
       "name": "gov_experiments_enabled_not_null",
       "table_name": "gov_experiments",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL episode_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycles_episode_id_not_null",
+      "table_name": "record_cycles",
       "validated": true
     },
     {
@@ -8533,6 +9153,16 @@
       "kind": "n",
       "name": "record_artifacts_experiment_id_not_null",
       "table_name": "record_artifacts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_candidate_selections_experiment_id_not_null",
+      "table_name": "record_candidate_selections",
       "validated": true
     },
     {
@@ -9271,6 +9901,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_candidate_selections_id_not_null",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_commands_id_not_null",
       "table_name": "record_commands",
       "validated": true
@@ -9313,6 +9953,16 @@
       "kind": "n",
       "name": "record_operator_profiles_id_not_null",
       "table_name": "record_operator_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_operators_id_not_null",
+      "table_name": "record_operators",
       "validated": true
     },
     {
@@ -9457,6 +10107,26 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL idea_artifact_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_returns_idea_artifact_id_not_null",
+      "table_name": "record_returns",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL idea_mode",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycles_idea_mode_not_null",
+      "table_name": "record_cycles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL idempotency_key",
       "enforced": true,
       "initially_deferred": false,
@@ -9573,6 +10243,16 @@
       "kind": "n",
       "name": "record_commands_kind_not_null",
       "table_name": "record_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_returns_kind_not_null",
+      "table_name": "record_returns",
       "validated": true
     },
     {
@@ -10147,12 +10827,52 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL profile_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_candidate_selections_profile_id_not_null",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_schema_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_operator_profiles_profile_schema_version_not_null",
+      "table_name": "record_operator_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_candidate_selections_profile_version_not_null",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL provenance_ref",
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
       "name": "supply_identities_provenance_ref_not_null",
       "table_name": "supply_identities",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL purpose",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycles_purpose_not_null",
+      "table_name": "record_cycles",
       "validated": true
     },
     {
@@ -10193,6 +10913,16 @@
       "kind": "n",
       "name": "gov_fx_rate_not_null",
       "table_name": "gov_fx",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL reason",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_candidate_selections_reason_not_null",
+      "table_name": "record_candidate_selections",
       "validated": true
     },
     {
@@ -10577,6 +11307,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL selected_by",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_candidate_selections_selected_by_not_null",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL slot",
       "enforced": true,
       "initially_deferred": false,
@@ -10667,12 +11407,32 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL status",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_operators_status_not_null",
+      "table_name": "record_operators",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL stopped",
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
       "name": "supply_candidates_stopped_not_null",
       "table_name": "supply_candidates",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL timezone",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_operators_timezone_not_null",
+      "table_name": "record_operators",
       "validated": true
     },
     {
@@ -10713,6 +11473,16 @@
       "kind": "n",
       "name": "gov_prices_unit_quantity_not_null",
       "table_name": "gov_prices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL updated_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_operators_updated_at_not_null",
+      "table_name": "record_operators",
       "validated": true
     },
     {
@@ -10883,6 +11653,16 @@
       "kind": "n",
       "name": "record_agents_workflow_id_not_null",
       "table_name": "record_agents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_candidate_selections_workflow_id_not_null",
+      "table_name": "record_candidate_selections",
       "validated": true
     },
     {
@@ -11231,6 +12011,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "p",
+      "name": "record_candidate_selections_pkey",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
       "name": "record_commands_pkey",
       "table_name": "record_commands",
       "validated": true
@@ -11263,6 +12053,16 @@
       "kind": "p",
       "name": "record_idea_acceptances_pkey",
       "table_name": "record_idea_acceptances",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_operators_pkey",
+      "table_name": "record_operators",
       "validated": true
     },
     {
@@ -11457,16 +12257,6 @@
     },
     {
       "deferrable": false,
-      "definition": "UNIQUE (artifact_id)",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "u",
-      "name": "record_idea_acceptances_artifact_id_key",
-      "table_name": "record_idea_acceptances",
-      "validated": true
-    },
-    {
-      "deferrable": false,
       "definition": "UNIQUE (artifact_id, disposition)",
       "enforced": true,
       "initially_deferred": false,
@@ -11483,6 +12273,16 @@
       "kind": "u",
       "name": "record_verdicts_attempt_id_key",
       "table_name": "record_verdicts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (auth_subject)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "uq_record_operator_subject",
+      "table_name": "record_operators",
       "validated": true
     },
     {
@@ -11717,12 +12517,32 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_candidate_selections_experiment_id_key",
+      "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (experiment_id, identity_id)",
       "enforced": true,
       "initially_deferred": false,
       "kind": "u",
       "name": "supply_candidates_experiment_id_identity_id_key",
       "table_name": "supply_candidates",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (experiment_id, kind, applicable_scope_id, ordinal)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_returns_experiment_id_kind_applicable_scope_id_ordin_key",
+      "table_name": "record_returns",
       "validated": true
     },
     {
@@ -11743,16 +12563,6 @@
       "kind": "u",
       "name": "record_cycles_experiment_id_ordinal_key",
       "table_name": "record_cycles",
-      "validated": true
-    },
-    {
-      "deferrable": false,
-      "definition": "UNIQUE (experiment_id, ordinal)",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "u",
-      "name": "record_returns_experiment_id_ordinal_key",
-      "table_name": "record_returns",
       "validated": true
     },
     {
@@ -11843,6 +12653,16 @@
       "kind": "u",
       "name": "record_artifacts_id_experiment_id_key",
       "table_name": "record_artifacts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_candidate_selections_id_experiment_id_key",
+      "table_name": "record_candidate_selections",
       "validated": true
     },
     {
@@ -12234,13 +13054,28 @@
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_return_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NEW.ordinal>1 AND NOT EXISTS(\n  SELECT 1 FROM record_returns r JOIN record_verdicts v ON v.id=r.verdict_id\n  WHERE r.to_cycle_id=NEW.id AND r.from_cycle_id=NEW.parent_cycle_id\n    AND r.experiment_id=NEW.experiment_id AND r.ordinal=NEW.ordinal-1\n    AND v.cycle_id=NEW.parent_cycle_id AND v.verdict IN ('REFINE_SAME_IDEA','MATERIAL_PIVOT_RECOMMENDED'))\n THEN RAISE EXCEPTION 'research cycle requires exact committed return'; END IF;\n RETURN NULL;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_return_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NEW.ordinal>1 AND NOT EXISTS(\n  SELECT 1 FROM record_returns r JOIN record_verdicts v ON v.id=r.verdict_id\n  WHERE r.to_cycle_id=NEW.id AND r.from_cycle_id=NEW.parent_cycle_id\n    AND r.experiment_id=NEW.experiment_id\n    AND v.cycle_id=NEW.parent_cycle_id AND v.verdict IN ('REFINE_SAME_IDEA','MATERIAL_PIVOT_RECOMMENDED','INCONCLUSIVE','PROCEED_TO_OFFER'))\n THEN RAISE EXCEPTION 'research cycle requires exact committed return'; END IF;\n RETURN NULL;\nEND $function$\n",
       "name": "record_cycle_return_guard"
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE a record_artifacts; c record_cycles; parent_idea record_artifacts;\n        decision record_pivot_decisions; proof gov_evidence; retained gov_retained;\n        call gov_calls; validation record_artifacts; recommendation record_artifacts;\n        committed record_verdicts; attempt record_research_attempts; parent_cycle record_cycles;\nBEGIN\n IF TG_OP='UPDATE' OR TG_OP='DELETE' THEN\n  RAISE EXCEPTION 'immutable product record' USING ERRCODE='23514';\n END IF;\n IF TG_TABLE_NAME<>'record_operator_profiles' AND to_jsonb(NEW)->>'experiment_id' IS NOT NULL THEN\n  PERFORM 1 FROM gov_experiments WHERE id=(to_jsonb(NEW)->>'experiment_id')::uuid FOR UPDATE;\n END IF;\n IF TG_TABLE_NAME='record_operator_profiles' THEN\n  NEW.content_hash:=encode(sha256(convert_to(NEW.capabilities::text || E'\\n' || NEW.constraints::text, 'UTF8')), 'hex');\n  IF jsonb_typeof(NEW.capabilities)<>'array' OR jsonb_array_length(NEW.capabilities)=0\n     OR jsonb_typeof(NEW.constraints)<>'array' OR jsonb_array_length(NEW.constraints)=0\n     OR EXISTS(SELECT 1 FROM jsonb_array_elements(NEW.capabilities) x WHERE NOT record_nonempty_text(x))\n     OR EXISTS(SELECT 1 FROM jsonb_array_elements(NEW.constraints) x WHERE NOT record_nonempty_text(x))\n     OR jsonb_array_length(NEW.capabilities)<>(SELECT count(DISTINCT x) FROM jsonb_array_elements(NEW.capabilities) x)\n     OR jsonb_array_length(NEW.constraints)<>(SELECT count(DISTINCT x) FROM jsonb_array_elements(NEW.constraints) x)\n  THEN RAISE EXCEPTION 'invalid operator profile'; END IF;\n ELSIF TG_TABLE_NAME='record_artifacts' THEN\n  NEW.content_hash:=encode(sha256(convert_to(NEW.payload::text, 'UTF8')), 'hex');\n  IF record_payload_valid(NEW.kind,NEW.payload) IS NOT TRUE THEN RAISE EXCEPTION 'invalid artifact payload'; END IF;\n ELSIF TG_TABLE_NAME='record_artifact_links' THEN\n  IF record_lineage_closed(NEW.consumer_id,NEW.experiment_id)\n  THEN RAISE EXCEPTION 'accepted artifact lineage is closed'; END IF;\n ELSIF TG_TABLE_NAME='record_source_refs' THEN\n  IF record_lineage_closed(NEW.artifact_id,NEW.experiment_id)\n  THEN RAISE EXCEPTION 'accepted artifact lineage is closed'; END IF;\n  IF NEW.kind='GOVERNANCE_EVIDENCE' THEN\n   SELECT * INTO proof FROM gov_evidence WHERE id=NEW.evidence_id;\n   IF NOT FOUND OR (proof.call_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM gov_calls WHERE id=proof.call_id AND experiment_id=NEW.experiment_id))\n   THEN RAISE EXCEPTION 'invalid evidence scope'; END IF;\n  ELSE\n   SELECT * INTO retained FROM gov_retained WHERE id=NEW.retained_id;\n   SELECT * INTO call FROM gov_calls WHERE id=NEW.call_id;\n   IF retained.id IS NULL OR call.id IS NULL OR retained.call_id IS DISTINCT FROM NEW.call_id OR retained.grant_id IS DISTINCT FROM NEW.grant_id\n      OR retained.grant_version IS DISTINCT FROM NEW.grant_version OR retained.field IS DISTINCT FROM NEW.field\n      OR retained.expires_at IS DISTINCT FROM NEW.expires_at OR call.experiment_id IS DISTINCT FROM NEW.experiment_id\n   THEN RAISE EXCEPTION 'invalid retained source scope'; END IF;\n  END IF;\n ELSIF TG_TABLE_NAME='record_cycles' THEN\n  IF NEW.ordinal <> (SELECT count(*)+1 FROM record_cycles WHERE experiment_id=NEW.experiment_id)\n  THEN RAISE EXCEPTION 'noncontiguous research cycle'; END IF;\n  IF NEW.ordinal=1 THEN\n   IF NEW.parent_cycle_id IS NOT NULL THEN RAISE EXCEPTION 'initial cycle cannot have a parent'; END IF;\n  ELSE\n   SELECT * INTO parent_cycle FROM record_cycles WHERE id=NEW.parent_cycle_id AND experiment_id=NEW.experiment_id;\n   IF parent_cycle.id IS NULL OR parent_cycle.ordinal<>NEW.ordinal-1\n      OR ROW(NEW.seed_artifact_id,NEW.seed_kind,NEW.seed_version,NEW.seed_hash)\n         IS DISTINCT FROM ROW(parent_cycle.seed_artifact_id,parent_cycle.seed_kind,parent_cycle.seed_version,parent_cycle.seed_hash)\n   THEN RAISE EXCEPTION 'research cycle must preserve original seed and exact parent'; END IF;\n  END IF;\n ELSIF TG_TABLE_NAME='record_pivot_decisions' THEN\n  SELECT * INTO a FROM record_artifacts WHERE id=NEW.artifact_id;\n  SELECT * INTO c FROM record_cycles WHERE id=NEW.cycle_id;\n  IF a.payload->'material_pivot'<>'true'::jsonb OR c.parent_cycle_id IS NULL OR NOT EXISTS(\n    SELECT 1 FROM record_experiments e JOIN record_operator_profiles p\n      ON p.id=e.operator_profile_id AND p.version=e.operator_profile_version\n    WHERE e.id=NEW.experiment_id AND p.operator_id=NEW.approved_by\n      AND p.capabilities @> '[\"MATERIAL_PIVOT_APPROVAL\"]'::jsonb)\n  THEN RAISE EXCEPTION 'invalid material pivot approval'; END IF;\n ELSIF TG_TABLE_NAME='record_idea_acceptances' THEN\n  SELECT * INTO a FROM record_artifacts WHERE id=NEW.artifact_id;\n  SELECT * INTO c FROM record_cycles WHERE id=NEW.cycle_id;\n  IF c.parent_cycle_id IS NOT NULL THEN\n   SELECT prior_artifact.* INTO parent_idea FROM record_idea_acceptances prior\n    JOIN record_artifacts prior_artifact ON prior_artifact.id=prior.artifact_id\n    WHERE prior.cycle_id=c.parent_cycle_id;\n   SELECT prior_verdict.* INTO committed FROM record_returns r\n    JOIN record_verdicts prior_verdict ON prior_verdict.id=r.verdict_id\n    WHERE r.to_cycle_id=NEW.cycle_id;\n  END IF;\n  IF c.parent_cycle_id IS NOT NULL AND parent_idea.id IS NULL THEN RAISE EXCEPTION 'missing parent accepted idea'; END IF;\n  IF NOT EXISTS(\n    SELECT 1 FROM record_experiments e JOIN record_operator_profiles p\n      ON p.id=e.operator_profile_id AND p.version=e.operator_profile_version\n    WHERE e.id=NEW.experiment_id AND p.operator_id=NEW.accepted_by\n      AND p.capabilities @> '[\"RESEARCH_REVIEW\"]'::jsonb)\n  THEN RAISE EXCEPTION 'idea acceptance requires operator capability'; END IF;\n  IF committed.verdict='MATERIAL_PIVOT_RECOMMENDED' AND parent_idea.payload->>'core_intent' IS NOT DISTINCT FROM a.payload->>'core_intent'\n  THEN RAISE EXCEPTION 'material pivot must change core intent'; END IF;\n  IF c.parent_cycle_id IS NOT NULL AND parent_idea.payload->>'core_intent' IS DISTINCT FROM a.payload->>'core_intent' THEN\n   IF a.payload->'material_pivot'<>'true'::jsonb OR NEW.pivot_approval_id IS NULL THEN RAISE EXCEPTION 'material pivot requires approval'; END IF;\n  ELSIF a.payload->'material_pivot'='true'::jsonb OR NEW.pivot_approval_id IS NOT NULL THEN\n   RAISE EXCEPTION 'invalid pivot classification';\n  END IF;\n  IF NEW.pivot_approval_id IS NOT NULL THEN\n   SELECT * INTO decision FROM record_pivot_decisions WHERE id=NEW.pivot_approval_id;\n   IF decision.cycle_id IS DISTINCT FROM NEW.cycle_id OR decision.artifact_id IS DISTINCT FROM NEW.artifact_id OR decision.approved_by IS DISTINCT FROM NEW.accepted_by\n   THEN RAISE EXCEPTION 'invalid pivot approval binding'; END IF;\n  END IF;\n ELSIF TG_TABLE_NAME='record_research_attempts' THEN\n  IF NOT EXISTS(SELECT 1 FROM record_idea_acceptances WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id)\n     OR EXISTS(SELECT 1 FROM record_verdicts WHERE cycle_id=NEW.cycle_id)\n     OR NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1)\n     OR NEW.ordinal <> (SELECT count(*)+1 FROM record_research_attempts WHERE cycle_id=NEW.cycle_id)\n     OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=NEW.plan_artifact_id AND role='ACCEPTED_IDEA')<>1\n     OR NOT EXISTS(SELECT 1 FROM record_artifact_links link JOIN record_idea_acceptances idea ON idea.artifact_id=link.producer_id\n         WHERE link.consumer_id=NEW.plan_artifact_id AND link.role='ACCEPTED_IDEA' AND idea.cycle_id=NEW.cycle_id)\n  THEN RAISE EXCEPTION 'research attempt requires current accepted idea and exact plan lineage'; END IF;\n ELSIF TG_TABLE_NAME='record_verdicts' THEN\n  SELECT * INTO attempt FROM record_research_attempts WHERE id=NEW.attempt_id;\n  IF attempt.id IS NULL\n     OR NOT EXISTS(SELECT 1 FROM record_idea_acceptances WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id)\n     OR NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1)\n     OR attempt.ordinal IS DISTINCT FROM (SELECT max(ordinal) FROM record_research_attempts WHERE cycle_id=NEW.cycle_id)\n     OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=NEW.report_artifact_id AND role='PLAN')<>1\n     OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.report_artifact_id AND producer_id=attempt.plan_artifact_id AND role='PLAN')\n     OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=NEW.recommendation_artifact_id AND role='REPORT')<>1\n     OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.recommendation_artifact_id AND producer_id=NEW.report_artifact_id AND role='REPORT')\n  THEN RAISE EXCEPTION 'verdict requires current attempt and exact report lineage'; END IF;\n  SELECT * INTO recommendation FROM record_artifacts WHERE id=NEW.recommendation_artifact_id;\n  IF recommendation.payload->>'recommendation' IS DISTINCT FROM NEW.verdict OR NOT EXISTS(\n    SELECT 1 FROM record_experiments e JOIN record_operator_profiles p\n      ON p.id=e.operator_profile_id AND p.version=e.operator_profile_version\n    WHERE e.id=NEW.experiment_id AND p.operator_id=NEW.committed_by\n      AND p.capabilities @> '[\"RESEARCH_REVIEW\"]'::jsonb)\n  THEN RAISE EXCEPTION 'verdict recommendation or operator mismatch'; END IF;\n ELSIF TG_TABLE_NAME='record_returns' THEN\n  SELECT * INTO committed FROM record_verdicts WHERE id=NEW.verdict_id;\n  SELECT * INTO c FROM record_cycles WHERE id=NEW.to_cycle_id;\n  IF committed.id IS NULL OR c.id IS NULL OR committed.cycle_id IS DISTINCT FROM NEW.from_cycle_id OR committed.verdict NOT IN ('REFINE_SAME_IDEA','MATERIAL_PIVOT_RECOMMENDED')\n     OR c.parent_cycle_id IS DISTINCT FROM NEW.from_cycle_id OR c.ordinal<>NEW.ordinal+1\n     OR NEW.ordinal IS DISTINCT FROM (SELECT ordinal FROM record_cycles WHERE id=NEW.from_cycle_id)\n  THEN RAISE EXCEPTION 'invalid research return'; END IF;\n ELSIF TG_TABLE_NAME='record_artifact_dispositions' THEN\n  IF NEW.disposition IN ('VALIDATED','ACCEPTED') THEN\n   SELECT * INTO validation FROM record_artifacts WHERE id=NEW.validation_artifact_id AND experiment_id=NEW.experiment_id;\n   IF validation.kind IS DISTINCT FROM 'VALIDATION_RESULT' OR validation.payload->>'disposition' IS DISTINCT FROM 'PASS'\n      OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=validation.id AND role='TARGET')<>1\n      OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=validation.id AND role='TARGET'\n          AND producer_id=NEW.artifact_id AND producer_kind=NEW.artifact_kind\n          AND producer_version=NEW.artifact_version AND producer_hash=NEW.artifact_hash)\n   THEN RAISE EXCEPTION 'passing validation required'; END IF;\n  END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE a record_artifacts; c record_cycles; parent_idea record_artifacts;\n        decision record_pivot_decisions; proof gov_evidence; retained gov_retained;\n        call gov_calls; validation record_artifacts; recommendation record_artifacts;\n        committed record_verdicts; attempt record_research_attempts; parent_cycle record_cycles;\nBEGIN\n IF TG_OP='UPDATE' OR TG_OP='DELETE' THEN\n  RAISE EXCEPTION 'immutable product record' USING ERRCODE='23514';\n END IF;\n IF TG_TABLE_NAME<>'record_operator_profiles' AND to_jsonb(NEW)->>'experiment_id' IS NOT NULL THEN\n  PERFORM 1 FROM gov_experiments WHERE id=(to_jsonb(NEW)->>'experiment_id')::uuid FOR UPDATE;\n END IF;\n IF TG_TABLE_NAME='record_operator_profiles' THEN\n  NEW.content_hash:=encode(sha256(convert_to(NEW.capabilities::text || E'\\n' || NEW.constraints::text, 'UTF8')), 'hex');\n  IF jsonb_typeof(NEW.capabilities)<>'array' OR jsonb_array_length(NEW.capabilities)=0\n     OR jsonb_typeof(NEW.constraints)<>'array' OR jsonb_array_length(NEW.constraints)=0\n     OR EXISTS(SELECT 1 FROM jsonb_array_elements(NEW.capabilities) x WHERE NOT record_nonempty_text(x))\n     OR EXISTS(SELECT 1 FROM jsonb_array_elements(NEW.constraints) x WHERE NOT record_nonempty_text(x))\n     OR jsonb_array_length(NEW.capabilities)<>(SELECT count(DISTINCT x) FROM jsonb_array_elements(NEW.capabilities) x)\n     OR jsonb_array_length(NEW.constraints)<>(SELECT count(DISTINCT x) FROM jsonb_array_elements(NEW.constraints) x)\n  THEN RAISE EXCEPTION 'invalid operator profile'; END IF;\n ELSIF TG_TABLE_NAME='record_artifacts' THEN\n  NEW.content_hash:=encode(sha256(convert_to(NEW.payload::text, 'UTF8')), 'hex');\n  IF record_payload_valid(NEW.kind,NEW.payload) IS NOT TRUE THEN RAISE EXCEPTION 'invalid artifact payload'; END IF;\n ELSIF TG_TABLE_NAME='record_artifact_links' THEN\n  IF record_lineage_closed(NEW.consumer_id,NEW.experiment_id)\n  THEN RAISE EXCEPTION 'accepted artifact lineage is closed'; END IF;\n ELSIF TG_TABLE_NAME='record_source_refs' THEN\n  IF record_lineage_closed(NEW.artifact_id,NEW.experiment_id)\n  THEN RAISE EXCEPTION 'accepted artifact lineage is closed'; END IF;\n  IF NEW.kind='GOVERNANCE_EVIDENCE' THEN\n   SELECT * INTO proof FROM gov_evidence WHERE id=NEW.evidence_id;\n   IF NOT FOUND OR (proof.call_id IS NOT NULL AND NOT EXISTS(SELECT 1 FROM gov_calls WHERE id=proof.call_id AND experiment_id=NEW.experiment_id))\n   THEN RAISE EXCEPTION 'invalid evidence scope'; END IF;\n  ELSE\n   SELECT * INTO retained FROM gov_retained WHERE id=NEW.retained_id;\n   SELECT * INTO call FROM gov_calls WHERE id=NEW.call_id;\n   IF retained.id IS NULL OR call.id IS NULL OR retained.call_id IS DISTINCT FROM NEW.call_id OR retained.grant_id IS DISTINCT FROM NEW.grant_id\n      OR retained.grant_version IS DISTINCT FROM NEW.grant_version OR retained.field IS DISTINCT FROM NEW.field\n      OR retained.expires_at IS DISTINCT FROM NEW.expires_at OR call.experiment_id IS DISTINCT FROM NEW.experiment_id\n   THEN RAISE EXCEPTION 'invalid retained source scope'; END IF;\n  END IF;\n ELSIF TG_TABLE_NAME='record_cycles' THEN\n  IF NEW.ordinal <> (SELECT count(*)+1 FROM record_cycles WHERE experiment_id=NEW.experiment_id)\n  THEN RAISE EXCEPTION 'noncontiguous research cycle'; END IF;\n  IF NEW.ordinal=1 THEN\n   IF NEW.parent_cycle_id IS NOT NULL THEN RAISE EXCEPTION 'initial cycle cannot have a parent'; END IF;\n  ELSE\n   SELECT * INTO parent_cycle FROM record_cycles WHERE id=NEW.parent_cycle_id AND experiment_id=NEW.experiment_id;\n   IF parent_cycle.id IS NULL OR parent_cycle.ordinal<>NEW.ordinal-1\n      OR ROW(NEW.seed_artifact_id,NEW.seed_kind,NEW.seed_version,NEW.seed_hash)\n         IS DISTINCT FROM ROW(parent_cycle.seed_artifact_id,parent_cycle.seed_kind,parent_cycle.seed_version,parent_cycle.seed_hash)\n   THEN RAISE EXCEPTION 'research cycle must preserve original seed and exact parent'; END IF;\n  END IF;\n ELSIF TG_TABLE_NAME='record_pivot_decisions' THEN\n  SELECT * INTO a FROM record_artifacts WHERE id=NEW.artifact_id;\n  SELECT * INTO c FROM record_cycles WHERE id=NEW.cycle_id;\n  IF NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1) THEN RAISE EXCEPTION 'pivot requires current cycle'; END IF;\n  IF a.payload->'material_pivot' IS DISTINCT FROM 'true'::jsonb OR record_operator_authorized(NEW.experiment_id,NEW.approved_by) IS NOT TRUE\n  THEN RAISE EXCEPTION 'invalid material pivot approval'; END IF;\n ELSIF TG_TABLE_NAME='record_idea_acceptances' THEN\n  SELECT * INTO a FROM record_artifacts WHERE id=NEW.artifact_id;\n  SELECT * INTO c FROM record_cycles WHERE id=NEW.cycle_id;\n  IF NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1) THEN RAISE EXCEPTION 'idea requires current cycle'; END IF;\n  IF c.parent_cycle_id IS NOT NULL THEN\n   SELECT prior_artifact.* INTO parent_idea FROM record_idea_acceptances prior\n    JOIN record_artifacts prior_artifact ON prior_artifact.id=prior.artifact_id\n    WHERE prior.cycle_id=c.parent_cycle_id;\n   SELECT prior_verdict.* INTO committed FROM record_returns r\n    JOIN record_verdicts prior_verdict ON prior_verdict.id=r.verdict_id\n    WHERE r.to_cycle_id=NEW.cycle_id;\n  END IF;\n  IF c.parent_cycle_id IS NOT NULL AND parent_idea.id IS NULL THEN RAISE EXCEPTION 'missing parent accepted idea'; END IF;\n  IF record_operator_authorized(NEW.experiment_id,NEW.accepted_by) IS NOT TRUE\n  THEN RAISE EXCEPTION 'idea acceptance requires operator capability'; END IF;\n  IF committed.verdict='MATERIAL_PIVOT_RECOMMENDED' AND parent_idea.payload->>'core_intent' IS NOT DISTINCT FROM a.payload->>'core_intent'\n  THEN RAISE EXCEPTION 'material pivot must change core intent'; END IF;\n  IF c.parent_cycle_id IS NOT NULL AND parent_idea.payload->>'core_intent' IS DISTINCT FROM a.payload->>'core_intent' THEN\n   IF a.payload->'material_pivot'<>'true'::jsonb OR NEW.pivot_approval_id IS NULL THEN RAISE EXCEPTION 'material pivot requires approval'; END IF;\n  ELSIF c.parent_cycle_id IS NOT NULL AND c.purpose NOT IN ('INCONCLUSIVE_SUPPLEMENT','OFFER_GAP_RETURN') AND (a.payload->'material_pivot'='true'::jsonb OR NEW.pivot_approval_id IS NOT NULL) THEN\n   RAISE EXCEPTION 'invalid pivot classification';\n  END IF;\n  IF c.parent_cycle_id IS NULL AND a.payload->'material_pivot'='true'::jsonb AND NEW.pivot_approval_id IS NULL\n  THEN RAISE EXCEPTION 'initial material pivot requires approval'; END IF;\n  IF c.parent_cycle_id IS NULL AND a.payload->'material_pivot'='false'::jsonb AND NEW.pivot_approval_id IS NOT NULL\n  THEN RAISE EXCEPTION 'invalid initial pivot classification'; END IF;\n  IF c.purpose IN ('INCONCLUSIVE_SUPPLEMENT','OFFER_GAP_RETURN') AND a.id IS DISTINCT FROM parent_idea.id\n  THEN RAISE EXCEPTION 'supplement must preserve exact accepted idea'; END IF;\n  IF NEW.pivot_approval_id IS NOT NULL THEN\n   SELECT * INTO decision FROM record_pivot_decisions WHERE id=NEW.pivot_approval_id;\n   IF decision.cycle_id IS DISTINCT FROM NEW.cycle_id OR decision.artifact_id IS DISTINCT FROM NEW.artifact_id OR decision.approved_by IS DISTINCT FROM NEW.accepted_by\n   THEN RAISE EXCEPTION 'invalid pivot approval binding'; END IF;\n  END IF;\n ELSIF TG_TABLE_NAME='record_research_attempts' THEN\n  IF NOT EXISTS(SELECT 1 FROM record_idea_acceptances WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id)\n     OR EXISTS(SELECT 1 FROM record_verdicts WHERE cycle_id=NEW.cycle_id)\n     OR NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1)\n     OR NEW.ordinal <> (SELECT count(*)+1 FROM record_research_attempts WHERE cycle_id=NEW.cycle_id)\n     OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=NEW.plan_artifact_id AND role='ACCEPTED_IDEA')<>1\n     OR NOT EXISTS(SELECT 1 FROM record_artifact_links link JOIN record_idea_acceptances idea ON idea.artifact_id=link.producer_id\n         WHERE link.consumer_id=NEW.plan_artifact_id AND link.role='ACCEPTED_IDEA' AND idea.cycle_id=NEW.cycle_id)\n  THEN RAISE EXCEPTION 'research attempt requires current accepted idea and exact plan lineage'; END IF;\n ELSIF TG_TABLE_NAME='record_verdicts' THEN\n  SELECT * INTO attempt FROM record_research_attempts WHERE id=NEW.attempt_id;\n  IF attempt.id IS NULL\n     OR NOT EXISTS(SELECT 1 FROM record_idea_acceptances WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id)\n     OR NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1)\n     OR attempt.ordinal IS DISTINCT FROM (SELECT max(ordinal) FROM record_research_attempts WHERE cycle_id=NEW.cycle_id)\n     OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=NEW.report_artifact_id AND role='PLAN')<>1\n     OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.report_artifact_id AND producer_id=attempt.plan_artifact_id AND role='PLAN')\n     OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=NEW.recommendation_artifact_id AND role='REPORT')<>1\n     OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.recommendation_artifact_id AND producer_id=NEW.report_artifact_id AND role='REPORT')\n  THEN RAISE EXCEPTION 'verdict requires current attempt and exact report lineage'; END IF;\n  SELECT * INTO recommendation FROM record_artifacts WHERE id=NEW.recommendation_artifact_id;\n  IF recommendation.payload->>'recommendation' IS DISTINCT FROM NEW.verdict OR record_operator_authorized(NEW.experiment_id,NEW.committed_by) IS NOT TRUE\n  THEN RAISE EXCEPTION 'verdict recommendation or operator mismatch'; END IF;\n ELSIF TG_TABLE_NAME='record_artifact_dispositions' THEN\n  IF NEW.disposition IN ('VALIDATED','ACCEPTED') THEN\n   SELECT * INTO validation FROM record_artifacts WHERE id=NEW.validation_artifact_id AND experiment_id=NEW.experiment_id;\n   IF validation.kind IS DISTINCT FROM 'VALIDATION_RESULT' OR validation.payload->>'disposition' IS DISTINCT FROM 'PASS'\n      OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=validation.id AND role='TARGET')<>1\n      OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=validation.id AND role='TARGET'\n          AND producer_id=NEW.artifact_id AND producer_kind=NEW.artifact_kind\n          AND producer_version=NEW.artifact_version AND producer_hash=NEW.artifact_hash)\n   THEN RAISE EXCEPTION 'passing validation required'; END IF;\n  END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_operator_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'operator history cannot be deleted' USING ERRCODE='23514'; END IF;\n IF TG_OP='UPDATE' AND (\n    NEW.id IS DISTINCT FROM OLD.id OR NEW.created_at IS DISTINCT FROM OLD.created_at\n    OR (OLD.auth_subject IS NOT NULL AND ROW(NEW.auth_subject,NEW.display_name,NEW.timezone)\n        IS DISTINCT FROM ROW(OLD.auth_subject,OLD.display_name,OLD.timezone)))\n THEN RAISE EXCEPTION 'operator identity binding is immutable' USING ERRCODE='23514'; END IF;\n IF NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=NEW.timezone)\n THEN RAISE EXCEPTION 'invalid operator timezone' USING ERRCODE='23514'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_operator_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_origin_return_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE a record_artifacts; parent record_cycles; root record_cycles; c record_cycles;\n v record_verdicts; idea record_idea_acceptances; selection record_candidate_selections;\n scope_id uuid; expected_verdict text; expected_purpose text;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable product record'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n IF TG_TABLE_NAME='record_candidate_selections' THEN\n  SELECT * INTO a FROM record_artifacts WHERE id=NEW.artifact_id;\n  IF record_operator_authorized(NEW.experiment_id,NEW.selected_by) IS NOT TRUE\n    OR ROW(a.workflow_id,a.agent_id) IS DISTINCT FROM ROW(NEW.workflow_id,NEW.agent_id)\n    OR NOT EXISTS(SELECT 1 FROM record_experiments e WHERE e.id=NEW.experiment_id AND e.operator_profile_id=NEW.profile_id AND e.operator_profile_version=NEW.profile_version)\n    OR EXISTS(SELECT 1 FROM record_cycles WHERE experiment_id=NEW.experiment_id)\n  THEN RAISE EXCEPTION 'invalid candidate selection'; END IF;\n ELSIF TG_TABLE_NAME='record_cycles' THEN\n  IF record_operator_authorized(NEW.experiment_id,(SELECT p.operator_id FROM record_experiments e JOIN record_operator_profiles p ON p.id=e.operator_profile_id AND p.version=e.operator_profile_version WHERE e.id=NEW.experiment_id)) IS NOT TRUE\n  THEN RAISE EXCEPTION 'inactive experiment owner'; END IF;\n  IF NEW.ordinal=1 THEN\n   IF NEW.purpose IS DISTINCT FROM 'INITIAL' OR NEW.episode_id IS DISTINCT FROM NEW.id THEN RAISE EXCEPTION 'invalid initial episode'; END IF;\n   SELECT * INTO a FROM record_artifacts WHERE id=NEW.seed_artifact_id;\n   IF NEW.idea_mode='SYSTEM_DISCOVERY' THEN\n    SELECT * INTO selection FROM record_candidate_selections WHERE id=NEW.selection_id;\n    IF ROW(selection.artifact_id,selection.artifact_kind,selection.artifact_version,selection.artifact_hash,selection.experiment_id)\n      IS DISTINCT FROM ROW(NEW.seed_artifact_id,NEW.seed_kind,NEW.seed_version,NEW.seed_hash,NEW.experiment_id)\n    THEN RAISE EXCEPTION 'exact selection required'; END IF;\n   ELSIF a.payload->>'origin' IS DISTINCT FROM 'USER_SUPPLIED' OR EXISTS(SELECT 1 FROM record_candidate_selections WHERE experiment_id=NEW.experiment_id)\n   THEN RAISE EXCEPTION 'original user seed required'; END IF;\n  ELSE\n   SELECT * INTO parent FROM record_cycles WHERE id=NEW.parent_cycle_id;\n   IF ROW(NEW.idea_mode,NEW.selection_id,NEW.episode_id) IS DISTINCT FROM ROW(parent.idea_mode,parent.selection_id,parent.episode_id)\n      OR NEW.purpose='INITIAL'\n   THEN RAISE EXCEPTION 'immutable origin and episode required'; END IF;\n  END IF;\n ELSIF TG_TABLE_NAME='record_returns' THEN\n  SELECT * INTO v FROM record_verdicts WHERE id=NEW.verdict_id;\n  SELECT * INTO parent FROM record_cycles WHERE id=NEW.from_cycle_id;\n  SELECT * INTO c FROM record_cycles WHERE id=NEW.to_cycle_id;\n  SELECT * INTO root FROM record_cycles WHERE experiment_id=NEW.experiment_id AND ordinal=1;\n  SELECT * INTO idea FROM record_idea_acceptances WHERE cycle_id=NEW.from_cycle_id;\n  expected_verdict:=CASE NEW.kind WHEN 'SAME_INTENT' THEN 'REFINE_SAME_IDEA' WHEN 'MATERIAL_PIVOT' THEN 'MATERIAL_PIVOT_RECOMMENDED' WHEN 'INCONCLUSIVE_SUPPLEMENT' THEN 'INCONCLUSIVE' WHEN 'OFFER_GAP' THEN 'PROCEED_TO_OFFER' END;\n  expected_purpose:=CASE NEW.kind WHEN 'SAME_INTENT' THEN 'SAME_INTENT_RETURN' WHEN 'MATERIAL_PIVOT' THEN 'MATERIAL_PIVOT_RETURN' WHEN 'INCONCLUSIVE_SUPPLEMENT' THEN 'INCONCLUSIVE_SUPPLEMENT' WHEN 'OFFER_GAP' THEN 'OFFER_GAP_RETURN' END;\n  scope_id:=CASE NEW.kind WHEN 'SAME_INTENT' THEN CASE WHEN parent.idea_mode='USER_SEEDED_REFINEMENT' THEN parent.seed_artifact_id ELSE (SELECT artifact_id FROM record_idea_acceptances WHERE cycle_id=root.id) END WHEN 'OFFER_GAP' THEN idea.artifact_id ELSE parent.episode_id END;\n  IF v.id IS NULL OR c.id IS NULL OR parent.id IS NULL OR idea.id IS NULL OR expected_verdict IS NULL\n   OR v.cycle_id IS DISTINCT FROM parent.id OR v.verdict IS DISTINCT FROM expected_verdict\n   OR c.parent_cycle_id IS DISTINCT FROM parent.id OR c.ordinal<>parent.ordinal+1 OR c.purpose IS DISTINCT FROM expected_purpose\n   OR c.id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1)\n   OR NEW.applicable_scope_id IS DISTINCT FROM scope_id OR NEW.idea_artifact_id IS DISTINCT FROM idea.artifact_id\n   OR NEW.ordinal<>(SELECT count(*)+1 FROM record_returns WHERE experiment_id=NEW.experiment_id AND kind=NEW.kind AND applicable_scope_id=scope_id)\n  THEN RAISE EXCEPTION 'invalid scoped research return'; END IF;\n  IF NOT EXISTS(SELECT 1 FROM record_artifact_dispositions WHERE artifact_id=NEW.feedback_artifact_id AND disposition='ACCEPTED')\n   OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=NEW.feedback_artifact_id AND role IN ('REPORT','RECOMMENDATION','ACCEPTED_IDEA'))<>3\n   OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.feedback_artifact_id AND role='REPORT' AND producer_id=v.report_artifact_id)\n   OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.feedback_artifact_id AND role='RECOMMENDATION' AND producer_id=v.recommendation_artifact_id)\n   OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.feedback_artifact_id AND role='ACCEPTED_IDEA' AND producer_id=idea.artifact_id)\n  THEN RAISE EXCEPTION 'accepted exact return evidence required'; END IF;\n  IF NEW.kind='OFFER_GAP' THEN\n   -- Activation requires the future offer-owner migration to establish this typed accepted bundle.\n   IF NOT EXISTS(SELECT 1 FROM record_artifacts a JOIN record_artifact_dispositions d ON d.artifact_id=a.id AND d.disposition='ACCEPTED' WHERE a.id=NEW.offer_input_bundle_id AND a.experiment_id=NEW.experiment_id AND a.kind='OFFER_DESIGN_INPUT_BUNDLE')\n      OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.feedback_artifact_id AND producer_id=NEW.offer_input_bundle_id AND role='OFFER_INPUT_BUNDLE')\n      OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=NEW.offer_input_bundle_id AND role IN ('ACCEPTED_IDEA','REPORT','RECOMMENDATION'))<>3\n      OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.offer_input_bundle_id AND role='ACCEPTED_IDEA' AND producer_id=idea.artifact_id)\n      OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.offer_input_bundle_id AND role='REPORT' AND producer_id=v.report_artifact_id)\n      OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=NEW.offer_input_bundle_id AND role='RECOMMENDATION' AND producer_id=v.recommendation_artifact_id)\n   THEN RAISE EXCEPTION 'accepted offer input bundle required'; END IF;\n  END IF;\n ELSIF TG_TABLE_NAME='record_artifacts' THEN\n  IF record_operator_authorized(NEW.experiment_id,NEW.created_by) IS NOT TRUE THEN RAISE EXCEPTION 'inactive artifact owner'; END IF;\n ELSIF TG_TABLE_NAME='record_research_attempts' THEN\n  IF record_operator_authorized(NEW.experiment_id,(SELECT p.operator_id FROM record_experiments e JOIN record_operator_profiles p ON p.id=e.operator_profile_id AND p.version=e.operator_profile_version WHERE e.id=NEW.experiment_id)) IS NOT TRUE THEN RAISE EXCEPTION 'inactive experiment owner'; END IF;\n  SELECT * INTO c FROM record_cycles WHERE id=NEW.cycle_id;\n  IF c.ordinal>1 AND NOT EXISTS(SELECT 1 FROM record_returns r JOIN record_artifact_links l ON l.producer_id=r.feedback_artifact_id AND l.consumer_id=NEW.plan_artifact_id AND l.role='RETURN_FEEDBACK' WHERE r.to_cycle_id=c.id)\n  THEN RAISE EXCEPTION 'research plan requires exact return feedback'; END IF;\n ELSIF TG_TABLE_NAME='record_artifact_dispositions' THEN\n  IF record_operator_authorized(NEW.experiment_id,NEW.decided_by) IS NOT TRUE THEN RAISE EXCEPTION 'inactive decision owner'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_origin_return_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_profile_guard_v2()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable product record' USING ERRCODE='23514'; END IF;\n PERFORM 1 FROM record_operators WHERE id=NEW.operator_id AND auth_subject IS NOT NULL AND status='ACTIVE' FOR SHARE;\n IF NOT FOUND OR NEW.profile_schema_version IS DISTINCT FROM 2 OR NEW.approved_by IS DISTINCT FROM NEW.operator_id\n THEN RAISE EXCEPTION 'profile requires bound active owner approval' USING ERRCODE='23514'; END IF;\n IF NEW.version>1 AND NOT EXISTS(SELECT 1 FROM record_operator_profiles\n   WHERE id=NEW.id AND version=NEW.version-1 AND operator_id=NEW.operator_id AND profile_schema_version=2)\n THEN RAISE EXCEPTION 'profile requires exact previous version' USING ERRCODE='23514'; END IF;\n IF record_profile_entries(NEW.capabilities,true) IS NOT TRUE OR record_profile_entries(NEW.constraints,false) IS NOT TRUE\n THEN RAISE EXCEPTION 'invalid profile entries' USING ERRCODE='23514'; END IF;\n IF (record_json_exact(NEW.delivery,ARRAY['schema_version','max_project_hours','hours_per_week','concurrent_projects'])\n    AND NEW.delivery->'schema_version'='1'::jsonb\n    AND record_profile_number(NEW.delivery->'max_project_hours',100000,2,true)\n    AND record_profile_number(NEW.delivery->'hours_per_week',168,2,true)\n    AND jsonb_typeof(NEW.delivery->'concurrent_projects')='number'\n    AND (NEW.delivery->>'concurrent_projects') ~ '^[1-9][0-9]{0,2}$'\n    AND (NEW.delivery->>'concurrent_projects')::numeric<=100) IS NOT TRUE\n THEN RAISE EXCEPTION 'invalid delivery limits' USING ERRCODE='23514'; END IF;\n IF (record_json_exact(NEW.commercial,ARRAY['schema_version','currency','hourly_cost','minimum_project_price',\n       'minimum_margin_rate','maximum_discount_rate','minimum_deposit_rate'])\n    AND NEW.commercial->'schema_version'='1'::jsonb\n    AND NEW.commercial->>'currency' ~ '^[A-Z]{3}$'\n    AND record_profile_number(NEW.commercial->'hourly_cost',1000000000000,6,false,false)\n    AND record_profile_number(NEW.commercial->'minimum_project_price',1000000000000,6,false,false)\n    AND record_profile_number(NEW.commercial->'minimum_margin_rate',1,6)\n    AND record_profile_number(NEW.commercial->'maximum_discount_rate',1,6)\n    AND record_profile_number(NEW.commercial->'minimum_deposit_rate',1,6)) IS NOT TRUE\n THEN RAISE EXCEPTION 'invalid commercial limits' USING ERRCODE='23514'; END IF;\n NEW.content_hash:=encode(sha256(convert_to(jsonb_build_object('profile_schema_version',NEW.profile_schema_version,\n   'operator_id',NEW.operator_id,'capabilities',NEW.capabilities,'constraints',NEW.constraints,\n   'delivery',NEW.delivery,'commercial',NEW.commercial,'approved_by',NEW.approved_by)::text,'UTF8')),'hex');\n RETURN NEW;\nEND $function$\n",
+      "name": "record_profile_guard_v2"
     },
     {
       "arguments": "",
@@ -12268,6 +13103,11 @@
       "name": "supply_plan_valid"
     },
     {
+      "arguments": "experiment_id uuid, actor_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_operator_authorized(experiment_id uuid, actor_id uuid)\n RETURNS boolean\n LANGUAGE sql\nAS $function$\n SELECT coalesce((SELECT record_profile_authorized(e.operator_profile_id,e.operator_profile_version,actor_id)\n   FROM record_experiments e WHERE e.id=experiment_id),false)\n$function$\n",
+      "name": "record_operator_authorized"
+    },
+    {
       "arguments": "item gov_calls",
       "definition": "CREATE OR REPLACE FUNCTION public.gov_validate_call_json(item gov_calls)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\nDECLARE operation gov_operations; config gov_configs; a jsonb; r jsonb; m jsonb; u jsonb; actor jsonb;\nBEGIN\n SELECT * INTO operation FROM gov_operations WHERE id=item.operation_id;\n SELECT * INTO config FROM gov_configs WHERE id=item.config_id;\n a:=item.attribution; r:=item.request; m:=item.result_metadata;\n IF operation.agent_id IS NOT NULL THEN\n  actor:=jsonb_build_object('schema_version',1,'kind','agent','agent_run_id',operation.agent_id::text);\n ELSE\n  actor:=jsonb_build_object('schema_version',1,'kind','system','service',operation.service);\n END IF;\n IF NOT gov_json_object(a,ARRAY['schema_version','experiment_id','workflow_run_id','operation_run_id',\n   'operation_run_kind','actor','correlation_id','logical_operation_id','config_version','deadline'])\n   OR NOT (a->>'experiment_id'=item.experiment_id::text AND a->>'workflow_run_id'=item.workflow_id::text\n    AND a->>'operation_run_id'=item.operation_id::text AND a->>'config_version'=item.config_version::text\n    AND a->>'logical_operation_id'=item.logical_operation_id::text AND a->>'operation_run_kind'=operation.kind\n    AND a->'actor'=actor AND a->'actor'->>'schema_version'='1') IS TRUE\n   OR NOT gov_json_uuid(a->'correlation_id') OR NOT gov_json_time(a->'deadline') THEN\n  RAISE EXCEPTION 'invalid governance attribution' USING ERRCODE='23514';\n END IF;\n IF NOT gov_json_object(r,ARRAY['schema_version','config_ref','requested_count'])\n   OR NOT (r->>'config_ref'=item.config_id::text AND jsonb_typeof(r->'requested_count')='number'\n    AND r->>'requested_count' ~ '^[1-9][0-9]*$' AND (r->>'requested_count')::integer BETWEEN 1 AND 100\n    AND r->'requested_count'=config.data->'requested_count') IS TRUE THEN\n  RAISE EXCEPTION 'invalid governance request metadata' USING ERRCODE='23514';\n END IF;\n IF m IS NULL THEN RETURN; END IF;\n IF NOT gov_json_object(m,ARRAY['schema_version','capability','external_request_id','started_at','finished_at','status','error_code','usage'])\n   OR NOT (m->>'capability'=config.capability AND item.state IN ('DISPATCHED','RECONCILING','FINAL')\n    AND item.token IS NOT NULL AND item.finished_at IS NOT NULL\n    AND m->>'status' IN ('SUCCEEDED','REFUSED','FAILED')\n    AND ((m->>'status'='SUCCEEDED' AND m->'error_code'='null'::jsonb)\n     OR (m->>'status'<>'SUCCEEDED' AND m->>'error_code' IN ('DENIED','CAPABILITY_MISMATCH','TIMEOUT','UNAVAILABLE','MALFORMED_RESPONSE','REFUSED','WRITE_AUTHORITY_REQUIRED')))\n    AND (m->'external_request_id'='null'::jsonb OR (jsonb_typeof(m->'external_request_id')='string' AND m->>'external_request_id' ~ '^[A-Za-z0-9_-]{1,100}$'))\n    AND jsonb_typeof(m->'usage')='array') IS TRUE\n   OR NOT gov_json_time(m->'started_at') OR NOT gov_json_time(m->'finished_at') THEN\n  RAISE EXCEPTION 'invalid governance result metadata' USING ERRCODE='23514';\n END IF;\n IF (m->>'finished_at')::timestamptz < (m->>'started_at')::timestamptz THEN\n  RAISE EXCEPTION 'invalid governance result timing' USING ERRCODE='23514';\n END IF;\n FOR u IN SELECT value FROM jsonb_array_elements(m->'usage') LOOP\n  IF NOT gov_json_object(u,ARRAY['schema_version','component','quantity','currency','cost','knowledge','observation_key'])\n    OR NOT gov_json_uuid(u->'observation_key') OR NOT gov_json_quantity(u->'quantity') OR NOT gov_json_quantity(u->'cost')\n    OR NOT (u->>'currency'=item.currency AND u->>'knowledge' IN ('ESTIMATE','FINAL','UNAVAILABLE')\n      AND ((u->>'knowledge'='UNAVAILABLE' AND u->'cost'='null'::jsonb)\n       OR (u->>'knowledge'<>'UNAVAILABLE' AND u->'cost'<>'null'::jsonb))) IS TRUE THEN\n   RAISE EXCEPTION 'invalid governance usage metadata' USING ERRCODE='23514';\n  END IF;\n  IF NOT EXISTS(SELECT 1 FROM gov_usage existing WHERE existing.call_id=item.id\n    AND existing.observation_key::text=u->>'observation_key' AND existing.component=u->>'component'\n    AND existing.currency=u->>'currency' AND existing.knowledge=u->>'knowledge'\n    AND existing.quantity IS NOT DISTINCT FROM (u->>'quantity')::numeric\n    AND existing.cost IS NOT DISTINCT FROM (u->>'cost')::numeric) THEN\n   RAISE EXCEPTION 'governance usage metadata binding' USING ERRCODE='23514';\n  END IF;\n END LOOP;\nEND $function$\n",
       "name": "gov_validate_call_json"
@@ -12279,12 +13119,17 @@
     },
     {
       "arguments": "kind text, value jsonb",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_payload_valid(kind text, value jsonb)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\nAS $function$\n SELECT CASE kind\n  WHEN 'EXPERIMENT_BRIEF' THEN record_json_exact(value,ARRAY['objective']) AND record_nonempty_text(value->'objective')\n  WHEN 'IDEA_SEED' THEN record_json_exact(value,ARRAY['origin','statement']) AND value->>'origin' IN ('USER_SUPPLIED','AGENT_DISCOVERED') AND record_nonempty_text(value->'statement')\n  WHEN 'IDEA_CANDIDATE' THEN record_json_exact(value,ARRAY['title','hypothesis']) AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'hypothesis')\n  WHEN 'IDEA_BRIEF' THEN record_json_exact(value,ARRAY['title','customer','problem','core_intent','material_pivot']) AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'customer') AND record_nonempty_text(value->'problem') AND record_nonempty_text(value->'core_intent') AND jsonb_typeof(value->'material_pivot')='boolean'\n  WHEN 'RESEARCH_PLAN' THEN record_json_exact(value,ARRAY['questions','method']) AND record_nonempty_text_array(value->'questions') AND record_nonempty_text(value->'method')\n  WHEN 'RESEARCH_EVIDENCE' THEN record_json_exact(value,ARRAY['claim','finding']) AND record_nonempty_text(value->'claim') AND record_nonempty_text(value->'finding')\n  WHEN 'COMPETITOR_PROFILE' THEN record_json_exact(value,ARRAY['name','positioning']) AND record_nonempty_text(value->'name') AND record_nonempty_text(value->'positioning')\n  WHEN 'SERVICE_PROFILE' THEN record_json_exact(value,ARRAY['name','scope']) AND record_nonempty_text(value->'name') AND record_nonempty_text(value->'scope')\n  WHEN 'PRICE_OBSERVATION' THEN record_json_exact(value,ARRAY['status','currency','amount','unit','source_note']) AND record_nonempty_text(value->'unit') AND record_nonempty_text(value->'source_note') AND ((value->>'status'='QUOTED' AND value->>'currency' ~ '^[A-Z]{3}$' AND value->>'amount' ~ '^[0-9]+(\\.[0-9]{1,6})?$' AND (value->>'amount')::numeric>0 AND (value->>'amount')::numeric<1000000000000) OR (value->>'status'='REQUIRED_UNAVAILABLE' AND value->'currency'='null'::jsonb AND value->'amount'='null'::jsonb))\n  WHEN 'MARKET_RESEARCH_REPORT' THEN record_json_exact(value,ARRAY['finding','limitations']) AND record_nonempty_text(value->'finding') AND record_nonempty_text_array(value->'limitations')\n  WHEN 'MARKET_RESEARCH_RECOMMENDATION' THEN record_json_exact(value,ARRAY['recommendation','rationale']) AND value->>'recommendation' IN ('PROCEED_TO_OFFER','REFINE_SAME_IDEA','MATERIAL_PIVOT_RECOMMENDED','KILL_IDEA','INCONCLUSIVE') AND record_nonempty_text(value->'rationale')\n  WHEN 'RESEARCH_FEEDBACK_BRIEF' THEN record_json_exact(value,ARRAY['preserve','change']) AND record_nonempty_text_array(value->'preserve') AND record_nonempty_text_array(value->'change')\n  WHEN 'VALIDATION_RESULT' THEN record_json_exact(value,ARRAY['validator','disposition','reason']) AND record_nonempty_text(value->'validator') AND value->>'disposition' IN ('PASS','FAIL') AND record_nonempty_text(value->'reason')\n  WHEN 'ACCEPTANCE_RECEIPT' THEN record_json_exact(value,ARRAY['disposition','reason']) AND value->>'disposition' IN ('ACCEPTED','REJECTED','SUPERSEDED') AND record_nonempty_text(value->'reason')\n  ELSE false END\n$function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_payload_valid(kind text, value jsonb)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\nAS $function$\n SELECT CASE kind\n  WHEN 'EXPERIMENT_BRIEF' THEN record_json_exact(value,ARRAY['objective']) AND record_nonempty_text(value->'objective')\n  WHEN 'IDEA_SEED' THEN record_json_exact(value,ARRAY['origin','statement']) AND value->>'origin' ='USER_SUPPLIED' AND record_nonempty_text(value->'statement')\n  WHEN 'IDEA_CANDIDATE' THEN record_json_exact(value,ARRAY['title','hypothesis']) AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'hypothesis')\n  WHEN 'IDEA_BRIEF' THEN record_json_exact(value,ARRAY['title','customer','problem','core_intent','material_pivot']) AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'customer') AND record_nonempty_text(value->'problem') AND record_nonempty_text(value->'core_intent') AND jsonb_typeof(value->'material_pivot')='boolean'\n  WHEN 'RESEARCH_PLAN' THEN record_json_exact(value,ARRAY['questions','method']) AND record_nonempty_text_array(value->'questions') AND record_nonempty_text(value->'method')\n  WHEN 'RESEARCH_EVIDENCE' THEN record_json_exact(value,ARRAY['claim','finding']) AND record_nonempty_text(value->'claim') AND record_nonempty_text(value->'finding')\n  WHEN 'COMPETITOR_PROFILE' THEN record_json_exact(value,ARRAY['name','positioning']) AND record_nonempty_text(value->'name') AND record_nonempty_text(value->'positioning')\n  WHEN 'SERVICE_PROFILE' THEN record_json_exact(value,ARRAY['name','scope']) AND record_nonempty_text(value->'name') AND record_nonempty_text(value->'scope')\n  WHEN 'PRICE_OBSERVATION' THEN record_json_exact(value,ARRAY['status','currency','amount','unit','source_note']) AND record_nonempty_text(value->'unit') AND record_nonempty_text(value->'source_note') AND ((value->>'status'='QUOTED' AND value->>'currency' ~ '^[A-Z]{3}$' AND value->>'amount' ~ '^[0-9]+(\\.[0-9]{1,6})?$' AND (value->>'amount')::numeric>0 AND (value->>'amount')::numeric<1000000000000) OR (value->>'status'='REQUIRED_UNAVAILABLE' AND value->'currency'='null'::jsonb AND value->'amount'='null'::jsonb))\n  WHEN 'MARKET_RESEARCH_REPORT' THEN record_json_exact(value,ARRAY['finding','limitations']) AND record_nonempty_text(value->'finding') AND record_nonempty_text_array(value->'limitations')\n  WHEN 'MARKET_RESEARCH_RECOMMENDATION' THEN record_json_exact(value,ARRAY['recommendation','rationale']) AND value->>'recommendation' IN ('PROCEED_TO_OFFER','REFINE_SAME_IDEA','MATERIAL_PIVOT_RECOMMENDED','KILL_IDEA','INCONCLUSIVE') AND record_nonempty_text(value->'rationale')\n  WHEN 'RESEARCH_FEEDBACK_BRIEF' THEN record_json_exact(value,ARRAY['preserve','change']) AND record_nonempty_text_array(value->'preserve') AND record_nonempty_text_array(value->'change')\n  WHEN 'OFFER_RESEARCH_GAP_BRIEF' THEN record_json_exact(value,ARRAY['required_evidence','justification']) AND record_nonempty_text_array(value->'required_evidence') AND record_nonempty_text(value->'justification')\n  WHEN 'VALIDATION_RESULT' THEN record_json_exact(value,ARRAY['validator','disposition','reason']) AND record_nonempty_text(value->'validator') AND value->>'disposition' IN ('PASS','FAIL') AND record_nonempty_text(value->'reason')\n  WHEN 'ACCEPTANCE_RECEIPT' THEN record_json_exact(value,ARRAY['disposition','reason']) AND value->>'disposition' IN ('ACCEPTED','REJECTED','SUPERSEDED') AND record_nonempty_text(value->'reason')\n  ELSE false END\n$function$\n",
       "name": "record_payload_valid"
     },
     {
+      "arguments": "profile_id uuid, profile_version integer, actor_id uuid",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_profile_authorized(profile_id uuid, profile_version integer, actor_id uuid)\n RETURNS boolean\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n PERFORM 1 FROM record_operator_profiles p JOIN record_operators o ON o.id=p.operator_id\n  WHERE p.id=profile_id AND p.version=profile_version AND p.profile_schema_version=2\n    AND p.approved_by=p.operator_id AND p.operator_id=actor_id AND o.status='ACTIVE'\n    AND o.auth_subject IS NOT NULL FOR SHARE OF o;\n RETURN FOUND;\nEND $function$\n",
+      "name": "record_profile_authorized"
+    },
+    {
       "arguments": "target uuid, scope uuid",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_lineage_closed(target uuid, scope uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE\nAS $function$\n WITH RECURSIVE authoritative(id) AS (\n  SELECT artifact_id FROM record_artifact_dispositions WHERE experiment_id=scope AND disposition IN ('ACCEPTED','VALIDATED')\n  UNION SELECT validation_artifact_id FROM record_artifact_dispositions WHERE experiment_id=scope AND validation_artifact_id IS NOT NULL\n  UNION SELECT seed_artifact_id FROM record_cycles WHERE experiment_id=scope\n  UNION SELECT artifact_id FROM record_idea_acceptances WHERE experiment_id=scope\n  UNION SELECT artifact_id FROM record_pivot_decisions WHERE experiment_id=scope\n  UNION SELECT plan_artifact_id FROM record_research_attempts WHERE experiment_id=scope\n  UNION SELECT report_artifact_id FROM record_verdicts WHERE experiment_id=scope\n  UNION SELECT recommendation_artifact_id FROM record_verdicts WHERE experiment_id=scope\n  UNION SELECT feedback_artifact_id FROM record_returns WHERE experiment_id=scope\n ), lineage(id) AS (\n  SELECT id FROM authoritative\n  UNION\n  SELECT link.producer_id FROM record_artifact_links link JOIN lineage ON lineage.id=link.consumer_id WHERE link.experiment_id=scope\n ) SELECT EXISTS(SELECT 1 FROM lineage WHERE id=target)\n$function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_lineage_closed(target uuid, scope uuid)\n RETURNS boolean\n LANGUAGE sql\n STABLE\nAS $function$\n WITH RECURSIVE authoritative(id) AS (\n  SELECT artifact_id FROM record_artifact_dispositions WHERE experiment_id=scope AND disposition IN ('ACCEPTED','VALIDATED')\n  UNION SELECT validation_artifact_id FROM record_artifact_dispositions WHERE experiment_id=scope AND validation_artifact_id IS NOT NULL\n  UNION SELECT artifact_id FROM record_candidate_selections WHERE experiment_id=scope\n  UNION SELECT seed_artifact_id FROM record_cycles WHERE experiment_id=scope\n  UNION SELECT artifact_id FROM record_idea_acceptances WHERE experiment_id=scope\n  UNION SELECT artifact_id FROM record_pivot_decisions WHERE experiment_id=scope\n  UNION SELECT plan_artifact_id FROM record_research_attempts WHERE experiment_id=scope\n  UNION SELECT report_artifact_id FROM record_verdicts WHERE experiment_id=scope\n  UNION SELECT recommendation_artifact_id FROM record_verdicts WHERE experiment_id=scope\n  UNION SELECT feedback_artifact_id FROM record_returns WHERE experiment_id=scope\n ), lineage(id) AS (\n  SELECT id FROM authoritative\n  UNION\n  SELECT link.producer_id FROM record_artifact_links link JOIN lineage ON lineage.id=link.consumer_id WHERE link.experiment_id=scope\n ) SELECT EXISTS(SELECT 1 FROM lineage WHERE id=target)\n$function$\n",
       "name": "record_lineage_closed"
     },
     {
@@ -12321,6 +13166,16 @@
       "arguments": "value jsonb, keys text[]",
       "definition": "CREATE OR REPLACE FUNCTION public.record_json_exact(value jsonb, keys text[])\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\nAS $function$\n SELECT COALESCE(jsonb_typeof(value)='object' AND value ?& keys AND value-keys='{}'::jsonb,false)\n$function$\n",
       "name": "record_json_exact"
+    },
+    {
+      "arguments": "value jsonb, max_value numeric, places integer, positive boolean, inclusive boolean",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_profile_number(value jsonb, max_value numeric, places integer, positive boolean DEFAULT false, inclusive boolean DEFAULT true)\n RETURNS boolean\n LANGUAGE plpgsql\n IMMUTABLE\nAS $function$\nDECLARE number numeric;\nBEGIN\n IF jsonb_typeof(value) IS DISTINCT FROM 'string' OR (value#>>'{}') !~ '^(0|[1-9][0-9]*)(\\.[0-9]+)?$' THEN RETURN false; END IF;\n IF length(value#>>'{}')>32 THEN RETURN false; END IF;\n number := (value#>>'{}')::numeric;\n RETURN number>=0 AND (NOT positive OR number>0) AND scale(number)<=places\n    AND ((inclusive AND number<=max_value) OR (NOT inclusive AND number<max_value));\nEXCEPTION WHEN OTHERS THEN RETURN false;\nEND $function$\n",
+      "name": "record_profile_number"
+    },
+    {
+      "arguments": "value jsonb, required boolean",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_profile_entries(value jsonb, required boolean)\n RETURNS boolean\n LANGUAGE plpgsql\n IMMUTABLE\nAS $function$\nBEGIN\n IF jsonb_typeof(value) IS DISTINCT FROM 'array' THEN RETURN false; END IF;\n RETURN jsonb_array_length(value) BETWEEN CASE WHEN required THEN 1 ELSE 0 END AND 100\n    AND NOT EXISTS(SELECT 1 FROM jsonb_array_elements(value) x\n      WHERE jsonb_typeof(x) IS DISTINCT FROM 'string' OR length(btrim(x#>>'{}')) NOT BETWEEN 1 AND 1000)\n    AND jsonb_array_length(value)=(SELECT count(DISTINCT x) FROM jsonb_array_elements(value) x);\nEND $function$\n",
+      "name": "record_profile_entries"
     }
   ],
   "indexes": [
@@ -12784,11 +13639,56 @@
       "valid": true
     },
     {
+      "definition": "CREATE INDEX ix_record_candidate_selections_fk_0 ON public.record_candidate_selections USING btree (agent_id, workflow_id)",
+      "name": "ix_record_candidate_selections_fk_0",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_candidate_selections",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_candidate_selections_fk_1 ON public.record_candidate_selections USING btree (artifact_id, experiment_id, artifact_kind, artifact_version, artifact_hash)",
+      "name": "ix_record_candidate_selections_fk_1",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_candidate_selections",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_candidate_selections_fk_2 ON public.record_candidate_selections USING btree (profile_id, profile_version)",
+      "name": "ix_record_candidate_selections_fk_2",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_candidate_selections",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_candidate_selections_fk_3 ON public.record_candidate_selections USING btree (workflow_id, experiment_id)",
+      "name": "ix_record_candidate_selections_fk_3",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_candidate_selections",
+      "unique_index": false,
+      "valid": true
+    },
+    {
       "definition": "CREATE INDEX ix_record_commands_fk_0 ON public.record_commands USING btree (experiment_id)",
       "name": "ix_record_commands_fk_0",
       "primary_index": false,
       "ready": true,
       "table_name": "record_commands",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_cycles_episode ON public.record_cycles USING btree (episode_id, experiment_id)",
+      "name": "ix_record_cycles_episode",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycles",
       "unique_index": false,
       "valid": true
     },
@@ -12813,6 +13713,15 @@
     {
       "definition": "CREATE INDEX ix_record_cycles_fk_2 ON public.record_cycles USING btree (seed_artifact_id, experiment_id, seed_kind, seed_version, seed_hash)",
       "name": "ix_record_cycles_fk_2",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycles",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_cycles_selection ON public.record_cycles USING btree (selection_id, experiment_id)",
+      "name": "ix_record_cycles_selection",
       "primary_index": false,
       "ready": true,
       "table_name": "record_cycles",
@@ -12901,6 +13810,15 @@
       "valid": true
     },
     {
+      "definition": "CREATE INDEX ix_record_profile_approver ON public.record_operator_profiles USING btree (approved_by)",
+      "name": "ix_record_profile_approver",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_operator_profiles",
+      "unique_index": false,
+      "valid": true
+    },
+    {
       "definition": "CREATE INDEX ix_record_research_attempts_fk_0 ON public.record_research_attempts USING btree (cycle_id, experiment_id)",
       "name": "ix_record_research_attempts_fk_0",
       "primary_index": false,
@@ -12948,6 +13866,24 @@
     {
       "definition": "CREATE INDEX ix_record_returns_fk_3 ON public.record_returns USING btree (verdict_id, experiment_id)",
       "name": "ix_record_returns_fk_3",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_returns",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_returns_idea ON public.record_returns USING btree (idea_artifact_id, experiment_id)",
+      "name": "ix_record_returns_idea",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_returns",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_returns_offer_bundle ON public.record_returns USING btree (offer_input_bundle_id, experiment_id)",
+      "name": "ix_record_returns_offer_bundle",
       "primary_index": false,
       "ready": true,
       "table_name": "record_returns",
@@ -13558,6 +14494,33 @@
       "valid": true
     },
     {
+      "definition": "CREATE UNIQUE INDEX record_candidate_selections_experiment_id_key ON public.record_candidate_selections USING btree (experiment_id)",
+      "name": "record_candidate_selections_experiment_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_candidate_selections",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_candidate_selections_id_experiment_id_key ON public.record_candidate_selections USING btree (id, experiment_id)",
+      "name": "record_candidate_selections_id_experiment_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_candidate_selections",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_candidate_selections_pkey ON public.record_candidate_selections USING btree (id)",
+      "name": "record_candidate_selections_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_candidate_selections",
+      "unique_index": true,
+      "valid": true
+    },
+    {
       "definition": "CREATE UNIQUE INDEX record_commands_command_key_key ON public.record_commands USING btree (command_key)",
       "name": "record_commands_command_key_key",
       "primary_index": false,
@@ -13612,15 +14575,6 @@
       "valid": true
     },
     {
-      "definition": "CREATE UNIQUE INDEX record_idea_acceptances_artifact_id_key ON public.record_idea_acceptances USING btree (artifact_id)",
-      "name": "record_idea_acceptances_artifact_id_key",
-      "primary_index": false,
-      "ready": true,
-      "table_name": "record_idea_acceptances",
-      "unique_index": true,
-      "valid": true
-    },
-    {
       "definition": "CREATE UNIQUE INDEX record_idea_acceptances_cycle_id_key ON public.record_idea_acceptances USING btree (cycle_id)",
       "name": "record_idea_acceptances_cycle_id_key",
       "primary_index": false,
@@ -13644,6 +14598,15 @@
       "primary_index": true,
       "ready": true,
       "table_name": "record_operator_profiles",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_operators_pkey ON public.record_operators USING btree (id)",
+      "name": "record_operators_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_operators",
       "unique_index": true,
       "valid": true
     },
@@ -13720,8 +14683,8 @@
       "valid": true
     },
     {
-      "definition": "CREATE UNIQUE INDEX record_returns_experiment_id_ordinal_key ON public.record_returns USING btree (experiment_id, ordinal)",
-      "name": "record_returns_experiment_id_ordinal_key",
+      "definition": "CREATE UNIQUE INDEX record_returns_experiment_id_kind_applicable_scope_id_ordin_key ON public.record_returns USING btree (experiment_id, kind, applicable_scope_id, ordinal)",
+      "name": "record_returns_experiment_id_kind_applicable_scope_id_ordin_key",
       "primary_index": false,
       "ready": true,
       "table_name": "record_returns",
@@ -14159,6 +15122,24 @@
       "table_name": "supply_references",
       "unique_index": true,
       "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX uq_record_operator_subject ON public.record_operators USING btree (auth_subject)",
+      "name": "uq_record_operator_subject",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_operators",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX uq_record_profile_owner_version ON public.record_operator_profiles USING btree (operator_id, version) WHERE (profile_schema_version = 2)",
+      "name": "uq_record_profile_owner_version",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_operator_profiles",
+      "unique_index": true,
+      "valid": true
     }
   ],
   "manifest_version": 1,
@@ -14341,6 +15322,12 @@
     {
       "force_row_security": false,
       "kind": "r",
+      "name": "record_candidate_selections",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
       "name": "record_commands",
       "row_security": false
     },
@@ -14366,6 +15353,12 @@
       "force_row_security": false,
       "kind": "r",
       "name": "record_operator_profiles",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_operators",
       "row_security": false
     },
     {
@@ -15957,6 +16950,110 @@
       "internal": true,
       "name": null,
       "table_name": "gov_evidence"
+    },
+    {
+      "constraint_name": "fk_record_profile_approver",
+      "constraint_table": "record_operator_profiles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
+    },
+    {
+      "constraint_name": "fk_record_profile_approver",
+      "constraint_table": "record_operator_profiles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "fk_record_profile_approver",
+      "constraint_table": "record_operator_profiles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
+    },
+    {
+      "constraint_name": "fk_record_profile_approver",
+      "constraint_table": "record_operator_profiles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "fk_record_profile_operator",
+      "constraint_table": "record_operator_profiles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
+    },
+    {
+      "constraint_name": "fk_record_profile_operator",
+      "constraint_table": "record_operator_profiles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "fk_record_profile_operator",
+      "constraint_table": "record_operator_profiles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
+    },
+    {
+      "constraint_name": "fk_record_profile_operator",
+      "constraint_table": "record_operator_profiles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
     },
     {
       "constraint_name": "fk_supply_batch_feedback",
@@ -18104,6 +19201,214 @@
       "table_name": "gov_experiments"
     },
     {
+      "constraint_name": "record_candidate_selections_agent_id_workflow_id_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
+    },
+    {
+      "constraint_name": "record_candidate_selections_agent_id_workflow_id_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_agents"
+    },
+    {
+      "constraint_name": "record_candidate_selections_agent_id_workflow_id_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
+    },
+    {
+      "constraint_name": "record_candidate_selections_agent_id_workflow_id_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_agents"
+    },
+    {
+      "constraint_name": "record_candidate_selections_artifact_id_experiment_id_arti_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
+    },
+    {
+      "constraint_name": "record_candidate_selections_artifact_id_experiment_id_arti_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_candidate_selections_artifact_id_experiment_id_arti_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
+    },
+    {
+      "constraint_name": "record_candidate_selections_artifact_id_experiment_id_arti_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_candidate_selections_profile_id_profile_version_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
+    },
+    {
+      "constraint_name": "record_candidate_selections_profile_id_profile_version_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
+    },
+    {
+      "constraint_name": "record_candidate_selections_profile_id_profile_version_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
+    },
+    {
+      "constraint_name": "record_candidate_selections_profile_id_profile_version_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
+    },
+    {
+      "constraint_name": "record_candidate_selections_workflow_id_experiment_id_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
+    },
+    {
+      "constraint_name": "record_candidate_selections_workflow_id_experiment_id_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_workflows"
+    },
+    {
+      "constraint_name": "record_candidate_selections_workflow_id_experiment_id_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
+    },
+    {
+      "constraint_name": "record_candidate_selections_workflow_id_experiment_id_fkey",
+      "constraint_table": "record_candidate_selections",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_workflows"
+    },
+    {
       "constraint_name": "record_commands_experiment_id_fkey",
       "constraint_table": "record_commands",
       "deferrable": false,
@@ -18169,6 +19474,58 @@
       "table_name": "record_cycles"
     },
     {
+      "constraint_name": "record_cycles_episode_id_experiment_id_fkey",
+      "constraint_table": "record_cycles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_cycles_episode_id_experiment_id_fkey",
+      "constraint_table": "record_cycles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_cycles_episode_id_experiment_id_fkey",
+      "constraint_table": "record_cycles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_cycles_episode_id_experiment_id_fkey",
+      "constraint_table": "record_cycles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
       "constraint_name": "record_cycles_experiment_id_fkey",
       "constraint_table": "record_cycles",
       "deferrable": false,
@@ -18323,6 +19680,58 @@
       "internal": true,
       "name": null,
       "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_cycles_selection_id_experiment_id_fkey",
+      "constraint_table": "record_cycles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_cycles_selection_id_experiment_id_fkey",
+      "constraint_table": "record_cycles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
+    },
+    {
+      "constraint_name": "record_cycles_selection_id_experiment_id_fkey",
+      "constraint_table": "record_cycles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_cycles_selection_id_experiment_id_fkey",
+      "constraint_table": "record_cycles",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_candidate_selections"
     },
     {
       "constraint_name": "record_experiments_id_fkey",
@@ -18999,6 +20408,110 @@
       "internal": true,
       "name": null,
       "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_returns_idea_artifact_id_experiment_id_fkey",
+      "constraint_table": "record_returns",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_returns"
+    },
+    {
+      "constraint_name": "record_returns_idea_artifact_id_experiment_id_fkey",
+      "constraint_table": "record_returns",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_returns_idea_artifact_id_experiment_id_fkey",
+      "constraint_table": "record_returns",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_returns"
+    },
+    {
+      "constraint_name": "record_returns_idea_artifact_id_experiment_id_fkey",
+      "constraint_table": "record_returns",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_returns_offer_input_bundle_id_experiment_id_fkey",
+      "constraint_table": "record_returns",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_returns"
+    },
+    {
+      "constraint_name": "record_returns_offer_input_bundle_id_experiment_id_fkey",
+      "constraint_table": "record_returns",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_returns_offer_input_bundle_id_experiment_id_fkey",
+      "constraint_table": "record_returns",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_returns"
+    },
+    {
+      "constraint_name": "record_returns_offer_input_bundle_id_experiment_id_fkey",
+      "constraint_table": "record_returns",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
     },
     {
       "constraint_name": "record_returns_to_cycle_id_experiment_id_fkey",
@@ -21435,6 +22948,19 @@
       "constraint_name": null,
       "constraint_table": null,
       "deferrable": false,
+      "definition": "CREATE TRIGGER record_artifact_dispositions_origin_guard BEFORE INSERT OR DELETE OR UPDATE ON record_artifact_dispositions FOR EACH ROW EXECUTE FUNCTION record_origin_return_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_origin_return_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_artifact_dispositions_origin_guard",
+      "table_name": "record_artifact_dispositions"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
       "definition": "CREATE TRIGGER record_artifact_links_guard BEFORE INSERT OR DELETE OR UPDATE ON record_artifact_links FOR EACH ROW EXECUTE FUNCTION record_guard()",
       "enabled": "O",
       "events": 31,
@@ -21461,6 +22987,19 @@
       "constraint_name": null,
       "constraint_table": null,
       "deferrable": false,
+      "definition": "CREATE TRIGGER record_artifacts_origin_guard BEFORE INSERT OR DELETE OR UPDATE ON record_artifacts FOR EACH ROW EXECUTE FUNCTION record_origin_return_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_origin_return_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_artifacts_origin_guard",
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
       "definition": "CREATE TRIGGER record_audit_guard BEFORE INSERT OR DELETE OR UPDATE ON record_audit FOR EACH ROW EXECUTE FUNCTION record_guard()",
       "enabled": "O",
       "events": 31,
@@ -21469,6 +23008,19 @@
       "internal": false,
       "name": "record_audit_guard",
       "table_name": "record_audit"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_candidate_selections_origin_guard BEFORE INSERT OR DELETE OR UPDATE ON record_candidate_selections FOR EACH ROW EXECUTE FUNCTION record_origin_return_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_origin_return_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_candidate_selections_origin_guard",
+      "table_name": "record_candidate_selections"
     },
     {
       "constraint_name": null,
@@ -21494,6 +23046,19 @@
       "initially_deferred": false,
       "internal": false,
       "name": "record_cycles_guard",
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_cycles_origin_guard BEFORE INSERT OR DELETE OR UPDATE ON record_cycles FOR EACH ROW EXECUTE FUNCTION record_origin_return_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_origin_return_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_cycles_origin_guard",
       "table_name": "record_cycles"
     },
     {
@@ -21526,10 +23091,23 @@
       "constraint_name": null,
       "constraint_table": null,
       "deferrable": false,
-      "definition": "CREATE TRIGGER record_operator_profiles_guard BEFORE INSERT OR DELETE OR UPDATE ON record_operator_profiles FOR EACH ROW EXECUTE FUNCTION record_guard()",
+      "definition": "CREATE TRIGGER record_operator_guard BEFORE INSERT OR DELETE OR UPDATE ON record_operators FOR EACH ROW EXECUTE FUNCTION record_operator_guard()",
       "enabled": "O",
       "events": 31,
-      "function_name": "public.record_guard",
+      "function_name": "public.record_operator_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_operator_guard",
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_operator_profiles_guard BEFORE INSERT OR DELETE OR UPDATE ON record_operator_profiles FOR EACH ROW EXECUTE FUNCTION record_profile_guard_v2()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_profile_guard_v2",
       "initially_deferred": false,
       "internal": false,
       "name": "record_operator_profiles_guard",
@@ -21578,6 +23156,19 @@
       "constraint_name": null,
       "constraint_table": null,
       "deferrable": false,
+      "definition": "CREATE TRIGGER record_research_attempts_origin_guard BEFORE INSERT OR DELETE OR UPDATE ON record_research_attempts FOR EACH ROW EXECUTE FUNCTION record_origin_return_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_origin_return_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_research_attempts_origin_guard",
+      "table_name": "record_research_attempts"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
       "definition": "CREATE TRIGGER record_returns_guard BEFORE INSERT OR DELETE OR UPDATE ON record_returns FOR EACH ROW EXECUTE FUNCTION record_guard()",
       "enabled": "O",
       "events": 31,
@@ -21585,6 +23176,19 @@
       "initially_deferred": false,
       "internal": false,
       "name": "record_returns_guard",
+      "table_name": "record_returns"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_returns_origin_guard BEFORE INSERT OR DELETE OR UPDATE ON record_returns FOR EACH ROW EXECUTE FUNCTION record_origin_return_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_origin_return_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_returns_origin_guard",
       "table_name": "record_returns"
     },
     {

@@ -8,9 +8,10 @@ from enum import StrEnum
 from typing import Any, Literal, Self
 from uuid import UUID
 
-from pydantic import AwareDatetime, Field, field_validator, model_validator
+from pydantic import AwareDatetime, Field, model_validator
 
 from alon_ai.providers.contracts import StrictDTO
+from alon_ai.records.operator_models import OperatorProfileVersion
 
 
 class ArtifactKind(StrEnum):
@@ -26,6 +27,7 @@ class ArtifactKind(StrEnum):
     MARKET_RESEARCH_REPORT = "MARKET_RESEARCH_REPORT"
     MARKET_RESEARCH_RECOMMENDATION = "MARKET_RESEARCH_RECOMMENDATION"
     RESEARCH_FEEDBACK_BRIEF = "RESEARCH_FEEDBACK_BRIEF"
+    OFFER_RESEARCH_GAP_BRIEF = "OFFER_RESEARCH_GAP_BRIEF"
     VALIDATION_RESULT = "VALIDATION_RESULT"
     ACCEPTANCE_RECEIPT = "ACCEPTANCE_RECEIPT"
 
@@ -56,6 +58,10 @@ _PAYLOAD_FIELDS: dict[ArtifactKind, dict[str, type]] = {
     ArtifactKind.MARKET_RESEARCH_RECOMMENDATION: {
         "recommendation": str,
         "rationale": str,
+    },
+    ArtifactKind.OFFER_RESEARCH_GAP_BRIEF: {
+        "required_evidence": list,
+        "justification": str,
     },
     ArtifactKind.RESEARCH_FEEDBACK_BRIEF: {"preserve": list, "change": list},
     ArtifactKind.VALIDATION_RESULT: {
@@ -96,7 +102,6 @@ def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, A
             raise ValueError("invalid artifact payload value")
     if kind is ArtifactKind.IDEA_SEED and payload["origin"] not in {
         "USER_SUPPLIED",
-        "AGENT_DISCOVERED",
     }:
         raise ValueError("invalid idea origin")
     if kind is ArtifactKind.MARKET_RESEARCH_RECOMMENDATION and payload[
@@ -151,23 +156,8 @@ def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, A
     return payload
 
 
-class OperatorCapabilityProfile(StrictDTO):
-    id: UUID
-    version: int = Field(ge=1)
-    operator_id: UUID
-    capabilities: tuple[str, ...] = Field(min_length=1, max_length=32)
-    constraints: tuple[str, ...] = Field(min_length=1, max_length=32)
-    created_at: AwareDatetime
-
-    @field_validator("capabilities", "constraints")
-    @classmethod
-    def normalized_tokens(cls, value: tuple[str, ...]) -> tuple[str, ...]:
-        if len(value) != len(set(value)) or any(
-            not item or len(item) > 100 or not item.replace("_", "").isalnum()
-            for item in value
-        ):
-            raise ValueError("invalid capability token")
-        return value
+# Compatibility name; authorization belongs to the explicit operator registry.
+OperatorCapabilityProfile = OperatorProfileVersion
 
 
 class ProductExperiment(StrictDTO):

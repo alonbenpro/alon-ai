@@ -214,12 +214,65 @@ outbox = table(
     UniqueConstraint("command_id"),
 )
 
+candidate_selections = table(
+    "candidate_selections",
+    gov.col("id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("artifact_id", gov.U),
+    gov.col("artifact_kind", String(64)),
+    gov.col("artifact_version", Integer),
+    gov.col("artifact_hash", String(64)),
+    gov.col("workflow_id", gov.U),
+    gov.col("agent_id", gov.U),
+    gov.col("profile_id", gov.U),
+    gov.col("profile_version", Integer),
+    gov.col("selected_by", gov.U),
+    gov.col("reason", String(4000)),
+    gov.col("created_at", gov.T),
+    ForeignKeyConstraint(
+        [
+            "artifact_id",
+            "experiment_id",
+            "artifact_kind",
+            "artifact_version",
+            "artifact_hash",
+        ],
+        [
+            "record_artifacts.id",
+            "record_artifacts.experiment_id",
+            "record_artifacts.kind",
+            "record_artifacts.version",
+            "record_artifacts.content_hash",
+        ],
+    ),
+    ForeignKeyConstraint(
+        ["workflow_id", "experiment_id"],
+        ["record_workflows.id", "record_workflows.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["agent_id", "workflow_id"], ["record_agents.id", "record_agents.workflow_id"]
+    ),
+    ForeignKeyConstraint(
+        ["profile_id", "profile_version"],
+        ["record_operator_profiles.id", "record_operator_profiles.version"],
+    ),
+    UniqueConstraint("experiment_id"),
+    UniqueConstraint("id", "experiment_id"),
+    CheckConstraint(
+        "artifact_kind='IDEA_CANDIDATE' AND length(btrim(reason)) BETWEEN 1 AND 4000"
+    ),
+)
+
 cycles = table(
     "cycles",
     gov.col("id", gov.U, primary_key=True),
     gov.col("experiment_id", gov.U),
     gov.col("ordinal", Integer),
     gov.col("parent_cycle_id", gov.U, nullable=True),
+    gov.col("idea_mode", String(32)),
+    gov.col("selection_id", gov.U, nullable=True),
+    gov.col("purpose", String(32)),
+    gov.col("episode_id", gov.U),
     gov.col("seed_artifact_id", gov.U),
     gov.col("seed_kind", String(64)),
     gov.col("seed_version", Integer),
@@ -242,7 +295,28 @@ cycles = table(
     ),
     UniqueConstraint("id", "experiment_id"),
     UniqueConstraint("experiment_id", "ordinal"),
-    CheckConstraint("ordinal BETWEEN 1 AND 3 AND seed_kind='IDEA_SEED'"),
+    ForeignKeyConstraint(
+        ["selection_id", "experiment_id"],
+        ["record_candidate_selections.id", "record_candidate_selections.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["episode_id", "experiment_id"],
+        ["record_cycles.id", "record_cycles.experiment_id"],
+    ),
+    CheckConstraint("ordinal > 0"),
+    CheckConstraint(
+        "(idea_mode='USER_SEEDED_REFINEMENT' AND seed_kind='IDEA_SEED' AND selection_id IS NULL) OR (idea_mode='SYSTEM_DISCOVERY' AND seed_kind='IDEA_CANDIDATE' AND selection_id IS NOT NULL)"
+    ),
+    gov.enumcheck(
+        "purpose",
+        [
+            "INITIAL",
+            "SAME_INTENT_RETURN",
+            "MATERIAL_PIVOT_RETURN",
+            "INCONCLUSIVE_SUPPLEMENT",
+            "OFFER_GAP_RETURN",
+        ],
+    ),
 )
 
 pivot_decisions = table(
@@ -314,7 +388,6 @@ idea_acceptances = table(
     ),
     ForeignKeyConstraint(["pivot_approval_id"], ["record_pivot_decisions.id"]),
     UniqueConstraint("cycle_id"),
-    UniqueConstraint("artifact_id"),
     CheckConstraint("artifact_kind='IDEA_BRIEF'"),
 )
 
@@ -434,6 +507,10 @@ returns = table(
     gov.col("verdict_id", gov.U),
     gov.col("to_cycle_id", gov.U),
     gov.col("ordinal", Integer),
+    gov.col("kind", String(32)),
+    gov.col("applicable_scope_id", gov.U),
+    gov.col("idea_artifact_id", gov.U),
+    gov.col("offer_input_bundle_id", gov.U, nullable=True),
     gov.col("feedback_artifact_id", gov.U),
     gov.col("feedback_kind", String(64)),
     gov.col("feedback_version", Integer),
@@ -469,9 +546,21 @@ returns = table(
     ),
     UniqueConstraint("verdict_id"),
     UniqueConstraint("to_cycle_id"),
-    UniqueConstraint("experiment_id", "ordinal"),
+    ForeignKeyConstraint(
+        ["offer_input_bundle_id", "experiment_id"],
+        ["record_artifacts.id", "record_artifacts.experiment_id"],
+    ),
+    CheckConstraint("(kind='OFFER_GAP') = (offer_input_bundle_id IS NOT NULL)"),
+    ForeignKeyConstraint(
+        ["idea_artifact_id", "experiment_id"],
+        ["record_artifacts.id", "record_artifacts.experiment_id"],
+    ),
+    UniqueConstraint("experiment_id", "kind", "applicable_scope_id", "ordinal"),
     CheckConstraint(
-        "ordinal BETWEEN 1 AND 2 AND feedback_kind='RESEARCH_FEEDBACK_BRIEF'"
+        "(kind='SAME_INTENT' AND ordinal BETWEEN 1 AND 2) OR (kind IN ('INCONCLUSIVE_SUPPLEMENT','OFFER_GAP') AND ordinal=1) OR (kind='MATERIAL_PIVOT' AND ordinal>0)"
+    ),
+    CheckConstraint(
+        "(kind='OFFER_GAP' AND feedback_kind='OFFER_RESEARCH_GAP_BRIEF') OR (kind<>'OFFER_GAP' AND feedback_kind='RESEARCH_FEEDBACK_BRIEF')"
     ),
 )
 
@@ -541,6 +630,7 @@ RECORD_TABLES = (
     commands,
     audit,
     outbox,
+    candidate_selections,
     cycles,
     pivot_decisions,
     idea_acceptances,
@@ -550,10 +640,27 @@ RECORD_TABLES = (
     artifact_dispositions,
 )
 
+# Preserve indexes from applied migration04 when new foreign keys are added.
+_ADDITIONAL_FK_INDEXES = {
+    ("record_cycles", "episode_id"): "ix_record_cycles_episode",
+    ("record_cycles", "selection_id"): "ix_record_cycles_selection",
+    ("record_returns", "idea_artifact_id"): "ix_record_returns_idea",
+    ("record_returns", "offer_input_bundle_id"): "ix_record_returns_offer_bundle",
+}
 for tab in RECORD_TABLES:
+    existing_foreign_keys = []
+    for fk in tab.foreign_key_constraints:
+        first_column = fk.elements[0].parent.name
+        explicit_name = _ADDITIONAL_FK_INDEXES.get((tab.name, first_column))
+        if explicit_name:
+            Index(
+                explicit_name, *[tab.c[element.parent.name] for element in fk.elements]
+            )
+        else:
+            existing_foreign_keys.append(fk)
     for index, fk in enumerate(
         sorted(
-            tab.foreign_key_constraints,
+            existing_foreign_keys,
             key=lambda item: tuple(element.parent.name for element in item.elements),
         )
     ):

@@ -2,6 +2,7 @@
 
 import asyncio
 from datetime import UTC, datetime, timedelta
+from decimal import Decimal
 from uuid import UUID, uuid4
 
 import pytest
@@ -13,7 +14,11 @@ from alon_ai.records import (
     ArtifactDraft,
     ArtifactInput,
     ArtifactKind,
+    CommercialConstraints,
+    DeliveryConstraints,
     OperatorCapabilityProfile,
+    OperatorIdentity,
+    OperatorRepository,
     ProductAgent,
     ProductExperiment,
     ProductRecordsDenied,
@@ -53,14 +58,63 @@ def artifact(
     )
 
 
+async def register_test_operator(engine):
+    await OperatorRepository(engine, clock=lambda: NOW).register_operator(
+        OperatorIdentity(
+            id=UUID(int=1),
+            auth_subject="synthetic:operator",
+            display_name="Synthetic operator",
+        ),
+        command_key=UUID(int=10001),
+    )
+
+
+async def accept_feedback(repo, experiment_id, feedback):
+    validation = await repo.append_artifact(
+        artifact(
+            experiment_id,
+            ArtifactKind.VALIDATION_RESULT,
+            {
+                "validator": "synthetic-return-validator",
+                "disposition": "PASS",
+                "reason": "Exact evidence justifies return",
+            },
+        ),
+        inputs=(ArtifactInput.from_receipt(feedback, role="TARGET"),),
+        command_key=uuid4(),
+    )
+    await repo.record_disposition(
+        ArtifactInput.from_receipt(feedback, role="TARGET"),
+        experiment_id=experiment_id,
+        disposition="ACCEPTED",
+        validation=ArtifactInput.from_receipt(validation, role="VALIDATION"),
+        decided_by=UUID(int=1),
+        command_key=uuid4(),
+    )
+
+
 async def roots(engine, *, suffix="root"):
     experiment_id, workflow_id, agent_id = uuid4(), uuid4(), uuid4()
     profile = OperatorCapabilityProfile(
-        id=uuid4(),
+        id=UUID(int=2),
         version=1,
         operator_id=UUID(int=1),
-        capabilities=("RESEARCH_REVIEW", "MATERIAL_PIVOT_APPROVAL"),
-        constraints=("SYNTHETIC_ONLY",),
+        capabilities=("Python backend development",),
+        constraints=("Synthetic work only",),
+        delivery=DeliveryConstraints(
+            max_project_hours=Decimal(80),
+            hours_per_week=Decimal(20),
+            concurrent_projects=1,
+        ),
+        commercial=CommercialConstraints(
+            currency="ILS",
+            hourly_cost=Decimal(100),
+            minimum_project_price=Decimal(5000),
+            minimum_margin_rate=Decimal("0.4"),
+            maximum_discount_rate=Decimal("0.1"),
+            minimum_deposit_rate=Decimal("0.5"),
+        ),
+        approved_by=UUID(int=1),
         created_at=NOW,
     )
     async with engine.begin() as connection:
@@ -72,7 +126,8 @@ async def roots(engine, *, suffix="root"):
             insert(gov.agents).values(id=agent_id, workflow_id=workflow_id)
         )
     repo = ProductRecordsRepository(engine, clock=lambda: NOW)
-    await repo.register_profile(profile, command_key=uuid4())
+    await register_test_operator(engine)
+    await repo.register_profile(profile, command_key=UUID(int=10002))
     await repo.bind_roots(
         ProductExperiment(
             id=experiment_id,
@@ -317,14 +372,29 @@ async def test_source_reference_is_exact_but_does_not_block_retention_purge(
         )
     product = ProductRecordsRepository(governance_engine, clock=lambda: now)
     profile = OperatorCapabilityProfile(
-        id=uuid4(),
+        id=UUID(int=2),
         version=1,
         operator_id=UUID(int=1),
-        capabilities=("RESEARCH_REVIEW",),
-        constraints=("SYNTHETIC_ONLY",),
+        capabilities=("Python backend development",),
+        constraints=("Synthetic work only",),
+        delivery=DeliveryConstraints(
+            max_project_hours=Decimal(80),
+            hours_per_week=Decimal(20),
+            concurrent_projects=1,
+        ),
+        commercial=CommercialConstraints(
+            currency="ILS",
+            hourly_cost=Decimal(100),
+            minimum_project_price=Decimal(5000),
+            minimum_margin_rate=Decimal("0.4"),
+            maximum_discount_rate=Decimal("0.1"),
+            minimum_deposit_rate=Decimal("0.5"),
+        ),
+        approved_by=UUID(int=1),
         created_at=now,
     )
-    await product.register_profile(profile, command_key=uuid4())
+    await register_test_operator(governance_engine)
+    await product.register_profile(profile, command_key=UUID(int=10002))
     await product.bind_roots(
         ProductExperiment(
             id=attr.experiment_id,
@@ -503,7 +573,16 @@ async def test_cycle_acceptance_verdict_return_and_material_pivot_gates(
         ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
         {"preserve": ["Core pain"], "change": ["Narrow buyer"]},
     )
-    feedback_receipt = await repo.append_artifact(feedback, command_key=uuid4())
+    feedback_receipt = await repo.append_artifact(
+        feedback,
+        inputs=(
+            ArtifactInput.from_receipt(idea_receipt, role="ACCEPTED_IDEA"),
+            ArtifactInput.from_receipt(report_receipt, role="REPORT"),
+            ArtifactInput.from_receipt(recommendation_receipt, role="RECOMMENDATION"),
+        ),
+        command_key=uuid4(),
+    )
+    await accept_feedback(repo, experiment_id, feedback_receipt)
     next_cycle = await repo.return_to_refinement(
         verdict.id,
         feedback=ArtifactInput.from_receipt(feedback_receipt, role="FEEDBACK"),

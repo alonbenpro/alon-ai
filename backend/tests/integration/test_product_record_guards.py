@@ -5,7 +5,7 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy import insert, select
 from sqlalchemy.exc import SQLAlchemyError
-from test_product_records import NOW, artifact, roots
+from test_product_records import NOW, accept_feedback, artifact, roots
 
 from alon_ai.records import (
     ArtifactInput,
@@ -188,7 +188,13 @@ async def test_authoritative_receipts_close_artifact_lineage(
         experiment_id,
         ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
         {"preserve": ["Intent"], "change": ["Buyer"]},
+        inputs=(
+            ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA"),
+            ArtifactInput.from_receipt(report, role="REPORT"),
+            ArtifactInput.from_receipt(recommendation, role="RECOMMENDATION"),
+        ),
     )
+    await accept_feedback(repo, experiment_id, feedback)
     await repo.return_to_refinement(
         verdict.id,
         feedback=ArtifactInput.from_receipt(feedback, role="FEEDBACK"),
@@ -463,7 +469,13 @@ async def test_receipt_replays_compare_all_decision_arguments(governance_engine)
         experiment_id,
         ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
         {"preserve": ["Intent"], "change": ["Buyer"]},
+        inputs=(
+            ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA"),
+            ArtifactInput.from_receipt(report, role="REPORT"),
+            ArtifactInput.from_receipt(recommendation, role="RECOMMENDATION"),
+        ),
     )
+    await accept_feedback(repo, experiment_id, feedback)
     feedback_ref = ArtifactInput.from_receipt(feedback, role="FEEDBACK")
     key = uuid4()
     next_cycle = await repo.return_to_refinement(

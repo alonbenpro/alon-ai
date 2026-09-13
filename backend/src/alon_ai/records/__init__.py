@@ -19,6 +19,13 @@ from alon_ai.records.models import (
     SourceReference,
     VerdictReceipt,
 )
+from alon_ai.records.operator_models import (
+    CommercialConstraints,
+    DeliveryConstraints,
+    OperatorIdentity,
+    OperatorProfileVersion,
+)
+from alon_ai.records.operators import OperatorRepository
 from alon_ai.records.repository import ProductRecordsRepository
 
 __all__ = [
@@ -28,9 +35,14 @@ __all__ = [
     "ArtifactKind",
     "ArtifactReceipt",
     "CommandReceipt",
+    "CommercialConstraints",
     "CycleReceipt",
+    "DeliveryConstraints",
     "IdeaAcceptanceReceipt",
     "OperatorCapabilityProfile",
+    "OperatorIdentity",
+    "OperatorProfileVersion",
+    "OperatorRepository",
     "PivotDecisionReceipt",
     "ProductAgent",
     "ProductExperiment",
