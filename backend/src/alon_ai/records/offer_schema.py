@@ -389,6 +389,7 @@ initial_outreach_policies = table(
     gov.col("detailed_scope", String(16)),
     gov.col("budget_question", String(16)),
     gov.col("primary_goal", String(40)),
+    gov.col("max_sequence_steps", Integer, nullable=True),
     ForeignKeyConstraint(
         [
             "artifact_id",
@@ -414,7 +415,8 @@ initial_outreach_policies = table(
     UniqueConstraint("offer_id"),
     CheckConstraint(
         "pricing='OMIT' AND formal_proposal='FORBIDDEN' AND detailed_scope='OMIT' AND "
-        "budget_question='FORBIDDEN' AND primary_goal='START_RELEVANT_CONVERSATION'"
+        "budget_question='FORBIDDEN' AND primary_goal='START_RELEVANT_CONVERSATION' AND "
+        "(max_sequence_steps IS NULL OR max_sequence_steps>0)"
     ),
 )
 

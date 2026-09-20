@@ -21,14 +21,28 @@ from test_offer_records import (
     ready_proposal,
 )
 from test_organization_records import complete_content, provision_call, snapshot
-from test_product_records import NOW
+from test_product_records import NOW, artifact
 
 from alon_ai.contact import ContactPolicyRepository
 from alon_ai.providers.contracts import Capability, ContentField
 from alon_ai.providers.execution import ExecutionResult
-from alon_ai.records import ArtifactInput, ArtifactKind, ProductRecordsDenied
+from alon_ai.records import (
+    AngleCandidateInput,
+    ArtifactInput,
+    ArtifactKind,
+    ClaimInput,
+    DraftGraphRequest,
+    EvidenceCoverageInput,
+    FreezeOutreachContextRequest,
+    OutreachRecordsRepository,
+    ProductRecordsDenied,
+    ProductRecordsRepository,
+    SequenceStepInput,
+    SubjectCandidateInput,
+)
 from alon_ai.records import offer_schema as offers
 from alon_ai.records import organization_schema as organizations
+from alon_ai.records import outreach_schema as outreach
 from alon_ai.records import qualification_schema as qualification
 from alon_ai.records.offer_models import (
     INITIAL_OUTREACH_POLICY,
@@ -692,4 +706,287 @@ async def test_exact_fifty_freeze_is_atomic_protected_and_replayable(governance_
                 )
             )
             == "TARGET_50_REACHED"
+        )
+
+
+async def test_outreach_context_and_draft_are_complete_safe_and_replayable(
+    governance_engine,
+):
+    (
+        experiment_id,
+        acceptance,
+        criteria,
+        plan,
+        _,
+        _,
+        leads,
+    ) = await qualified_pool(governance_engine, size=50)
+    qualification_repo = QualificationCohortRepository(
+        governance_engine, lookup_key=KEY, clock=lambda: NOW
+    )
+    decisions = []
+    dossiers = []
+    for index, lead in enumerate(leads):
+        dossier = await qualification_repo.record_dossier(
+            dossier_request(acceptance, lead, index), command_key=uuid4()
+        )
+        dossiers.append(dossier)
+        decisions.append(
+            await qualification_repo.decide(
+                await decision_request(
+                    lead,
+                    dossier,
+                    criteria,
+                    policy_ref=plan.qualification_rule_id,
+                ),
+                command_key=uuid4(),
+            )
+        )
+    cohort = await qualification_repo.freeze_cohort(
+        FreezeCohortRequest(
+            offer_acceptance_id=acceptance["id"],
+            decision_ids=tuple(item.id for item in decisions),
+            frozen_by=OWNER,
+        ),
+        command_key=uuid4(),
+    )
+    model_context = await provision_call(
+        governance_engine,
+        experiment_id,
+        Capability.OPENAI_GENERATE,
+        {ContentField.COMPANY},
+    )
+    model_config = model_context[2]
+    records_repo = ProductRecordsRepository(governance_engine, clock=lambda: NOW)
+    prompt = await put(
+        records_repo,
+        experiment_id,
+        ArtifactKind.OUTREACH_PROMPT_CONFIGURATION,
+        {"template": "Use only evidence linked to this frozen context."},
+    )
+    context_draft = artifact(
+        experiment_id,
+        ArtifactKind.OUTREACH_CONTEXT_BUNDLE,
+        {
+            "status": "FROZEN",
+            "recipient_mode": "GENERAL_BUSINESS_INBOX",
+            "recipient_label": None,
+            "greeting": "Hello team",
+        },
+    )
+    context_request = FreezeOutreachContextRequest(
+        cohort_id=cohort.id,
+        decision_id=decisions[0].id,
+        artifact=context_draft,
+        prompt_configuration=ArtifactInput.from_receipt(
+            prompt, role="PROMPT_CONFIGURATION"
+        ),
+        model_config_id=model_config.id,
+        coverage=(
+            EvidenceCoverageInput(
+                evidence_id=dossiers[0].evidence_ids[0], disposition="USED"
+            ),
+        ),
+        frozen_by=OWNER,
+    )
+    outreach_repo = OutreachRecordsRepository(
+        governance_engine, lookup_key=KEY, clock=lambda: NOW
+    )
+    with pytest.raises(ProductRecordsDenied, match="INCOMPLETE_EVIDENCE_COVERAGE"):
+        await outreach_repo.freeze_context(
+            context_request.model_copy(update={"coverage": ()}), command_key=uuid4()
+        )
+    context_key = uuid4()
+    context = await outreach_repo.freeze_context(
+        context_request, command_key=context_key
+    )
+    assert (
+        await outreach_repo.freeze_context(context_request, command_key=context_key)
+        == context
+    )
+    sensitive_context = await outreach_repo.freeze_context(
+        context_request.model_copy(
+            update={
+                "decision_id": decisions[1].id,
+                "artifact": artifact(
+                    experiment_id,
+                    ArtifactKind.OUTREACH_CONTEXT_BUNDLE,
+                    context_draft.payload,
+                ),
+                "coverage": (
+                    EvidenceCoverageInput(
+                        evidence_id=dossiers[1].evidence_ids[0],
+                        disposition="REJECTED_SENSITIVE",
+                        reason_code="SENSITIVE_PERSONAL_INFORMATION",
+                    ),
+                ),
+            }
+        ),
+        command_key=uuid4(),
+    )
+
+    evidence_id = dossiers[0].evidence_ids[0]
+    angle_id, subject_id = uuid4(), uuid4()
+    narrative = artifact(
+        experiment_id,
+        ArtifactKind.LEAD_OPPORTUNITY_NARRATIVE,
+        {"text": "The retained evidence identifies a follow-up problem."},
+    )
+    strategy = artifact(
+        experiment_id,
+        ArtifactKind.CONVERSATION_STRATEGY,
+        {"text": "Open a relevant business conversation without a proposal."},
+    )
+    sequence = artifact(
+        experiment_id,
+        ArtifactKind.OUTREACH_SEQUENCE_PLAN,
+        {"objective": "Start a relevant conversation", "step_count": 2},
+    )
+    email = artifact(
+        experiment_id,
+        ArtifactKind.EMAIL_DRAFT,
+        {
+            "recipient_mode": "GENERAL_BUSINESS_INBOX",
+            "greeting": "Hello team",
+            "subject": "A question about lead follow-up",
+            "body": "Your public information suggests lead follow-up is manual. Is improving it relevant?",
+        },
+    )
+    draft_request = DraftGraphRequest(
+        context_id=context.id,
+        angles=(
+            AngleCandidateInput(
+                id=angle_id,
+                rank=1,
+                text="Manual lead follow-up",
+                evidence_ids=(evidence_id,),
+            ),
+        ),
+        narrative=narrative,
+        strategy=strategy,
+        subjects=(
+            SubjectCandidateInput(
+                id=subject_id,
+                rank=1,
+                text="A question about lead follow-up",
+                evidence_ids=(evidence_id,),
+            ),
+        ),
+        sequence=sequence,
+        sequence_steps=(
+            SequenceStepInput(
+                ordinal=1, delay_days=0, objective="Initial relevant question"
+            ),
+            SequenceStepInput(
+                ordinal=2, delay_days=4, objective="One evidence-based follow-up"
+            ),
+        ),
+        draft=email,
+        primary_angle_id=angle_id,
+        subject_id=subject_id,
+        cta="Is improving this relevant?",
+        claims=(
+            ClaimInput(
+                artifact_id=narrative.id,
+                ordinal=1,
+                text="Lead follow-up is manual.",
+                kind="FACTUAL",
+                evidence_ids=(evidence_id,),
+                offer_field_paths=(),
+            ),
+            ClaimInput(
+                artifact_id=email.id,
+                ordinal=1,
+                text="Improving lead follow-up is within the offer problem.",
+                kind="COMMERCIAL",
+                evidence_ids=(),
+                offer_field_paths=("problem",),
+            ),
+        ),
+        validator="OUTREACH_DRAFT_V1",
+        validator_version=1,
+        recorded_by=OWNER,
+    )
+    sensitive_evidence_id = dossiers[1].evidence_ids[0]
+    with pytest.raises(ProductRecordsDenied, match="REJECTED_EVIDENCE_REFERENCE"):
+        await outreach_repo.record_draft(
+            draft_request.model_copy(
+                update={
+                    "context_id": sensitive_context.id,
+                    "angles": (
+                        draft_request.angles[0].model_copy(
+                            update={"evidence_ids": (sensitive_evidence_id,)}
+                        ),
+                    ),
+                    "subjects": (
+                        draft_request.subjects[0].model_copy(
+                            update={"evidence_ids": (sensitive_evidence_id,)}
+                        ),
+                    ),
+                    "claims": (
+                        draft_request.claims[0].model_copy(
+                            update={"evidence_ids": (sensitive_evidence_id,)}
+                        ),
+                        draft_request.claims[1],
+                    ),
+                }
+            ),
+            command_key=uuid4(),
+        )
+    with pytest.raises(ProductRecordsDenied, match="RECIPIENT_GREETING_MISMATCH"):
+        bad_email = email.model_copy(
+            update={
+                "payload": {
+                    **email.payload,
+                    "greeting": "Hi Alice",
+                }
+            }
+        )
+        await outreach_repo.record_draft(
+            draft_request.model_copy(update={"draft": bad_email}),
+            command_key=uuid4(),
+        )
+    with pytest.raises(ProductRecordsDenied, match="SEQUENCE_POLICY_LIMIT"):
+        too_long = tuple(
+            SequenceStepInput(ordinal=index, delay_days=index, objective="Follow-up")
+            for index in range(1, 5)
+        )
+        await outreach_repo.record_draft(
+            draft_request.model_copy(
+                update={
+                    "sequence_steps": too_long,
+                    "sequence": sequence.model_copy(
+                        update={"payload": {**sequence.payload, "step_count": 4}}
+                    ),
+                }
+            ),
+            command_key=uuid4(),
+        )
+    draft_key = uuid4()
+    validation = await outreach_repo.record_draft(draft_request, command_key=draft_key)
+    assert validation.disposition == "PASS"
+    assert (
+        await outreach_repo.record_draft(draft_request, command_key=draft_key)
+        == validation
+    )
+    with pytest.raises(SQLAlchemyError):
+        async with governance_engine.begin() as connection:
+            await connection.execute(
+                insert(outreach.draft_angles).values(
+                    draft_artifact_id=validation.draft_id,
+                    context_id=context.id,
+                    angle_id=angle_id,
+                    role="PRIMARY",
+                )
+            )
+    async with governance_engine.connect() as connection:
+        assert (
+            await connection.scalar(
+                select(func.count()).select_from(outreach.validations)
+            )
+            == 1
+        )
+        assert (
+            await connection.scalar(select(func.count()).select_from(outreach.coverage))
+            == 2
         )

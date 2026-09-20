@@ -157,11 +157,15 @@ async def provision_call(
         plan_identifier="fixture",
         order_form_ref="fixture",
         terms_version="fixture",
-        purpose=Purpose.GATEWAY_EFFECT
-        if capability == Capability.GMAIL_SEND
-        else Purpose.LEAD_DISCOVERY
-        if capability.name.startswith("BRAVE")
-        else Purpose.RESEARCH,
+        purpose=(
+            Purpose.GATEWAY_EFFECT
+            if capability == Capability.GMAIL_SEND
+            else Purpose.GENERATION
+            if capability == Capability.OPENAI_GENERATE
+            else Purpose.LEAD_DISCOVERY
+            if capability.name.startswith("BRAVE")
+            else Purpose.RESEARCH
+        ),
         required_fields=frozenset(fields),
     )
     policy = ControlPolicy(
@@ -187,8 +191,8 @@ async def provision_call(
         **use.model_dump(exclude={"schema_version", "required_fields"}),
         outbound_use_permitted=True,
         storage_fields=use.required_fields,
-        retention_rule_id=uuid4(),
-        retention_seconds=3600,
+        retention_rule_id=uuid4() if use.required_fields else None,
+        retention_seconds=3600 if use.required_fields else None,
         approved_by=OWNER,
         approved_at=NOW - timedelta(days=2),
         effective_at=NOW - timedelta(days=1),
@@ -199,6 +203,9 @@ async def provision_call(
     await admin.grant(grant)
     price = PriceVersion(
         id=uuid4(),
+        model_identifier="fixture-model"
+        if capability == Capability.OPENAI_GENERATE
+        else None,
         capability=capability,
         component=UsageComponent.REQUEST,
         currency="USD",
@@ -230,6 +237,9 @@ async def provision_call(
         fx_id=fx.id,
         requested_count=1,
         adapter_version=uuid4(),
+        model_identifier="fixture-model"
+        if capability == Capability.OPENAI_GENERATE
+        else None,
     )
     await admin.config(config)
     await admin.budgets(

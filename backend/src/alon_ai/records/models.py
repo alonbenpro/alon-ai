@@ -35,6 +35,13 @@ class ArtifactKind(StrEnum):
     OFFER_PACKAGE = "OFFER_PACKAGE"
     OFFER_QUALIFICATION_PROFILE = "OFFER_QUALIFICATION_PROFILE"
     INITIAL_OUTREACH_POLICY = "INITIAL_OUTREACH_POLICY"
+    OUTREACH_PROMPT_CONFIGURATION = "OUTREACH_PROMPT_CONFIGURATION"
+    OUTREACH_CONTEXT_BUNDLE = "OUTREACH_CONTEXT_BUNDLE"
+    LEAD_OPPORTUNITY_NARRATIVE = "LEAD_OPPORTUNITY_NARRATIVE"
+    CONVERSATION_STRATEGY = "CONVERSATION_STRATEGY"
+    OUTREACH_SEQUENCE_PLAN = "OUTREACH_SEQUENCE_PLAN"
+    EMAIL_DRAFT = "EMAIL_DRAFT"
+    DRAFT_VALIDATION_RESULT = "DRAFT_VALIDATION_RESULT"
     VALIDATION_RESULT = "VALIDATION_RESULT"
     ACCEPTANCE_RECEIPT = "ACCEPTANCE_RECEIPT"
 
@@ -128,6 +135,29 @@ _PAYLOAD_FIELDS: dict[ArtifactKind, dict[str, type]] = {
         "detailed_scope": str,
         "budget_question": str,
         "primary_goal": str,
+        "max_sequence_steps": int,
+    },
+    ArtifactKind.OUTREACH_PROMPT_CONFIGURATION: {"template": str},
+    ArtifactKind.OUTREACH_CONTEXT_BUNDLE: {
+        "status": str,
+        "recipient_mode": str,
+        "recipient_label": object,
+        "greeting": str,
+    },
+    ArtifactKind.LEAD_OPPORTUNITY_NARRATIVE: {"text": str},
+    ArtifactKind.CONVERSATION_STRATEGY: {"text": str},
+    ArtifactKind.OUTREACH_SEQUENCE_PLAN: {"objective": str, "step_count": int},
+    ArtifactKind.EMAIL_DRAFT: {
+        "recipient_mode": str,
+        "greeting": str,
+        "subject": str,
+        "body": str,
+    },
+    ArtifactKind.DRAFT_VALIDATION_RESULT: {
+        "validator": str,
+        "disposition": str,
+        "input_hash": str,
+        "reason_codes": list,
     },
     ArtifactKind.RESEARCH_FEEDBACK_BRIEF: {"preserve": list, "change": list},
     ArtifactKind.VALIDATION_RESULT: {
@@ -162,7 +192,13 @@ def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, A
             continue
         elif (
             not isinstance(value, list)
-            or not value
+            or (
+                not value
+                and not (
+                    kind is ArtifactKind.DRAFT_VALIDATION_RESULT
+                    and key == "reason_codes"
+                )
+            )
             or not all(_nonempty(item) for item in value)
         ):
             raise ValueError("invalid artifact payload value")
@@ -257,14 +293,56 @@ def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, A
             or exponent < -2
         ):
             raise ValueError("invalid offer economics")
-    if kind is ArtifactKind.INITIAL_OUTREACH_POLICY and payload != {
-        "pricing": "OMIT",
-        "formal_proposal": "FORBIDDEN",
-        "detailed_scope": "OMIT",
-        "budget_question": "FORBIDDEN",
-        "primary_goal": "START_RELEVANT_CONVERSATION",
+    if kind is ArtifactKind.INITIAL_OUTREACH_POLICY:
+        fixed = {
+            key: value for key, value in payload.items() if key != "max_sequence_steps"
+        }
+        if (
+            fixed
+            != {
+                "pricing": "OMIT",
+                "formal_proposal": "FORBIDDEN",
+                "detailed_scope": "OMIT",
+                "budget_question": "FORBIDDEN",
+                "primary_goal": "START_RELEVANT_CONVERSATION",
+            }
+            or payload["max_sequence_steps"] <= 0
+        ):
+            raise ValueError("invalid initial outreach policy")
+    if kind is ArtifactKind.OUTREACH_CONTEXT_BUNDLE and payload["status"] != "FROZEN":
+        raise ValueError("outreach context must be frozen")
+    if kind in {
+        ArtifactKind.OUTREACH_CONTEXT_BUNDLE,
+        ArtifactKind.EMAIL_DRAFT,
+    } and payload["recipient_mode"] not in {
+        "NAMED_PERSON",
+        "ROLE_INBOX",
+        "GENERAL_BUSINESS_INBOX",
     }:
-        raise ValueError("invalid initial outreach policy")
+        raise ValueError("invalid outreach recipient mode")
+    if kind is ArtifactKind.OUTREACH_CONTEXT_BUNDLE:
+        mode = payload["recipient_mode"]
+        label = payload["recipient_label"]
+        greeting = payload["greeting"]
+        if (
+            mode == "GENERAL_BUSINESS_INBOX"
+            and (label is not None or greeting != "Hello team")
+        ) or (
+            mode in {"NAMED_PERSON", "ROLE_INBOX"}
+            and (
+                not _nonempty(label)
+                or greeting
+                != (f"Hi {label}" if mode == "NAMED_PERSON" else f"Hello {label} team")
+            )
+        ):
+            raise ValueError("recipient mode and greeting are inconsistent")
+    if kind is ArtifactKind.OUTREACH_SEQUENCE_PLAN and payload["step_count"] <= 0:
+        raise ValueError("outreach sequence must be finite and nonempty")
+    if kind is ArtifactKind.DRAFT_VALIDATION_RESULT and (
+        payload["disposition"] not in {"PASS", "FAIL"}
+        or len(payload["input_hash"]) != 64
+    ):
+        raise ValueError("invalid draft validation result")
     return payload
 
 

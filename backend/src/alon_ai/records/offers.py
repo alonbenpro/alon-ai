@@ -685,7 +685,17 @@ class OfferRecordsRepository:
                 is not ArtifactKind.OFFER_QUALIFICATION_PROFILE
                 or request.outreach_policy.kind
                 is not ArtifactKind.INITIAL_OUTREACH_POLICY
-                or policy_artifact["payload"] != INITIAL_OUTREACH_POLICY
+                or {
+                    key: value
+                    for key, value in policy_artifact["payload"].items()
+                    if key != "max_sequence_steps"
+                }
+                != {
+                    key: value
+                    for key, value in INITIAL_OUTREACH_POLICY.items()
+                    if key != "max_sequence_steps"
+                }
+                or policy_artifact["payload"]["max_sequence_steps"] <= 0
             ):
                 raise ProductRecordsDenied("MATCHING_RECORDS")
             evidence_ids = set(
@@ -776,7 +786,7 @@ class OfferRecordsRepository:
                     artifact_version=request.outreach_policy.version,
                     artifact_hash=request.outreach_policy.content_hash,
                     offer_id=offer_id,
-                    **INITIAL_OUTREACH_POLICY,
+                    **policy_artifact["payload"],
                 )
             )
             await connection.execute(

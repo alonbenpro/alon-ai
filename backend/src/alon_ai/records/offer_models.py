@@ -78,6 +78,7 @@ INITIAL_OUTREACH_POLICY = {
     "detailed_scope": "OMIT",
     "budget_question": "FORBIDDEN",
     "primary_goal": "START_RELEVANT_CONVERSATION",
+    "max_sequence_steps": 3,
 }
 
 OFFER_FIELD_EVIDENCE_ROLES = {

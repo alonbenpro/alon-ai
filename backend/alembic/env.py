@@ -23,6 +23,7 @@ from alon_ai.accounting.schema import metadata as target_metadata
 from alon_ai.records import (
     offer_schema,  # noqa: F401
     organization_schema,  # noqa: F401
+    outreach_schema,  # noqa: F401
     qualification_schema,  # noqa: F401
 )
 from alon_ai.supply import schema as supply_schema  # noqa: F401

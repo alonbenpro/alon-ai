@@ -38,6 +38,18 @@ from alon_ai.records.operator_models import (
     OperatorProfileVersion,
 )
 from alon_ai.records.operators import OperatorRepository
+from alon_ai.records.outreach import OutreachRecordsRepository
+from alon_ai.records.outreach_models import (
+    AngleCandidateInput,
+    ClaimInput,
+    DraftGraphRequest,
+    DraftValidationReceipt,
+    EvidenceCoverageInput,
+    FreezeOutreachContextRequest,
+    OutreachContextReceipt,
+    SequenceStepInput,
+    SubjectCandidateInput,
+)
 from alon_ai.records.qualification_models import (
     CohortReceipt,
     CriterionResultInput,
@@ -52,11 +64,13 @@ from alon_ai.records.qualifications import QualificationCohortRepository
 from alon_ai.records.repository import ProductRecordsRepository
 
 __all__ = [
+    "AngleCandidateInput",
     "ArtifactDispositionReceipt",
     "ArtifactDraft",
     "ArtifactInput",
     "ArtifactKind",
     "ArtifactReceipt",
+    "ClaimInput",
     "CohortReceipt",
     "CommandReceipt",
     "CommercialConstraints",
@@ -65,7 +79,11 @@ __all__ = [
     "CriterionResultInput",
     "CycleReceipt",
     "DeliveryConstraints",
+    "DraftGraphRequest",
+    "DraftValidationReceipt",
+    "EvidenceCoverageInput",
     "FreezeCohortRequest",
+    "FreezeOutreachContextRequest",
     "IdeaAcceptanceReceipt",
     "InputBundleReceipt",
     "LeadDossierReceipt",
@@ -81,6 +99,8 @@ __all__ = [
     "OperatorIdentity",
     "OperatorProfileVersion",
     "OperatorRepository",
+    "OutreachContextReceipt",
+    "OutreachRecordsRepository",
     "PivotDecisionReceipt",
     "ProductAgent",
     "ProductExperiment",
@@ -92,6 +112,8 @@ __all__ = [
     "QualificationDecisionReceipt",
     "QualificationDecisionRequest",
     "ResearchAttemptReceipt",
+    "SequenceStepInput",
     "SourceReference",
+    "SubjectCandidateInput",
     "VerdictReceipt",
 ]
