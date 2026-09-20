@@ -38,6 +38,17 @@ from alon_ai.records.operator_models import (
     OperatorProfileVersion,
 )
 from alon_ai.records.operators import OperatorRepository
+from alon_ai.records.qualification_models import (
+    CohortReceipt,
+    CriterionResultInput,
+    FreezeCohortRequest,
+    LeadDossierReceipt,
+    LeadDossierRequest,
+    LeadEvidenceInput,
+    QualificationDecisionReceipt,
+    QualificationDecisionRequest,
+)
+from alon_ai.records.qualifications import QualificationCohortRepository
 from alon_ai.records.repository import ProductRecordsRepository
 
 __all__ = [
@@ -46,14 +57,20 @@ __all__ = [
     "ArtifactInput",
     "ArtifactKind",
     "ArtifactReceipt",
+    "CohortReceipt",
     "CommandReceipt",
     "CommercialConstraints",
     "CommercialEnvelopeReceipt",
     "CommercialEnvelopeRequest",
+    "CriterionResultInput",
     "CycleReceipt",
     "DeliveryConstraints",
+    "FreezeCohortRequest",
     "IdeaAcceptanceReceipt",
     "InputBundleReceipt",
+    "LeadDossierReceipt",
+    "LeadDossierRequest",
+    "LeadEvidenceInput",
     "OfferAcceptanceReceipt",
     "OfferAcceptanceRequest",
     "OfferFieldSource",
@@ -70,7 +87,10 @@ __all__ = [
     "ProductRecordsDenied",
     "ProductRecordsRepository",
     "ProductWorkflow",
+    "QualificationCohortRepository",
     "QualificationCriterion",
+    "QualificationDecisionReceipt",
+    "QualificationDecisionRequest",
     "ResearchAttemptReceipt",
     "SourceReference",
     "VerdictReceipt",

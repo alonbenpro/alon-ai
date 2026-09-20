@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260913_08"
+    "20260920_09"
   ],
   "columns": [
     {
@@ -361,6 +361,16 @@
       "not_null": true,
       "ordinal": 6,
       "table_name": "record_org_suppressions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "admission_id",
+      "not_null": true,
+      "ordinal": 7,
+      "table_name": "record_qualification_dossiers",
       "type": "uuid"
     },
     {
@@ -1127,6 +1137,16 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "binding_id",
+      "not_null": true,
+      "ordinal": 6,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "brave_call_id",
       "not_null": true,
       "ordinal": 4,
@@ -1399,8 +1419,48 @@
       "identity": "",
       "name": "candidate_id",
       "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "candidate_id",
+      "not_null": true,
       "ordinal": 4,
       "table_name": "contact_attempts",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "candidate_id",
+      "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "candidate_id",
+      "not_null": true,
+      "ordinal": 5,
+      "table_name": "record_qualification_cohort_members",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "candidate_id",
+      "not_null": true,
+      "ordinal": 5,
+      "table_name": "record_qualification_decisions",
       "type": "uuid"
     },
     {
@@ -1522,6 +1582,26 @@
       "ordinal": 2,
       "table_name": "record_qualification_criteria",
       "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "code",
+      "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_qualification_evidence",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cohort_id",
+      "not_null": true,
+      "ordinal": 1,
+      "table_name": "record_qualification_cohort_members",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -1702,6 +1782,16 @@
       "ordinal": 4,
       "table_name": "gov_usage",
       "type": "character varying"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "confidence",
+      "not_null": true,
+      "ordinal": 10,
+      "table_name": "record_qualification_evidence",
+      "type": "numeric(5,4)"
     },
     {
       "default_expression": null,
@@ -1979,6 +2069,16 @@
       "identity": "",
       "name": "created_at",
       "not_null": true,
+      "ordinal": 12,
+      "table_name": "record_qualification_matrices",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
       "ordinal": 13,
       "table_name": "record_artifacts",
       "type": "timestamp with time zone"
@@ -2001,6 +2101,16 @@
       "not_null": true,
       "ordinal": 13,
       "table_name": "record_offer_gap_briefs",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "ordinal": 14,
+      "table_name": "record_qualification_dossiers",
       "type": "timestamp with time zone"
     },
     {
@@ -2287,6 +2397,26 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "criterion_code",
+      "not_null": true,
+      "ordinal": 2,
+      "table_name": "record_qualification_result_evidence",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "criterion_code",
+      "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_qualification_criterion_results",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "currency",
       "not_null": true,
       "ordinal": 10,
@@ -2467,10 +2597,30 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "decided_at",
+      "not_null": true,
+      "ordinal": 19,
+      "table_name": "record_qualification_decisions",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "decided_by",
       "not_null": true,
       "ordinal": 12,
       "table_name": "record_artifact_dispositions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "decided_by",
+      "not_null": true,
+      "ordinal": 18,
+      "table_name": "record_qualification_decisions",
       "type": "uuid"
     },
     {
@@ -2482,6 +2632,16 @@
       "ordinal": 11,
       "table_name": "contact_cases",
       "type": "character varying"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "decision_id",
+      "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_qualification_cohort_members",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -2562,6 +2722,46 @@
       "ordinal": 11,
       "table_name": "record_artifact_dispositions",
       "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "dossier_id",
+      "not_null": true,
+      "ordinal": 2,
+      "table_name": "record_qualification_evidence",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "dossier_id",
+      "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "dossier_id",
+      "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_qualification_result_evidence",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "dossier_id",
+      "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -2739,6 +2939,16 @@
       "identity": "",
       "name": "evidence_id",
       "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_qualification_result_evidence",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "evidence_id",
+      "not_null": true,
       "ordinal": 5,
       "table_name": "gov_grant_events",
       "type": "uuid"
@@ -2802,6 +3012,16 @@
       "ordinal": 9,
       "table_name": "gov_settlements",
       "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "excerpt",
+      "not_null": true,
+      "ordinal": 7,
+      "table_name": "record_qualification_evidence",
+      "type": "character varying(4000)"
     },
     {
       "default_expression": null,
@@ -3110,6 +3330,56 @@
       "name": "experiment_id",
       "not_null": true,
       "ordinal": 2,
+      "table_name": "record_qualification_cohort_members",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "ordinal": 2,
+      "table_name": "record_qualification_cohorts",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "ordinal": 2,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "ordinal": 2,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "ordinal": 2,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "ordinal": 2,
       "table_name": "record_research_attempts",
       "type": "uuid"
     },
@@ -3291,6 +3561,16 @@
       "not_null": true,
       "ordinal": 3,
       "table_name": "record_org_evidence",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_qualification_evidence",
       "type": "uuid"
     },
     {
@@ -3577,6 +3857,16 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "finding_codes",
+      "not_null": true,
+      "ordinal": 16,
+      "table_name": "record_qualification_decisions",
+      "type": "character varying(64)[]"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "finished_at",
       "not_null": false,
       "ordinal": 23,
@@ -3601,6 +3891,26 @@
       "not_null": true,
       "ordinal": 3,
       "table_name": "record_returns",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "frozen_at",
+      "not_null": true,
+      "ordinal": 9,
+      "table_name": "record_qualification_cohorts",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "frozen_by",
+      "not_null": true,
+      "ordinal": 8,
+      "table_name": "record_qualification_cohorts",
       "type": "uuid"
     },
     {
@@ -4340,6 +4650,56 @@
       "name": "id",
       "not_null": true,
       "ordinal": 1,
+      "table_name": "record_qualification_cohorts",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "ordinal": 1,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "ordinal": 1,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "ordinal": 1,
+      "table_name": "record_qualification_evidence",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "ordinal": 1,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "ordinal": 1,
       "table_name": "record_research_attempts",
       "type": "uuid"
     },
@@ -4680,6 +5040,16 @@
       "name": "kind",
       "not_null": true,
       "ordinal": 5,
+      "table_name": "record_qualification_evidence",
+      "type": "character varying(24)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "kind",
+      "not_null": true,
+      "ordinal": 5,
       "table_name": "supply_discovery_completions",
       "type": "character varying"
     },
@@ -4811,6 +5181,36 @@
       "not_null": true,
       "ordinal": 3,
       "table_name": "record_org_conflicts",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "matrix_id",
+      "not_null": true,
+      "ordinal": 1,
+      "table_name": "record_qualification_criterion_results",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "matrix_id",
+      "not_null": true,
+      "ordinal": 1,
+      "table_name": "record_qualification_result_evidence",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "matrix_id",
+      "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_qualification_decisions",
       "type": "uuid"
     },
     {
@@ -5060,6 +5460,16 @@
       "name": "observed_at",
       "not_null": true,
       "ordinal": 8,
+      "table_name": "record_qualification_evidence",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "observed_at",
+      "not_null": true,
+      "ordinal": 8,
       "table_name": "supply_discovery_completions",
       "type": "timestamp with time zone"
     },
@@ -5072,6 +5482,46 @@
       "ordinal": 9,
       "table_name": "contact_attempts",
       "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_acceptance_id",
+      "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_qualification_cohorts",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_acceptance_id",
+      "not_null": true,
+      "ordinal": 8,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_acceptance_id",
+      "not_null": true,
+      "ordinal": 9,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_acceptance_id",
+      "not_null": true,
+      "ordinal": 9,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -5099,8 +5549,38 @@
       "identity": "",
       "name": "offer_id",
       "not_null": true,
+      "ordinal": 10,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_id",
+      "not_null": true,
+      "ordinal": 10,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_id",
+      "not_null": true,
       "ordinal": 3,
       "table_name": "record_offer_acceptances",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_id",
+      "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_qualification_cohorts",
       "type": "uuid"
     },
     {
@@ -5121,6 +5601,16 @@
       "not_null": true,
       "ordinal": 7,
       "table_name": "record_offer_qualification_profiles",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_id",
+      "not_null": true,
+      "ordinal": 9,
+      "table_name": "record_qualification_matrices",
       "type": "uuid"
     },
     {
@@ -5309,6 +5799,16 @@
       "identity": "",
       "name": "ordinal",
       "not_null": true,
+      "ordinal": 3,
+      "table_name": "record_qualification_cohort_members",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "ordinal",
+      "not_null": true,
       "ordinal": 4,
       "table_name": "record_research_attempts",
       "type": "integer"
@@ -5437,11 +5937,61 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "organization_id",
+      "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "organization_id",
+      "not_null": true,
+      "ordinal": 5,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "organization_id",
+      "not_null": true,
+      "ordinal": 6,
+      "table_name": "record_qualification_cohort_members",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "organization_id",
+      "not_null": true,
+      "ordinal": 6,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "outcome",
       "not_null": true,
       "ordinal": 10,
       "table_name": "record_org_observations",
       "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "outcome",
+      "not_null": true,
+      "ordinal": 14,
+      "table_name": "record_qualification_decisions",
+      "type": "character varying(48)"
     },
     {
       "default_expression": null,
@@ -5611,6 +6161,46 @@
       "not_null": false,
       "ordinal": 4,
       "table_name": "gov_authorities",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "policy_id",
+      "not_null": true,
+      "ordinal": 11,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "policy_id",
+      "not_null": true,
+      "ordinal": 12,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "policy_id",
+      "not_null": true,
+      "ordinal": 12,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "policy_id",
+      "not_null": true,
+      "ordinal": 6,
+      "table_name": "record_qualification_cohorts",
       "type": "uuid"
     },
     {
@@ -5789,8 +6379,58 @@
       "identity": "",
       "name": "profile_id",
       "not_null": true,
+      "ordinal": 10,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_id",
+      "not_null": true,
+      "ordinal": 11,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_id",
+      "not_null": true,
+      "ordinal": 11,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_id",
+      "not_null": true,
+      "ordinal": 2,
+      "table_name": "record_qualification_criterion_results",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_id",
+      "not_null": true,
       "ordinal": 5,
       "table_name": "record_offer_acceptances",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_id",
+      "not_null": true,
+      "ordinal": 5,
+      "table_name": "record_qualification_cohorts",
       "type": "uuid"
     },
     {
@@ -5812,6 +6452,16 @@
       "ordinal": 10,
       "table_name": "record_candidate_selections",
       "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "proposal_fact_id",
+      "not_null": true,
+      "ordinal": 13,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -5937,6 +6587,16 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "rationale",
+      "not_null": true,
+      "ordinal": 5,
+      "table_name": "record_qualification_criterion_results",
+      "type": "character varying(2000)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "reason",
       "not_null": false,
       "ordinal": 6,
@@ -5982,6 +6642,16 @@
       "ordinal": 4,
       "table_name": "record_org_exclusions",
       "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "reason_code",
+      "not_null": true,
+      "ordinal": 15,
+      "table_name": "record_qualification_decisions",
+      "type": "character varying(64)"
     },
     {
       "default_expression": null,
@@ -6047,6 +6717,46 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "recipient_id",
+      "not_null": true,
+      "ordinal": 5,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "recipient_id",
+      "not_null": true,
+      "ordinal": 6,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "recipient_id",
+      "not_null": true,
+      "ordinal": 7,
+      "table_name": "record_qualification_cohort_members",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "recipient_id",
+      "not_null": true,
+      "ordinal": 7,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "recipient_lookup_hash",
       "not_null": true,
       "ordinal": 7,
@@ -6062,6 +6772,46 @@
       "ordinal": 8,
       "table_name": "record_org_effects",
       "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "recipient_source_id",
+      "not_null": true,
+      "ordinal": 7,
+      "table_name": "record_qualification_matrices",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "recipient_source_id",
+      "not_null": true,
+      "ordinal": 8,
+      "table_name": "record_qualification_cohort_members",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "recipient_source_id",
+      "not_null": true,
+      "ordinal": 8,
+      "table_name": "record_qualification_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "recipient_source_id",
+      "not_null": true,
+      "ordinal": 8,
+      "table_name": "record_qualification_dossiers",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -6311,6 +7061,16 @@
       "not_null": true,
       "ordinal": 6,
       "table_name": "record_org_observations",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "reservation_id",
+      "not_null": true,
+      "ordinal": 9,
+      "table_name": "record_qualification_cohort_members",
       "type": "uuid"
     },
     {
@@ -6797,6 +7557,16 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "source_ref",
+      "not_null": true,
+      "ordinal": 6,
+      "table_name": "record_qualification_evidence",
+      "type": "character varying(1000)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "source_role",
       "not_null": false,
       "ordinal": 7,
@@ -6839,6 +7609,16 @@
       "identity": "",
       "name": "status",
       "not_null": true,
+      "ordinal": 4,
+      "table_name": "record_qualification_criterion_results",
+      "type": "character varying(24)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "status",
+      "not_null": true,
       "ordinal": 5,
       "table_name": "record_operators",
       "type": "character varying(16)"
@@ -6872,6 +7652,16 @@
       "ordinal": 3,
       "table_name": "record_org_merges",
       "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "target_size",
+      "not_null": true,
+      "ordinal": 7,
+      "table_name": "record_qualification_cohorts",
+      "type": "integer"
     },
     {
       "default_expression": null,
@@ -6999,6 +7789,16 @@
       "identity": "",
       "name": "valid_until",
       "not_null": true,
+      "ordinal": 17,
+      "table_name": "record_qualification_decisions",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "valid_until",
+      "not_null": true,
       "ordinal": 7,
       "table_name": "supply_contacts",
       "type": "timestamp with time zone"
@@ -7021,6 +7821,16 @@
       "not_null": true,
       "ordinal": 8,
       "table_name": "supply_identities",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "valid_until",
+      "not_null": true,
+      "ordinal": 9,
+      "table_name": "record_qualification_evidence",
       "type": "timestamp with time zone"
     },
     {
@@ -7152,6 +7962,16 @@
       "ordinal": 4,
       "table_name": "supply_plans",
       "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "version",
+      "not_null": true,
+      "ordinal": 13,
+      "table_name": "record_qualification_dossiers",
+      "type": "integer"
     },
     {
       "default_expression": null,
@@ -7757,6 +8577,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (cardinality(finding_codes) > 0 AND decided_at < valid_until)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_qualification_decisions_check",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (cardinality(required_source_types) > 0 AND cardinality(targeted_questions) > 0)",
       "enforced": true,
       "initially_deferred": false,
@@ -8167,6 +8997,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (kind::text = ANY (ARRAY['OBSERVED_FACT'::character varying, 'HYPOTHESIS'::character varying, 'CONTRADICTION'::character varying, 'UNKNOWN'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_qualification_evidence_kind_check",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (kind::text = ANY (ARRAY['PRICE'::character varying, 'FX'::character varying, 'GRANT'::character varying, 'GRANT_EVENT'::character varying, 'CONTROL'::character varying, 'RECONCILIATION'::character varying, 'INVOICE'::character varying, 'PROVIDER_RESULT'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -8357,6 +9197,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (observed_at < valid_until AND confidence >= 0::numeric AND confidence <= 1::numeric)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_qualification_evidence_check",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (observed_at < valid_until)",
       "enforced": true,
       "initially_deferred": false,
@@ -8447,6 +9297,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (ordinal >= 1 AND ordinal <= 50)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_qualification_cohort_members_ordinal_check",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (organization_id <> matched_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -8493,6 +9353,16 @@
       "kind": "c",
       "name": "supply_qualifications_outcome_check",
       "table_name": "supply_qualifications",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (outcome::text = ANY (ARRAY['QUALIFIED_CONTACTABLE'::character varying, 'PILOT_FIT_CONTACTABLE'::character varying, 'REJECTED_NOT_A_FIT'::character varying, 'REJECTED_NO_RELEVANT_PROBLEM_SIGNAL'::character varying, 'REJECTED_ALREADY_ADEQUATELY_SOLVED'::character varying, 'REJECTED_TECHNICAL_MISMATCH'::character varying, 'REJECTED_ECONOMIC_MISMATCH'::character varying, 'REJECTED_BUYER_MISMATCH'::character varying, 'REJECTED_INSUFFICIENT_EVIDENCE'::character varying, 'BLOCKED_POLICY_OR_IDENTITY'::character varying, 'REVIEW_REQUIRED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_qualification_decisions_outcome_check",
+      "table_name": "record_qualification_decisions",
       "validated": true
     },
     {
@@ -8867,6 +9737,26 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (status::text = ANY (ARRAY['SATISFIED'::character varying, 'PARTIAL'::character varying, 'NOT_SATISFIED'::character varying, 'UNKNOWN'::character varying, 'CONTRADICTED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_qualification_criterion_results_status_check",
+      "table_name": "record_qualification_criterion_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (target_size = 50)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_qualification_cohorts_target_size_check",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (unit_price >= 0::numeric AND unit_price < '1000000000000000000000000'::numeric AND scale(unit_price) <= 12)",
       "enforced": true,
       "initially_deferred": false,
@@ -8947,6 +9837,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (version > 0)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_qualification_dossiers_version_check",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (account, capability) REFERENCES gov_authorities(account, capability)",
       "enforced": true,
       "initially_deferred": false,
@@ -8983,6 +9883,16 @@
       "kind": "f",
       "name": "gov_allocations_account_id_fkey",
       "table_name": "gov_allocations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (admission_id) REFERENCES record_org_admissions(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_dossiers_admission_id_fkey",
+      "table_name": "record_qualification_dossiers",
       "validated": true
     },
     {
@@ -9247,6 +10157,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (binding_id, experiment_id, organization_id) REFERENCES record_org_bindings(id, experiment_id, organization_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_dossiers_binding_id_experiment_id_org_fkey",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (brave_call_id) REFERENCES gov_calls(id)",
       "enforced": true,
       "initially_deferred": false,
@@ -9461,6 +10381,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_qualification_dossiers_candidate_id_experiment_id_fkey",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (candidate_id, experiment_id) REFERENCES supply_candidates(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "supply_contact_failures_candidate_id_experiment_id_fkey",
       "table_name": "supply_contact_failures",
       "validated": true
@@ -9497,6 +10427,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (candidate_id, experiment_id, proposal_fact_id) REFERENCES supply_qualifications(candidate_id, experiment_id, fact_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_decision_candidate_id_experiment_id_p_fkey",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (case_id, experiment_id) REFERENCES contact_cases(candidate_id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -9513,6 +10453,16 @@
       "kind": "f",
       "name": "supply_candidates_clearance_id_identity_id_experiment_id_fkey",
       "table_name": "supply_candidates",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cohort_id, experiment_id) REFERENCES record_qualification_cohorts(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_cohort_member_cohort_id_experiment_id_fkey",
+      "table_name": "record_qualification_cohort_members",
       "validated": true
     },
     {
@@ -9653,6 +10603,36 @@
       "kind": "f",
       "name": "record_research_attempts_cycle_id_experiment_id_fkey",
       "table_name": "record_research_attempts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (decision_id, experiment_id) REFERENCES record_qualification_decisions(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_cohort_memb_decision_id_experiment_id_fkey",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (dossier_id, experiment_id) REFERENCES record_qualification_dossiers(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_evidence_dossier_id_experiment_id_fkey",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (dossier_id, experiment_id) REFERENCES record_qualification_dossiers(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_matrices_dossier_id_experiment_id_fkey",
+      "table_name": "record_qualification_matrices",
       "validated": true
     },
     {
@@ -9803,6 +10783,16 @@
       "kind": "f",
       "name": "record_org_merges_evidence_id_fkey",
       "table_name": "record_org_merges",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (evidence_id, dossier_id) REFERENCES record_qualification_evidence(id, dossier_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_result_evidenc_evidence_id_dossier_id_fkey",
+      "table_name": "record_qualification_result_evidence",
       "validated": true
     },
     {
@@ -10197,6 +11187,66 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (matrix_id, criterion_code) REFERENCES record_qualification_criterion_results(matrix_id, criterion_code)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_result_evide_matrix_id_criterion_code_fkey",
+      "table_name": "record_qualification_result_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (matrix_id, dossier_id) REFERENCES record_qualification_matrices(id, dossier_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_decisions_matrix_id_dossier_id_fkey",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (matrix_id, dossier_id) REFERENCES record_qualification_matrices(id, dossier_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_result_evidence_matrix_id_dossier_id_fkey",
+      "table_name": "record_qualification_result_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (matrix_id, profile_id) REFERENCES record_qualification_matrices(id, profile_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_criterion_result_matrix_id_profile_id_fkey",
+      "table_name": "record_qualification_criterion_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (offer_acceptance_id, experiment_id) REFERENCES record_offer_acceptances(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_cohorts_offer_acceptance_id_experimen_fkey",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (offer_acceptance_id, experiment_id) REFERENCES record_offer_acceptances(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_dossiers_offer_acceptance_id_experime_fkey",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (offer_id, experiment_id) REFERENCES record_offer_packages(id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -10233,6 +11283,16 @@
       "kind": "f",
       "name": "record_offer_qualification_profiles_offer_id_experiment_id_fkey",
       "table_name": "record_offer_qualification_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (offer_id, experiment_id) REFERENCES record_offer_packages(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_dossiers_offer_id_experiment_id_fkey",
+      "table_name": "record_qualification_dossiers",
       "validated": true
     },
     {
@@ -10457,6 +11517,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (policy_id) REFERENCES record_initial_outreach_policies(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_dossiers_policy_id_fkey",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (policy_id, account, capability) REFERENCES gov_policies(id, account, capability)",
       "enforced": true,
       "initially_deferred": false,
@@ -10523,6 +11593,26 @@
       "kind": "f",
       "name": "record_qualification_criteria_profile_id_fkey",
       "table_name": "record_qualification_criteria",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (profile_id) REFERENCES record_offer_qualification_profiles(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_dossiers_profile_id_fkey",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (profile_id, criterion_code) REFERENCES record_qualification_criteria(profile_id, code)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_criterion_r_profile_id_criterion_code_fkey",
+      "table_name": "record_qualification_criterion_results",
       "validated": true
     },
     {
@@ -10597,6 +11687,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (recipient_source_id, experiment_id, organization_id, recipient_id) REFERENCES record_org_recipient_sources(id, experiment_id, organization_id, recipient_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_dossiers_recipient_source_id_experime_fkey",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (recommendation_artifact_id, experiment_id, recommendation_kind, recommendation_version, recommendation_hash) REFERENCES record_artifacts(id, experiment_id, kind, version, content_hash)",
       "enforced": true,
       "initially_deferred": false,
@@ -10643,6 +11743,16 @@
       "kind": "f",
       "name": "record_org_releases_reservation_id_fkey",
       "table_name": "record_org_releases",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (reservation_id) REFERENCES record_org_reservations(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_qualification_cohort_members_reservation_id_fkey",
+      "table_name": "record_qualification_cohort_members",
       "validated": true
     },
     {
@@ -11133,6 +12243,16 @@
       "kind": "n",
       "name": "gov_authorities_active_not_null",
       "table_name": "gov_authorities",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL admission_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_admission_id_not_null",
+      "table_name": "record_qualification_dossiers",
       "validated": true
     },
     {
@@ -11857,6 +12977,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL binding_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_binding_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL brave_call_id",
       "enforced": true,
       "initially_deferred": false,
@@ -12091,6 +13221,46 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_qualification_cohort_members_candidate_id_not_null",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL candidate_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_candidate_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL candidate_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_candidate_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL candidate_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_candidate_id_not_null",
+      "table_name": "record_qualification_matrices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL candidate_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "supply_contact_failures_candidate_id_not_null",
       "table_name": "supply_contact_failures",
       "validated": true
@@ -12213,6 +13383,26 @@
       "kind": "n",
       "name": "record_qualification_criteria_code_not_null",
       "table_name": "record_qualification_criteria",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL code",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_evidence_code_not_null",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cohort_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohort_members_cohort_id_not_null",
+      "table_name": "record_qualification_cohort_members",
       "validated": true
     },
     {
@@ -12373,6 +13563,16 @@
       "kind": "n",
       "name": "gov_usage_component_not_null",
       "table_name": "gov_usage",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL confidence",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_evidence_confidence_not_null",
+      "table_name": "record_qualification_evidence",
       "validated": true
     },
     {
@@ -12881,6 +14081,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_qualification_dossiers_created_at_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_created_at_not_null",
+      "table_name": "record_qualification_matrices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_research_attempts_created_at_not_null",
       "table_name": "record_research_attempts",
       "validated": true
@@ -12923,6 +14143,26 @@
       "kind": "n",
       "name": "record_artifacts_created_by_not_null",
       "table_name": "record_artifacts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL criterion_code",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_criterion_results_criterion_code_not_null",
+      "table_name": "record_qualification_criterion_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL criterion_code",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_result_evidence_criterion_code_not_null",
+      "table_name": "record_qualification_result_evidence",
       "validated": true
     },
     {
@@ -13107,6 +14347,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL decided_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_decided_at_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL decided_by",
       "enforced": true,
       "initially_deferred": false,
@@ -13117,12 +14367,32 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL decided_by",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_decided_by_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL decision",
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
       "name": "contact_cases_decision_not_null",
       "table_name": "contact_cases",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL decision_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohort_members_decision_id_not_null",
+      "table_name": "record_qualification_cohort_members",
       "validated": true
     },
     {
@@ -13173,6 +14443,46 @@
       "kind": "n",
       "name": "record_artifact_dispositions_disposition_not_null",
       "table_name": "record_artifact_dispositions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL dossier_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_dossier_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL dossier_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_evidence_dossier_id_not_null",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL dossier_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_dossier_id_not_null",
+      "table_name": "record_qualification_matrices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL dossier_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_result_evidence_dossier_id_not_null",
+      "table_name": "record_qualification_result_evidence",
       "validated": true
     },
     {
@@ -13403,6 +14713,26 @@
       "kind": "n",
       "name": "record_org_merges_evidence_id_not_null",
       "table_name": "record_org_merges",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL evidence_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_result_evidence_evidence_id_not_null",
+      "table_name": "record_qualification_result_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL excerpt",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_evidence_excerpt_not_null",
+      "table_name": "record_qualification_evidence",
       "validated": true
     },
     {
@@ -13723,6 +15053,66 @@
       "kind": "n",
       "name": "record_pivot_decisions_experiment_id_not_null",
       "table_name": "record_pivot_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohort_members_experiment_id_not_null",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohorts_experiment_id_not_null",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_experiment_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_experiment_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_evidence_experiment_id_not_null",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_experiment_id_not_null",
+      "table_name": "record_qualification_matrices",
       "validated": true
     },
     {
@@ -14087,6 +15477,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL finding_codes",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_finding_codes_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL formal_proposal",
       "enforced": true,
       "initially_deferred": false,
@@ -14113,6 +15513,26 @@
       "kind": "n",
       "name": "gov_budget_accounts_frozen_not_null",
       "table_name": "gov_budget_accounts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL frozen_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohorts_frozen_at_not_null",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL frozen_by",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohorts_frozen_by_not_null",
+      "table_name": "record_qualification_cohorts",
       "validated": true
     },
     {
@@ -14841,6 +16261,56 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_qualification_cohorts_id_not_null",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_evidence_id_not_null",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_id_not_null",
+      "table_name": "record_qualification_matrices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_research_attempts_id_not_null",
       "table_name": "record_research_attempts",
       "validated": true
@@ -15141,6 +16611,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_qualification_evidence_kind_not_null",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_returns_kind_not_null",
       "table_name": "record_returns",
       "validated": true
@@ -15283,6 +16763,36 @@
       "kind": "n",
       "name": "record_org_conflicts_matched_id_not_null",
       "table_name": "record_org_conflicts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL matrix_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_criterion_results_matrix_id_not_null",
+      "table_name": "record_qualification_criterion_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL matrix_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_matrix_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL matrix_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_result_evidence_matrix_id_not_null",
+      "table_name": "record_qualification_result_evidence",
       "validated": true
     },
     {
@@ -15511,6 +17021,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_qualification_evidence_observed_at_not_null",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL observed_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "supply_discovery_completions_observed_at_not_null",
       "table_name": "supply_discovery_completions",
       "validated": true
@@ -15533,6 +17053,46 @@
       "kind": "n",
       "name": "supply_identities_observed_at_not_null",
       "table_name": "supply_identities",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL offer_acceptance_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohorts_offer_acceptance_id_not_null",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL offer_acceptance_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_offer_acceptance_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL offer_acceptance_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_offer_acceptance_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL offer_acceptance_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_offer_acceptance_id_not_null",
+      "table_name": "record_qualification_matrices",
       "validated": true
     },
     {
@@ -15583,6 +17143,46 @@
       "kind": "n",
       "name": "record_offer_qualification_profiles_offer_id_not_null",
       "table_name": "record_offer_qualification_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL offer_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohorts_offer_id_not_null",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL offer_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_offer_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL offer_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_offer_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL offer_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_offer_id_not_null",
+      "table_name": "record_qualification_matrices",
       "validated": true
     },
     {
@@ -15721,6 +17321,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_qualification_cohort_members_ordinal_not_null",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL ordinal",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_research_attempts_ordinal_not_null",
       "table_name": "record_research_attempts",
       "validated": true
@@ -15837,6 +17447,46 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL organization_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohort_members_organization_id_not_null",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL organization_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_organization_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL organization_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_organization_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL organization_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_organization_id_not_null",
+      "table_name": "record_qualification_matrices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL outcome",
       "enforced": true,
       "initially_deferred": false,
@@ -15853,6 +17503,16 @@
       "kind": "n",
       "name": "record_org_observations_outcome_not_null",
       "table_name": "record_org_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL outcome",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_outcome_not_null",
+      "table_name": "record_qualification_decisions",
       "validated": true
     },
     {
@@ -15973,6 +17633,46 @@
       "kind": "n",
       "name": "record_offer_acceptances_policy_id_not_null",
       "table_name": "record_offer_acceptances",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL policy_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohorts_policy_id_not_null",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL policy_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_policy_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL policy_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_policy_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL policy_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_policy_id_not_null",
+      "table_name": "record_qualification_matrices",
       "validated": true
     },
     {
@@ -16131,8 +17831,58 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_qualification_cohorts_profile_id_not_null",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_qualification_criteria_profile_id_not_null",
       "table_name": "record_qualification_criteria",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_criterion_results_profile_id_not_null",
+      "table_name": "record_qualification_criterion_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_profile_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_profile_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_profile_id_not_null",
+      "table_name": "record_qualification_matrices",
       "validated": true
     },
     {
@@ -16153,6 +17903,16 @@
       "kind": "n",
       "name": "record_candidate_selections_profile_version_not_null",
       "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL proposal_fact_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_proposal_fact_id_not_null",
+      "table_name": "record_qualification_decisions",
       "validated": true
     },
     {
@@ -16257,6 +18017,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL rationale",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_criterion_results_rationale_not_null",
+      "table_name": "record_qualification_criterion_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL reason",
       "enforced": true,
       "initially_deferred": false,
@@ -16327,6 +18097,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL reason_code",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_reason_code_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL recipient_id",
       "enforced": true,
       "initially_deferred": false,
@@ -16347,6 +18127,46 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL recipient_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohort_members_recipient_id_not_null",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL recipient_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_recipient_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL recipient_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_recipient_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL recipient_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_recipient_id_not_null",
+      "table_name": "record_qualification_matrices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL recipient_lookup_hash",
       "enforced": true,
       "initially_deferred": false,
@@ -16363,6 +18183,46 @@
       "kind": "n",
       "name": "record_org_observations_recipient_lookup_hash_not_null",
       "table_name": "record_org_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL recipient_source_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohort_member_recipient_source_id_not_null",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL recipient_source_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_recipient_source_id_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL recipient_source_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_recipient_source_id_not_null",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL recipient_source_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_matrices_recipient_source_id_not_null",
+      "table_name": "record_qualification_matrices",
       "validated": true
     },
     {
@@ -16613,6 +18473,16 @@
       "kind": "n",
       "name": "record_org_releases_reservation_id_not_null",
       "table_name": "record_org_releases",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL reservation_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohort_members_reservation_id_not_null",
+      "table_name": "record_qualification_cohort_members",
       "validated": true
     },
     {
@@ -17017,6 +18887,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL source_ref",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_evidence_source_ref_not_null",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL stage",
       "enforced": true,
       "initially_deferred": false,
@@ -17077,6 +18957,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL status",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_criterion_results_status_not_null",
+      "table_name": "record_qualification_criterion_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL stopped",
       "enforced": true,
       "initially_deferred": false,
@@ -17103,6 +18993,16 @@
       "kind": "n",
       "name": "record_org_merges_surviving_id_not_null",
       "table_name": "record_org_merges",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL target_size",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_cohorts_target_size_not_null",
+      "table_name": "record_qualification_cohorts",
       "validated": true
     },
     {
@@ -17203,6 +19103,26 @@
       "kind": "n",
       "name": "contact_cases_valid_until_not_null",
       "table_name": "contact_cases",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL valid_until",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_decisions_valid_until_not_null",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL valid_until",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_evidence_valid_until_not_null",
+      "table_name": "record_qualification_evidence",
       "validated": true
     },
     {
@@ -17333,6 +19253,16 @@
       "kind": "n",
       "name": "record_operator_profiles_version_not_null",
       "table_name": "record_operator_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_qualification_dossiers_version_not_null",
+      "table_name": "record_qualification_dossiers",
       "validated": true
     },
     {
@@ -17483,6 +19413,16 @@
       "kind": "p",
       "name": "supply_qualifications_pkey",
       "table_name": "supply_qualifications",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (cohort_id, ordinal)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_qualification_cohort_members_pkey",
+      "table_name": "record_qualification_cohort_members",
       "validated": true
     },
     {
@@ -18091,6 +20031,56 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "p",
+      "name": "record_qualification_cohorts_pkey",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_qualification_decisions_pkey",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_qualification_dossiers_pkey",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_qualification_evidence_pkey",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_qualification_matrices_pkey",
+      "table_name": "record_qualification_matrices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
       "name": "record_research_attempts_pkey",
       "table_name": "record_research_attempts",
       "validated": true
@@ -18223,6 +20213,26 @@
       "kind": "p",
       "name": "record_operator_profiles_pkey",
       "table_name": "record_operator_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (matrix_id, criterion_code)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_qualification_criterion_results_pkey",
+      "table_name": "record_qualification_criterion_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (matrix_id, criterion_code, evidence_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_qualification_result_evidence_pkey",
+      "table_name": "record_qualification_result_evidence",
       "validated": true
     },
     {
@@ -18507,6 +20517,76 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (candidate_id, experiment_id, fact_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "uq_supply_qualification_exact",
+      "table_name": "supply_qualifications",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (candidate_id, version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_dossiers_candidate_id_version_key",
+      "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (cohort_id, candidate_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_cohort_members_cohort_id_candidate_id_key",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (cohort_id, decision_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_cohort_members_cohort_id_decision_id_key",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (cohort_id, organization_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_cohort_membe_cohort_id_organization_id_key",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (cohort_id, recipient_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_cohort_members_cohort_id_recipient_id_key",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (cohort_id, recipient_source_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_cohort_m_cohort_id_recipient_source_id_key",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (command_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -18657,6 +20737,36 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (dossier_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_decisions_dossier_id_key",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (dossier_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_matrices_dossier_id_key",
+      "table_name": "record_qualification_matrices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (dossier_id, code)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_evidence_dossier_id_code_key",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (effect_id, outcome)",
       "enforced": true,
       "initially_deferred": false,
@@ -18693,6 +20803,16 @@
       "kind": "u",
       "name": "record_candidate_selections_experiment_id_key",
       "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_cohorts_experiment_id_key",
+      "table_name": "record_qualification_cohorts",
       "validated": true
     },
     {
@@ -18827,6 +20947,26 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (id, dossier_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_evidence_id_dossier_id_key",
+      "table_name": "record_qualification_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (id, dossier_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_matrices_id_dossier_id_key",
+      "table_name": "record_qualification_matrices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -18943,6 +21083,36 @@
       "kind": "u",
       "name": "record_offer_qualification_profiles_id_experiment_id_key",
       "table_name": "record_offer_qualification_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_cohorts_id_experiment_id_key",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_decisions_id_experiment_id_key",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_dossiers_id_experiment_id_key",
+      "table_name": "record_qualification_dossiers",
       "validated": true
     },
     {
@@ -19087,12 +21257,32 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (id, offer_acceptance_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_decisions_id_offer_acceptance_id_key",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (id, organization_id)",
       "enforced": true,
       "initially_deferred": false,
       "kind": "u",
       "name": "record_org_evidence_id_organization_id_key",
       "table_name": "record_org_evidence",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (id, profile_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_matrices_id_profile_id_key",
+      "table_name": "record_qualification_matrices",
       "validated": true
     },
     {
@@ -19207,6 +21397,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (matrix_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_decisions_matrix_id_key",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (offer_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -19277,6 +21477,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (proposal_fact_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_decisions_proposal_fact_id_key",
+      "table_name": "record_qualification_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (proposal_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -19323,6 +21533,16 @@
       "kind": "u",
       "name": "record_org_releases_reservation_id_key",
       "table_name": "record_org_releases",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (reservation_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_qualification_cohort_members_reservation_id_key",
+      "table_name": "record_qualification_cohort_members",
       "validated": true
     },
     {
@@ -19474,6 +21694,26 @@
       "name": "record_offer_bundle_complete",
       "table_name": "record_offer_bundles",
       "validated": true
+    },
+    {
+      "deferrable": true,
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED",
+      "enforced": true,
+      "initially_deferred": true,
+      "kind": "t",
+      "name": "record_qualification_cohort_exact",
+      "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": true,
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED",
+      "enforced": true,
+      "initially_deferred": true,
+      "kind": "t",
+      "name": "record_qualification_member_exact",
+      "table_name": "record_qualification_cohort_members",
+      "validated": true
     }
   ],
   "extensions": [
@@ -19573,6 +21813,16 @@
       "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_profile_guard_v2()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable product record' USING ERRCODE='23514'; END IF;\n PERFORM 1 FROM record_operators WHERE id=NEW.operator_id AND auth_subject IS NOT NULL AND status='ACTIVE' FOR SHARE;\n IF NOT FOUND OR NEW.profile_schema_version IS DISTINCT FROM 2 OR NEW.approved_by IS DISTINCT FROM NEW.operator_id\n THEN RAISE EXCEPTION 'profile requires bound active owner approval' USING ERRCODE='23514'; END IF;\n IF NEW.version>1 AND NOT EXISTS(SELECT 1 FROM record_operator_profiles\n   WHERE id=NEW.id AND version=NEW.version-1 AND operator_id=NEW.operator_id AND profile_schema_version=2)\n THEN RAISE EXCEPTION 'profile requires exact previous version' USING ERRCODE='23514'; END IF;\n IF record_profile_entries(NEW.capabilities,true) IS NOT TRUE OR record_profile_entries(NEW.constraints,false) IS NOT TRUE\n THEN RAISE EXCEPTION 'invalid profile entries' USING ERRCODE='23514'; END IF;\n IF (record_json_exact(NEW.delivery,ARRAY['schema_version','max_project_hours','hours_per_week','concurrent_projects'])\n    AND NEW.delivery->'schema_version'='1'::jsonb\n    AND record_profile_number(NEW.delivery->'max_project_hours',100000,2,true)\n    AND record_profile_number(NEW.delivery->'hours_per_week',168,2,true)\n    AND jsonb_typeof(NEW.delivery->'concurrent_projects')='number'\n    AND (NEW.delivery->>'concurrent_projects') ~ '^[1-9][0-9]{0,2}$'\n    AND (NEW.delivery->>'concurrent_projects')::numeric<=100) IS NOT TRUE\n THEN RAISE EXCEPTION 'invalid delivery limits' USING ERRCODE='23514'; END IF;\n IF (record_json_exact(NEW.commercial,ARRAY['schema_version','currency','hourly_cost','minimum_project_price',\n       'minimum_margin_rate','maximum_discount_rate','minimum_deposit_rate'])\n    AND NEW.commercial->'schema_version'='1'::jsonb\n    AND NEW.commercial->>'currency' ~ '^[A-Z]{3}$'\n    AND record_profile_number(NEW.commercial->'hourly_cost',1000000000000,6,false,false)\n    AND record_profile_number(NEW.commercial->'minimum_project_price',1000000000000,6,false,false)\n    AND record_profile_number(NEW.commercial->'minimum_margin_rate',1,6)\n    AND record_profile_number(NEW.commercial->'maximum_discount_rate',1,6)\n    AND record_profile_number(NEW.commercial->'minimum_deposit_rate',1,6)) IS NOT TRUE\n THEN RAISE EXCEPTION 'invalid commercial limits' USING ERRCODE='23514'; END IF;\n NEW.content_hash:=encode(sha256(convert_to(jsonb_build_object('profile_schema_version',NEW.profile_schema_version,\n   'operator_id',NEW.operator_id,'capabilities',NEW.capabilities,'constraints',NEW.constraints,\n   'delivery',NEW.delivery,'commercial',NEW.commercial,'approved_by',NEW.approved_by)::text,'UTF8')),'hex');\n RETURN NEW;\nEND $function$\n",
       "name": "record_profile_guard_v2"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_qualification_exact_cohort()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE target uuid:=COALESCE(to_jsonb(NEW)->>'cohort_id',to_jsonb(NEW)->>'id')::uuid;\nBEGIN\n IF (SELECT count(*) FROM record_qualification_cohort_members WHERE cohort_id=target)<>50 THEN RAISE EXCEPTION 'cohort must contain exactly 50 members'; END IF;\n RETURN NULL;\nEND $function$\n",
+      "name": "record_qualification_exact_cohort"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_qualification_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE d record_qualification_dossiers; m record_qualification_matrices; decision record_qualification_decisions; cohort record_qualification_cohorts; acceptance record_offer_acceptances; result_count integer; criterion_count integer;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable qualification record'; END IF;\n IF TG_TABLE_NAME='record_qualification_dossiers' THEN\n  SELECT * INTO acceptance FROM record_offer_acceptances WHERE id=NEW.offer_acceptance_id;\n  IF ROW(acceptance.experiment_id,acceptance.offer_id,acceptance.profile_id,acceptance.policy_id) IS DISTINCT FROM ROW(NEW.experiment_id,NEW.offer_id,NEW.profile_id,NEW.policy_id)\n   OR NOT EXISTS(SELECT 1 FROM supply_candidates c JOIN record_org_bindings b ON b.identity_id=c.identity_id AND b.id=NEW.binding_id JOIN record_org_admissions a ON a.binding_id=b.id AND a.id=NEW.admission_id JOIN record_org_recipient_sources r ON r.binding_id=b.id AND r.candidate_id=c.id AND r.id=NEW.recipient_source_id WHERE c.id=NEW.candidate_id AND c.experiment_id=NEW.experiment_id AND b.organization_id=NEW.organization_id AND r.recipient_id=NEW.recipient_id)\n  THEN RAISE EXCEPTION 'exact dossier lineage required'; END IF;\n ELSIF TG_TABLE_NAME='record_qualification_matrices' THEN\n  SELECT * INTO d FROM record_qualification_dossiers WHERE id=NEW.dossier_id;\n  IF ROW(d.experiment_id,d.candidate_id,d.organization_id,d.recipient_id,d.recipient_source_id,d.offer_acceptance_id,d.offer_id,d.profile_id,d.policy_id) IS DISTINCT FROM ROW(NEW.experiment_id,NEW.candidate_id,NEW.organization_id,NEW.recipient_id,NEW.recipient_source_id,NEW.offer_acceptance_id,NEW.offer_id,NEW.profile_id,NEW.policy_id) THEN RAISE EXCEPTION 'exact matrix lineage required'; END IF;\n ELSIF TG_TABLE_NAME='record_qualification_decisions' THEN\n  SELECT * INTO m FROM record_qualification_matrices WHERE id=NEW.matrix_id;\n  SELECT count(*) INTO result_count FROM record_qualification_criterion_results r WHERE r.matrix_id=NEW.matrix_id AND EXISTS(SELECT 1 FROM record_qualification_result_evidence e WHERE e.matrix_id=r.matrix_id AND e.criterion_code=r.criterion_code);\n  SELECT count(*) INTO criterion_count FROM record_qualification_criteria WHERE profile_id=NEW.profile_id;\n  IF ROW(m.experiment_id,m.dossier_id,m.candidate_id,m.organization_id,m.recipient_id,m.recipient_source_id,m.offer_acceptance_id,m.offer_id,m.profile_id,m.policy_id) IS DISTINCT FROM ROW(NEW.experiment_id,NEW.dossier_id,NEW.candidate_id,NEW.organization_id,NEW.recipient_id,NEW.recipient_source_id,NEW.offer_acceptance_id,NEW.offer_id,NEW.profile_id,NEW.policy_id)\n   OR result_count<>criterion_count\n   OR NEW.offer_acceptance_id IS DISTINCT FROM (SELECT id FROM record_offer_acceptances WHERE experiment_id=NEW.experiment_id ORDER BY accepted_at DESC,id DESC LIMIT 1)\n   OR (NEW.outcome IN ('QUALIFIED_CONTACTABLE','PILOT_FIT_CONTACTABLE') AND EXISTS(SELECT 1 FROM record_qualification_criterion_results r JOIN record_qualification_criteria c ON c.profile_id=r.profile_id AND c.code=r.criterion_code WHERE r.matrix_id=NEW.matrix_id AND ((c.rule_kind='HARD_GATE' AND r.status<>'SATISFIED') OR (c.rule_kind='FATAL_DISQUALIFIER' AND r.status<>'NOT_SATISFIED'))))\n   OR (NEW.outcome='PILOT_FIT_CONTACTABLE' AND NOT EXISTS(SELECT 1 FROM record_qualification_criterion_results r JOIN record_qualification_criteria c ON c.profile_id=r.profile_id AND c.code=r.criterion_code WHERE r.matrix_id=NEW.matrix_id AND c.category='PILOT_FIT' AND r.status='SATISFIED'))\n   OR NOT EXISTS(SELECT 1 FROM supply_qualifications sq WHERE sq.candidate_id=NEW.candidate_id AND sq.experiment_id=NEW.experiment_id AND sq.fact_id=NEW.proposal_fact_id AND ((NEW.outcome IN ('QUALIFIED_CONTACTABLE','PILOT_FIT_CONTACTABLE') AND sq.outcome='QUALIFIED') OR (NEW.outcome NOT IN ('QUALIFIED_CONTACTABLE','PILOT_FIT_CONTACTABLE') AND sq.outcome<>'QUALIFIED')))\n  THEN RAISE EXCEPTION 'complete authoritative qualification required'; END IF;\n ELSIF TG_TABLE_NAME='record_qualification_cohorts' THEN\n  SELECT * INTO acceptance FROM record_offer_acceptances WHERE id=NEW.offer_acceptance_id;\n  IF ROW(acceptance.experiment_id,acceptance.offer_id,acceptance.profile_id,acceptance.policy_id) IS DISTINCT FROM ROW(NEW.experiment_id,NEW.offer_id,NEW.profile_id,NEW.policy_id)\n   OR NEW.offer_acceptance_id IS DISTINCT FROM (SELECT id FROM record_offer_acceptances WHERE experiment_id=NEW.experiment_id ORDER BY accepted_at DESC,id DESC LIMIT 1)\n  THEN RAISE EXCEPTION 'exact cohort offer required'; END IF;\n ELSIF TG_TABLE_NAME='record_qualification_cohort_members' THEN\n  SELECT * INTO decision FROM record_qualification_decisions WHERE id=NEW.decision_id;\n  SELECT * INTO cohort FROM record_qualification_cohorts WHERE id=NEW.cohort_id;\n  IF decision.outcome NOT IN ('QUALIFIED_CONTACTABLE','PILOT_FIT_CONTACTABLE') OR decision.valid_until<=record_org_now()\n   OR ROW(decision.experiment_id,decision.candidate_id,decision.organization_id,decision.recipient_id,decision.recipient_source_id) IS DISTINCT FROM ROW(NEW.experiment_id,NEW.candidate_id,NEW.organization_id,NEW.recipient_id,NEW.recipient_source_id)\n   OR ROW(decision.experiment_id,decision.offer_acceptance_id,decision.offer_id,decision.profile_id,decision.policy_id) IS DISTINCT FROM ROW(cohort.experiment_id,cohort.offer_acceptance_id,cohort.offer_id,cohort.profile_id,cohort.policy_id)\n   OR NOT EXISTS(SELECT 1 FROM record_org_reservations r WHERE r.id=NEW.reservation_id AND ROW(r.experiment_id,r.organization_id,r.recipient_id,r.source_id)=ROW(NEW.experiment_id,NEW.organization_id,NEW.recipient_id,NEW.recipient_source_id))\n  THEN RAISE EXCEPTION 'invalid cohort member'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_qualification_guard"
     },
     {
       "arguments": "",
@@ -22449,11 +24699,263 @@
       "valid": true
     },
     {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohort_m_cohort_id_recipient_source_id_key ON public.record_qualification_cohort_members USING btree (cohort_id, recipient_source_id)",
+      "name": "record_qualification_cohort_m_cohort_id_recipient_source_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_cohort_members",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohort_membe_cohort_id_organization_id_key ON public.record_qualification_cohort_members USING btree (cohort_id, organization_id)",
+      "name": "record_qualification_cohort_membe_cohort_id_organization_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_cohort_members",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohort_members_cohort_id_candidate_id_key ON public.record_qualification_cohort_members USING btree (cohort_id, candidate_id)",
+      "name": "record_qualification_cohort_members_cohort_id_candidate_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_cohort_members",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohort_members_cohort_id_decision_id_key ON public.record_qualification_cohort_members USING btree (cohort_id, decision_id)",
+      "name": "record_qualification_cohort_members_cohort_id_decision_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_cohort_members",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohort_members_cohort_id_recipient_id_key ON public.record_qualification_cohort_members USING btree (cohort_id, recipient_id)",
+      "name": "record_qualification_cohort_members_cohort_id_recipient_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_cohort_members",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohort_members_pkey ON public.record_qualification_cohort_members USING btree (cohort_id, ordinal)",
+      "name": "record_qualification_cohort_members_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_qualification_cohort_members",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohort_members_reservation_id_key ON public.record_qualification_cohort_members USING btree (reservation_id)",
+      "name": "record_qualification_cohort_members_reservation_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_cohort_members",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohorts_experiment_id_key ON public.record_qualification_cohorts USING btree (experiment_id)",
+      "name": "record_qualification_cohorts_experiment_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_cohorts",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohorts_id_experiment_id_key ON public.record_qualification_cohorts USING btree (id, experiment_id)",
+      "name": "record_qualification_cohorts_id_experiment_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_cohorts",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_cohorts_pkey ON public.record_qualification_cohorts USING btree (id)",
+      "name": "record_qualification_cohorts_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_qualification_cohorts",
+      "unique_index": true,
+      "valid": true
+    },
+    {
       "definition": "CREATE UNIQUE INDEX record_qualification_criteria_pkey ON public.record_qualification_criteria USING btree (profile_id, code)",
       "name": "record_qualification_criteria_pkey",
       "primary_index": true,
       "ready": true,
       "table_name": "record_qualification_criteria",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_criterion_results_pkey ON public.record_qualification_criterion_results USING btree (matrix_id, criterion_code)",
+      "name": "record_qualification_criterion_results_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_qualification_criterion_results",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_decisions_dossier_id_key ON public.record_qualification_decisions USING btree (dossier_id)",
+      "name": "record_qualification_decisions_dossier_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_decisions_id_experiment_id_key ON public.record_qualification_decisions USING btree (id, experiment_id)",
+      "name": "record_qualification_decisions_id_experiment_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_decisions_id_offer_acceptance_id_key ON public.record_qualification_decisions USING btree (id, offer_acceptance_id)",
+      "name": "record_qualification_decisions_id_offer_acceptance_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_decisions_matrix_id_key ON public.record_qualification_decisions USING btree (matrix_id)",
+      "name": "record_qualification_decisions_matrix_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_decisions_pkey ON public.record_qualification_decisions USING btree (id)",
+      "name": "record_qualification_decisions_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_qualification_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_decisions_proposal_fact_id_key ON public.record_qualification_decisions USING btree (proposal_fact_id)",
+      "name": "record_qualification_decisions_proposal_fact_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_dossiers_candidate_id_version_key ON public.record_qualification_dossiers USING btree (candidate_id, version)",
+      "name": "record_qualification_dossiers_candidate_id_version_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_dossiers",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_dossiers_id_experiment_id_key ON public.record_qualification_dossiers USING btree (id, experiment_id)",
+      "name": "record_qualification_dossiers_id_experiment_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_dossiers",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_dossiers_pkey ON public.record_qualification_dossiers USING btree (id)",
+      "name": "record_qualification_dossiers_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_qualification_dossiers",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_evidence_dossier_id_code_key ON public.record_qualification_evidence USING btree (dossier_id, code)",
+      "name": "record_qualification_evidence_dossier_id_code_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_evidence",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_evidence_id_dossier_id_key ON public.record_qualification_evidence USING btree (id, dossier_id)",
+      "name": "record_qualification_evidence_id_dossier_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_evidence",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_evidence_pkey ON public.record_qualification_evidence USING btree (id)",
+      "name": "record_qualification_evidence_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_qualification_evidence",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_matrices_dossier_id_key ON public.record_qualification_matrices USING btree (dossier_id)",
+      "name": "record_qualification_matrices_dossier_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_matrices",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_matrices_id_dossier_id_key ON public.record_qualification_matrices USING btree (id, dossier_id)",
+      "name": "record_qualification_matrices_id_dossier_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_matrices",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_matrices_id_profile_id_key ON public.record_qualification_matrices USING btree (id, profile_id)",
+      "name": "record_qualification_matrices_id_profile_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_qualification_matrices",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_matrices_pkey ON public.record_qualification_matrices USING btree (id)",
+      "name": "record_qualification_matrices_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_qualification_matrices",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_qualification_result_evidence_pkey ON public.record_qualification_result_evidence USING btree (matrix_id, criterion_code, evidence_id)",
+      "name": "record_qualification_result_evidence_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_qualification_result_evidence",
       "unique_index": true,
       "valid": true
     },
@@ -22960,6 +25462,15 @@
       "table_name": "record_operator_profiles",
       "unique_index": true,
       "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX uq_supply_qualification_exact ON public.supply_qualifications USING btree (candidate_id, experiment_id, fact_id)",
+      "name": "uq_supply_qualification_exact",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "supply_qualifications",
+      "unique_index": true,
+      "valid": true
     }
   ],
   "manifest_version": 2,
@@ -23370,7 +25881,55 @@
     {
       "force_row_security": false,
       "kind": "r",
+      "name": "record_qualification_cohort_members",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_qualification_cohorts",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
       "name": "record_qualification_criteria",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_qualification_criterion_results",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_qualification_decisions",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_qualification_dossiers",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_qualification_evidence",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_qualification_matrices",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_qualification_result_evidence",
       "row_security": false
     },
     {
@@ -31608,6 +34167,227 @@
       "table_name": "record_cycles"
     },
     {
+      "constraint_name": "record_qualification_cohort_exact",
+      "constraint_table": "record_qualification_cohorts",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER record_qualification_cohort_exact AFTER INSERT ON record_qualification_cohorts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION record_qualification_exact_cohort()",
+      "enabled": "O",
+      "events": 5,
+      "function_name": "public.record_qualification_exact_cohort",
+      "initially_deferred": true,
+      "internal": false,
+      "name": "record_qualification_cohort_exact",
+      "table_name": "record_qualification_cohorts"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_memb_decision_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohort_members"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_memb_decision_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_decisions"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_memb_decision_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohort_members"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_memb_decision_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_decisions"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_member_cohort_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohort_members"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_member_cohort_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohorts"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_member_cohort_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohort_members"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_member_cohort_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohorts"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_members_reservation_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohort_members"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_members_reservation_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_org_reservations"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_members_reservation_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohort_members"
+    },
+    {
+      "constraint_name": "record_qualification_cohort_members_reservation_id_fkey",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_org_reservations"
+    },
+    {
+      "constraint_name": "record_qualification_cohorts_offer_acceptance_id_experimen_fkey",
+      "constraint_table": "record_qualification_cohorts",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohorts"
+    },
+    {
+      "constraint_name": "record_qualification_cohorts_offer_acceptance_id_experimen_fkey",
+      "constraint_table": "record_qualification_cohorts",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_acceptances"
+    },
+    {
+      "constraint_name": "record_qualification_cohorts_offer_acceptance_id_experimen_fkey",
+      "constraint_table": "record_qualification_cohorts",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_cohorts"
+    },
+    {
+      "constraint_name": "record_qualification_cohorts_offer_acceptance_id_experimen_fkey",
+      "constraint_table": "record_qualification_cohorts",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_acceptances"
+    },
+    {
       "constraint_name": "record_qualification_criteria_profile_id_fkey",
       "constraint_table": "record_qualification_criteria",
       "deferrable": false,
@@ -31658,6 +34438,903 @@
       "internal": true,
       "name": null,
       "table_name": "record_offer_qualification_profiles"
+    },
+    {
+      "constraint_name": "record_qualification_criterion_r_profile_id_criterion_code_fkey",
+      "constraint_table": "record_qualification_criterion_results",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_criterion_results"
+    },
+    {
+      "constraint_name": "record_qualification_criterion_r_profile_id_criterion_code_fkey",
+      "constraint_table": "record_qualification_criterion_results",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_criteria"
+    },
+    {
+      "constraint_name": "record_qualification_criterion_r_profile_id_criterion_code_fkey",
+      "constraint_table": "record_qualification_criterion_results",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_criterion_results"
+    },
+    {
+      "constraint_name": "record_qualification_criterion_r_profile_id_criterion_code_fkey",
+      "constraint_table": "record_qualification_criterion_results",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_criteria"
+    },
+    {
+      "constraint_name": "record_qualification_criterion_result_matrix_id_profile_id_fkey",
+      "constraint_table": "record_qualification_criterion_results",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_criterion_results"
+    },
+    {
+      "constraint_name": "record_qualification_criterion_result_matrix_id_profile_id_fkey",
+      "constraint_table": "record_qualification_criterion_results",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_matrices"
+    },
+    {
+      "constraint_name": "record_qualification_criterion_result_matrix_id_profile_id_fkey",
+      "constraint_table": "record_qualification_criterion_results",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_criterion_results"
+    },
+    {
+      "constraint_name": "record_qualification_criterion_result_matrix_id_profile_id_fkey",
+      "constraint_table": "record_qualification_criterion_results",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_matrices"
+    },
+    {
+      "constraint_name": "record_qualification_decision_candidate_id_experiment_id_p_fkey",
+      "constraint_table": "record_qualification_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_decisions"
+    },
+    {
+      "constraint_name": "record_qualification_decision_candidate_id_experiment_id_p_fkey",
+      "constraint_table": "record_qualification_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_qualifications"
+    },
+    {
+      "constraint_name": "record_qualification_decision_candidate_id_experiment_id_p_fkey",
+      "constraint_table": "record_qualification_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_decisions"
+    },
+    {
+      "constraint_name": "record_qualification_decision_candidate_id_experiment_id_p_fkey",
+      "constraint_table": "record_qualification_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_qualifications"
+    },
+    {
+      "constraint_name": "record_qualification_decisions_matrix_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_decisions"
+    },
+    {
+      "constraint_name": "record_qualification_decisions_matrix_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_matrices"
+    },
+    {
+      "constraint_name": "record_qualification_decisions_matrix_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_decisions"
+    },
+    {
+      "constraint_name": "record_qualification_decisions_matrix_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_matrices"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_admission_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_admission_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_org_admissions"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_admission_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_admission_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_org_admissions"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_binding_id_experiment_id_org_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_binding_id_experiment_id_org_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_org_bindings"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_binding_id_experiment_id_org_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_binding_id_experiment_id_org_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_org_bindings"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_candidate_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_candidate_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_candidates"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_candidate_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_candidate_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_candidates"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_offer_acceptance_id_experime_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_offer_acceptance_id_experime_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_acceptances"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_offer_acceptance_id_experime_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_offer_acceptance_id_experime_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_acceptances"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_offer_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_offer_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_packages"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_offer_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_offer_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_packages"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_policy_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_policy_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_initial_outreach_policies"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_policy_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_policy_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_initial_outreach_policies"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_profile_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_profile_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_qualification_profiles"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_profile_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_profile_id_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_qualification_profiles"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_recipient_source_id_experime_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_recipient_source_id_experime_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_org_recipient_sources"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_recipient_source_id_experime_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_dossiers_recipient_source_id_experime_fkey",
+      "constraint_table": "record_qualification_dossiers",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_org_recipient_sources"
+    },
+    {
+      "constraint_name": "record_qualification_evidence_dossier_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_evidence_dossier_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_evidence_dossier_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_evidence_dossier_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_matrices_dossier_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_matrices",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_matrices"
+    },
+    {
+      "constraint_name": "record_qualification_matrices_dossier_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_matrices",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_matrices_dossier_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_matrices",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_matrices"
+    },
+    {
+      "constraint_name": "record_qualification_matrices_dossier_id_experiment_id_fkey",
+      "constraint_table": "record_qualification_matrices",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": "record_qualification_member_exact",
+      "constraint_table": "record_qualification_cohort_members",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER record_qualification_member_exact AFTER INSERT ON record_qualification_cohort_members DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION record_qualification_exact_cohort()",
+      "enabled": "O",
+      "events": 5,
+      "function_name": "public.record_qualification_exact_cohort",
+      "initially_deferred": true,
+      "internal": false,
+      "name": "record_qualification_member_exact",
+      "table_name": "record_qualification_cohort_members"
+    },
+    {
+      "constraint_name": "record_qualification_result_evide_matrix_id_criterion_code_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_result_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_result_evide_matrix_id_criterion_code_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_criterion_results"
+    },
+    {
+      "constraint_name": "record_qualification_result_evide_matrix_id_criterion_code_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_result_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_result_evide_matrix_id_criterion_code_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_criterion_results"
+    },
+    {
+      "constraint_name": "record_qualification_result_evidenc_evidence_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_result_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_result_evidenc_evidence_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_result_evidenc_evidence_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_result_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_result_evidenc_evidence_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_result_evidence_matrix_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_result_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_result_evidence_matrix_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_matrices"
+    },
+    {
+      "constraint_name": "record_qualification_result_evidence_matrix_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_result_evidence"
+    },
+    {
+      "constraint_name": "record_qualification_result_evidence_matrix_id_dossier_id_fkey",
+      "constraint_table": "record_qualification_result_evidence",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_qualification_matrices"
     },
     {
       "constraint_name": "record_research_attempts_cycle_id_experiment_id_fkey",
@@ -34978,6 +38655,32 @@
       "constraint_name": null,
       "constraint_table": null,
       "deferrable": false,
+      "definition": "CREATE TRIGGER record_qualification_cohort_members_guard BEFORE INSERT OR DELETE OR UPDATE ON record_qualification_cohort_members FOR EACH ROW EXECUTE FUNCTION record_qualification_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_qualification_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_qualification_cohort_members_guard",
+      "table_name": "record_qualification_cohort_members"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_qualification_cohorts_guard BEFORE INSERT OR DELETE OR UPDATE ON record_qualification_cohorts FOR EACH ROW EXECUTE FUNCTION record_qualification_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_qualification_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_qualification_cohorts_guard",
+      "table_name": "record_qualification_cohorts"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
       "definition": "CREATE TRIGGER record_qualification_criteria_guard BEFORE INSERT OR DELETE OR UPDATE ON record_qualification_criteria FOR EACH ROW EXECUTE FUNCTION record_offer_guard()",
       "enabled": "O",
       "events": 31,
@@ -34986,6 +38689,84 @@
       "internal": false,
       "name": "record_qualification_criteria_guard",
       "table_name": "record_qualification_criteria"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_qualification_criterion_results_guard BEFORE INSERT OR DELETE OR UPDATE ON record_qualification_criterion_results FOR EACH ROW EXECUTE FUNCTION record_qualification_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_qualification_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_qualification_criterion_results_guard",
+      "table_name": "record_qualification_criterion_results"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_qualification_decisions_guard BEFORE INSERT OR DELETE OR UPDATE ON record_qualification_decisions FOR EACH ROW EXECUTE FUNCTION record_qualification_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_qualification_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_qualification_decisions_guard",
+      "table_name": "record_qualification_decisions"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_qualification_dossiers_guard BEFORE INSERT OR DELETE OR UPDATE ON record_qualification_dossiers FOR EACH ROW EXECUTE FUNCTION record_qualification_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_qualification_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_qualification_dossiers_guard",
+      "table_name": "record_qualification_dossiers"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_qualification_evidence_guard BEFORE INSERT OR DELETE OR UPDATE ON record_qualification_evidence FOR EACH ROW EXECUTE FUNCTION record_qualification_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_qualification_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_qualification_evidence_guard",
+      "table_name": "record_qualification_evidence"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_qualification_matrices_guard BEFORE INSERT OR DELETE OR UPDATE ON record_qualification_matrices FOR EACH ROW EXECUTE FUNCTION record_qualification_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_qualification_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_qualification_matrices_guard",
+      "table_name": "record_qualification_matrices"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_qualification_result_evidence_guard BEFORE INSERT OR DELETE OR UPDATE ON record_qualification_result_evidence FOR EACH ROW EXECUTE FUNCTION record_qualification_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_qualification_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_qualification_result_evidence_guard",
+      "table_name": "record_qualification_result_evidence"
     },
     {
       "constraint_name": null,

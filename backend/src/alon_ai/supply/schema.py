@@ -279,6 +279,7 @@ qualifications = table(
     ForeignKeyConstraint(
         ["fact_id", "experiment_id"], ["supply_facts.id", "supply_facts.experiment_id"]
     ),
+    UniqueConstraint("candidate_id", "experiment_id", "fact_id"),
     enumcheck("outcome", ["QUALIFIED", "REJECTED_FIT", "REJECTED_EVIDENCE"]),
 )
 feedback = table(
