@@ -102,8 +102,12 @@ async def test_new_decision_supersedes_readiness_without_rewriting_history(
             == 1
         )
 
-    # The old schema cannot represent appended decisions. Refuse a destructive
-    # rollback before changing anything instead of discarding immutable history.
+    # A rejected destructive downgrade must preserve the pre-attempt migration
+    # head and all immutable history.
+    async with governance_engine.connect() as connection:
+        head_before_downgrade = await connection.scalar(
+            text("SELECT version_num FROM alembic_version")
+        )
     result = await asyncio.to_thread(
         subprocess.run,
         [sys.executable, "-m", "alembic", "downgrade", "0d1db464e1c2"],
@@ -127,7 +131,7 @@ async def test_new_decision_supersedes_readiness_without_rewriting_history(
     async with governance_engine.connect() as connection:
         assert (
             await connection.scalar(text("SELECT version_num FROM alembic_version"))
-            == "20260920_10"
+            == head_before_downgrade
         )
         assert (
             await connection.scalar(select(func.count()).select_from(q.decisions)) == 3

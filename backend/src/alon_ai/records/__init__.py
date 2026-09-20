@@ -6,6 +6,14 @@ from alon_ai.records.calibration_models import (
     CalibrationFulfillmentRequest,
     CalibrationProposalRequest,
 )
+from alon_ai.records.conversation import ConversationRecordsRepository
+from alon_ai.records.conversation_models import (
+    ConversationDocumentInput,
+    ConversationFactInput,
+    ConversationRecordReceipt,
+    RecordConversationDocumentsRequest,
+    ReplyEvidenceSpan,
+)
 from alon_ai.records.models import (
     ArtifactDispositionReceipt,
     ArtifactDraft,
@@ -96,6 +104,10 @@ __all__ = [
     "CommercialEnvelopeReceipt",
     "CommercialEnvelopeRequest",
     "ContactabilityDecisionRequest",
+    "ConversationDocumentInput",
+    "ConversationFactInput",
+    "ConversationRecordReceipt",
+    "ConversationRecordsRepository",
     "CriterionResultInput",
     "CycleReceipt",
     "DeliveryConstraints",
@@ -134,6 +146,8 @@ __all__ = [
     "QualificationDecisionReceipt",
     "QualificationDecisionRequest",
     "ReadinessRepository",
+    "RecordConversationDocumentsRequest",
+    "ReplyEvidenceSpan",
     "ResearchAttemptReceipt",
     "ResearchEvidenceLinkRequest",
     "ResearchPlanRequest",

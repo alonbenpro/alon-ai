@@ -5,7 +5,22 @@ from pathlib import Path
 
 from sqlalchemy import text
 
-from alon_ai.db.schema_manifest import collect_schema
+from alon_ai.db.schema_manifest import canonicalize_columns, collect_schema
+
+
+def test_column_manifest_ignores_physical_postgres_position():
+    logical = {
+        "table_name": "record_initial_outreach_policies",
+        "name": "max_sequence_steps",
+        "type": "integer",
+        "not_null": False,
+        "identity": "",
+        "generated": "",
+        "default_expression": None,
+    }
+    assert canonicalize_columns([{**logical, "ordinal": 13}]) == canonicalize_columns(
+        [{**logical, "ordinal": 16}]
+    )
 
 
 async def test_migrated_schema_matches_reviewed_manifest(governance_engine):

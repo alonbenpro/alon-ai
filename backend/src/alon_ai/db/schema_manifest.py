@@ -41,7 +41,7 @@ QUERIES = {
         WHERE {TABLE_FILTER}
     """,
     "columns": f"""
-        SELECT c.relname AS table_name, a.attnum AS ordinal, a.attname AS name,
+        SELECT c.relname AS table_name, a.attname AS name,
                format_type(a.atttypid,a.atttypmod) AS type,
                a.attnotnull AS not_null, a.attidentity AS identity,
                a.attgenerated AS generated,
@@ -95,6 +95,14 @@ QUERIES = {
 }
 
 
+def canonicalize_columns(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Exclude physical PostgreSQL attribute positions from logical schema review."""
+    return sorted(
+        ({key: value for key, value in row.items() if key != "ordinal"} for row in rows),
+        key=lambda row: (row["table_name"], row["name"]),
+    )
+
+
 async def collect_schema(connection: AsyncConnection) -> dict[str, Any]:
     await connection.execute(text("SET LOCAL search_path TO public, pg_catalog"))
     version = int(
@@ -113,7 +121,11 @@ async def collect_schema(connection: AsyncConnection) -> dict[str, Any]:
     }
     for name, query in QUERIES.items():
         rows = [dict(row) for row in (await connection.execute(text(query))).mappings()]
-        result[name] = sorted(rows, key=lambda row: json.dumps(row, sort_keys=True))
+        result[name] = (
+            canonicalize_columns(rows)
+            if name == "columns"
+            else sorted(rows, key=lambda row: json.dumps(row, sort_keys=True))
+        )
     return result
 
 
