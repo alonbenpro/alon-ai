@@ -1,5 +1,11 @@
 """Public L03 product-record contracts."""
 
+from alon_ai.records.calibration import CalibrationRepository
+from alon_ai.records.calibration_models import (
+    CalibrationDecisionRequest,
+    CalibrationFulfillmentRequest,
+    CalibrationProposalRequest,
+)
 from alon_ai.records.models import (
     ArtifactDispositionReceipt,
     ArtifactDraft,
@@ -61,6 +67,15 @@ from alon_ai.records.qualification_models import (
     QualificationDecisionRequest,
 )
 from alon_ai.records.qualifications import QualificationCohortRepository
+from alon_ai.records.readiness import ReadinessRepository
+from alon_ai.records.readiness_models import (
+    ContactabilityDecisionRequest,
+    DiscoveryPlanRequest,
+    ProviderResultRequest,
+    ResearchEvidenceLinkRequest,
+    ResearchPlanRequest,
+    ResearchRunRequest,
+)
 from alon_ai.records.repository import ProductRecordsRepository
 
 __all__ = [
@@ -70,15 +85,21 @@ __all__ = [
     "ArtifactInput",
     "ArtifactKind",
     "ArtifactReceipt",
+    "CalibrationDecisionRequest",
+    "CalibrationFulfillmentRequest",
+    "CalibrationProposalRequest",
+    "CalibrationRepository",
     "ClaimInput",
     "CohortReceipt",
     "CommandReceipt",
     "CommercialConstraints",
     "CommercialEnvelopeReceipt",
     "CommercialEnvelopeRequest",
+    "ContactabilityDecisionRequest",
     "CriterionResultInput",
     "CycleReceipt",
     "DeliveryConstraints",
+    "DiscoveryPlanRequest",
     "DraftGraphRequest",
     "DraftValidationReceipt",
     "EvidenceCoverageInput",
@@ -107,11 +128,16 @@ __all__ = [
     "ProductRecordsDenied",
     "ProductRecordsRepository",
     "ProductWorkflow",
+    "ProviderResultRequest",
     "QualificationCohortRepository",
     "QualificationCriterion",
     "QualificationDecisionReceipt",
     "QualificationDecisionRequest",
+    "ReadinessRepository",
     "ResearchAttemptReceipt",
+    "ResearchEvidenceLinkRequest",
+    "ResearchPlanRequest",
+    "ResearchRunRequest",
     "SequenceStepInput",
     "SourceReference",
     "SubjectCandidateInput",

@@ -21,10 +21,12 @@ import alon_ai.contact as contact_schema  # noqa: F401
 import alon_ai.records.schema as records_schema  # noqa: F401
 from alon_ai.accounting.schema import metadata as target_metadata
 from alon_ai.records import (
+    calibration_schema,  # noqa: F401
     offer_schema,  # noqa: F401
     organization_schema,  # noqa: F401
     outreach_schema,  # noqa: F401
     qualification_schema,  # noqa: F401
+    readiness_schema,  # noqa: F401
 )
 from alon_ai.supply import schema as supply_schema  # noqa: F401
 

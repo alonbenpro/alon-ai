@@ -8,7 +8,11 @@ from sqlalchemy import (
     String,
     Table,
     UniqueConstraint,
+    column,
     text,
+)
+from sqlalchemy import (
+    table as sql_table,
 )
 from sqlalchemy.dialects.postgresql import JSONB
 
@@ -598,3 +602,13 @@ BEGIN
 END $$
 """,
 ]
+
+# Read-only projection: historical first results remain in supply_qualifications.
+current_qualifications = sql_table(
+    "record_current_supply_qualifications",
+    column("candidate_id", U),
+    column("experiment_id", U),
+    column("fact_id", U),
+    column("accepted_at", T),
+    column("outcome", String),
+)

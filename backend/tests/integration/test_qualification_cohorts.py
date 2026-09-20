@@ -166,7 +166,9 @@ async def accepted_offer(engine):
     return context[1], row, criteria
 
 
-async def qualified_pool(engine, size=52):
+async def qualified_pool(
+    engine, size=52, *, verify_first=None, first_contact_rejected=False
+):
     experiment_id, acceptance, criteria = await accepted_offer(engine)
     supply, writer, _, plan, _ = await setup(engine, existing_exp=experiment_id)
     batch_id = await supply.begin_batch(experiment_id, 1, plan, uuid4())
@@ -241,8 +243,23 @@ async def qualified_pool(engine, size=52):
         )
         policy_id = await supply.verification_policy(experiment_id)
         verification_id = await fact(
-            "VERIFIED", contact_ref=source_id, policy_ref=policy_id
+            "VERIFICATION_REJECTED"
+            if index == 0 and first_contact_rejected
+            else "VERIFIED",
+            contact_ref=source_id,
+            policy_ref=policy_id,
         )
+        if index == 0 and verify_first is not None:
+            await verify_first(
+                engine,
+                supply,
+                contact,
+                experiment_id,
+                batch_id,
+                candidate_id,
+                source_id,
+                verification_id,
+            )
         await supply.resolve_contact(candidate_id, source_id, verification_id)
         recipient = await org_repo.register_recipient(
             identity.binding_id,
@@ -259,7 +276,14 @@ async def qualified_pool(engine, size=52):
     async with engine.begin() as connection:
         await connection.execute(
             update(supply_schema.candidates)
-            .where(supply_schema.candidates.c.experiment_id == experiment_id)
+            .where(
+                supply_schema.candidates.c.experiment_id == experiment_id,
+                supply_schema.candidates.c.id.in_(
+                    select(supply_schema.contacts.c.candidate_id).where(
+                        supply_schema.contacts.c.outcome == "SUPPORTED"
+                    )
+                ),
+            )
             .values(deep_started=True)
         )
     return experiment_id, acceptance, criteria, plan, supply, org_repo, leads

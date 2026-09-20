@@ -87,7 +87,7 @@ from alon_ai.records.organization_models import (
 )
 from alon_ai.records.organizations import OrganizationRepository
 from alon_ai.supply import schema as supply_schema
-from alon_ai.supply.repository import ComposedContactSupplyHook
+from alon_ai.supply.repository import ComposedContactSupplyHook, SupplyAdmissionHook
 
 KEY = SecretStr("0123456789abcdef" * 2)
 OWNER = UUID(int=1)
@@ -136,6 +136,7 @@ async def provision_call(
     *,
     service: ServiceName = "provider-executor",
     contact_data=None,
+    supply_data=None,
 ):
     attr = CallAttribution(
         experiment_id=exp,
@@ -149,7 +150,10 @@ async def provision_call(
         deadline=NOW + timedelta(hours=1),
     )
     admin = GovernanceProvisioner(engine)
-    await admin.scope(attr, gate_kind="CONTACT" if contact_data else "NONE")
+    await admin.scope(
+        attr,
+        gate_kind="CONTACT" if contact_data else "SUPPLY" if supply_data else "NONE",
+    )
     use = IntendedUse(
         provider=CAPABILITIES[capability].provider,
         account_handle="fixture-" + uuid4().hex,
@@ -260,6 +264,10 @@ async def provision_call(
                 supply, contact_owner=ContactAdmissionHook(contact)
             )
         }
+    if supply_data:
+        supply, batch = supply_data
+        await supply.bind_operation(attr, batch, "DISCOVERY", config.id)
+        hooks = {"SUPPLY": SupplyAdmissionHook(supply)}
     governed = GovernanceRepository(engine, clock=lambda: NOW, admission_hooks=hooks)
     if capability == Capability.GMAIL_SEND:
         # Fixture-only persisted call representing the future gateway, never a live send.

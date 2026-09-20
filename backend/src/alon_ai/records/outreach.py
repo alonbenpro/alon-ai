@@ -29,6 +29,7 @@ from alon_ai.records.outreach_models import (
     FreezeOutreachContextRequest,
     OutreachContextReceipt,
 )
+from alon_ai.records.qualifications import QualificationCohortRepository
 from alon_ai.records.repository import _complete, _existing, _request_hash, safe_records
 from alon_ai.supply import schema as supply
 
@@ -108,6 +109,9 @@ class OutreachRecordsRepository:
     ) -> None:
         self.engine = engine
         self.clock = clock
+        self.qualifications = QualificationCohortRepository(
+            engine, lookup_key=lookup_key, clock=clock
+        )
         self.organizations = OrganizationRepository(
             engine, lookup_key=lookup_key, clock=clock
         )
@@ -199,6 +203,7 @@ class OutreachRecordsRepository:
             if {item.evidence_id for item in request.coverage} != evidence_ids:
                 raise ProductRecordsDenied("INCOMPLETE_EVIDENCE_COVERAGE")
             now = self.clock()
+            await self.qualifications._current_decision(connection, decision, now)
             if (
                 request.artifact.kind is not ArtifactKind.OUTREACH_CONTEXT_BUNDLE
                 or request.prompt_configuration.kind
@@ -383,6 +388,10 @@ class OutreachRecordsRepository:
                     connection, old["result_id"], old["id"]
                 )
             now = self.clock()
+            decision = await _one(
+                connection, qualification.decisions, "id", context["decision_id"]
+            )
+            await self.qualifications._current_decision(connection, decision, now)
             if await connection.scalar(
                 select(organization.releases.c.id).where(
                     organization.releases.c.reservation_id == context["reservation_id"]

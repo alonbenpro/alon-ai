@@ -206,12 +206,8 @@ decisions = table(
         ],
     ),
     ForeignKeyConstraint(
-        ["candidate_id", "experiment_id", "proposal_fact_id"],
-        [
-            "supply_qualifications.candidate_id",
-            "supply_qualifications.experiment_id",
-            "supply_qualifications.fact_id",
-        ],
+        ["proposal_fact_id", "experiment_id"],
+        ["supply_facts.id", "supply_facts.experiment_id"],
     ),
     UniqueConstraint("id", "experiment_id"),
     UniqueConstraint("id", "offer_acceptance_id"),

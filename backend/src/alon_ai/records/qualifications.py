@@ -5,7 +5,7 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from pydantic import SecretStr
-from sqlalchemy import func, insert, select, text
+from sqlalchemy import func, insert, select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
@@ -136,6 +136,15 @@ class QualificationCohortRepository:
             await self.organizations._owner(
                 connection, experiment_id, request.recorded_by
             )
+            from alon_ai.records.readiness import assert_dossier_evidence_input
+
+            await assert_dossier_evidence_input(
+                connection,
+                candidate_id=request.candidate_id,
+                offer_acceptance_id=request.offer_acceptance_id,
+                evidence=request.evidence,
+                now=self.clock(),
+            )
             version = (
                 await connection.scalar(
                     select(func.coalesce(func.max(q.dossiers.c.version), 0)).where(
@@ -201,31 +210,9 @@ class QualificationCohortRepository:
         current = await self._current_acceptance(connection, dossier["experiment_id"])
         if current is None or current["id"] != dossier["offer_acceptance_id"]:
             raise ProductRecordsDenied("STALE_OFFER_VERSION")
-        contact = await _one(
-            connection, supply.contacts, "candidate_id", dossier["candidate_id"]
-        )
-        source = await _one(
-            connection,
-            org.recipient_sources,
-            "id",
-            dossier["recipient_source_id"],
-        )
-        if (
-            contact["outcome"] != "SUPPORTED"
-            or contact["source_id"] != source["source_fact_id"]
-            or not contact["resolved_at"] <= now < contact["valid_until"]
-        ):
-            raise ProductRecordsDenied("STALE_CONTACT")
-        reason = await connection.scalar(
-            text("SELECT record_org_block_reason(:org,:recipient,:exp)"),
-            {
-                "org": dossier["organization_id"],
-                "recipient": dossier["recipient_id"],
-                "exp": dossier["experiment_id"],
-            },
-        )
-        if reason is not None:
-            raise ProductRecordsDenied("PROTECTION_CONFLICT")
+        from alon_ai.records.readiness import assert_current_contact
+
+        contact, _ = await assert_current_contact(connection, dossier, now)
         return contact
 
     @safe_records
@@ -247,6 +234,9 @@ class QualificationCohortRepository:
                 )
             now = self.clock()
             contact = await self._decision_gate(connection, dossier, now)
+            from alon_ai.records.readiness import assert_dossier_research_lineage
+
+            await assert_dossier_research_lineage(connection, dossier, now)
             criteria = tuple(
                 (
                     await connection.execute(
@@ -344,6 +334,27 @@ class QualificationCohortRepository:
             await self.organizations._owner(
                 connection, experiment_id, request.decided_by
             )
+            supply_state = await connection.scalar(
+                select(supply.plans.c.state).where(
+                    supply.plans.c.experiment_id == experiment_id
+                )
+            )
+            if supply_state not in {"ACTIVE", "TARGET_50_REACHED"}:
+                raise ProductRecordsDenied("SUPPLY_STOPPED")
+            if request.proposed_outcome in ACCEPTED:
+                eligible = tuple(
+                    (
+                        await connection.execute(
+                            select(supply.current_qualifications.c.candidate_id).where(
+                                supply.current_qualifications.c.experiment_id
+                                == experiment_id,
+                                supply.current_qualifications.c.outcome == "QUALIFIED",
+                            )
+                        )
+                    ).scalars()
+                )
+                if len(eligible) >= 50 and dossier["candidate_id"] not in eligible:
+                    raise ProductRecordsDenied("SUPPLY_TARGET_REACHED")
             matrix_id, decision_id = uuid4(), uuid4()
             lineage = {
                 name: dossier[name]
@@ -393,15 +404,25 @@ class QualificationCohortRepository:
                     for evidence_id in item.evidence_ids
                 ],
             )
-            await connection.execute(
-                insert(supply.qualifications).values(
-                    candidate_id=dossier["candidate_id"],
-                    experiment_id=experiment_id,
-                    fact_id=proof["id"],
-                    accepted_at=now,
-                    outcome=proof["kind"],
+            # Supply's first result remains immutable; later qualification versions
+            # are appended below and exposed through the current-readiness view.
+            if (
+                await connection.scalar(
+                    select(supply.qualifications.c.candidate_id).where(
+                        supply.qualifications.c.candidate_id == dossier["candidate_id"]
+                    )
                 )
-            )
+                is None
+            ):
+                await connection.execute(
+                    insert(supply.qualifications).values(
+                        candidate_id=dossier["candidate_id"],
+                        experiment_id=experiment_id,
+                        fact_id=proof["id"],
+                        accepted_at=now,
+                        outcome=proof["kind"],
+                    )
+                )
             await connection.execute(
                 insert(q.decisions).values(
                     id=decision_id,
@@ -422,6 +443,9 @@ class QualificationCohortRepository:
                     **lineage,
                 )
             )
+            from alon_ai.records.calibration import complete_requalification
+
+            await complete_requalification(connection, decision_id, completed_at=now)
             command_id = await _complete(
                 connection,
                 command_key=command_key,
@@ -433,6 +457,25 @@ class QualificationCohortRepository:
                 now=now,
             )
             return await self._decision_receipt(connection, decision_id, command_id)
+
+    async def _current_decision(self, connection, decision, now):
+        latest = await connection.scalar(
+            select(q.decisions.c.id)
+            .join(q.dossiers, q.dossiers.c.id == q.decisions.c.dossier_id)
+            .where(
+                q.decisions.c.candidate_id == decision["candidate_id"],
+                q.decisions.c.experiment_id == decision["experiment_id"],
+            )
+            .order_by(q.dossiers.c.version.desc(), q.decisions.c.id.desc())
+            .limit(1)
+        )
+        if latest != decision["id"] or decision["valid_until"] <= now:
+            raise ProductRecordsDenied("STALE_DECISION")
+        await self._decision_gate(
+            connection,
+            await _one(connection, q.dossiers, "id", decision["dossier_id"]),
+            now,
+        )
 
     async def _cohort_receipt(self, connection, cohort_id, command_id):
         count = await connection.scalar(
@@ -478,6 +521,9 @@ class QualificationCohortRepository:
                 return await self._cohort_receipt(
                     connection, old["result_id"], old["id"]
                 )
+            from alon_ai.records.calibration import assert_no_pending_calibration
+
+            await assert_no_pending_calibration(connection, experiment_id)
             current = await self._current_acceptance(connection, experiment_id)
             if (
                 current is None
@@ -505,11 +551,7 @@ class QualificationCohortRepository:
             for row in ordered:
                 if row["outcome"] not in ACCEPTED or row["valid_until"] <= now:
                     raise ProductRecordsDenied("STALE_DECISION")
-                await self._decision_gate(
-                    connection,
-                    await _one(connection, q.dossiers, "id", row["dossier_id"]),
-                    now,
-                )
+                await self._current_decision(connection, row, now)
             cohort_id = uuid4()
             await connection.execute(
                 insert(q.cohorts).values(

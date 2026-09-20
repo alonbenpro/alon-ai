@@ -106,7 +106,10 @@ async def finish(c, exp, reason, key):
             command_key=key,
             reason=reason,
             achieved=await count(
-                c, s.qualifications, exp, s.qualifications.c.outcome == "QUALIFIED"
+                c,
+                s.current_qualifications,
+                exp,
+                s.current_qualifications.c.outcome == "QUALIFIED",
             ),
             batches_used=await count(c, s.batches, exp),
             businesses_discovered=await count(c, s.candidates, exp),
@@ -431,17 +434,17 @@ class CampaignSupplyRepository:
                 await c.execute(
                     select(s.facts.c.valid_until, s.contacts.c.valid_until)
                     .select_from(
-                        s.qualifications.join(
-                            s.facts, s.qualifications.c.fact_id == s.facts.c.id
+                        s.current_qualifications.join(
+                            s.facts, s.current_qualifications.c.fact_id == s.facts.c.id
                         ).join(
                             s.contacts,
-                            s.qualifications.c.candidate_id
+                            s.current_qualifications.c.candidate_id
                             == s.contacts.c.candidate_id,
                         )
                     )
                     .where(
-                        s.qualifications.c.experiment_id == exp,
-                        s.qualifications.c.outcome == "QUALIFIED",
+                        s.current_qualifications.c.experiment_id == exp,
+                        s.current_qualifications.c.outcome == "QUALIFIED",
                     )
                 )
             ).all()
@@ -724,6 +727,10 @@ class CampaignSupplyRepository:
     async def snapshot(self, experiment_id: UUID) -> SupplySnapshot:
         async with self.engine.begin() as c:
             root = await locked(c, experiment_id)
+            await c.execute(
+                text("SELECT set_config('alon.organization_now',:now,true)"),
+                {"now": self.clock().isoformat()},
+            )
             slots = tuple(
                 (
                     await c.execute(
@@ -750,15 +757,18 @@ class CampaignSupplyRepository:
                     await c.execute(
                         select(func.count())
                         .select_from(
-                            s.qualifications.join(
+                            s.current_qualifications.join(
                                 s.contacts,
                                 s.contacts.c.candidate_id
-                                == s.qualifications.c.candidate_id,
-                            ).join(s.facts, s.facts.c.id == s.qualifications.c.fact_id)
+                                == s.current_qualifications.c.candidate_id,
+                            ).join(
+                                s.facts,
+                                s.facts.c.id == s.current_qualifications.c.fact_id,
+                            )
                         )
                         .where(
-                            s.qualifications.c.experiment_id == experiment_id,
-                            s.qualifications.c.outcome == "QUALIFIED",
+                            s.current_qualifications.c.experiment_id == experiment_id,
+                            s.current_qualifications.c.outcome == "QUALIFIED",
                             s.contacts.c.valid_until > self.clock(),
                             s.facts.c.valid_until > self.clock(),
                         )
@@ -766,9 +776,9 @@ class CampaignSupplyRepository:
                 ).scalar_one(),
                 accepted=await count(
                     c,
-                    s.qualifications,
+                    s.current_qualifications,
                     experiment_id,
-                    s.qualifications.c.outcome == "QUALIFIED",
+                    s.current_qualifications.c.outcome == "QUALIFIED",
                 ),
             )
 

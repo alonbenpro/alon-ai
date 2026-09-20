@@ -650,6 +650,61 @@ class OfferRecordsRepository:
                 )
             ):
                 raise ProductRecordsDenied("PROPOSAL_INVALIDATED")
+            if request.calibration_decision_id is not None:
+                from alon_ai.records import calibration_schema as calibration
+                from alon_ai.records import qualification_schema as qualification
+
+                decision = (
+                    (
+                        await connection.execute(
+                            select(calibration.decisions).where(
+                                calibration.decisions.c.id
+                                == request.calibration_decision_id
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                current_id = await connection.scalar(
+                    select(s.offer_acceptances.c.id)
+                    .where(
+                        s.offer_acceptances.c.experiment_id == proposal["experiment_id"]
+                    )
+                    .order_by(
+                        s.offer_acceptances.c.accepted_at.desc(),
+                        s.offer_acceptances.c.id.desc(),
+                    )
+                    .limit(1)
+                )
+                if (
+                    decision is None
+                    or decision["experiment_id"] != proposal["experiment_id"]
+                    or decision["outcome"] != "ACCEPT"
+                    or decision["base_offer_acceptance_id"] != current_id
+                    or await connection.scalar(
+                        select(calibration.fulfillments.c.id).where(
+                            calibration.fulfillments.c.calibration_decision_id
+                            == request.calibration_decision_id
+                        )
+                    )
+                    is not None
+                    or await connection.scalar(
+                        select(qualification.cohorts.c.id).where(
+                            qualification.cohorts.c.experiment_id
+                            == proposal["experiment_id"]
+                        )
+                    )
+                    is not None
+                ):
+                    raise ProductRecordsDenied("CALIBRATION_NOT_AUTHORIZED")
+                base_bundle = await connection.scalar(
+                    select(s.offer_packages.c.bundle_id).where(
+                        s.offer_packages.c.id == decision["base_offer_id"]
+                    )
+                )
+                if base_bundle != proposal["bundle_id"]:
+                    raise ProductRecordsDenied("CALIBRATION_INPUT_DRIFT")
             package = await _exact_artifact(connection, request.package)
             await _exact_artifact(connection, request.qualification_profile)
             policy_artifact = await _exact_artifact(connection, request.outreach_policy)
@@ -727,6 +782,7 @@ class OfferRecordsRepository:
                     artifact_version=request.package.version,
                     artifact_hash=request.package.content_hash,
                     proposal_id=request.proposal_id,
+                    calibration_decision_id=request.calibration_decision_id,
                     bundle_id=proposal["bundle_id"],
                     envelope_id=proposal["envelope_id"],
                     currency=package["payload"]["currency"],

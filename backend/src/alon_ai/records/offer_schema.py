@@ -228,6 +228,7 @@ offer_packages = table(
     gov.col("currency", String(3)),
     gov.col("base_price", Numeric(18, 2)),
     gov.col("created_at", gov.T),
+    gov.col("calibration_decision_id", gov.U, nullable=True, unique=True),
     ForeignKeyConstraint(
         [
             "artifact_id",
@@ -251,8 +252,23 @@ offer_packages = table(
     UniqueConstraint("id", "experiment_id"),
     UniqueConstraint("artifact_id"),
     UniqueConstraint("proposal_id"),
-    UniqueConstraint("bundle_id"),
+    ForeignKeyConstraint(
+        ["calibration_decision_id", "experiment_id"],
+        [
+            "record_calibration_decisions.id",
+            "record_calibration_decisions.experiment_id",
+        ],
+        name="fk_offer_calibration_decision",
+        use_alter=True,
+    ),
     CheckConstraint("artifact_kind='OFFER_PACKAGE'"),
+)
+
+Index(
+    "uq_record_offer_uncalibrated_bundle",
+    offer_packages.c.bundle_id,
+    unique=True,
+    postgresql_where=offer_packages.c.calibration_decision_id.is_(None),
 )
 
 offer_field_sources = table(

@@ -183,6 +183,7 @@ class QualificationCriterion(StrictDTO):
 
 
 class OfferAcceptanceRequest(StrictDTO):
+    calibration_decision_id: UUID | None = None
     package: ArtifactInput
     proposal_id: UUID
     qualification_profile: ArtifactInput
