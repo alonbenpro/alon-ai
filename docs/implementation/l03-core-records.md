@@ -34,6 +34,8 @@ uv run ruff format --check .
 uv run pyright
 ```
 
-The operator/origin checkpoint passed 55 focused PostgreSQL tests, including clean migration rollback and reapplication; Ruff and Pyright passed.
+The operator/origin checkpoint `6ac45dd` passed 55 focused PostgreSQL tests, two schema inventory checks and the full 680-test backend suite. [GitHub CI](https://github.com/alonbenpro/alon-ai/actions/runs/34745030882) passed backend, frontend, security and container migration/startup checks. Ruff, Pyright, package build and the 245-file secret scan passed. A subsequent populated-history migration fixture verifies that legacy profile hashes survive upgrade, commercial constraints remain unset, and identity bindings remain disabled/unbound; all seven operator tests pass.
+
+The offer and organization checkpoint adds migrations `20260913_07` and `20260913_08`, exact accepted-research offer inputs, deterministic commercial envelopes, field-level offer lineage, atomic offer acceptance and bounded offer-gap returns, plus global organization identity and contact-protection records. Its focused offer/organization/migration/manifest suite passed 19 tests after regenerating the manifest at migration head `20260913_08`; Ruff and Pyright passed with zero errors, and the full backend suite passed 697 tests. This checkpoint does not implement later qualification, cohort, outreach, conversation, handoff or learning work.
 
 L03 remains incomplete until its other record families and gates pass: complete offer and offer-research-return activation, organization/contact protection, qualification/cohort, outreach/conversation/handoff and learning persistence. Live agents, provider integrations and workflows belong to their later owning tasks. No fixture result establishes real sending, booking or commercial authority.

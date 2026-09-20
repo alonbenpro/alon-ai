@@ -24,6 +24,16 @@ TABLE_FILTER = (
 )
 
 QUERIES = {
+    "extensions": """
+        SELECT e.extname AS name, e.extversion AS version, n.nspname AS schema
+        FROM pg_extension e JOIN pg_namespace n ON n.oid=e.extnamespace
+        WHERE e.extname<>'plpgsql'
+    """,
+    "views": """
+        SELECT c.relname AS name, pg_get_viewdef(c.oid,true) AS definition
+        FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
+        WHERE n.nspname='public' AND c.relkind='v'
+    """,
     "tables": f"""
         SELECT c.relname AS name, c.relkind AS kind, c.relrowsecurity AS row_security,
                c.relforcerowsecurity AS force_row_security
@@ -91,7 +101,7 @@ async def collect_schema(connection: AsyncConnection) -> dict[str, Any]:
         (await connection.execute(text("SHOW server_version_num"))).scalar_one()
     )
     result: dict[str, Any] = {
-        "manifest_version": 1,
+        "manifest_version": 2,
         "postgres_major": version // 10000,
         "alembic_heads": sorted(
             (

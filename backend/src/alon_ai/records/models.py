@@ -28,6 +28,13 @@ class ArtifactKind(StrEnum):
     MARKET_RESEARCH_RECOMMENDATION = "MARKET_RESEARCH_RECOMMENDATION"
     RESEARCH_FEEDBACK_BRIEF = "RESEARCH_FEEDBACK_BRIEF"
     OFFER_RESEARCH_GAP_BRIEF = "OFFER_RESEARCH_GAP_BRIEF"
+    DELIVERY_SCOPE_ESTIMATE = "DELIVERY_SCOPE_ESTIMATE"
+    OFFER_DESIGN_INPUT_BUNDLE = "OFFER_DESIGN_INPUT_BUNDLE"
+    COMMERCIAL_DESIGN_ENVELOPE = "COMMERCIAL_DESIGN_ENVELOPE"
+    OFFER_DESIGN_PROPOSAL = "OFFER_DESIGN_PROPOSAL"
+    OFFER_PACKAGE = "OFFER_PACKAGE"
+    OFFER_QUALIFICATION_PROFILE = "OFFER_QUALIFICATION_PROFILE"
+    INITIAL_OUTREACH_POLICY = "INITIAL_OUTREACH_POLICY"
     VALIDATION_RESULT = "VALIDATION_RESULT"
     ACCEPTANCE_RECEIPT = "ACCEPTANCE_RECEIPT"
 
@@ -62,6 +69,65 @@ _PAYLOAD_FIELDS: dict[ArtifactKind, dict[str, type]] = {
     ArtifactKind.OFFER_RESEARCH_GAP_BRIEF: {
         "required_evidence": list,
         "justification": str,
+    },
+    ArtifactKind.DELIVERY_SCOPE_ESTIMATE: {"hours": str, "basis": str},
+    ArtifactKind.OFFER_DESIGN_INPUT_BUNDLE: {"status": str},
+    ArtifactKind.COMMERCIAL_DESIGN_ENVELOPE: {"status": str, "reason": str},
+    ArtifactKind.OFFER_DESIGN_PROPOSAL: {
+        "target_customer": str,
+        "buyer": str,
+        "problem": str,
+        "solution_mechanism": str,
+        "credible_outcome": str,
+        "positioning": str,
+        "scope": str,
+        "deliverables": list,
+        "exclusions": list,
+        "prerequisites": list,
+        "timeline": str,
+        "customer_responsibilities": list,
+        "currency": str,
+        "base_price": str,
+        "pilot_terms": str,
+        "third_party_costs": str,
+        "payment_terms": str,
+        "validity": str,
+        "claims": list,
+        "ideal_fit": list,
+        "disqualifiers": list,
+        "negotiation_variables": list,
+    },
+    ArtifactKind.OFFER_PACKAGE: {
+        "target_customer": str,
+        "buyer": str,
+        "problem": str,
+        "solution_mechanism": str,
+        "credible_outcome": str,
+        "positioning": str,
+        "scope": str,
+        "deliverables": list,
+        "exclusions": list,
+        "prerequisites": list,
+        "timeline": str,
+        "customer_responsibilities": list,
+        "currency": str,
+        "base_price": str,
+        "pilot_terms": str,
+        "third_party_costs": str,
+        "payment_terms": str,
+        "validity": str,
+        "claims": list,
+        "ideal_fit": list,
+        "disqualifiers": list,
+        "negotiation_variables": list,
+    },
+    ArtifactKind.OFFER_QUALIFICATION_PROFILE: {"summary": str},
+    ArtifactKind.INITIAL_OUTREACH_POLICY: {
+        "pricing": str,
+        "formal_proposal": str,
+        "detailed_scope": str,
+        "budget_question": str,
+        "primary_goal": str,
     },
     ArtifactKind.RESEARCH_FEEDBACK_BRIEF: {"preserve": list, "change": list},
     ArtifactKind.VALIDATION_RESULT: {
@@ -153,6 +219,52 @@ def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, A
             payload["currency"] is not None or payload["amount"] is not None
         ):
             raise ValueError("unavailable quote cannot invent a price")
+    if kind is ArtifactKind.DELIVERY_SCOPE_ESTIMATE:
+        try:
+            hours = Decimal(payload["hours"])
+        except InvalidOperation as error:
+            raise ValueError("invalid delivery scope estimate") from error
+        exponent = hours.as_tuple().exponent
+        if (
+            hours <= 0
+            or hours > Decimal(100000)
+            or not isinstance(exponent, int)
+            or exponent < -2
+        ):
+            raise ValueError("invalid delivery scope estimate")
+    if kind is ArtifactKind.OFFER_DESIGN_INPUT_BUNDLE and payload["status"] != "FROZEN":
+        raise ValueError("invalid offer input bundle")
+    if kind is ArtifactKind.COMMERCIAL_DESIGN_ENVELOPE and payload["status"] not in {
+        "READY",
+        "IMPOSSIBLE_ECONOMICS",
+        "CURRENCY_MISMATCH",
+        "DELIVERY_CAPACITY_EXCEEDED",
+    }:
+        raise ValueError("invalid commercial envelope")
+    if kind in {ArtifactKind.OFFER_DESIGN_PROPOSAL, ArtifactKind.OFFER_PACKAGE}:
+        try:
+            price = Decimal(payload["base_price"])
+        except InvalidOperation as error:
+            raise ValueError("invalid offer price") from error
+        currency = payload["currency"]
+        exponent = price.as_tuple().exponent
+        if (
+            not isinstance(currency, str)
+            or len(currency) != 3
+            or not currency.isupper()
+            or price <= 0
+            or not isinstance(exponent, int)
+            or exponent < -2
+        ):
+            raise ValueError("invalid offer economics")
+    if kind is ArtifactKind.INITIAL_OUTREACH_POLICY and payload != {
+        "pricing": "OMIT",
+        "formal_proposal": "FORBIDDEN",
+        "detailed_scope": "OMIT",
+        "budget_question": "FORBIDDEN",
+        "primary_goal": "START_RELEVANT_CONVERSATION",
+    }:
+        raise ValueError("invalid initial outreach policy")
     return payload
 
 

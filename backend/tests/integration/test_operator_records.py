@@ -1,7 +1,12 @@
 """Explicit operator ownership and real delivery/commercial profile versions."""
 
+import asyncio
+import os
+import subprocess
+import sys
 from datetime import UTC, datetime
 from decimal import Decimal
+from pathlib import Path
 from uuid import uuid4
 
 import pytest
@@ -200,4 +205,72 @@ def test_nonfinite_and_out_of_range_commercial_bounds_are_rejected(field, value)
     with pytest.raises(ValidationError):
         CommercialConstraints.model_validate(
             {**p.commercial.model_dump(), field: value}
+        )
+
+
+async def test_upgrade_preserves_legacy_profile_without_fabricating_identity(
+    governance_engine,
+):
+    engine = governance_engine
+
+    async def migrate(direction, target):
+        await engine.dispose()
+        result = await asyncio.to_thread(
+            subprocess.run,
+            [sys.executable, "-m", "alembic", direction, target],
+            cwd=Path(__file__).resolve().parents[2],
+            env=dict(
+                os.environ,
+                ALON_AI_DATABASE_URL=engine.url.render_as_string(hide_password=False),
+                ALON_AI_ENVIRONMENT="test",
+            ),
+            capture_output=True,
+            text=True,
+            timeout=60,
+            check=False,
+        )
+        assert result.returncode == 0, result.stderr
+
+    await migrate("downgrade", "20260912_04")
+    profile_id, owner_id = uuid4(), uuid4()
+    async with engine.begin() as c:
+        old_hash = await c.scalar(
+            text("""
+                INSERT INTO record_operator_profiles
+                    (id,version,operator_id,capabilities,constraints,created_at)
+                VALUES (:profile,1,:owner,'["RESEARCH_REVIEW"]',
+                    '["SYNTHETIC_ONLY"]',:now)
+                RETURNING content_hash
+            """),
+            {"profile": profile_id, "owner": owner_id, "now": NOW},
+        )
+    await migrate("upgrade", "head")
+    async with engine.connect() as c:
+        row = (
+            (
+                await c.execute(
+                    text("""
+                        SELECT p.content_hash, p.profile_schema_version,
+                               p.commercial, o.auth_subject, o.status
+                        FROM record_operator_profiles p
+                        JOIN record_operators o ON o.id=p.operator_id
+                        WHERE p.id=:profile
+                    """),
+                    {"profile": profile_id},
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert row["content_hash"] == old_hash
+        assert row["profile_schema_version"] == 1
+        assert row["commercial"] is None
+        assert row["auth_subject"] is None
+        assert row["status"] == "DISABLED"
+        assert (
+            await c.scalar(
+                text("SELECT record_profile_authorized(:profile,1,:owner)"),
+                {"profile": profile_id, "owner": owner_id},
+            )
+            is False
         )

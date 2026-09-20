@@ -30,6 +30,9 @@ async def test_manifest_detects_columns_indexes_and_disabled_guards(governance_e
             text("CREATE INDEX schema_manifest_probe ON gov_calls(created_at)")
         )
         await connection.execute(text("ALTER TABLE gov_calls DISABLE TRIGGER ALL"))
+        await connection.execute(
+            text("CREATE VIEW schema_manifest_probe_view AS SELECT 1 AS unexpected")
+        )
         after = await collect_schema(connection)
-    for component in ("columns", "indexes", "triggers"):
+    for component in ("columns", "indexes", "triggers", "views"):
         assert before[component] != after[component], component

@@ -36,6 +36,8 @@ async def test_full_migration_chain_roundtrip(governance_engine):
         if direction == "downgrade":
             assert actual["alembic_heads"] == []
             for component in (
+                "extensions",
+                "views",
                 "tables",
                 "columns",
                 "constraints",
