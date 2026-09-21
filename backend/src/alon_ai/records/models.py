@@ -55,6 +55,14 @@ class ArtifactKind(StrEnum):
     RESPONSE_PLAN = "RESPONSE_PLAN"
     RESPONSE_DRAFT = "RESPONSE_DRAFT"
     RESPONSE_VALIDATION_RESULT = "RESPONSE_VALIDATION_RESULT"
+    RECIPIENT_REFERRAL_EVIDENCE = "RECIPIENT_REFERRAL_EVIDENCE"
+    LEAD_REQUESTED_FOLLOW_UP = "LEAD_REQUESTED_FOLLOW_UP"
+    INVOICE_HANDOFF_BRIEF = "INVOICE_HANDOFF_BRIEF"
+    DEMO_REQUEST_BRIEF = "DEMO_REQUEST_BRIEF"
+    MEETING_HANDOFF_BRIEF = "MEETING_HANDOFF_BRIEF"
+    OPERATOR_ACTION_REQUIRED = "OPERATOR_ACTION_REQUIRED"
+    MANUAL_OUTCOME_EVENT = "MANUAL_OUTCOME_EVENT"
+    OPERATOR_AUTHORED_MESSAGE = "OPERATOR_AUTHORED_MESSAGE"
     VALIDATION_RESULT = "VALIDATION_RESULT"
     ACCEPTANCE_RECEIPT = "ACCEPTANCE_RECEIPT"
 
@@ -185,6 +193,14 @@ _PAYLOAD_FIELDS: dict[ArtifactKind, dict[str, type]] = {
     ArtifactKind.RESPONSE_PLAN: {"objective": str},
     ArtifactKind.RESPONSE_DRAFT: {"body": str},
     ArtifactKind.RESPONSE_VALIDATION_RESULT: {"disposition": str},
+    ArtifactKind.RECIPIENT_REFERRAL_EVIDENCE: {"status": str},
+    ArtifactKind.LEAD_REQUESTED_FOLLOW_UP: {"timezone": str},
+    ArtifactKind.INVOICE_HANDOFF_BRIEF: {"summary": str},
+    ArtifactKind.DEMO_REQUEST_BRIEF: {"summary": str},
+    ArtifactKind.MEETING_HANDOFF_BRIEF: {"summary": str},
+    ArtifactKind.OPERATOR_ACTION_REQUIRED: {"action": str},
+    ArtifactKind.MANUAL_OUTCOME_EVENT: {"outcome": str},
+    ArtifactKind.OPERATOR_AUTHORED_MESSAGE: {"body": str},
     ArtifactKind.RESEARCH_FEEDBACK_BRIEF: {"preserve": list, "change": list},
     ArtifactKind.VALIDATION_RESULT: {
         "validator": str,
