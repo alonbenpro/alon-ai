@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
-from typing import Literal
+import math
+from typing import Annotated, Literal
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import AwareDatetime, Field, model_validator
 
 from alon_ai.providers.contracts import StrictDTO
 from alon_ai.records.models import CommandReceipt
@@ -253,3 +254,267 @@ class LearningProposalReceipt(CommandReceipt):
 class LearningEvaluationReceipt(CommandReceipt):
     comparison_id: UUID
     assessment_id: UUID
+
+
+StrategyRole = Literal["DISCOVERY", "QUALIFICATION", "OUTREACH", "REPLY"]
+ReasoningEffort = Literal["NONE", "MINIMAL", "LOW", "MEDIUM", "HIGH", "XHIGH"]
+
+STRATEGY_BUDGET_POLICY_VERSION = "STRATEGY_BUDGET_LIMITS_V1"
+MAX_STRATEGY_TOOL_CALLS = 100
+MAX_STRATEGY_SEARCHES = 100
+MAX_STRATEGY_PAGES = 500
+
+
+class DiscoveryStrategyConfiguration(StrictDTO):
+    role: Literal["DISCOVERY"]
+    discovery_rule_version: str = Field(min_length=1, max_length=100)
+    source_order: tuple[
+        Literal["BRAVE_LOCAL", "BRAVE_COMPANY", "OFFICIAL_WEB"], ...
+    ] = Field(min_length=1, max_length=3)
+
+
+class QualificationStrategyConfiguration(StrictDTO):
+    role: Literal["QUALIFICATION"]
+    matrix_rule_version: str = Field(min_length=1, max_length=100)
+    revalidation_rule_version: str = Field(min_length=1, max_length=100)
+
+
+class OutreachStrategyConfiguration(StrictDTO):
+    role: Literal["OUTREACH"]
+    drafting_rule_version: str = Field(min_length=1, max_length=100)
+    validation_rule_version: str = Field(min_length=1, max_length=100)
+
+
+class ReplyStrategyConfiguration(StrictDTO):
+    role: Literal["REPLY"]
+    interpretation_rule_version: str = Field(min_length=1, max_length=100)
+    response_rule_version: str = Field(min_length=1, max_length=100)
+
+
+StrategyConfiguration = Annotated[
+    DiscoveryStrategyConfiguration
+    | QualificationStrategyConfiguration
+    | OutreachStrategyConfiguration
+    | ReplyStrategyConfiguration,
+    Field(discriminator="role"),
+]
+
+
+class StrategyAgentVersionInput(StrictDTO):
+    id: UUID
+    logical_id: UUID
+    version: int = Field(ge=1)
+    supersedes_id: UUID | None = None
+    origin_candidate_id: UUID | None = None
+    prompt: LearningArtifactReference
+    few_shot: LearningArtifactReference | None = None
+    model_identifier: str = Field(pattern=r"^[A-Za-z0-9_.:-]{1,100}$")
+    reasoning_effort: ReasoningEffort
+    budget_policy_version: Literal["STRATEGY_BUDGET_LIMITS_V1"] = (
+        STRATEGY_BUDGET_POLICY_VERSION
+    )
+    max_tool_calls: int = Field(ge=0, le=MAX_STRATEGY_TOOL_CALLS)
+    max_searches: int = Field(ge=0, le=MAX_STRATEGY_SEARCHES)
+    max_pages: int = Field(ge=0, le=MAX_STRATEGY_PAGES)
+    configuration: StrategyConfiguration
+
+    @model_validator(mode="after")
+    def exact_role_and_budgets(self):
+        if not any((self.max_tool_calls, self.max_searches, self.max_pages)):
+            raise ValueError("strategy budgets cannot all be zero")
+        return self
+
+
+class GlobalStrategyPackageRequest(StrictDTO):
+    id: UUID
+    logical_id: UUID
+    version: int = Field(ge=1)
+    supersedes_id: UUID | None = None
+    members: tuple[StrategyAgentVersionInput, ...] = Field(min_length=4, max_length=4)
+    created_by: UUID
+
+    @model_validator(mode="after")
+    def complete_role_set(self):
+        if {item.configuration.role for item in self.members} != {
+            "DISCOVERY",
+            "QUALIFICATION",
+            "OUTREACH",
+            "REPLY",
+        }:
+            raise ValueError("strategy package requires exactly one member per role")
+        return self
+
+
+class StrategyPackageReceipt(CommandReceipt):
+    package_id: UUID
+    package_version: int
+    package_hash: str
+
+
+class FreezeExperimentStrategyRequest(StrictDTO):
+    experiment_id: UUID
+    package_id: UUID
+    frozen_by: UUID
+
+
+class StrategyExecutionBindingRequest(StrictDTO):
+    id: UUID
+    experiment_id: UUID
+    workflow_id: UUID
+    agent_id: UUID
+    operation_id: UUID
+    package_id: UUID
+    agent_version_id: UUID
+    role: StrategyRole
+    model_config_id: UUID
+    model_config_workflow_id: UUID
+    model_config_version: UUID
+
+
+class PromotionDecisionRequest(StrictDTO):
+    id: UUID
+    proposal_id: UUID
+    candidate_id: UUID
+    comparison_id: UUID
+    assessment_id: UUID
+    baseline_package_id: UUID
+    disposition: Literal["ACCEPTED", "REJECTED"]
+    package: GlobalStrategyPackageRequest | None = None
+    reason_codes: tuple[str, ...] = Field(min_length=1, max_length=30)
+    policy_version: Literal["STRATEGY_PROMOTION_V1"] = "STRATEGY_PROMOTION_V1"
+    decided_by: UUID
+
+    @model_validator(mode="after")
+    def accepted_decisions_create_exactly_one_package(self):
+        if (self.disposition == "ACCEPTED") != (self.package is not None):
+            raise ValueError("accepted promotion requires a package")
+        return self
+
+
+class LiveStrategyMetricInput(StrictDTO):
+    category: Literal["COMMERCIAL", "QUALITY", "SAFETY", "LATENCY", "COST"]
+    code: str = Field(pattern=r"^[A-Z][A-Z0-9_]{0,63}$")
+    value: float = Field(allow_inf_nan=False)
+    unit: str = Field(pattern=r"^[A-Z][A-Z0-9_]{0,31}$")
+
+
+class LiveStrategyObservationRequest(StrictDTO):
+    id: UUID
+    execution_binding_id: UUID
+    segment_kind: Literal[
+        "GLOBAL", "OFFER", "INDUSTRY", "ORGANIZATION_TYPE", "RECIPIENT_MODE"
+    ]
+    segment_key: str = Field(min_length=1, max_length=200)
+    inputs: LearningInputBundleInput
+    metrics: tuple[LiveStrategyMetricInput, ...] = Field(min_length=5, max_length=50)
+    observed_from: AwareDatetime
+    observed_to: AwareDatetime
+    recorded_by: UUID
+
+    @model_validator(mode="after")
+    def complete_observation(self):
+        if self.observed_to < self.observed_from:
+            raise ValueError("observation window is invalid")
+        if {item.category for item in self.metrics} != {
+            "COMMERCIAL",
+            "QUALITY",
+            "SAFETY",
+            "LATENCY",
+            "COST",
+        }:
+            raise ValueError("live observation requires all metric categories")
+        if len({(item.category, item.code) for item in self.metrics}) != len(
+            self.metrics
+        ):
+            raise ValueError("live observation metrics must be unique")
+        if not self.inputs.usage or not self.inputs.costs:
+            raise ValueError("live observation requires exact usage and cost lineage")
+        return self
+
+
+class LiveRegressionAssessmentRequest(StrictDTO):
+    id: UUID
+    package_id: UUID
+    observation_ids: tuple[UUID, ...] = Field(min_length=1, max_length=1000)
+    evaluator_version: str = Field(min_length=1, max_length=100)
+    evaluator_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    disposition: Literal["PASS", "FAIL", "INCONCLUSIVE"]
+    metric_results: dict[str, float]
+    confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    sample_size: int = Field(ge=1)
+    rollback_satisfied: bool
+    failure_reason_codes: tuple[str, ...] = Field(default=(), max_length=30)
+    negative_classification: str | None = Field(default=None, max_length=100)
+
+    @model_validator(mode="after")
+    def negative_assessment_retains_analysis(self):
+        negative = self.disposition in {"FAIL", "INCONCLUSIVE"}
+        if negative != bool(self.failure_reason_codes) or negative != bool(
+            self.negative_classification
+        ):
+            raise ValueError("negative live assessment requires retained analysis")
+        if len(set(self.observation_ids)) != len(self.observation_ids):
+            raise ValueError("live assessment observations must be unique")
+        if not all(math.isfinite(value) for value in self.metric_results.values()):
+            raise ValueError("live assessment metrics must be finite")
+        return self
+
+
+class RollbackCandidateInput(StrictDTO):
+    package_id: UUID
+    confidence: float = Field(ge=0, le=1, allow_inf_nan=False)
+    eligible: bool
+    reason_codes: tuple[str, ...] = Field(min_length=1, max_length=30)
+
+
+class RollbackDecisionRequest(StrictDTO):
+    id: UUID
+    current_package_id: UUID
+    target_package_id: UUID
+    assessment_id: UUID
+    candidates: tuple[RollbackCandidateInput, ...] = Field(min_length=1, max_length=100)
+    forced: bool = False
+    policy_version: Literal["HIGHEST_CONFIDENCE_ELIGIBLE_V1"] = (
+        "HIGHEST_CONFIDENCE_ELIGIBLE_V1"
+    )
+    decided_by: UUID
+    reason_codes: tuple[str, ...] = Field(min_length=1, max_length=30)
+
+    @model_validator(mode="after")
+    def target_is_highest_confidence_eligible(self):
+        if self.current_package_id == self.target_package_id:
+            raise ValueError("rollback target must differ from current package")
+        if len({item.package_id for item in self.candidates}) != len(self.candidates):
+            raise ValueError("rollback candidates must be unique")
+        eligible = [item for item in self.candidates if item.eligible]
+        if not eligible:
+            raise ValueError("rollback requires an eligible retained package")
+        highest = max(item.confidence for item in eligible)
+        winners = sorted(
+            (item for item in eligible if item.confidence == highest),
+            key=lambda item: str(item.package_id),
+        )
+        if self.target_package_id != winners[0].package_id:
+            raise ValueError("rollback target is not the deterministic highest confidence package")
+        return self
+
+
+class StrategyControlRequest(StrictDTO):
+    id: UUID
+    kind: Literal["PAUSE", "RESUME", "PIN", "UNPIN", "FORCED_ROLLBACK"]
+    package_id: UUID | None = None
+    rollback_decision_id: UUID | None = None
+    operator_id: UUID
+    reason_codes: tuple[str, ...] = Field(min_length=1, max_length=30)
+
+    @model_validator(mode="after")
+    def exact_control_target(self):
+        if self.kind == "PIN" and self.package_id is None:
+            raise ValueError("pin requires a package")
+        if self.kind == "FORCED_ROLLBACK" and self.rollback_decision_id is None:
+            raise ValueError("forced rollback requires a decision")
+        if self.kind in {"PAUSE", "RESUME", "UNPIN"} and (
+            self.package_id is not None or self.rollback_decision_id is not None
+        ):
+            raise ValueError("control target does not match control kind")
+        return self

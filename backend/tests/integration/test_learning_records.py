@@ -70,8 +70,12 @@ async def proposal_request(
             logical_id=uuid4(),
             version=1,
             baseline_artifact=reference,
-            candidate_configuration={"template": "Synthetic candidate."},
-            config_diff=({"op": "REPLACE", "path": "/template", "value": "Synthetic candidate."},),
+            candidate_configuration={
+                "role": "OUTREACH",
+                "drafting_rule_version": "draft-v1",
+                "validation_rule_version": "validate-v1",
+            },
+            config_diff=({"op": "REPLACE", "path": "/drafting_rule_version", "value": "draft-v1"},),
             diff_hash=digest("diff"),
             content_hash=digest("candidate"),
         )
