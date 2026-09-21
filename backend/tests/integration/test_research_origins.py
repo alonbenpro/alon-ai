@@ -115,8 +115,12 @@ async def research_verdict(repo, exp, cycle, idea, verdict_kind, feedback=None):
         },
         inputs=inputs,
     )
-    attempt = await repo.start_research_attempt(
-        cycle.id, ArtifactInput.from_receipt(plan, role="PLAN"), command_key=uuid4()
+    attempt = await repo.start_market_research(
+        exp,
+        cycle.id,
+        accepted_idea=ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA"),
+        plan=ArtifactInput.from_receipt(plan, role="PLAN"),
+        command_key=uuid4(),
     )
     report = await put(
         repo,
@@ -500,8 +504,10 @@ async def test_missing_or_other_cycle_feedback_cannot_authorize_return(
         ),
     )
     with pytest.raises(ProductRecordsDenied):
-        await repo.start_research_attempt(
+        await repo.start_market_research(
+            exp,
             next_cycle.id,
-            ArtifactInput.from_receipt(plan, role="PLAN"),
+            accepted_idea=ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA"),
+            plan=ArtifactInput.from_receipt(plan, role="PLAN"),
             command_key=uuid4(),
         )

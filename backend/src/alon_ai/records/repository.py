@@ -12,7 +12,7 @@ from uuid import UUID, uuid4
 
 from pydantic import ValidationError
 from pydantic_core import to_jsonable_python
-from sqlalchemy import func, insert, select
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
@@ -27,6 +27,7 @@ from alon_ai.records.models import (
     CommandReceipt,
     CycleReceipt,
     IdeaAcceptanceReceipt,
+    MarketResearchTransitionReceipt,
     OperatorCapabilityProfile,
     PivotDecisionReceipt,
     ProductAgent,
@@ -782,6 +783,16 @@ class ProductRecordsRepository:
                 )
                 or 0
             ) + 1
+            if ordinal == 1:
+                raise ProductRecordsDenied("WORKFLOW_TRANSITION_REQUIRED")
+            state = await connection.scalar(
+                select(s.cycle_states.c.state).where(
+                    s.cycle_states.c.cycle_id == cycle_id,
+                    s.cycle_states.c.experiment_id == cycle["experiment_id"],
+                )
+            )
+            if state != "MARKET_RESEARCH":
+                raise ProductRecordsDenied("INVALID_STATE")
             result_id = uuid4()
             await connection.execute(
                 insert(s.research_attempts).values(
@@ -812,6 +823,214 @@ class ProductRecordsRepository:
                 id=result_id,
                 cycle_id=cycle_id,
                 ordinal=ordinal,
+            )
+
+    @safe_records
+    async def start_market_research(
+        self,
+        experiment_id: UUID,
+        cycle_id: UUID,
+        *,
+        accepted_idea: ArtifactInput,
+        plan: ArtifactInput,
+        command_key: UUID,
+    ) -> MarketResearchTransitionReceipt:
+        async with self.engine.begin() as connection:
+            await lock_experiment(connection, experiment_id)
+            request_hash = _request_hash(
+                experiment_id=experiment_id,
+                cycle_id=cycle_id,
+                accepted_idea=accepted_idea,
+                plan=plan,
+            )
+            old = await _existing(
+                connection, command_key, "START_MARKET_RESEARCH", request_hash
+            )
+            if old:
+                transition = (
+                    (
+                        await connection.execute(
+                            select(s.cycle_transitions).where(
+                                s.cycle_transitions.c.command_id == old["id"]
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                attempt = (
+                    (
+                        await connection.execute(
+                            select(s.research_attempts).where(
+                                s.research_attempts.c.id == old["result_id"]
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                return MarketResearchTransitionReceipt(
+                    command_id=old["id"],
+                    result_id=attempt["id"],
+                    id=attempt["id"],
+                    cycle_id=attempt["cycle_id"],
+                    ordinal=attempt["ordinal"],
+                    transition_id=transition["id"],
+                    state="MARKET_RESEARCH",
+                )
+
+            cycle = (
+                (
+                    await connection.execute(
+                        select(s.cycles).where(
+                            s.cycles.c.id == cycle_id,
+                            s.cycles.c.experiment_id == experiment_id,
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if cycle is None:
+                raise ProductRecordsDenied("SCOPE")
+            current_cycle_id = await connection.scalar(
+                select(s.cycles.c.id)
+                .where(s.cycles.c.experiment_id == experiment_id)
+                .order_by(s.cycles.c.ordinal.desc())
+                .limit(1)
+            )
+            if current_cycle_id != cycle_id:
+                raise ProductRecordsDenied("NON_CURRENT_CYCLE")
+            state = (
+                (
+                    await connection.execute(
+                        select(s.cycle_states)
+                        .where(
+                            s.cycle_states.c.cycle_id == cycle_id,
+                            s.cycle_states.c.experiment_id == experiment_id,
+                        )
+                        .with_for_update()
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            if state["state"] != "IDEA_REFINEMENT":
+                raise ProductRecordsDenied("INVALID_STATE")
+            acceptance = (
+                (
+                    await connection.execute(
+                        select(s.idea_acceptances).where(
+                            s.idea_acceptances.c.cycle_id == cycle_id,
+                            s.idea_acceptances.c.experiment_id == experiment_id,
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if acceptance is None:
+                raise ProductRecordsDenied("MISSING_ACCEPTED_IDEA")
+            if (
+                acceptance["artifact_id"] != accepted_idea.artifact_id
+                or acceptance["artifact_kind"] != accepted_idea.kind
+                or acceptance["artifact_version"] != accepted_idea.version
+                or acceptance["artifact_hash"] != accepted_idea.content_hash
+            ):
+                raise ProductRecordsDenied("STALE_IDEA_LINEAGE")
+            idea = (
+                (
+                    await connection.execute(
+                        select(s.artifacts).where(
+                            s.artifacts.c.id == accepted_idea.artifact_id,
+                            s.artifacts.c.experiment_id == experiment_id,
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            if await connection.scalar(
+                select(s.artifacts.c.id).where(
+                    s.artifacts.c.logical_id == idea["logical_id"],
+                    s.artifacts.c.version > idea["version"],
+                )
+            ) or await connection.scalar(
+                select(s.artifact_dispositions.c.id).where(
+                    s.artifact_dispositions.c.artifact_id == accepted_idea.artifact_id,
+                    s.artifact_dispositions.c.disposition == "SUPERSEDED",
+                )
+            ):
+                raise ProductRecordsDenied("STALE_IDEA_LINEAGE")
+            attempt_id = uuid4()
+            transition_id = uuid4()
+            now = self.clock()
+            await connection.execute(
+                insert(s.research_attempts).values(
+                    id=attempt_id,
+                    experiment_id=experiment_id,
+                    cycle_id=cycle_id,
+                    ordinal=1,
+                    plan_artifact_id=plan.artifact_id,
+                    plan_kind=plan.kind,
+                    plan_version=plan.version,
+                    plan_hash=plan.content_hash,
+                    created_at=now,
+                )
+            )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=experiment_id,
+                kind="START_MARKET_RESEARCH",
+                request_hash=request_hash,
+                result_type="RESEARCH_ATTEMPT",
+                result_id=attempt_id,
+                now=now,
+            )
+            await connection.execute(
+                insert(s.cycle_transitions).values(
+                    id=transition_id,
+                    experiment_id=experiment_id,
+                    cycle_id=cycle_id,
+                    ordinal=1,
+                    from_state="IDEA_REFINEMENT",
+                    to_state="MARKET_RESEARCH",
+                    idea_acceptance_id=acceptance["id"],
+                    idea_artifact_id=accepted_idea.artifact_id,
+                    idea_kind=accepted_idea.kind,
+                    idea_version=accepted_idea.version,
+                    idea_hash=accepted_idea.content_hash,
+                    research_attempt_id=attempt_id,
+                    command_id=command_id,
+                    created_at=now,
+                )
+            )
+            advanced = await connection.execute(
+                update(s.cycle_states)
+                .where(
+                    s.cycle_states.c.cycle_id == cycle_id,
+                    s.cycle_states.c.experiment_id == experiment_id,
+                    s.cycle_states.c.state == "IDEA_REFINEMENT",
+                    s.cycle_states.c.transition_ordinal == 0,
+                )
+                .values(
+                    state="MARKET_RESEARCH",
+                    transition_ordinal=1,
+                    last_transition_id=transition_id,
+                    updated_at=now,
+                )
+            )
+            if advanced.rowcount != 1:
+                raise ProductRecordsDenied("INVALID_STATE")
+            return MarketResearchTransitionReceipt(
+                command_id=command_id,
+                result_id=attempt_id,
+                id=attempt_id,
+                cycle_id=cycle_id,
+                ordinal=1,
+                transition_id=transition_id,
+                state="MARKET_RESEARCH",
             )
 
     @safe_records

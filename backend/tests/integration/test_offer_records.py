@@ -90,8 +90,12 @@ async def complete_research(
         )
     )
     source = SourceReference.governance_evidence(proof_id)
-    attempt = await repo.start_research_attempt(
-        cycle.id, ArtifactInput.from_receipt(plan, role="PLAN"), command_key=uuid4()
+    attempt = await repo.start_market_research(
+        experiment_id,
+        cycle.id,
+        accepted_idea=ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA"),
+        plan=ArtifactInput.from_receipt(plan, role="PLAN"),
+        command_key=uuid4(),
     )
     evidence = []
     for role in RESEARCH_ROLES:
@@ -609,9 +613,13 @@ async def test_new_bundle_invalidates_unaccepted_proposal_and_gap_activates_once
             ArtifactInput.from_receipt(context[3], role="ACCEPTED_IDEA"),
         ),
     )
-    attempt = await context[0].start_research_attempt(
+    attempt = await context[0].start_market_research(
+        context[1],
         cycle.id,
-        ArtifactInput.from_receipt(next_plan, role="PLAN"),
+        accepted_idea=ArtifactInput.from_receipt(
+            context[3], role="ACCEPTED_IDEA"
+        ),
+        plan=ArtifactInput.from_receipt(next_plan, role="PLAN"),
         command_key=uuid4(),
     )
     next_report = await put(

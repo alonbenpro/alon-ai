@@ -147,8 +147,12 @@ async def test_authoritative_receipts_close_artifact_lineage(
     repo, experiment_id, seed, cycle, idea, plan = await cycle_fixture(
         governance_engine
     )
-    attempt = await repo.start_research_attempt(
-        cycle.id, ArtifactInput.from_receipt(plan, role="PLAN"), command_key=uuid4()
+    attempt = await repo.start_market_research(
+        experiment_id,
+        cycle.id,
+        accepted_idea=ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA"),
+        plan=ArtifactInput.from_receipt(plan, role="PLAN"),
+        command_key=uuid4(),
     )
     ancestor = await put(
         repo,
@@ -353,13 +357,19 @@ async def test_attempt_and_verdict_reject_unbound_or_stale_lineage(governance_en
         {"questions": ["Demand?"], "method": "Unbound"},
     )
     with pytest.raises(ProductRecordsDenied):
-        await repo.start_research_attempt(
+        await repo.start_market_research(
+            experiment_id,
             cycle.id,
-            ArtifactInput.from_receipt(unbound, role="PLAN"),
+            accepted_idea=ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA"),
+            plan=ArtifactInput.from_receipt(unbound, role="PLAN"),
             command_key=uuid4(),
         )
-    first = await repo.start_research_attempt(
-        cycle.id, ArtifactInput.from_receipt(plan, role="PLAN"), command_key=uuid4()
+    first = await repo.start_market_research(
+        experiment_id,
+        cycle.id,
+        accepted_idea=ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA"),
+        plan=ArtifactInput.from_receipt(plan, role="PLAN"),
+        command_key=uuid4(),
     )
     second_plan = await put(
         repo,
@@ -420,13 +430,31 @@ async def test_receipt_replays_compare_all_decision_arguments(governance_engine)
         await repo.accept_idea(cycle.id, idea_ref, accepted_by=uuid4(), command_key=key)
     key = uuid4()
     plan_ref = ArtifactInput.from_receipt(plan, role="PLAN")
-    attempt = await repo.start_research_attempt(cycle.id, plan_ref, command_key=key)
+    attempt = await repo.start_market_research(
+        experiment_id,
+        cycle.id,
+        accepted_idea=idea_ref,
+        plan=plan_ref,
+        command_key=key,
+    )
     assert (
-        await repo.start_research_attempt(cycle.id, plan_ref, command_key=key)
+        await repo.start_market_research(
+            experiment_id,
+            cycle.id,
+            accepted_idea=idea_ref,
+            plan=plan_ref,
+            command_key=key,
+        )
         == attempt
     )
     with pytest.raises(ProductRecordsDenied, match="COMMAND_CONFLICT"):
-        await repo.start_research_attempt(cycle.id, idea_ref, command_key=key)
+        await repo.start_market_research(
+            experiment_id,
+            cycle.id,
+            accepted_idea=idea_ref,
+            plan=idea_ref,
+            command_key=key,
+        )
     report = await put(
         repo,
         experiment_id,

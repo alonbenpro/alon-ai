@@ -538,6 +538,11 @@ class ResearchAttemptReceipt(CommandReceipt):
     ordinal: int
 
 
+class MarketResearchTransitionReceipt(ResearchAttemptReceipt):
+    transition_id: UUID
+    state: Literal["MARKET_RESEARCH"]
+
+
 class VerdictReceipt(CommandReceipt):
     id: UUID
     cycle_id: UUID

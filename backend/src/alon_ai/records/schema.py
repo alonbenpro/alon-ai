@@ -388,6 +388,15 @@ idea_acceptances = table(
     ),
     ForeignKeyConstraint(["pivot_approval_id"], ["record_pivot_decisions.id"]),
     UniqueConstraint("cycle_id"),
+    UniqueConstraint(
+        "id",
+        "cycle_id",
+        "experiment_id",
+        "artifact_id",
+        "artifact_kind",
+        "artifact_version",
+        "artifact_hash",
+    ),
     CheckConstraint("artifact_kind='IDEA_BRIEF'"),
 )
 
@@ -420,6 +429,102 @@ research_attempts = table(
     UniqueConstraint("cycle_id", "ordinal"),
     UniqueConstraint("plan_artifact_id"),
     CheckConstraint("ordinal BETWEEN 1 AND 3 AND plan_kind='RESEARCH_PLAN'"),
+)
+
+cycle_transitions = table(
+    "cycle_transitions",
+    gov.col("id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("cycle_id", gov.U),
+    gov.col("ordinal", Integer),
+    gov.col("from_state", String(32)),
+    gov.col("to_state", String(32)),
+    gov.col("idea_acceptance_id", gov.U),
+    gov.col("idea_artifact_id", gov.U),
+    gov.col("idea_kind", String(64)),
+    gov.col("idea_version", Integer),
+    gov.col("idea_hash", String(64)),
+    gov.col("research_attempt_id", gov.U),
+    gov.col("command_id", gov.U),
+    gov.col("created_at", gov.T),
+    ForeignKeyConstraint(
+        ["cycle_id", "experiment_id"],
+        ["record_cycles.id", "record_cycles.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        [
+            "idea_acceptance_id",
+            "cycle_id",
+            "experiment_id",
+            "idea_artifact_id",
+            "idea_kind",
+            "idea_version",
+            "idea_hash",
+        ],
+        [
+            "record_idea_acceptances.id",
+            "record_idea_acceptances.cycle_id",
+            "record_idea_acceptances.experiment_id",
+            "record_idea_acceptances.artifact_id",
+            "record_idea_acceptances.artifact_kind",
+            "record_idea_acceptances.artifact_version",
+            "record_idea_acceptances.artifact_hash",
+        ],
+    ),
+    ForeignKeyConstraint(
+        ["research_attempt_id", "cycle_id", "experiment_id"],
+        [
+            "record_research_attempts.id",
+            "record_research_attempts.cycle_id",
+            "record_research_attempts.experiment_id",
+        ],
+    ),
+    ForeignKeyConstraint(["command_id"], ["record_commands.id"]),
+    UniqueConstraint("cycle_id", "ordinal"),
+    UniqueConstraint("research_attempt_id"),
+    UniqueConstraint("command_id"),
+    UniqueConstraint("id", "cycle_id", "experiment_id", "ordinal", "to_state"),
+    CheckConstraint(
+        "ordinal=1 AND from_state='IDEA_REFINEMENT' "
+        "AND to_state='MARKET_RESEARCH' AND idea_kind='IDEA_BRIEF'"
+    ),
+)
+
+cycle_states = table(
+    "cycle_states",
+    gov.col("cycle_id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("state", String(32)),
+    gov.col("transition_ordinal", Integer),
+    gov.col("last_transition_id", gov.U, nullable=True),
+    gov.col("updated_at", gov.T),
+    ForeignKeyConstraint(
+        ["cycle_id", "experiment_id"],
+        ["record_cycles.id", "record_cycles.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        [
+            "last_transition_id",
+            "cycle_id",
+            "experiment_id",
+            "transition_ordinal",
+            "state",
+        ],
+        [
+            "record_cycle_transitions.id",
+            "record_cycle_transitions.cycle_id",
+            "record_cycle_transitions.experiment_id",
+            "record_cycle_transitions.ordinal",
+            "record_cycle_transitions.to_state",
+        ],
+    ),
+    UniqueConstraint("cycle_id", "experiment_id"),
+    CheckConstraint(
+        "(state='IDEA_REFINEMENT' AND transition_ordinal=0 "
+        "AND last_transition_id IS NULL) OR "
+        "(state='MARKET_RESEARCH' AND transition_ordinal=1 "
+        "AND last_transition_id IS NOT NULL)"
+    ),
 )
 
 verdicts = table(
@@ -635,6 +740,8 @@ RECORD_TABLES = (
     pivot_decisions,
     idea_acceptances,
     research_attempts,
+    cycle_transitions,
+    cycle_states,
     verdicts,
     returns,
     artifact_dispositions,

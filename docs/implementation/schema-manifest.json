@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260921_14"
+    "20260922_15"
   ],
   "columns": [
     {
@@ -4943,6 +4943,186 @@
       "not_null": true,
       "table_name": "record_conversations",
       "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_cycle_states",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_cycle_states",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "last_transition_id",
+      "not_null": false,
+      "table_name": "record_cycle_states",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "state",
+      "not_null": true,
+      "table_name": "record_cycle_states",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "transition_ordinal",
+      "not_null": true,
+      "table_name": "record_cycle_states",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "updated_at",
+      "not_null": true,
+      "table_name": "record_cycle_states",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_id",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "from_state",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "idea_acceptance_id",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "idea_artifact_id",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "idea_hash",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "idea_kind",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "idea_version",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "ordinal",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "research_attempt_id",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "to_state",
+      "not_null": true,
+      "table_name": "record_cycle_transitions",
+      "type": "character varying(32)"
     },
     {
       "default_expression": null,
@@ -15598,6 +15778,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (ordinal = 1 AND from_state::text = 'IDEA_REFINEMENT'::text AND to_state::text = 'MARKET_RESEARCH'::text AND idea_kind::text = 'IDEA_BRIEF'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_cycle_transitions_check",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (ordinal > 0 AND (direction::text = ANY (ARRAY['INBOUND'::character varying, 'OUTBOUND'::character varying]::text[])) AND sanitized_hash::text ~ '^[0-9a-f]{64}$'::text AND raw_hash::text ~ '^[0-9a-f]{64}$'::text)",
       "enforced": true,
       "initially_deferred": false,
@@ -16274,6 +16464,16 @@
       "kind": "c",
       "name": "supply_batches_stage_check",
       "table_name": "supply_batches",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (state::text = 'IDEA_REFINEMENT'::text AND transition_ordinal = 0 AND last_transition_id IS NULL OR state::text = 'MARKET_RESEARCH'::text AND transition_ordinal = 1 AND last_transition_id IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_cycle_states_check",
+      "table_name": "record_cycle_states",
       "validated": true
     },
     {
@@ -17732,6 +17932,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_cycle_transitions_command_id_fkey",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (command_id) REFERENCES record_commands(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_outbox_command_id_fkey",
       "table_name": "record_outbox",
       "validated": true
@@ -18214,6 +18424,26 @@
       "kind": "f",
       "name": "record_strategy_rollback_decisions_current_package_id_fkey",
       "table_name": "record_strategy_rollback_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_cycle_states_cycle_id_experiment_id_fkey",
+      "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_cycle_transitions_cycle_id_experiment_id_fkey",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -19048,6 +19278,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (idea_acceptance_id, cycle_id, experiment_id, idea_artifact_id, idea_kind, idea_version, idea_hash) REFERENCES record_idea_acceptances(id, cycle_id, experiment_id, artifact_id, artifact_kind, artifact_version, artifact_hash)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_cycle_transitions_idea_acceptance_id_cycle_id_exper_fkey",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (idea_artifact_id, experiment_id) REFERENCES record_artifacts(id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -19154,6 +19394,16 @@
       "kind": "f",
       "name": "record_conversation_booking_observations_intent_id_fkey",
       "table_name": "record_conversation_booking_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (last_transition_id, cycle_id, experiment_id, transition_ordinal, state) REFERENCES record_cycle_transitions(id, cycle_id, experiment_id, ordinal, to_state)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_cycle_states_last_transition_id_cycle_id_experiment_fkey",
+      "table_name": "record_cycle_states",
       "validated": true
     },
     {
@@ -20444,6 +20694,16 @@
       "kind": "f",
       "name": "record_readiness_discovery_pl_research_artifact_id_experim_fkey",
       "table_name": "record_readiness_discovery_plans",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (research_attempt_id, cycle_id, experiment_id) REFERENCES record_research_attempts(id, cycle_id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_cycle_transitions_research_attempt_id_cycle_id_expe_fkey",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -23432,6 +23692,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_cycle_transitions_command_id_not_null",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL command_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_outbox_command_id_not_null",
       "table_name": "record_outbox",
       "validated": true
@@ -24932,6 +25202,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_cycle_transitions_created_at_not_null",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_cycles_created_at_not_null",
       "table_name": "record_cycles",
       "validated": true
@@ -25564,6 +25844,26 @@
       "kind": "n",
       "name": "record_strategy_rollback_decisions_current_package_id_not_null",
       "table_name": "record_strategy_rollback_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_states_cycle_id_not_null",
+      "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_transitions_cycle_id_not_null",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -26902,6 +27202,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_cycle_states_experiment_id_not_null",
+      "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_transitions_experiment_id_not_null",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_cycles_experiment_id_not_null",
       "table_name": "record_cycles",
       "validated": true
@@ -27748,6 +28068,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL from_state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_transitions_from_state_not_null",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL frozen",
       "enforced": true,
       "initially_deferred": false,
@@ -28532,6 +28862,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_cycle_transitions_id_not_null",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_cycles_id_not_null",
       "table_name": "record_cycles",
       "validated": true
@@ -29302,8 +29642,28 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_cycle_transitions_idea_acceptance_id_not_null",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL idea_acceptance_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_offer_bundles_idea_acceptance_id_not_null",
       "table_name": "record_offer_bundles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL idea_artifact_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_transitions_idea_artifact_id_not_null",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -29342,8 +29702,28 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_cycle_transitions_idea_hash_not_null",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL idea_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_readiness_discovery_plans_idea_hash_not_null",
       "table_name": "record_readiness_discovery_plans",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL idea_kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_transitions_idea_kind_not_null",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -29364,6 +29744,16 @@
       "kind": "n",
       "name": "record_cycles_idea_mode_not_null",
       "table_name": "record_cycles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL idea_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_transitions_idea_version_not_null",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -31034,6 +31424,16 @@
       "kind": "n",
       "name": "record_conversation_messages_ordinal_not_null",
       "table_name": "record_conversation_messages",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL ordinal",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_transitions_ordinal_not_null",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -33328,6 +33728,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL research_attempt_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_transitions_research_attempt_id_not_null",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL research_hash",
       "enforced": true,
       "initially_deferred": false,
@@ -34462,6 +34872,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_cycle_states_state_not_null",
+      "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "supply_plans_state_not_null",
       "table_name": "supply_plans",
       "validated": true
@@ -34738,12 +35158,32 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL to_state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_transitions_to_state_not_null",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL topic",
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
       "name": "record_outbox_topic_not_null",
       "table_name": "record_outbox",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL transition_ordinal",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_states_transition_ordinal_not_null",
+      "table_name": "record_cycle_states",
       "validated": true
     },
     {
@@ -34784,6 +35224,16 @@
       "kind": "n",
       "name": "record_qualification_criteria_unknown_behavior_not_null",
       "table_name": "record_qualification_criteria",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL updated_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_cycle_states_updated_at_not_null",
+      "table_name": "record_cycle_states",
       "validated": true
     },
     {
@@ -35508,6 +35958,16 @@
     },
     {
       "deferrable": false,
+      "definition": "PRIMARY KEY (cycle_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_cycle_states_pkey",
+      "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "PRIMARY KEY (document_id, ordinal)",
       "enforced": true,
       "initially_deferred": false,
@@ -36014,6 +36474,16 @@
       "kind": "p",
       "name": "record_conversations_pkey",
       "table_name": "record_conversations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_cycle_transitions_pkey",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -37422,6 +37892,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "u",
+      "name": "record_cycle_transitions_command_id_key",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (command_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
       "name": "record_outbox_command_id_key",
       "table_name": "record_outbox",
       "validated": true
@@ -37674,6 +38154,26 @@
       "kind": "u",
       "name": "record_pivot_decisions_cycle_id_artifact_id_key",
       "table_name": "record_pivot_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (cycle_id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_cycle_states_cycle_id_experiment_id_key",
+      "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (cycle_id, ordinal)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_cycle_transitions_cycle_id_ordinal_key",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -38004,6 +38504,26 @@
       "kind": "u",
       "name": "record_research_attempts_id_cycle_id_experiment_id_key",
       "table_name": "record_research_attempts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (id, cycle_id, experiment_id, artifact_id, artifact_kind, artifact_version, artifact_hash)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "uq_record_idea_acceptance_exact_cycle",
+      "table_name": "record_idea_acceptances",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (id, cycle_id, experiment_id, ordinal, to_state)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_cycle_transitions_id_cycle_id_experiment_id_ordinal__key",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -38918,6 +39438,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (research_attempt_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_cycle_transitions_research_attempt_id_key",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (reservation_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -39152,6 +39682,26 @@
       "enforced": true,
       "initially_deferred": true,
       "kind": "t",
+      "name": "record_cycle_transition_consistency",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": true,
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED",
+      "enforced": true,
+      "initially_deferred": true,
+      "kind": "t",
+      "name": "record_first_attempt_requires_transition",
+      "table_name": "record_research_attempts",
+      "validated": true
+    },
+    {
+      "deferrable": true,
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED",
+      "enforced": true,
+      "initially_deferred": true,
+      "kind": "t",
       "name": "record_learning_assessment_negative_complete",
       "table_name": "record_learning_regression_assessments",
       "validated": true
@@ -39357,8 +39907,33 @@
     },
     {
       "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_state_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP='DELETE' THEN\n  RAISE EXCEPTION 'cycle state projection cannot be deleted';\n ELSIF TG_OP='INSERT' THEN\n  IF NEW.state<>'IDEA_REFINEMENT' OR NEW.transition_ordinal<>0\n     OR NEW.last_transition_id IS NOT NULL\n     OR EXISTS(SELECT 1 FROM record_cycle_transitions WHERE cycle_id=NEW.cycle_id)\n  THEN RAISE EXCEPTION 'invalid initial cycle state'; END IF;\n  RETURN NEW;\n END IF;\n IF OLD.state<>'IDEA_REFINEMENT' OR OLD.transition_ordinal<>0\n    OR OLD.last_transition_id IS NOT NULL\n    OR NEW.state<>'MARKET_RESEARCH' OR NEW.transition_ordinal<>1\n    OR NEW.last_transition_id IS NULL\n    OR NOT EXISTS(SELECT 1 FROM record_cycle_transitions transition\n       WHERE transition.id=NEW.last_transition_id\n        AND transition.cycle_id=NEW.cycle_id\n        AND transition.experiment_id=NEW.experiment_id\n        AND transition.ordinal=NEW.transition_ordinal\n        AND transition.from_state=OLD.state\n        AND transition.to_state=NEW.state)\n    OR NEW.transition_ordinal IS DISTINCT FROM (\n       SELECT max(ordinal) FROM record_cycle_transitions\n        WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id)\n THEN RAISE EXCEPTION 'cycle state must follow transition history'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_cycle_state_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_state_initialize()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n INSERT INTO record_cycle_states(cycle_id,experiment_id,state,transition_ordinal,last_transition_id,updated_at)\n VALUES(NEW.id,NEW.experiment_id,'IDEA_REFINEMENT',0,NULL,NEW.created_at);\n RETURN NEW;\nEND $function$\n",
+      "name": "record_cycle_state_initialize"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_transition_consistency()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NOT EXISTS(SELECT 1 FROM record_cycle_states state\n  WHERE state.cycle_id=NEW.cycle_id AND state.experiment_id=NEW.experiment_id\n   AND state.state=NEW.to_state AND state.transition_ordinal=NEW.ordinal\n   AND state.last_transition_id=NEW.id)\n THEN RAISE EXCEPTION 'cycle state projection is inconsistent with history';\n ELSIF NOT EXISTS(SELECT 1 FROM record_audit audit\n   WHERE audit.command_id=NEW.command_id\n    AND audit.experiment_id=NEW.experiment_id\n    AND audit.kind='START_MARKET_RESEARCH'\n    AND audit.aggregate_id=NEW.research_attempt_id)\n   OR NOT EXISTS(SELECT 1 FROM record_outbox outbox\n   WHERE outbox.command_id=NEW.command_id\n    AND outbox.experiment_id=NEW.experiment_id\n    AND outbox.topic='product-record.start-market-research'\n    AND outbox.aggregate_type='RESEARCH_ATTEMPT'\n    AND outbox.aggregate_id=NEW.research_attempt_id)\n THEN RAISE EXCEPTION 'missing command audit or outbox'; END IF;\n RETURN NULL;\nEND $function$\n",
+      "name": "record_cycle_transition_consistency"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_transition_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n current_state record_cycle_states;\n acceptance record_idea_acceptances;\n attempt record_research_attempts;\n accepted_artifact record_artifacts;\n command record_commands;\nBEGIN\n IF TG_OP<>'INSERT' THEN\n  RAISE EXCEPTION 'immutable cycle transition';\n END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO current_state FROM record_cycle_states\n  WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO acceptance FROM record_idea_acceptances\n  WHERE id=NEW.idea_acceptance_id AND cycle_id=NEW.cycle_id\n   AND experiment_id=NEW.experiment_id AND artifact_id=NEW.idea_artifact_id\n   AND artifact_kind=NEW.idea_kind AND artifact_version=NEW.idea_version\n   AND artifact_hash=NEW.idea_hash;\n SELECT * INTO attempt FROM record_research_attempts\n  WHERE id=NEW.research_attempt_id AND cycle_id=NEW.cycle_id\n   AND experiment_id=NEW.experiment_id;\n SELECT * INTO accepted_artifact FROM record_artifacts\n  WHERE id=NEW.idea_artifact_id AND experiment_id=NEW.experiment_id\n   AND kind=NEW.idea_kind AND version=NEW.idea_version\n   AND content_hash=NEW.idea_hash;\n SELECT * INTO command FROM record_commands WHERE id=NEW.command_id;\n IF current_state.cycle_id IS NULL\n    OR current_state.state IS DISTINCT FROM NEW.from_state\n    OR current_state.transition_ordinal+1 IS DISTINCT FROM NEW.ordinal\n    OR acceptance.id IS NULL OR attempt.id IS NULL OR accepted_artifact.id IS NULL\n    OR attempt.ordinal<>1\n    OR NEW.cycle_id IS DISTINCT FROM (\n       SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id\n       ORDER BY ordinal DESC LIMIT 1)\n    OR EXISTS(SELECT 1 FROM record_artifacts later\n       WHERE later.logical_id=accepted_artifact.logical_id\n        AND later.version>accepted_artifact.version)\n    OR EXISTS(SELECT 1 FROM record_artifact_dispositions disposition\n       WHERE disposition.artifact_id=accepted_artifact.id\n        AND disposition.disposition='SUPERSEDED')\n    OR (SELECT count(*) FROM record_artifact_links\n        WHERE consumer_id=attempt.plan_artifact_id AND role='ACCEPTED_IDEA')<>1\n    OR NOT EXISTS(SELECT 1 FROM record_artifact_links\n        WHERE consumer_id=attempt.plan_artifact_id\n         AND producer_id=accepted_artifact.id AND role='ACCEPTED_IDEA')\n    OR command.id IS NULL OR command.experiment_id IS DISTINCT FROM NEW.experiment_id\n    OR command.kind<>'START_MARKET_RESEARCH'\n    OR command.result_type<>'RESEARCH_ATTEMPT'\n    OR command.result_id IS DISTINCT FROM NEW.research_attempt_id\n THEN RAISE EXCEPTION 'invalid idea-to-research transition'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_cycle_transition_guard"
+    },
+    {
+      "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_experiment_strategy_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE paused BOOLEAN; pinned UUID; selected UUID;\nBEGIN\n SELECT kind='PAUSE' INTO paused FROM record_learning_review_controls\n  WHERE registry_scope AND kind IN ('PAUSE','RESUME') ORDER BY event_ordinal DESC LIMIT 1;\n SELECT CASE WHEN kind='PIN' THEN package_id END INTO pinned FROM record_learning_review_controls\n  WHERE registry_scope AND kind IN ('PIN','UNPIN') ORDER BY event_ordinal DESC LIMIT 1;\n SELECT package_id INTO selected FROM record_learning_review_controls\n  WHERE registry_scope AND kind IN ('BOOTSTRAP_PACKAGE','PROMOTE_PACKAGE','ASSESSED_ROLLBACK','FORCED_ROLLBACK')\n  ORDER BY event_ordinal DESC LIMIT 1;\n IF coalesce(paused,false) OR NEW.package_id<>coalesce(pinned,selected)\n  OR EXISTS(SELECT 1 FROM gov_calls WHERE experiment_id=NEW.experiment_id)\n THEN RAISE EXCEPTION 'experiment strategy selection is not currently authorized'; END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_experiment_strategy_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_first_attempt_requires_transition()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NEW.ordinal=1 AND NOT EXISTS(SELECT 1 FROM record_cycle_transitions transition\n  WHERE transition.research_attempt_id=NEW.id AND transition.cycle_id=NEW.cycle_id\n   AND transition.experiment_id=NEW.experiment_id)\n THEN RAISE EXCEPTION 'first research attempt requires workflow transition'; END IF;\n RETURN NULL;\nEND $function$\n",
+      "name": "record_first_attempt_requires_transition"
     },
     {
       "arguments": "",
@@ -40492,6 +41067,60 @@
       "primary_index": false,
       "ready": true,
       "table_name": "record_commercial_envelopes",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_cycle_states_cycle ON public.record_cycle_states USING btree (cycle_id, experiment_id)",
+      "name": "ix_record_cycle_states_cycle",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_states",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_cycle_states_transition ON public.record_cycle_states USING btree (last_transition_id, cycle_id, experiment_id, transition_ordinal, state)",
+      "name": "ix_record_cycle_states_transition",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_states",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_cycle_transitions_acceptance ON public.record_cycle_transitions USING btree (idea_acceptance_id, cycle_id, experiment_id, idea_artifact_id, idea_kind, idea_version, idea_hash)",
+      "name": "ix_record_cycle_transitions_acceptance",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_cycle_transitions_attempt ON public.record_cycle_transitions USING btree (research_attempt_id, cycle_id, experiment_id)",
+      "name": "ix_record_cycle_transitions_attempt",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_cycle_transitions_command ON public.record_cycle_transitions USING btree (command_id)",
+      "name": "ix_record_cycle_transitions_command",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_cycle_transitions_cycle ON public.record_cycle_transitions USING btree (cycle_id, experiment_id)",
+      "name": "ix_record_cycle_transitions_cycle",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
       "unique_index": false,
       "valid": true
     },
@@ -42328,6 +42957,69 @@
       "primary_index": true,
       "ready": true,
       "table_name": "record_conversations",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_cycle_states_cycle_id_experiment_id_key ON public.record_cycle_states USING btree (cycle_id, experiment_id)",
+      "name": "record_cycle_states_cycle_id_experiment_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_states",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_cycle_states_pkey ON public.record_cycle_states USING btree (cycle_id)",
+      "name": "record_cycle_states_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_cycle_states",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_cycle_transitions_command_id_key ON public.record_cycle_transitions USING btree (command_id)",
+      "name": "record_cycle_transitions_command_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_cycle_transitions_cycle_id_ordinal_key ON public.record_cycle_transitions USING btree (cycle_id, ordinal)",
+      "name": "record_cycle_transitions_cycle_id_ordinal_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_cycle_transitions_id_cycle_id_experiment_id_ordinal__key ON public.record_cycle_transitions USING btree (id, cycle_id, experiment_id, ordinal, to_state)",
+      "name": "record_cycle_transitions_id_cycle_id_experiment_id_ordinal__key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_cycle_transitions_pkey ON public.record_cycle_transitions USING btree (id)",
+      "name": "record_cycle_transitions_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_cycle_transitions_research_attempt_id_key ON public.record_cycle_transitions USING btree (research_attempt_id)",
+      "name": "record_cycle_transitions_research_attempt_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
       "unique_index": true,
       "valid": true
     },
@@ -44690,6 +45382,15 @@
       "valid": true
     },
     {
+      "definition": "CREATE UNIQUE INDEX uq_record_idea_acceptance_exact_cycle ON public.record_idea_acceptances USING btree (id, cycle_id, experiment_id, artifact_id, artifact_kind, artifact_version, artifact_hash)",
+      "name": "uq_record_idea_acceptance_exact_cycle",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_idea_acceptances",
+      "unique_index": true,
+      "valid": true
+    },
+    {
       "definition": "CREATE UNIQUE INDEX uq_record_offer_uncalibrated_bundle ON public.record_offer_packages USING btree (bundle_id) WHERE (calibration_decision_id IS NULL)",
       "name": "uq_record_offer_uncalibrated_bundle",
       "primary_index": false,
@@ -45084,6 +45785,18 @@
       "force_row_security": false,
       "kind": "r",
       "name": "record_conversations",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_cycle_states",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_cycle_transitions",
       "row_security": false
     },
     {
@@ -54468,6 +55181,331 @@
       "table_name": "record_cycles"
     },
     {
+      "constraint_name": "record_cycle_states_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_cycle_states",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_states"
+    },
+    {
+      "constraint_name": "record_cycle_states_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_cycle_states",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_cycle_states_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_cycle_states",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_states"
+    },
+    {
+      "constraint_name": "record_cycle_states_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_cycle_states",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_cycle_states_last_transition_id_cycle_id_experiment_fkey",
+      "constraint_table": "record_cycle_states",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_states"
+    },
+    {
+      "constraint_name": "record_cycle_states_last_transition_id_cycle_id_experiment_fkey",
+      "constraint_table": "record_cycle_states",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_states_last_transition_id_cycle_id_experiment_fkey",
+      "constraint_table": "record_cycle_states",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_states"
+    },
+    {
+      "constraint_name": "record_cycle_states_last_transition_id_cycle_id_experiment_fkey",
+      "constraint_table": "record_cycle_states",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transition_consistency",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER record_cycle_transition_consistency AFTER INSERT ON record_cycle_transitions DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION record_cycle_transition_consistency()",
+      "enabled": "O",
+      "events": 5,
+      "function_name": "public.record_cycle_transition_consistency",
+      "initially_deferred": true,
+      "internal": false,
+      "name": "record_cycle_transition_consistency",
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_command_id_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_command_id_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_command_id_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_command_id_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_idea_acceptance_id_cycle_id_exper_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_idea_acceptance_id_cycle_id_exper_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_acceptances"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_idea_acceptance_id_cycle_id_exper_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_idea_acceptance_id_cycle_id_exper_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_acceptances"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_research_attempt_id_cycle_id_expe_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_research_attempt_id_cycle_id_expe_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_attempts"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_research_attempt_id_cycle_id_expe_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transitions_research_attempt_id_cycle_id_expe_fkey",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_attempts"
+    },
+    {
       "constraint_name": "record_cycles_episode_id_experiment_id_fkey",
       "constraint_table": "record_cycles",
       "deferrable": false,
@@ -55090,6 +56128,19 @@
       "internal": true,
       "name": null,
       "table_name": "record_operator_profiles"
+    },
+    {
+      "constraint_name": "record_first_attempt_requires_transition",
+      "constraint_table": "record_research_attempts",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER record_first_attempt_requires_transition AFTER INSERT ON record_research_attempts DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION record_first_attempt_requires_transition()",
+      "enabled": "O",
+      "events": 5,
+      "function_name": "public.record_first_attempt_requires_transition",
+      "initially_deferred": true,
+      "internal": false,
+      "name": "record_first_attempt_requires_transition",
+      "table_name": "record_research_attempts"
     },
     {
       "constraint_name": "record_global_strategy_packages_created_by_fkey",
@@ -70755,6 +71806,45 @@
       "internal": false,
       "name": "record_conversations_immutable",
       "table_name": "record_conversations"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_cycle_state_initialize AFTER INSERT ON record_cycles FOR EACH ROW EXECUTE FUNCTION record_cycle_state_initialize()",
+      "enabled": "O",
+      "events": 5,
+      "function_name": "public.record_cycle_state_initialize",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_cycle_state_initialize",
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_cycle_states_guard BEFORE INSERT OR DELETE OR UPDATE ON record_cycle_states FOR EACH ROW EXECUTE FUNCTION record_cycle_state_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_cycle_state_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_cycle_states_guard",
+      "table_name": "record_cycle_states"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_cycle_transitions_guard BEFORE INSERT OR DELETE OR UPDATE ON record_cycle_transitions FOR EACH ROW EXECUTE FUNCTION record_cycle_transition_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_cycle_transition_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_cycle_transitions_guard",
+      "table_name": "record_cycle_transitions"
     },
     {
       "constraint_name": null,
