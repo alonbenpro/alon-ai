@@ -324,12 +324,24 @@ pivot_decisions = table(
     gov.col("id", gov.U, primary_key=True),
     gov.col("experiment_id", gov.U),
     gov.col("cycle_id", gov.U),
-    gov.col("artifact_id", gov.U),
-    gov.col("artifact_kind", String(64)),
-    gov.col("artifact_version", Integer),
-    gov.col("artifact_hash", String(64)),
+    gov.col("artifact_id", gov.U, nullable=True),
+    gov.col("artifact_kind", String(64), nullable=True),
+    gov.col("artifact_version", Integer, nullable=True),
+    gov.col("artifact_hash", String(64), nullable=True),
     gov.col("approved_by", gov.U),
     gov.col("approved_at", gov.T),
+    gov.col("decision", String(16), server_default="APPROVED"),
+    gov.col("decision_ordinal", Integer, server_default="1"),
+    gov.col("verdict_id", gov.U, nullable=True),
+    gov.col("reason_code", String(64), nullable=True),
+    ForeignKeyConstraint(
+        ["verdict_id", "experiment_id"],
+        ["record_verdicts.id", "record_verdicts.experiment_id"],
+    ),
+    CheckConstraint("decision IN ('APPROVED','DENIED') AND decision_ordinal>0"),
+    CheckConstraint(
+        "(decision='APPROVED' AND artifact_id IS NOT NULL AND artifact_kind IS NOT NULL AND artifact_version IS NOT NULL AND artifact_hash IS NOT NULL) OR (decision='DENIED' AND verdict_id IS NOT NULL AND reason_code IS NOT NULL AND artifact_id IS NULL AND artifact_kind IS NULL AND artifact_version IS NULL AND artifact_hash IS NULL)"
+    ),
     ForeignKeyConstraint(
         ["cycle_id", "experiment_id"],
         ["record_cycles.id", "record_cycles.experiment_id"],
@@ -445,7 +457,12 @@ cycle_transitions = table(
     gov.col("idea_version", Integer),
     gov.col("idea_hash", String(64)),
     gov.col("research_attempt_id", gov.U),
+    gov.col("verdict_id", gov.U, nullable=True),
     gov.col("command_id", gov.U),
+    ForeignKeyConstraint(
+        ["verdict_id", "experiment_id"],
+        ["record_verdicts.id", "record_verdicts.experiment_id"],
+    ),
     gov.col("created_at", gov.T),
     ForeignKeyConstraint(
         ["cycle_id", "experiment_id"],
@@ -481,12 +498,9 @@ cycle_transitions = table(
     ),
     ForeignKeyConstraint(["command_id"], ["record_commands.id"]),
     UniqueConstraint("cycle_id", "ordinal"),
-    UniqueConstraint("research_attempt_id"),
-    UniqueConstraint("command_id"),
     UniqueConstraint("id", "cycle_id", "experiment_id", "ordinal", "to_state"),
     CheckConstraint(
-        "ordinal=1 AND from_state='IDEA_REFINEMENT' "
-        "AND to_state='MARKET_RESEARCH' AND idea_kind='IDEA_BRIEF'"
+        "idea_kind='IDEA_BRIEF' AND ((ordinal=1 AND from_state='IDEA_REFINEMENT' AND to_state='MARKET_RESEARCH' AND verdict_id IS NULL) OR (ordinal=2 AND from_state='MARKET_RESEARCH' AND to_state IN ('PROCEED_TO_OFFER','RETURN_FOR_REFINEMENT','WAITING_FOR_PIVOT_APPROVAL','KILLED','INCONCLUSIVE_REVIEW') AND verdict_id IS NOT NULL) OR (ordinal=3 AND from_state IN ('WAITING_FOR_PIVOT_APPROVAL','INCONCLUSIVE_REVIEW') AND to_state='RETURN_FOR_REFINEMENT' AND verdict_id IS NOT NULL))"
     ),
 )
 
@@ -522,8 +536,7 @@ cycle_states = table(
     CheckConstraint(
         "(state='IDEA_REFINEMENT' AND transition_ordinal=0 "
         "AND last_transition_id IS NULL) OR "
-        "(state='MARKET_RESEARCH' AND transition_ordinal=1 "
-        "AND last_transition_id IS NOT NULL)"
+        "(state IN ('MARKET_RESEARCH','PROCEED_TO_OFFER','RETURN_FOR_REFINEMENT','WAITING_FOR_PIVOT_APPROVAL','KILLED','INCONCLUSIVE_REVIEW') AND transition_ordinal BETWEEN 1 AND 3 AND last_transition_id IS NOT NULL)"
     ),
 )
 
@@ -767,6 +780,128 @@ artifact_dispositions = table(
     ),
 )
 
+research_cycle_budgets = table(
+    "research_cycle_budgets",
+    gov.col("cycle_id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("workflow_id", gov.U),
+    gov.col("config_id", gov.U),
+    gov.col("config_version", gov.U),
+    gov.col("budget_account_id", gov.U),
+    gov.col("max_search_results", Integer),
+    gov.col("max_capture_pages", Integer),
+    gov.col("max_openai_calls", Integer),
+    gov.col("created_at", gov.T),
+    ForeignKeyConstraint(
+        ["cycle_id", "experiment_id"],
+        ["record_cycles.id", "record_cycles.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["workflow_id", "experiment_id"],
+        ["record_workflows.id", "record_workflows.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["config_id", "workflow_id", "config_version"],
+        ["gov_configs.id", "gov_configs.workflow_id", "gov_configs.version"],
+    ),
+    ForeignKeyConstraint(["budget_account_id"], ["gov_budget_accounts.id"]),
+    UniqueConstraint("workflow_id"),
+    CheckConstraint(
+        "max_search_results>=0 AND max_capture_pages>=0 AND max_openai_calls>=0"
+    ),
+)
+
+research_return_blocks = table(
+    "research_return_blocks",
+    gov.col("id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("cycle_id", gov.U),
+    gov.col("verdict_id", gov.U),
+    gov.col("return_kind", String(32)),
+    gov.col("reason_code", String(64)),
+    gov.col("decision_ordinal", Integer, nullable=True),
+    gov.col("command_id", gov.U),
+    gov.col("created_at", gov.T),
+    ForeignKeyConstraint(
+        ["cycle_id", "experiment_id"],
+        ["record_cycles.id", "record_cycles.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["verdict_id", "experiment_id"],
+        ["record_verdicts.id", "record_verdicts.experiment_id"],
+    ),
+    ForeignKeyConstraint(["command_id"], ["record_commands.id"]),
+    UniqueConstraint("command_id"),
+    CheckConstraint(
+        "return_kind IN ('SAME_INTENT','MATERIAL_PIVOT','INCONCLUSIVE_SUPPLEMENT')"
+    ),
+    CheckConstraint(
+        "reason_code IN ('BUDGET_EXHAUSTED','UNFINALIZED_USAGE','SAME_INTENT_LIMIT_REACHED','SUPPLEMENT_LIMIT_REACHED','CANCELLED','STALE_INPUT','MISSING_EVIDENCE','REPEATED_BLOCKER')"
+    ),
+    CheckConstraint(
+        "(return_kind='MATERIAL_PIVOT' AND decision_ordinal>0) OR "
+        "(return_kind<>'MATERIAL_PIVOT' AND decision_ordinal IS NULL)"
+    ),
+)
+
+market_research_decision_workflow_bindings = table(
+    "market_research_decision_workflow_bindings",
+    gov.col("dbos_workflow_id", String(200), primary_key=True),
+    gov.col("application_version", String(64)),
+    gov.col("contract_version", Integer),
+    gov.col("operation_kind", String(32)),
+    gov.col("operation_id", gov.U),
+    gov.col("business_command_key", gov.U),
+    gov.col("request_hash", String(64)),
+    gov.col("request_payload", JSONB),
+    gov.col("experiment_id", gov.U),
+    gov.col("cycle_id", gov.U),
+    gov.col("command_id", gov.U, nullable=True),
+    gov.col("result_id", gov.U, nullable=True),
+    gov.col("failure_code", String(64), nullable=True),
+    gov.col("delivery_state", String(32)),
+    gov.col("created_at", gov.T),
+    gov.col("updated_at", gov.T),
+    ForeignKeyConstraint(
+        ["cycle_id", "experiment_id"],
+        ["record_cycles.id", "record_cycles.experiment_id"],
+    ),
+    ForeignKeyConstraint(["command_id"], ["record_commands.id"]),
+    UniqueConstraint("business_command_key"),
+    UniqueConstraint("operation_kind", "operation_id", "business_command_key"),
+    CheckConstraint(
+        "request_hash ~ '^[0-9a-f]{64}$' AND contract_version=1 AND jsonb_typeof(request_payload)='object'"
+    ),
+    CheckConstraint(
+        "operation_kind IN ('OUTCOME','PIVOT_DECISION','INCONCLUSIVE_SUPPLEMENT')"
+    ),
+    CheckConstraint(
+        "delivery_state IN ('PENDING','STARTED','BUSINESS_COMMITTED','RECEIPT_DELIVERED','RUNTIME_COMPLETED','CANCELLED','REJECTED')"
+    ),
+    CheckConstraint(
+        "(delivery_state IN ('PENDING','STARTED','CANCELLED') AND command_id IS NULL AND result_id IS NULL AND failure_code IS NULL) OR "
+        "(delivery_state='REJECTED' AND command_id IS NULL AND result_id IS NULL AND failure_code ~ '^[A-Z][A-Z0-9_]{0,63}$') OR "
+        "(delivery_state IN ('BUSINESS_COMMITTED','RECEIPT_DELIVERED','RUNTIME_COMPLETED') AND command_id IS NOT NULL AND result_id IS NOT NULL AND failure_code IS NULL)"
+    ),
+)
+
+Index(
+    "uq_record_pivot_decision_verdict_ordinal",
+    pivot_decisions.c.verdict_id,
+    pivot_decisions.c.decision_ordinal,
+    unique=True,
+    postgresql_where=pivot_decisions.c.verdict_id.is_not(None),
+)
+Index(
+    "uq_record_pivot_decision_approved_verdict",
+    pivot_decisions.c.verdict_id,
+    unique=True,
+    postgresql_where=(
+        pivot_decisions.c.verdict_id.is_not(None)
+        & (pivot_decisions.c.decision == "APPROVED")
+    ),
+)
+
 RECORD_TABLES = (
     operator_profiles,
     experiments,
@@ -785,6 +920,9 @@ RECORD_TABLES = (
     research_attempts,
     cycle_transitions,
     cycle_states,
+    research_cycle_budgets,
+    research_return_blocks,
+    market_research_decision_workflow_bindings,
     verdicts,
     returns,
     artifact_dispositions,

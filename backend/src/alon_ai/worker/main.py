@@ -13,6 +13,7 @@ from alon_ai.workflows.market_research import (
     DBOS_APPLICATION_VERSION,
     assert_compatible_application_version,
     configure_dbos,
+    recover_market_research_decision_workflows,
     recover_market_research_workflows,
 )
 
@@ -49,6 +50,9 @@ async def run_worker(settings: Settings) -> None:
         DBOS.launch()
         try:
             await recover_market_research_workflows(engine, DBOS_APPLICATION_VERSION)
+            await recover_market_research_decision_workflows(
+                engine, DBOS_APPLICATION_VERSION
+            )
             startup_event = build_worker_startup_event(settings)
             structlog.get_logger().info(
                 cast(str, startup_event["event"]),

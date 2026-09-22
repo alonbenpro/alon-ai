@@ -6,7 +6,10 @@ from alon_ai.workflows.market_research import (
     DBOS_APPLICATION_VERSION,
     DBOS_SYSTEM_SCHEMA,
     build_dbos_config,
+    inconclusive_supplement_workflow_id,
+    market_research_outcome_workflow_id,
     market_research_workflow_id,
+    material_pivot_decision_workflow_id,
 )
 
 
@@ -40,3 +43,19 @@ def test_market_research_workflow_id_is_deterministic_and_request_bound():
     assert first != market_research_workflow_id(cycle_id, "b" * 64)
     assert str(cycle_id) in first
     assert "a" * 64 in first
+
+
+def test_decision_workflow_ids_use_business_and_command_identity():
+    operation_id = UUID("00000000-0000-0000-0000-000000000101")
+    command_key = UUID("00000000-0000-0000-0000-000000000202")
+    decision_id = UUID("00000000-0000-0000-0000-000000000303")
+
+    assert market_research_outcome_workflow_id(operation_id, command_key) == (
+        f"market-research-outcome:{operation_id}:{command_key}"
+    )
+    assert material_pivot_decision_workflow_id(operation_id, decision_id) == (
+        f"material-pivot-decision:{operation_id}:{decision_id}"
+    )
+    assert inconclusive_supplement_workflow_id(operation_id, command_key) == (
+        f"inconclusive-supplement:{operation_id}:{command_key}"
+    )

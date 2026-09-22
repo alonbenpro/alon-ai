@@ -572,3 +572,46 @@ class ProductRecordsDenied(Exception):
     def __init__(self, reason: str = "INVALID_STATE") -> None:
         self.reason = reason
         super().__init__(reason)
+
+
+class ResearchCycleBudgetInput(StrictDTO):
+    workflow_id: UUID
+    config_id: UUID
+    config_version: UUID
+    budget_account_id: UUID
+    max_search_results: int = Field(ge=0, le=2147483647, strict=True)
+    max_capture_pages: int = Field(ge=0, le=2147483647, strict=True)
+    max_openai_calls: int = Field(ge=0, le=2147483647, strict=True)
+
+
+class MarketResearchOutcomeReceipt(VerdictReceipt):
+    transition_id: UUID
+    state: Literal[
+        "PROCEED_TO_OFFER",
+        "RETURN_FOR_REFINEMENT",
+        "WAITING_FOR_PIVOT_APPROVAL",
+        "KILLED",
+        "INCONCLUSIVE_REVIEW",
+    ]
+    child_cycle_id: UUID | None = None
+    block_id: UUID | None = None
+
+
+class MaterialPivotDecisionReceipt(CommandReceipt):
+    id: UUID
+    verdict_id: UUID
+    cycle_id: UUID
+    decision: Literal["APPROVED", "DENIED"]
+    decision_ordinal: int = Field(gt=0)
+    child_cycle_id: UUID | None = None
+    block_id: UUID | None = None
+
+
+class ResearchContinuationReceipt(CommandReceipt):
+    id: UUID
+    verdict_id: UUID
+    cycle_id: UUID
+    outcome: Literal["STARTED", "BLOCKED"]
+    child_cycle_id: UUID | None = None
+    block_id: UUID | None = None
+    reason_code: str | None = None

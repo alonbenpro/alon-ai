@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260922_16"
+    "20260922_17"
   ],
   "columns": [
     {
@@ -5128,6 +5128,15 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "verdict_id",
+      "not_null": false,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "created_at",
       "not_null": true,
       "table_name": "record_cycles",
@@ -7139,6 +7148,150 @@
       "not_null": true,
       "table_name": "record_live_strategy_observations",
       "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "application_version",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "business_command_key",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_id",
+      "not_null": false,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "contract_version",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "dbos_workflow_id",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "character varying(200)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "delivery_state",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "failure_code",
+      "not_null": false,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operation_id",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operation_kind",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "request_hash",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "request_payload",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "result_id",
+      "not_null": false,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "updated_at",
+      "not_null": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "type": "timestamp with time zone"
     },
     {
       "default_expression": null,
@@ -10394,7 +10547,7 @@
       "generated": "",
       "identity": "",
       "name": "artifact_hash",
-      "not_null": true,
+      "not_null": false,
       "table_name": "record_pivot_decisions",
       "type": "character varying(64)"
     },
@@ -10403,7 +10556,7 @@
       "generated": "",
       "identity": "",
       "name": "artifact_id",
-      "not_null": true,
+      "not_null": false,
       "table_name": "record_pivot_decisions",
       "type": "uuid"
     },
@@ -10412,7 +10565,7 @@
       "generated": "",
       "identity": "",
       "name": "artifact_kind",
-      "not_null": true,
+      "not_null": false,
       "table_name": "record_pivot_decisions",
       "type": "character varying(64)"
     },
@@ -10421,7 +10574,7 @@
       "generated": "",
       "identity": "",
       "name": "artifact_version",
-      "not_null": true,
+      "not_null": false,
       "table_name": "record_pivot_decisions",
       "type": "integer"
     },
@@ -10433,6 +10586,24 @@
       "not_null": true,
       "table_name": "record_pivot_decisions",
       "type": "uuid"
+    },
+    {
+      "default_expression": "'APPROVED'::character varying",
+      "generated": "",
+      "identity": "",
+      "name": "decision",
+      "not_null": true,
+      "table_name": "record_pivot_decisions",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": "1",
+      "generated": "",
+      "identity": "",
+      "name": "decision_ordinal",
+      "not_null": true,
+      "table_name": "record_pivot_decisions",
+      "type": "integer"
     },
     {
       "default_expression": null,
@@ -10449,6 +10620,24 @@
       "identity": "",
       "name": "id",
       "not_null": true,
+      "table_name": "record_pivot_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "reason_code",
+      "not_null": false,
+      "table_name": "record_pivot_decisions",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "verdict_id",
+      "not_null": false,
       "table_name": "record_pivot_decisions",
       "type": "uuid"
     },
@@ -12152,6 +12341,177 @@
       "not_null": true,
       "table_name": "record_research_attempts",
       "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "budget_account_id",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "config_id",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "config_version",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "max_capture_pages",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "max_openai_calls",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "max_search_results",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "workflow_id",
+      "not_null": true,
+      "table_name": "record_research_cycle_budgets",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_id",
+      "not_null": true,
+      "table_name": "record_research_return_blocks",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_research_return_blocks",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_research_return_blocks",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "decision_ordinal",
+      "not_null": false,
+      "table_name": "record_research_return_blocks",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_research_return_blocks",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "table_name": "record_research_return_blocks",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "reason_code",
+      "not_null": true,
+      "table_name": "record_research_return_blocks",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "return_kind",
+      "not_null": true,
+      "table_name": "record_research_return_blocks",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "verdict_id",
+      "not_null": true,
+      "table_name": "record_research_return_blocks",
+      "type": "uuid"
     },
     {
       "default_expression": null,
@@ -14354,6 +14714,26 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK ((decision::text = ANY (ARRAY['APPROVED'::character varying, 'DENIED'::character varying]::text[])) AND decision_ordinal > 0)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_pivot_decision_kind_check",
+      "table_name": "record_pivot_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK ((delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'CANCELLED'::character varying]::text[])) AND command_id IS NULL AND result_id IS NULL AND failure_code IS NULL OR delivery_state::text = 'REJECTED'::text AND command_id IS NULL AND result_id IS NULL AND failure_code::text ~ '^[A-Z][A-Z0-9_]{0,63}$'::text OR (delivery_state::text = ANY (ARRAY['BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying]::text[])) AND command_id IS NOT NULL AND result_id IS NOT NULL AND failure_code IS NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_market_research_decision_workflow_bindings_check1",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK ((delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'CANCELLED'::character varying]::text[])) AND transition_id IS NULL AND command_id IS NULL OR (delivery_state::text = ANY (ARRAY['BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying]::text[])) AND transition_id IS NOT NULL AND command_id IS NOT NULL)",
       "enforced": true,
       "initially_deferred": false,
@@ -15154,6 +15534,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (decision::text = 'APPROVED'::text AND artifact_id IS NOT NULL AND artifact_kind IS NOT NULL AND artifact_version IS NOT NULL AND artifact_hash IS NOT NULL OR decision::text = 'DENIED'::text AND verdict_id IS NOT NULL AND reason_code IS NOT NULL AND artifact_id IS NULL AND artifact_kind IS NULL AND artifact_version IS NULL AND artifact_hash IS NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_pivot_decision_shape_check",
+      "table_name": "record_pivot_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (decision::text = ANY (ARRAY['AVOIDED_HUNTER'::character varying, 'FALLBACK_ALLOWED'::character varying, 'PAUSED'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -15170,6 +15560,16 @@
       "kind": "c",
       "name": "supply_references_definition_check",
       "table_name": "supply_references",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying, 'CANCELLED'::character varying, 'REJECTED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_market_research_decision_workflow_b_delivery_state_check",
+      "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
     },
     {
@@ -15370,6 +15770,16 @@
       "kind": "c",
       "name": "record_strategy_registry_id_check",
       "table_name": "record_strategy_registry",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (idea_kind::text = 'IDEA_BRIEF'::text AND (ordinal = 1 AND from_state::text = 'IDEA_REFINEMENT'::text AND to_state::text = 'MARKET_RESEARCH'::text AND verdict_id IS NULL OR ordinal = 2 AND from_state::text = 'MARKET_RESEARCH'::text AND (to_state::text = ANY (ARRAY['PROCEED_TO_OFFER'::character varying, 'RETURN_FOR_REFINEMENT'::character varying, 'WAITING_FOR_PIVOT_APPROVAL'::character varying, 'KILLED'::character varying, 'INCONCLUSIVE_REVIEW'::character varying]::text[])) AND verdict_id IS NOT NULL OR ordinal = 3 AND (from_state::text = ANY (ARRAY['WAITING_FOR_PIVOT_APPROVAL'::character varying, 'INCONCLUSIVE_REVIEW'::character varying]::text[])) AND to_state::text = 'RETURN_FOR_REFINEMENT'::text AND verdict_id IS NOT NULL))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_cycle_transitions_check",
+      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -15724,6 +16134,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (max_search_results >= 0 AND max_capture_pages >= 0 AND max_openai_calls >= 0)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_research_cycle_budgets_check",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (max_sequence_steps IS NULL OR max_sequence_steps > 0)",
       "enforced": true,
       "initially_deferred": false,
@@ -15914,22 +16334,22 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (operation_kind::text = ANY (ARRAY['OUTCOME'::character varying, 'PIVOT_DECISION'::character varying, 'INCONCLUSIVE_SUPPLEMENT'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_market_research_decision_workflow_b_operation_kind_check",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (operator_constraint IS NULL OR (operator_constraint::text = ANY (ARRAY['CURRENCY'::character varying, 'DELIVERY_CAPACITY'::character varying, 'HOURLY_COST'::character varying, 'MINIMUM_PRICE'::character varying, 'MINIMUM_MARGIN_RATE'::character varying, 'MAXIMUM_DISCOUNT_RATE'::character varying, 'MINIMUM_DEPOSIT_RATE'::character varying]::text[])))",
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
       "name": "record_offer_field_sources_operator_constraint_check",
       "table_name": "record_offer_field_sources",
-      "validated": true
-    },
-    {
-      "deferrable": false,
-      "definition": "CHECK (ordinal = 1 AND from_state::text = 'IDEA_REFINEMENT'::text AND to_state::text = 'MARKET_RESEARCH'::text AND idea_kind::text = 'IDEA_BRIEF'::text)",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "c",
-      "name": "record_cycle_transitions_check",
-      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -16294,6 +16714,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (reason_code::text = ANY (ARRAY['BUDGET_EXHAUSTED'::character varying, 'UNFINALIZED_USAGE'::character varying, 'SAME_INTENT_LIMIT_REACHED'::character varying, 'SUPPLEMENT_LIMIT_REACHED'::character varying, 'CANCELLED'::character varying, 'STALE_INPUT'::character varying, 'MISSING_EVIDENCE'::character varying, 'REPEATED_BLOCKER'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_research_return_blocks_reason_code_check",
+      "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (reason_code::text ~ '^[A-Z][A-Z0-9_]{0,63}$'::text)",
       "enforced": true,
       "initially_deferred": false,
@@ -16374,6 +16804,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (request_hash::text ~ '^[0-9a-f]{64}$'::text AND contract_version = 1 AND jsonb_typeof(request_payload) = 'object'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_market_research_decision_workflow_bindings_check",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (request_hash::text ~ '^[0-9a-f]{64}$'::text)",
       "enforced": true,
       "initially_deferred": false,
@@ -16420,6 +16860,26 @@
       "kind": "c",
       "name": "record_org_identity_decisions_resolution_check",
       "table_name": "record_org_identity_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (return_kind::text = 'MATERIAL_PIVOT'::text AND decision_ordinal > 0 OR return_kind::text <> 'MATERIAL_PIVOT'::text AND decision_ordinal IS NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_research_return_blocks_check",
+      "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (return_kind::text = ANY (ARRAY['SAME_INTENT'::character varying, 'MATERIAL_PIVOT'::character varying, 'INCONCLUSIVE_SUPPLEMENT'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_research_return_blocks_return_kind_check",
+      "table_name": "record_research_return_blocks",
       "validated": true
     },
     {
@@ -16624,7 +17084,7 @@
     },
     {
       "deferrable": false,
-      "definition": "CHECK (state::text = 'IDEA_REFINEMENT'::text AND transition_ordinal = 0 AND last_transition_id IS NULL OR state::text = 'MARKET_RESEARCH'::text AND transition_ordinal = 1 AND last_transition_id IS NOT NULL)",
+      "definition": "CHECK (state::text = 'IDEA_REFINEMENT'::text AND transition_ordinal = 0 AND last_transition_id IS NULL OR (state::text = ANY (ARRAY['MARKET_RESEARCH'::character varying, 'PROCEED_TO_OFFER'::character varying, 'RETURN_FOR_REFINEMENT'::character varying, 'WAITING_FOR_PIVOT_APPROVAL'::character varying, 'KILLED'::character varying, 'INCONCLUSIVE_REVIEW'::character varying]::text[])) AND transition_ordinal >= 1 AND transition_ordinal <= 3 AND last_transition_id IS NOT NULL)",
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
@@ -17594,6 +18054,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (budget_account_id) REFERENCES gov_budget_accounts(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_research_cycle_budgets_budget_account_id_fkey",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (bundle_id) REFERENCES record_learning_input_bundles(id)",
       "enforced": true,
       "initially_deferred": false,
@@ -18108,6 +18578,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_market_research_decision_workflow_bindin_command_id_fkey",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (command_id) REFERENCES record_commands(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_market_research_workflow_bindings_command_id_fkey",
       "table_name": "record_market_research_workflow_bindings",
       "validated": true
@@ -18120,6 +18600,16 @@
       "kind": "f",
       "name": "record_outbox_command_id_fkey",
       "table_name": "record_outbox",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (command_id) REFERENCES record_commands(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_research_return_blocks_command_id_fkey",
+      "table_name": "record_research_return_blocks",
       "validated": true
     },
     {
@@ -18210,6 +18700,16 @@
       "kind": "f",
       "name": "gov_calls_config_id_workflow_id_config_version_fkey",
       "table_name": "gov_calls",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (config_id, workflow_id, config_version) REFERENCES gov_configs(id, workflow_id, version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_research_cycle_budgets_config_id_workflow_id_config_fkey",
+      "table_name": "record_research_cycle_budgets",
       "validated": true
     },
     {
@@ -18638,6 +19138,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_market_research_decision_wor_cycle_id_experiment_id_fkey",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_market_research_workflow_bin_cycle_id_experiment_id_fkey",
       "table_name": "record_market_research_workflow_bindings",
       "validated": true
@@ -18660,6 +19170,26 @@
       "kind": "f",
       "name": "record_research_attempts_cycle_id_experiment_id_fkey",
       "table_name": "record_research_attempts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_research_cycle_budgets_cycle_id_experiment_id_fkey",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_research_return_blocks_cycle_id_experiment_id_fkey",
+      "table_name": "record_research_return_blocks",
       "validated": true
     },
     {
@@ -21488,6 +22018,36 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_cycle_transition_verdict_fk",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (verdict_id, experiment_id) REFERENCES record_verdicts(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_pivot_decision_verdict_fk",
+      "table_name": "record_pivot_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (verdict_id, experiment_id) REFERENCES record_verdicts(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_research_return_blocks_verdict_id_experiment_id_fkey",
+      "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (verdict_id, experiment_id) REFERENCES record_verdicts(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_returns_verdict_id_experiment_id_fkey",
       "table_name": "record_returns",
       "validated": true
@@ -21600,6 +22160,16 @@
       "kind": "f",
       "name": "record_learning_runs_workflow_id_experiment_id_fkey",
       "table_name": "record_learning_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (workflow_id, experiment_id) REFERENCES record_workflows(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_research_cycle_budgets_workflow_id_experiment_id_fkey",
+      "table_name": "record_research_cycle_budgets",
       "validated": true
     },
     {
@@ -22018,6 +22588,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_decision_wo_application_version_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL application_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_workflow_bi_application_version_not_null",
       "table_name": "record_market_research_workflow_bindings",
       "validated": true
@@ -22170,16 +22750,6 @@
       "kind": "n",
       "name": "record_outreach_contexts_artifact_hash_not_null",
       "table_name": "record_outreach_contexts",
-      "validated": true
-    },
-    {
-      "deferrable": false,
-      "definition": "NOT NULL artifact_hash",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "n",
-      "name": "record_pivot_decisions_artifact_hash_not_null",
-      "table_name": "record_pivot_decisions",
       "validated": true
     },
     {
@@ -22388,16 +22958,6 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
-      "name": "record_pivot_decisions_artifact_id_not_null",
-      "table_name": "record_pivot_decisions",
-      "validated": true
-    },
-    {
-      "deferrable": false,
-      "definition": "NOT NULL artifact_id",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "n",
       "name": "record_readiness_research_plans_artifact_id_not_null",
       "table_name": "record_readiness_research_plans",
       "validated": true
@@ -22538,16 +23098,6 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
-      "name": "record_pivot_decisions_artifact_kind_not_null",
-      "table_name": "record_pivot_decisions",
-      "validated": true
-    },
-    {
-      "deferrable": false,
-      "definition": "NOT NULL artifact_kind",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "n",
       "name": "record_readiness_research_plans_artifact_kind_not_null",
       "table_name": "record_readiness_research_plans",
       "validated": true
@@ -22680,16 +23230,6 @@
       "kind": "n",
       "name": "record_outreach_contexts_artifact_version_not_null",
       "table_name": "record_outreach_contexts",
-      "validated": true
-    },
-    {
-      "deferrable": false,
-      "definition": "NOT NULL artifact_version",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "n",
-      "name": "record_pivot_decisions_artifact_version_not_null",
-      "table_name": "record_pivot_decisions",
       "validated": true
     },
     {
@@ -23134,6 +23674,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL budget_account_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_cycle_budgets_budget_account_id_not_null",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL budget_policy_version",
       "enforced": true,
       "initially_deferred": false,
@@ -23270,6 +23820,16 @@
       "kind": "n",
       "name": "record_offer_proposals_bundle_id_not_null",
       "table_name": "record_offer_proposals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL business_command_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_decision_w_business_command_key_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
     },
     {
@@ -23924,6 +24484,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL command_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_return_blocks_command_id_not_null",
+      "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL command_key",
       "enforced": true,
       "initially_deferred": false,
@@ -24208,6 +24778,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_research_cycle_budgets_config_id_not_null",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL config_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "supply_operations_config_id_not_null",
       "table_name": "supply_operations",
       "validated": true
@@ -24260,6 +24840,16 @@
       "kind": "n",
       "name": "record_readiness_provider_results_config_version_not_null",
       "table_name": "record_readiness_provider_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL config_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_cycle_budgets_config_version_not_null",
+      "table_name": "record_research_cycle_budgets",
       "validated": true
     },
     {
@@ -25004,6 +25594,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL contract_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_decision_workf_contract_version_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL contradictory_fields",
       "enforced": true,
       "initially_deferred": false,
@@ -25558,6 +26158,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_decision_workflow_bi_created_at_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_workflow_bindings_created_at_not_null",
       "table_name": "record_market_research_workflow_bindings",
       "validated": true
@@ -25838,6 +26448,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_research_cycle_budgets_created_at_not_null",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_return_blocks_created_at_not_null",
+      "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_returns_created_at_not_null",
       "table_name": "record_returns",
       "validated": true
@@ -26108,6 +26738,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_decision_workflow_bind_cycle_id_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_workflow_bindings_cycle_id_not_null",
       "table_name": "record_market_research_workflow_bindings",
       "validated": true
@@ -26130,6 +26770,26 @@
       "kind": "n",
       "name": "record_research_attempts_cycle_id_not_null",
       "table_name": "record_research_attempts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_cycle_budgets_cycle_id_not_null",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_return_blocks_cycle_id_not_null",
+      "table_name": "record_research_return_blocks",
       "validated": true
     },
     {
@@ -26190,6 +26850,16 @@
       "kind": "n",
       "name": "record_conversation_follow_ups_date_kind_not_null",
       "table_name": "record_conversation_follow_ups",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL dbos_workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_decision_workf_dbos_workflow_id_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
     },
     {
@@ -26344,6 +27014,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL decision",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_pivot_decisions_decision_not_null",
+      "table_name": "record_pivot_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL decision_id",
       "enforced": true,
       "initially_deferred": false,
@@ -26394,6 +27074,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL decision_ordinal",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_pivot_decisions_decision_ordinal_not_null",
+      "table_name": "record_pivot_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL deep_started",
       "enforced": true,
       "initially_deferred": false,
@@ -26420,6 +27110,16 @@
       "kind": "n",
       "name": "record_outreach_sequence_steps_delay_days_not_null",
       "table_name": "record_outreach_sequence_steps",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL delivery_state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_decision_workflo_delivery_state_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
     },
     {
@@ -27558,6 +28258,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_decision_workflow_experiment_id_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_workflow_bindings_experiment_id_not_null",
       "table_name": "record_market_research_workflow_bindings",
       "validated": true
@@ -27900,6 +28610,26 @@
       "kind": "n",
       "name": "record_research_attempts_experiment_id_not_null",
       "table_name": "record_research_attempts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_cycle_budgets_experiment_id_not_null",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_return_blocks_experiment_id_not_null",
+      "table_name": "record_research_return_blocks",
       "validated": true
     },
     {
@@ -29758,6 +30488,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_research_return_blocks_id_not_null",
+      "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_returns_id_not_null",
       "table_name": "record_returns",
       "validated": true
@@ -30624,6 +31364,26 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL max_capture_pages",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_cycle_budgets_max_capture_pages_not_null",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL max_openai_calls",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_cycle_budgets_max_openai_calls_not_null",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL max_pages",
       "enforced": true,
       "initially_deferred": false,
@@ -30640,6 +31400,16 @@
       "kind": "n",
       "name": "gov_config_prices_max_quantity_not_null",
       "table_name": "gov_config_prices",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL max_search_results",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_cycle_budgets_max_search_results_not_null",
+      "table_name": "record_research_cycle_budgets",
       "validated": true
     },
     {
@@ -31548,6 +32318,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_decision_workflow__operation_id_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operation_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_org_effects_operation_id_not_null",
       "table_name": "record_org_effects",
       "validated": true
@@ -31600,6 +32380,16 @@
       "kind": "n",
       "name": "supply_operations_operation_id_not_null",
       "table_name": "supply_operations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operation_kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_decision_workflo_operation_kind_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
     },
     {
@@ -33354,6 +34144,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL reason_code",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_return_blocks_reason_code_not_null",
+      "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL reason_codes",
       "enforced": true,
       "initially_deferred": false,
@@ -33958,8 +34758,28 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_decision_workflow__request_hash_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL request_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_workflow_bindings_request_hash_not_null",
       "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL request_payload",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_decision_workfl_request_payload_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
     },
     {
@@ -34240,6 +35060,16 @@
       "kind": "n",
       "name": "gov_retained_retention_rule_id_not_null",
       "table_name": "gov_retained",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL return_kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_return_blocks_return_kind_not_null",
+      "table_name": "record_research_return_blocks",
       "validated": true
     },
     {
@@ -35548,6 +36378,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_decision_workflow_bi_updated_at_not_null",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL updated_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_workflow_bindings_updated_at_not_null",
       "table_name": "record_market_research_workflow_bindings",
       "validated": true
@@ -35740,6 +36580,16 @@
       "kind": "n",
       "name": "record_offer_bundles_verdict_id_not_null",
       "table_name": "record_offer_bundles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL verdict_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_return_blocks_verdict_id_not_null",
+      "table_name": "record_research_return_blocks",
       "validated": true
     },
     {
@@ -35970,6 +36820,16 @@
       "kind": "n",
       "name": "record_learning_runs_workflow_id_not_null",
       "table_name": "record_learning_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_research_cycle_budgets_workflow_id_not_null",
+      "table_name": "record_research_cycle_budgets",
       "validated": true
     },
     {
@@ -36280,6 +37140,26 @@
       "kind": "p",
       "name": "record_cycle_states_pkey",
       "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (cycle_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_research_cycle_budgets_pkey",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (dbos_workflow_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_market_research_decision_workflow_bindings_pkey",
+      "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
     },
     {
@@ -37418,6 +38298,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "p",
+      "name": "record_research_return_blocks_pkey",
+      "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
       "name": "record_returns_pkey",
       "table_name": "record_returns",
       "validated": true
@@ -38018,6 +38908,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "u",
+      "name": "record_market_research_decision_workfl_business_command_key_key",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (business_command_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
       "name": "record_market_research_workflow_bindin_business_command_key_key",
       "table_name": "record_market_research_workflow_bindings",
       "validated": true
@@ -38228,8 +39128,8 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "u",
-      "name": "record_cycle_transitions_command_id_key",
-      "table_name": "record_cycle_transitions",
+      "name": "record_outbox_command_id_key",
+      "table_name": "record_outbox",
       "validated": true
     },
     {
@@ -38238,8 +39138,8 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "u",
-      "name": "record_outbox_command_id_key",
-      "table_name": "record_outbox",
+      "name": "record_research_return_blocks_command_id_key",
+      "table_name": "record_research_return_blocks",
       "validated": true
     },
     {
@@ -39644,6 +40544,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (operation_kind, operation_id, business_command_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_market_research_decisi_operation_kind_operation_id_b_key",
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (organization_id, matched_id, evidence_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -39780,16 +40690,6 @@
       "kind": "u",
       "name": "record_verdicts_report_artifact_id_key",
       "table_name": "record_verdicts",
-      "validated": true
-    },
-    {
-      "deferrable": false,
-      "definition": "UNIQUE (research_attempt_id)",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "u",
-      "name": "record_cycle_transitions_research_attempt_id_key",
-      "table_name": "record_cycle_transitions",
       "validated": true
     },
     {
@@ -39954,6 +40854,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (workflow_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_research_cycle_budgets_workflow_id_key",
+      "table_name": "record_research_cycle_budgets",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE NULLS NOT DISTINCT (artifact_id, kind, evidence_id, retained_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -40068,6 +40978,16 @@
       "enforced": true,
       "initially_deferred": true,
       "kind": "t",
+      "name": "record_managed_return_consistency",
+      "table_name": "record_returns",
+      "validated": true
+    },
+    {
+      "deferrable": true,
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED",
+      "enforced": true,
+      "initially_deferred": true,
+      "kind": "t",
       "name": "record_offer_acceptance_complete",
       "table_name": "record_offer_acceptances",
       "validated": true
@@ -40140,6 +41060,16 @@
       "kind": "t",
       "name": "record_qualification_member_exact",
       "table_name": "record_qualification_cohort_members",
+      "validated": true
+    },
+    {
+      "deferrable": true,
+      "definition": "TRIGGER DEFERRABLE INITIALLY DEFERRED",
+      "enforced": true,
+      "initially_deferred": true,
+      "kind": "t",
+      "name": "record_research_block_consistency",
+      "table_name": "record_research_return_blocks",
       "validated": true
     }
   ],
@@ -40253,7 +41183,7 @@
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_state_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP='DELETE' THEN\n  RAISE EXCEPTION 'cycle state projection cannot be deleted';\n ELSIF TG_OP='INSERT' THEN\n  IF NEW.state<>'IDEA_REFINEMENT' OR NEW.transition_ordinal<>0\n     OR NEW.last_transition_id IS NOT NULL\n     OR EXISTS(SELECT 1 FROM record_cycle_transitions WHERE cycle_id=NEW.cycle_id)\n  THEN RAISE EXCEPTION 'invalid initial cycle state'; END IF;\n  RETURN NEW;\n END IF;\n IF OLD.state<>'IDEA_REFINEMENT' OR OLD.transition_ordinal<>0\n    OR OLD.last_transition_id IS NOT NULL\n    OR NEW.state<>'MARKET_RESEARCH' OR NEW.transition_ordinal<>1\n    OR NEW.last_transition_id IS NULL\n    OR NOT EXISTS(SELECT 1 FROM record_cycle_transitions transition\n       WHERE transition.id=NEW.last_transition_id\n        AND transition.cycle_id=NEW.cycle_id\n        AND transition.experiment_id=NEW.experiment_id\n        AND transition.ordinal=NEW.transition_ordinal\n        AND transition.from_state=OLD.state\n        AND transition.to_state=NEW.state)\n    OR NEW.transition_ordinal IS DISTINCT FROM (\n       SELECT max(ordinal) FROM record_cycle_transitions\n        WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id)\n THEN RAISE EXCEPTION 'cycle state must follow transition history'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_state_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'cycle state projection cannot be deleted';\n ELSIF TG_OP='INSERT' THEN\n  IF NEW.state<>'IDEA_REFINEMENT' OR NEW.transition_ordinal<>0 OR NEW.last_transition_id IS NOT NULL\n   OR EXISTS(SELECT 1 FROM record_cycle_transitions WHERE cycle_id=NEW.cycle_id)\n  THEN RAISE EXCEPTION 'invalid initial cycle state'; END IF;\n  RETURN NEW;\n END IF;\n IF (NEW.cycle_id,NEW.experiment_id) IS DISTINCT FROM (OLD.cycle_id,OLD.experiment_id)\n  OR NEW.transition_ordinal<>OLD.transition_ordinal+1\n  OR NOT EXISTS(SELECT 1 FROM record_cycle_transitions t WHERE t.id=NEW.last_transition_id\n    AND t.cycle_id=NEW.cycle_id AND t.experiment_id=NEW.experiment_id\n    AND t.ordinal=NEW.transition_ordinal AND t.from_state=OLD.state AND t.to_state=NEW.state)\n  OR NEW.transition_ordinal IS DISTINCT FROM (SELECT max(ordinal) FROM record_cycle_transitions WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id)\n THEN RAISE EXCEPTION 'cycle state must follow transition history'; END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_cycle_state_guard"
     },
     {
@@ -40263,12 +41193,12 @@
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_transition_consistency()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NOT EXISTS(SELECT 1 FROM record_cycle_states state\n  WHERE state.cycle_id=NEW.cycle_id AND state.experiment_id=NEW.experiment_id\n   AND state.state=NEW.to_state AND state.transition_ordinal=NEW.ordinal\n   AND state.last_transition_id=NEW.id)\n THEN RAISE EXCEPTION 'cycle state projection is inconsistent with history';\n ELSIF NOT EXISTS(SELECT 1 FROM record_audit audit\n   WHERE audit.command_id=NEW.command_id\n    AND audit.experiment_id=NEW.experiment_id\n    AND audit.kind='START_MARKET_RESEARCH'\n    AND audit.aggregate_id=NEW.research_attempt_id)\n   OR NOT EXISTS(SELECT 1 FROM record_outbox outbox\n   WHERE outbox.command_id=NEW.command_id\n    AND outbox.experiment_id=NEW.experiment_id\n    AND outbox.topic='product-record.start-market-research'\n    AND outbox.aggregate_type='RESEARCH_ATTEMPT'\n    AND outbox.aggregate_id=NEW.research_attempt_id)\n THEN RAISE EXCEPTION 'missing command audit or outbox'; END IF;\n RETURN NULL;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_transition_consistency()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NOT EXISTS(SELECT 1 FROM record_cycle_states s JOIN record_cycle_transitions t ON t.id=s.last_transition_id\n  WHERE s.cycle_id=NEW.cycle_id AND s.experiment_id=NEW.experiment_id\n    AND t.cycle_id=s.cycle_id AND t.experiment_id=s.experiment_id AND t.ordinal=s.transition_ordinal\n    AND t.to_state=s.state AND s.transition_ordinal=(SELECT max(ordinal) FROM record_cycle_transitions WHERE cycle_id=NEW.cycle_id))\n THEN RAISE EXCEPTION 'cycle state projection is inconsistent with history'; END IF;\n IF NOT EXISTS(SELECT 1 FROM record_commands c JOIN record_audit a ON a.command_id=c.id\n    JOIN record_outbox o ON o.command_id=c.id\n    WHERE c.id=NEW.command_id AND c.experiment_id=NEW.experiment_id\n     AND a.experiment_id=c.experiment_id AND a.kind=c.kind AND a.aggregate_id=c.result_id\n     AND o.experiment_id=c.experiment_id AND o.aggregate_id=c.result_id AND o.aggregate_type=c.result_type\n     AND o.topic='product-record.'||replace(lower(c.kind),'_','-'))\n THEN RAISE EXCEPTION 'missing command audit or outbox'; END IF;\n RETURN NULL;\nEND $function$\n",
       "name": "record_cycle_transition_consistency"
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_transition_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE\n current_state record_cycle_states;\n acceptance record_idea_acceptances;\n attempt record_research_attempts;\n accepted_artifact record_artifacts;\n command record_commands;\nBEGIN\n IF TG_OP<>'INSERT' THEN\n  RAISE EXCEPTION 'immutable cycle transition';\n END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO current_state FROM record_cycle_states\n  WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO acceptance FROM record_idea_acceptances\n  WHERE id=NEW.idea_acceptance_id AND cycle_id=NEW.cycle_id\n   AND experiment_id=NEW.experiment_id AND artifact_id=NEW.idea_artifact_id\n   AND artifact_kind=NEW.idea_kind AND artifact_version=NEW.idea_version\n   AND artifact_hash=NEW.idea_hash;\n SELECT * INTO attempt FROM record_research_attempts\n  WHERE id=NEW.research_attempt_id AND cycle_id=NEW.cycle_id\n   AND experiment_id=NEW.experiment_id;\n SELECT * INTO accepted_artifact FROM record_artifacts\n  WHERE id=NEW.idea_artifact_id AND experiment_id=NEW.experiment_id\n   AND kind=NEW.idea_kind AND version=NEW.idea_version\n   AND content_hash=NEW.idea_hash;\n SELECT * INTO command FROM record_commands WHERE id=NEW.command_id;\n IF current_state.cycle_id IS NULL\n    OR current_state.state IS DISTINCT FROM NEW.from_state\n    OR current_state.transition_ordinal+1 IS DISTINCT FROM NEW.ordinal\n    OR acceptance.id IS NULL OR attempt.id IS NULL OR accepted_artifact.id IS NULL\n    OR attempt.ordinal<>1\n    OR NEW.cycle_id IS DISTINCT FROM (\n       SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id\n       ORDER BY ordinal DESC LIMIT 1)\n    OR EXISTS(SELECT 1 FROM record_artifacts later\n       WHERE later.logical_id=accepted_artifact.logical_id\n        AND later.version>accepted_artifact.version)\n    OR EXISTS(SELECT 1 FROM record_artifact_dispositions disposition\n       WHERE disposition.artifact_id=accepted_artifact.id\n        AND disposition.disposition='SUPERSEDED')\n    OR (SELECT count(*) FROM record_artifact_links\n        WHERE consumer_id=attempt.plan_artifact_id AND role='ACCEPTED_IDEA')<>1\n    OR NOT EXISTS(SELECT 1 FROM record_artifact_links\n        WHERE consumer_id=attempt.plan_artifact_id\n         AND producer_id=accepted_artifact.id AND role='ACCEPTED_IDEA')\n    OR command.id IS NULL OR command.experiment_id IS DISTINCT FROM NEW.experiment_id\n    OR command.kind<>'START_MARKET_RESEARCH'\n    OR command.result_type<>'RESEARCH_ATTEMPT'\n    OR command.result_id IS DISTINCT FROM NEW.research_attempt_id\n THEN RAISE EXCEPTION 'invalid idea-to-research transition'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_transition_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE current_state record_cycle_states; acceptance record_idea_acceptances;\n attempt record_research_attempts; accepted_artifact record_artifacts;\n command record_commands; committed record_verdicts; expected_state TEXT;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable cycle transition'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO current_state FROM record_cycle_states WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO acceptance FROM record_idea_acceptances WHERE id=NEW.idea_acceptance_id\n  AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id\n  AND artifact_id=NEW.idea_artifact_id AND artifact_kind=NEW.idea_kind\n  AND artifact_version=NEW.idea_version AND artifact_hash=NEW.idea_hash;\n SELECT * INTO attempt FROM record_research_attempts WHERE id=NEW.research_attempt_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id;\n SELECT * INTO accepted_artifact FROM record_artifacts WHERE id=NEW.idea_artifact_id AND experiment_id=NEW.experiment_id AND kind=NEW.idea_kind AND version=NEW.idea_version AND content_hash=NEW.idea_hash;\n SELECT * INTO command FROM record_commands WHERE id=NEW.command_id;\n IF current_state.cycle_id IS NULL OR current_state.state IS DISTINCT FROM NEW.from_state\n  OR current_state.transition_ordinal+1 IS DISTINCT FROM NEW.ordinal\n  OR acceptance.id IS NULL OR attempt.id IS NULL OR accepted_artifact.id IS NULL\n  OR command.id IS NULL OR command.experiment_id IS DISTINCT FROM NEW.experiment_id\n THEN RAISE EXCEPTION 'invalid cycle transition lineage'; END IF;\n IF NEW.ordinal=1 THEN\n  IF attempt.ordinal<>1 OR NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1)\n   OR EXISTS(SELECT 1 FROM record_artifacts later WHERE later.logical_id=accepted_artifact.logical_id AND later.version>accepted_artifact.version)\n   OR EXISTS(SELECT 1 FROM record_artifact_dispositions disposition WHERE disposition.artifact_id=accepted_artifact.id AND disposition.disposition='SUPERSEDED')\n   OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=attempt.plan_artifact_id AND role='ACCEPTED_IDEA')<>1\n   OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=attempt.plan_artifact_id AND producer_id=accepted_artifact.id AND role='ACCEPTED_IDEA')\n   OR command.kind NOT IN ('START_MARKET_RESEARCH','COMMIT_MARKET_RESEARCH_OUTCOME','DECIDE_MATERIAL_PIVOT','START_INCONCLUSIVE_SUPPLEMENT')\n   OR (command.kind='START_MARKET_RESEARCH' AND (command.result_type<>'RESEARCH_ATTEMPT' OR command.result_id IS DISTINCT FROM NEW.research_attempt_id))\n  THEN RAISE EXCEPTION 'invalid idea-to-research transition'; END IF;\n ELSE\n  SELECT * INTO committed FROM record_verdicts WHERE id=NEW.verdict_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id AND attempt_id=NEW.research_attempt_id;\n  IF committed.id IS NULL THEN RAISE EXCEPTION 'invalid committed verdict transition'; END IF;\n  expected_state := CASE committed.verdict WHEN 'PROCEED_TO_OFFER' THEN 'PROCEED_TO_OFFER' WHEN 'REFINE_SAME_IDEA' THEN 'RETURN_FOR_REFINEMENT' WHEN 'MATERIAL_PIVOT_RECOMMENDED' THEN 'WAITING_FOR_PIVOT_APPROVAL' WHEN 'KILL_IDEA' THEN 'KILLED' WHEN 'INCONCLUSIVE' THEN 'INCONCLUSIVE_REVIEW' END;\n  IF NEW.ordinal=2 AND (NEW.to_state IS DISTINCT FROM expected_state\n      OR command.kind<>'COMMIT_MARKET_RESEARCH_OUTCOME'\n      OR command.result_id IS DISTINCT FROM committed.id)\n  THEN RAISE EXCEPTION 'verdict and cycle state disagree'; END IF;\n  IF NEW.ordinal=3 AND NOT EXISTS(SELECT 1 FROM record_returns r\n      WHERE r.verdict_id=committed.id AND r.experiment_id=NEW.experiment_id\n       AND r.from_cycle_id=NEW.cycle_id\n       AND ((NEW.from_state='WAITING_FOR_PIVOT_APPROVAL' AND r.kind='MATERIAL_PIVOT' AND command.kind='DECIDE_MATERIAL_PIVOT'\n         AND EXISTS(SELECT 1 FROM record_pivot_decisions p WHERE p.verdict_id=committed.id AND p.cycle_id=r.to_cycle_id AND p.decision='APPROVED'))\n        OR (NEW.from_state='INCONCLUSIVE_REVIEW' AND r.kind='INCONCLUSIVE_SUPPLEMENT' AND command.kind='START_INCONCLUSIVE_SUPPLEMENT')))\n  THEN RAISE EXCEPTION 'return transition requires exact accepted continuation'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_cycle_transition_guard"
     },
     {
@@ -40375,6 +41305,11 @@
       "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_live_observation_seal_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF (SELECT count(DISTINCT category) FROM record_live_strategy_metrics WHERE observation_id=NEW.observation_id)<>5\n THEN RAISE EXCEPTION 'live observation metrics incomplete'; END IF; RETURN NEW;\nEND $function$\n",
       "name": "record_live_observation_seal_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_managed_return_consistency()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE outcome_command UUID; child_kind TEXT;\nBEGIN\n SELECT transition.command_id INTO outcome_command\n FROM record_cycle_transitions transition\n JOIN record_commands command ON command.id=transition.command_id\n WHERE transition.verdict_id=NEW.verdict_id\n   AND command.kind='COMMIT_MARKET_RESEARCH_OUTCOME';\n IF outcome_command IS NULL THEN RETURN NULL; END IF;\n SELECT command.kind INTO child_kind\n FROM record_cycle_transitions transition\n JOIN record_commands command ON command.id=transition.command_id\n WHERE transition.cycle_id=NEW.to_cycle_id AND transition.ordinal=1;\n IF (NEW.kind='SAME_INTENT' AND NOT EXISTS(\n       SELECT 1 FROM record_cycle_transitions WHERE cycle_id=NEW.to_cycle_id\n        AND ordinal=1 AND command_id=outcome_command))\n    OR (NEW.kind='MATERIAL_PIVOT' AND child_kind IS DISTINCT FROM 'DECIDE_MATERIAL_PIVOT')\n    OR (NEW.kind='INCONCLUSIVE_SUPPLEMENT' AND child_kind IS DISTINCT FROM 'START_INCONCLUSIVE_SUPPLEMENT')\n THEN RAISE EXCEPTION 'managed verdict requires managed continuation command'; END IF;\n RETURN NULL;\nEND $function$\n",
+      "name": "record_managed_return_consistency"
     },
     {
       "arguments": "",
@@ -40520,6 +41455,31 @@
       "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_readiness_target()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF EXISTS(SELECT 1 FROM supply_plans WHERE experiment_id=NEW.experiment_id AND state='ACTIVE')\n AND (SELECT count(*) FROM record_current_supply_qualifications WHERE experiment_id=NEW.experiment_id AND outcome='QUALIFIED')=50 THEN\n  INSERT INTO supply_outcomes SELECT NEW.experiment_id,NEW.proposal_fact_id,'TARGET_50_REACHED',50,\n   (SELECT count(*) FROM supply_batches WHERE experiment_id=NEW.experiment_id),\n   (SELECT count(*) FROM supply_candidates WHERE experiment_id=NEW.experiment_id);\n END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_readiness_target"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_research_block_consistency()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NOT EXISTS(SELECT 1 FROM record_commands c JOIN record_audit a ON a.command_id=c.id JOIN record_outbox o ON o.command_id=c.id\n   WHERE c.id=NEW.command_id AND c.experiment_id=NEW.experiment_id\n   AND a.experiment_id=c.experiment_id AND a.aggregate_id=c.result_id AND a.kind=c.kind\n   AND o.experiment_id=c.experiment_id AND o.aggregate_id=c.result_id AND o.aggregate_type=c.result_type)\n THEN RAISE EXCEPTION 'missing blocked continuation receipt audit or outbox'; END IF;\n RETURN NULL;\nEND $function$\n",
+      "name": "record_research_block_consistency"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_research_budget_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE account gov_budget_accounts;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable research cycle budget'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO account FROM gov_budget_accounts WHERE id=NEW.budget_account_id;\n IF account.id IS NULL OR account.scope<>'WORKFLOW' OR account.experiment_id IS DISTINCT FROM NEW.experiment_id\n  OR account.workflow_id IS DISTINCT FROM NEW.workflow_id OR account.frozen\n  OR account.effective_at>NEW.created_at OR account.expires_at<=NEW.created_at\n THEN RAISE EXCEPTION 'invalid research workflow budget'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_research_budget_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_research_decision_binding_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE prefix TEXT; c record_commands;\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'immutable research decision workflow binding'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n IF TG_OP='INSERT' THEN\n  prefix:=CASE NEW.operation_kind WHEN 'OUTCOME' THEN 'market-research-outcome' WHEN 'PIVOT_DECISION' THEN 'material-pivot-decision' WHEN 'INCONCLUSIVE_SUPPLEMENT' THEN 'inconclusive-supplement' END;\n  IF NEW.dbos_workflow_id IS DISTINCT FROM prefix||':'||NEW.operation_id::text||':'||\n    (CASE WHEN NEW.operation_kind='PIVOT_DECISION' THEN NEW.request_payload->>'decision_id'\n          ELSE NEW.business_command_key::text END)\n    OR NEW.delivery_state<>'PENDING' THEN RAISE EXCEPTION 'invalid research decision workflow identity'; END IF;\n  IF (NEW.operation_kind='OUTCOME' AND NOT EXISTS(SELECT 1 FROM record_research_attempts WHERE id=NEW.operation_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id))\n    OR (NEW.operation_kind<>'OUTCOME' AND NOT EXISTS(SELECT 1 FROM record_verdicts WHERE id=NEW.operation_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id))\n  THEN RAISE EXCEPTION 'invalid research decision workflow operation'; END IF;\n  RETURN NEW;\n END IF;\n IF (to_jsonb(NEW)-ARRAY['command_id','result_id','failure_code','delivery_state','updated_at']) IS DISTINCT FROM (to_jsonb(OLD)-ARRAY['command_id','result_id','failure_code','delivery_state','updated_at'])\n THEN RAISE EXCEPTION 'immutable research decision workflow identity'; END IF;\n IF NOT ((OLD.delivery_state='PENDING' AND NEW.delivery_state IN ('STARTED','CANCELLED'))\n   OR (OLD.delivery_state='STARTED' AND NEW.delivery_state IN ('BUSINESS_COMMITTED','CANCELLED','REJECTED'))\n   OR (OLD.delivery_state='BUSINESS_COMMITTED' AND NEW.delivery_state='RECEIPT_DELIVERED')\n   OR (OLD.delivery_state='RECEIPT_DELIVERED' AND NEW.delivery_state='RUNTIME_COMPLETED'))\n THEN RAISE EXCEPTION 'invalid research decision workflow delivery transition'; END IF;\n IF OLD.command_id IS NOT NULL AND (NEW.command_id,NEW.result_id) IS DISTINCT FROM (OLD.command_id,OLD.result_id)\n THEN RAISE EXCEPTION 'immutable research decision workflow receipt'; END IF;\n IF NEW.delivery_state='CANCELLED' AND EXISTS(SELECT 1 FROM record_commands WHERE command_key=NEW.business_command_key)\n THEN RAISE EXCEPTION 'committed research decision workflow cannot be cancelled'; END IF;\n IF NEW.command_id IS NOT NULL THEN\n  SELECT * INTO c FROM record_commands WHERE id=NEW.command_id;\n  IF c.id IS NULL OR c.command_key IS DISTINCT FROM NEW.business_command_key OR c.request_hash IS DISTINCT FROM NEW.request_hash\n   OR c.experiment_id IS DISTINCT FROM NEW.experiment_id OR c.result_id IS DISTINCT FROM NEW.result_id\n   OR c.kind IS DISTINCT FROM (CASE NEW.operation_kind WHEN 'OUTCOME' THEN 'COMMIT_MARKET_RESEARCH_OUTCOME' WHEN 'PIVOT_DECISION' THEN 'DECIDE_MATERIAL_PIVOT' WHEN 'INCONCLUSIVE_SUPPLEMENT' THEN 'START_INCONCLUSIVE_SUPPLEMENT' END)\n  THEN RAISE EXCEPTION 'invalid research decision workflow receipt lineage'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_research_decision_binding_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_research_pivot_decision_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE c record_cycles; a record_artifacts; v record_verdicts;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable pivot decision'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO c FROM record_cycles WHERE id=NEW.cycle_id AND experiment_id=NEW.experiment_id;\n IF c.id IS NULL OR record_operator_authorized(NEW.experiment_id,NEW.approved_by) IS NOT TRUE\n  OR NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1)\n THEN RAISE EXCEPTION 'pivot requires current cycle and authorized operator'; END IF;\n IF NEW.verdict_id IS NOT NULL THEN\n  SELECT * INTO v FROM record_verdicts WHERE id=NEW.verdict_id AND experiment_id=NEW.experiment_id;\n  IF v.id IS NULL OR v.verdict<>'MATERIAL_PIVOT_RECOMMENDED'\n   OR (NEW.decision='DENIED' AND c.id IS DISTINCT FROM v.cycle_id)\n   OR (NEW.decision='APPROVED' AND c.parent_cycle_id IS DISTINCT FROM v.cycle_id)\n   OR NEW.decision_ordinal<>(SELECT count(*)+1 FROM record_pivot_decisions WHERE verdict_id=NEW.verdict_id)\n   OR NOT EXISTS(SELECT 1 FROM record_cycle_states WHERE cycle_id=v.cycle_id AND state='WAITING_FOR_PIVOT_APPROVAL')\n  THEN RAISE EXCEPTION 'invalid pivot verdict lineage or ordinal'; END IF;\n ELSE\n  IF NEW.decision<>'APPROVED' OR NEW.decision_ordinal<>(SELECT count(*)+1 FROM record_pivot_decisions WHERE cycle_id=NEW.cycle_id AND verdict_id IS NULL)\n  THEN RAISE EXCEPTION 'invalid legacy pivot approval'; END IF;\n END IF;\n IF NEW.decision='APPROVED' THEN\n  SELECT * INTO a FROM record_artifacts WHERE id=NEW.artifact_id;\n  IF a.payload->'material_pivot' IS DISTINCT FROM 'true'::jsonb\n  THEN RAISE EXCEPTION 'invalid material pivot approval'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_research_pivot_decision_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_research_return_block_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable research return block'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n IF NOT EXISTS(SELECT 1 FROM record_verdicts v WHERE v.id=NEW.verdict_id AND v.cycle_id=NEW.cycle_id AND v.experiment_id=NEW.experiment_id\n  AND ((v.verdict='REFINE_SAME_IDEA' AND NEW.return_kind='SAME_INTENT') OR (v.verdict='MATERIAL_PIVOT_RECOMMENDED' AND NEW.return_kind='MATERIAL_PIVOT') OR (v.verdict='INCONCLUSIVE' AND NEW.return_kind='INCONCLUSIVE_SUPPLEMENT')))\n THEN RAISE EXCEPTION 'invalid return block verdict lineage'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_research_return_block_guard"
     },
     {
       "arguments": "",
@@ -41476,6 +42436,15 @@
       "valid": true
     },
     {
+      "definition": "CREATE INDEX ix_record_cycle_transitions_verdict ON public.record_cycle_transitions USING btree (verdict_id, experiment_id)",
+      "name": "ix_record_cycle_transitions_verdict",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_cycle_transitions",
+      "unique_index": false,
+      "valid": true
+    },
+    {
       "definition": "CREATE INDEX ix_record_cycles_episode ON public.record_cycles USING btree (episode_id, experiment_id)",
       "name": "ix_record_cycles_episode",
       "primary_index": false,
@@ -41571,6 +42540,24 @@
       "primary_index": false,
       "ready": true,
       "table_name": "record_initial_outreach_policies",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_market_research_decision_workflow_bindings_fk_0 ON public.record_market_research_decision_workflow_bindings USING btree (command_id)",
+      "name": "ix_record_market_research_decision_workflow_bindings_fk_0",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_market_research_decision_workflow_bindings_fk_1 ON public.record_market_research_decision_workflow_bindings USING btree (cycle_id, experiment_id)",
+      "name": "ix_record_market_research_decision_workflow_bindings_fk_1",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
       "unique_index": false,
       "valid": true
     },
@@ -42070,6 +43057,15 @@
       "valid": true
     },
     {
+      "definition": "CREATE INDEX ix_record_pivot_decisions_verdict ON public.record_pivot_decisions USING btree (verdict_id, experiment_id)",
+      "name": "ix_record_pivot_decisions_verdict",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_pivot_decisions",
+      "unique_index": false,
+      "valid": true
+    },
+    {
       "definition": "CREATE INDEX ix_record_profile_approver ON public.record_operator_profiles USING btree (approved_by)",
       "name": "ix_record_profile_approver",
       "primary_index": false,
@@ -42093,6 +43089,69 @@
       "primary_index": false,
       "ready": true,
       "table_name": "record_research_attempts",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_research_cycle_budgets_fk_0 ON public.record_research_cycle_budgets USING btree (budget_account_id)",
+      "name": "ix_record_research_cycle_budgets_fk_0",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_research_cycle_budgets",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_research_cycle_budgets_fk_1 ON public.record_research_cycle_budgets USING btree (config_id, workflow_id, config_version)",
+      "name": "ix_record_research_cycle_budgets_fk_1",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_research_cycle_budgets",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_research_cycle_budgets_fk_2 ON public.record_research_cycle_budgets USING btree (cycle_id, experiment_id)",
+      "name": "ix_record_research_cycle_budgets_fk_2",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_research_cycle_budgets",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_research_cycle_budgets_fk_3 ON public.record_research_cycle_budgets USING btree (workflow_id, experiment_id)",
+      "name": "ix_record_research_cycle_budgets_fk_3",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_research_cycle_budgets",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_research_return_blocks_fk_0 ON public.record_research_return_blocks USING btree (command_id)",
+      "name": "ix_record_research_return_blocks_fk_0",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_research_return_blocks",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_research_return_blocks_fk_1 ON public.record_research_return_blocks USING btree (cycle_id, experiment_id)",
+      "name": "ix_record_research_return_blocks_fk_1",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_research_return_blocks",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_research_return_blocks_fk_2 ON public.record_research_return_blocks USING btree (verdict_id, experiment_id)",
+      "name": "ix_record_research_return_blocks_fk_2",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_research_return_blocks",
       "unique_index": false,
       "valid": true
     },
@@ -43348,15 +44407,6 @@
       "valid": true
     },
     {
-      "definition": "CREATE UNIQUE INDEX record_cycle_transitions_command_id_key ON public.record_cycle_transitions USING btree (command_id)",
-      "name": "record_cycle_transitions_command_id_key",
-      "primary_index": false,
-      "ready": true,
-      "table_name": "record_cycle_transitions",
-      "unique_index": true,
-      "valid": true
-    },
-    {
       "definition": "CREATE UNIQUE INDEX record_cycle_transitions_cycle_id_ordinal_key ON public.record_cycle_transitions USING btree (cycle_id, ordinal)",
       "name": "record_cycle_transitions_cycle_id_ordinal_key",
       "primary_index": false,
@@ -43378,15 +44428,6 @@
       "definition": "CREATE UNIQUE INDEX record_cycle_transitions_pkey ON public.record_cycle_transitions USING btree (id)",
       "name": "record_cycle_transitions_pkey",
       "primary_index": true,
-      "ready": true,
-      "table_name": "record_cycle_transitions",
-      "unique_index": true,
-      "valid": true
-    },
-    {
-      "definition": "CREATE UNIQUE INDEX record_cycle_transitions_research_attempt_id_key ON public.record_cycle_transitions USING btree (research_attempt_id)",
-      "name": "record_cycle_transitions_research_attempt_id_key",
-      "primary_index": false,
       "ready": true,
       "table_name": "record_cycle_transitions",
       "unique_index": true,
@@ -43830,6 +44871,33 @@
       "primary_index": true,
       "ready": true,
       "table_name": "record_live_strategy_observations",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_market_research_decisi_operation_kind_operation_id_b_key ON public.record_market_research_decision_workflow_bindings USING btree (operation_kind, operation_id, business_command_key)",
+      "name": "record_market_research_decisi_operation_kind_operation_id_b_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_market_research_decision_workfl_business_command_key_key ON public.record_market_research_decision_workflow_bindings USING btree (business_command_key)",
+      "name": "record_market_research_decision_workfl_business_command_key_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_market_research_decision_workflow_bindings_pkey ON public.record_market_research_decision_workflow_bindings USING btree (dbos_workflow_id)",
+      "name": "record_market_research_decision_workflow_bindings_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_market_research_decision_workflow_bindings",
       "unique_index": true,
       "valid": true
     },
@@ -45193,6 +46261,42 @@
       "valid": true
     },
     {
+      "definition": "CREATE UNIQUE INDEX record_research_cycle_budgets_pkey ON public.record_research_cycle_budgets USING btree (cycle_id)",
+      "name": "record_research_cycle_budgets_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_research_cycle_budgets",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_research_cycle_budgets_workflow_id_key ON public.record_research_cycle_budgets USING btree (workflow_id)",
+      "name": "record_research_cycle_budgets_workflow_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_research_cycle_budgets",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_research_return_blocks_command_id_key ON public.record_research_return_blocks USING btree (command_id)",
+      "name": "record_research_return_blocks_command_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_research_return_blocks",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_research_return_blocks_pkey ON public.record_research_return_blocks USING btree (id)",
+      "name": "record_research_return_blocks_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_research_return_blocks",
+      "unique_index": true,
+      "valid": true
+    },
+    {
       "definition": "CREATE UNIQUE INDEX record_returns_experiment_id_kind_applicable_scope_id_ordin_key ON public.record_returns USING btree (experiment_id, kind, applicable_scope_id, ordinal)",
       "name": "record_returns_experiment_id_kind_applicable_scope_id_ordin_key",
       "primary_index": false,
@@ -45814,6 +46918,24 @@
       "valid": true
     },
     {
+      "definition": "CREATE UNIQUE INDEX uq_record_pivot_decision_approved_verdict ON public.record_pivot_decisions USING btree (verdict_id) WHERE ((verdict_id IS NOT NULL) AND ((decision)::text = 'APPROVED'::text))",
+      "name": "uq_record_pivot_decision_approved_verdict",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_pivot_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX uq_record_pivot_decision_verdict_ordinal ON public.record_pivot_decisions USING btree (verdict_id, decision_ordinal) WHERE (verdict_id IS NOT NULL)",
+      "name": "uq_record_pivot_decision_verdict_ordinal",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_pivot_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
       "definition": "CREATE UNIQUE INDEX uq_record_profile_owner_version ON public.record_operator_profiles USING btree (operator_id, version) WHERE (profile_schema_version = 2)",
       "name": "uq_record_profile_owner_version",
       "primary_index": false,
@@ -46360,6 +47482,12 @@
     {
       "force_row_security": false,
       "kind": "r",
+      "name": "record_market_research_decision_workflow_bindings",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
       "name": "record_market_research_workflow_bindings",
       "row_security": false
     },
@@ -46739,6 +47867,18 @@
       "force_row_security": false,
       "kind": "r",
       "name": "record_research_attempts",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_research_cycle_budgets",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_research_return_blocks",
       "row_security": false
     },
     {
@@ -55700,6 +56840,58 @@
       "table_name": "record_cycle_transitions"
     },
     {
+      "constraint_name": "record_cycle_transition_verdict_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transition_verdict_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
+    },
+    {
+      "constraint_name": "record_cycle_transition_verdict_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transition_verdict_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
+    },
+    {
       "constraint_name": "record_cycle_transitions_command_id_fkey",
       "constraint_table": "record_cycle_transitions",
       "deferrable": false,
@@ -59533,6 +60725,123 @@
       "internal": true,
       "name": null,
       "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_managed_return_consistency",
+      "constraint_table": "record_returns",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER record_managed_return_consistency AFTER INSERT ON record_returns DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION record_managed_return_consistency()",
+      "enabled": "O",
+      "events": 5,
+      "function_name": "public.record_managed_return_consistency",
+      "initially_deferred": true,
+      "internal": false,
+      "name": "record_managed_return_consistency",
+      "table_name": "record_returns"
+    },
+    {
+      "constraint_name": "record_market_research_decision_wor_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_market_research_decision_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_decision_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_decision_wor_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_market_research_decision_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_market_research_decision_wor_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_market_research_decision_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_decision_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_decision_wor_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_market_research_decision_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_market_research_decision_workflow_bindin_command_id_fkey",
+      "constraint_table": "record_market_research_decision_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_decision_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_decision_workflow_bindin_command_id_fkey",
+      "constraint_table": "record_market_research_decision_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "record_market_research_decision_workflow_bindin_command_id_fkey",
+      "constraint_table": "record_market_research_decision_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_decision_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_decision_workflow_bindin_command_id_fkey",
+      "constraint_table": "record_market_research_decision_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
     },
     {
       "constraint_name": "record_market_research_workflow_bin_cycle_id_experiment_id_fkey",
@@ -65125,6 +66434,58 @@
       "table_name": "record_outreach_drafts"
     },
     {
+      "constraint_name": "record_pivot_decision_verdict_fk",
+      "constraint_table": "record_pivot_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_pivot_decisions"
+    },
+    {
+      "constraint_name": "record_pivot_decision_verdict_fk",
+      "constraint_table": "record_pivot_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
+    },
+    {
+      "constraint_name": "record_pivot_decision_verdict_fk",
+      "constraint_table": "record_pivot_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_pivot_decisions"
+    },
+    {
+      "constraint_name": "record_pivot_decision_verdict_fk",
+      "constraint_table": "record_pivot_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
+    },
+    {
       "constraint_name": "record_pivot_decisions_artifact_id_experiment_id_artifact__fkey",
       "constraint_table": "record_pivot_decisions",
       "deferrable": false,
@@ -67905,6 +69266,383 @@
       "internal": true,
       "name": null,
       "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_research_block_consistency",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": true,
+      "definition": "CREATE CONSTRAINT TRIGGER record_research_block_consistency AFTER INSERT ON record_research_return_blocks DEFERRABLE INITIALLY DEFERRED FOR EACH ROW EXECUTE FUNCTION record_research_block_consistency()",
+      "enabled": "O",
+      "events": 5,
+      "function_name": "public.record_research_block_consistency",
+      "initially_deferred": true,
+      "internal": false,
+      "name": "record_research_block_consistency",
+      "table_name": "record_research_return_blocks"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_budget_account_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_cycle_budgets"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_budget_account_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_budget_accounts"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_budget_account_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_cycle_budgets"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_budget_account_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_budget_accounts"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_config_id_workflow_id_config_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_cycle_budgets"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_config_id_workflow_id_config_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_config_id_workflow_id_config_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_cycle_budgets"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_config_id_workflow_id_config_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_cycle_budgets"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_cycle_budgets"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_workflow_id_experiment_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_cycle_budgets"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_workflow_id_experiment_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_workflows"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_workflow_id_experiment_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_cycle_budgets"
+    },
+    {
+      "constraint_name": "record_research_cycle_budgets_workflow_id_experiment_id_fkey",
+      "constraint_table": "record_research_cycle_budgets",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_workflows"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_command_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_return_blocks"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_command_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_command_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_return_blocks"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_command_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_return_blocks"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_return_blocks"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_return_blocks"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_research_return_blocks"
+    },
+    {
+      "constraint_name": "record_research_return_blocks_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_research_return_blocks",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
     },
     {
       "constraint_name": "record_returns_feedback_artifact_id_experiment_id_feedback_fkey",
@@ -73370,6 +75108,19 @@
       "constraint_name": null,
       "constraint_table": null,
       "deferrable": false,
+      "definition": "CREATE TRIGGER record_market_research_decision_workflow_bindings_guard BEFORE INSERT OR DELETE OR UPDATE ON record_market_research_decision_workflow_bindings FOR EACH ROW EXECUTE FUNCTION record_research_decision_binding_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_research_decision_binding_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_market_research_decision_workflow_bindings_guard",
+      "table_name": "record_market_research_decision_workflow_bindings"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
       "definition": "CREATE TRIGGER record_market_research_workflow_bindings_guard BEFORE INSERT OR DELETE OR UPDATE ON record_market_research_workflow_bindings FOR EACH ROW EXECUTE FUNCTION record_market_research_workflow_binding_guard()",
       "enabled": "O",
       "events": 31,
@@ -74059,10 +75810,10 @@
       "constraint_name": null,
       "constraint_table": null,
       "deferrable": false,
-      "definition": "CREATE TRIGGER record_pivot_decisions_guard BEFORE INSERT OR DELETE OR UPDATE ON record_pivot_decisions FOR EACH ROW EXECUTE FUNCTION record_guard()",
+      "definition": "CREATE TRIGGER record_pivot_decisions_guard BEFORE INSERT OR DELETE OR UPDATE ON record_pivot_decisions FOR EACH ROW EXECUTE FUNCTION record_research_pivot_decision_guard()",
       "enabled": "O",
       "events": 31,
-      "function_name": "public.record_guard",
+      "function_name": "public.record_research_pivot_decision_guard",
       "initially_deferred": false,
       "internal": false,
       "name": "record_pivot_decisions_guard",
@@ -74340,6 +76091,32 @@
       "internal": false,
       "name": "record_research_attempts_origin_guard",
       "table_name": "record_research_attempts"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_research_cycle_budgets_guard BEFORE INSERT OR DELETE OR UPDATE ON record_research_cycle_budgets FOR EACH ROW EXECUTE FUNCTION record_research_budget_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_research_budget_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_research_cycle_budgets_guard",
+      "table_name": "record_research_cycle_budgets"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_research_return_blocks_guard BEFORE INSERT OR DELETE OR UPDATE ON record_research_return_blocks FOR EACH ROW EXECUTE FUNCTION record_research_return_block_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_research_return_block_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_research_return_blocks_guard",
+      "table_name": "record_research_return_blocks"
     },
     {
       "constraint_name": null,
