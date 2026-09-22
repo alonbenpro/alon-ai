@@ -67,6 +67,22 @@ def _request_hash(**request: Any) -> str:
     ).hexdigest()
 
 
+def market_research_request_hash(
+    *,
+    experiment_id: UUID,
+    cycle_id: UUID,
+    accepted_idea: ArtifactInput,
+    plan: ArtifactInput,
+) -> str:
+    """Return the exact hash used by the authoritative transition command."""
+    return _request_hash(
+        experiment_id=experiment_id,
+        cycle_id=cycle_id,
+        accepted_idea=accepted_idea,
+        plan=plan,
+    )
+
+
 async def _existing(
     connection: AsyncConnection, command_key: UUID, kind: str, request_hash: str
 ) -> Any:
@@ -834,10 +850,11 @@ class ProductRecordsRepository:
         accepted_idea: ArtifactInput,
         plan: ArtifactInput,
         command_key: UUID,
+        runtime_workflow_id: str | None = None,
     ) -> MarketResearchTransitionReceipt:
         async with self.engine.begin() as connection:
             await lock_experiment(connection, experiment_id)
-            request_hash = _request_hash(
+            request_hash = market_research_request_hash(
                 experiment_id=experiment_id,
                 cycle_id=cycle_id,
                 accepted_idea=accepted_idea,
@@ -846,6 +863,41 @@ class ProductRecordsRepository:
             old = await _existing(
                 connection, command_key, "START_MARKET_RESEARCH", request_hash
             )
+            if runtime_workflow_id is not None:
+                binding = (
+                    (
+                        await connection.execute(
+                            select(s.market_research_workflow_bindings)
+                            .where(
+                                s.market_research_workflow_bindings.c.dbos_workflow_id
+                                == runtime_workflow_id,
+                                s.market_research_workflow_bindings.c.experiment_id
+                                == experiment_id,
+                                s.market_research_workflow_bindings.c.cycle_id
+                                == cycle_id,
+                                s.market_research_workflow_bindings.c.business_command_key
+                                == command_key,
+                                s.market_research_workflow_bindings.c.request_hash
+                                == request_hash,
+                            )
+                            .with_for_update()
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                allowed_states = (
+                    {
+                        "STARTED",
+                        "BUSINESS_COMMITTED",
+                        "RECEIPT_DELIVERED",
+                        "RUNTIME_COMPLETED",
+                    }
+                    if old
+                    else {"STARTED"}
+                )
+                if binding is None or binding["delivery_state"] not in allowed_states:
+                    raise ProductRecordsDenied("WORKFLOW_NOT_EXECUTABLE")
             if old:
                 transition = (
                     (

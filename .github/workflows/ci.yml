@@ -122,6 +122,7 @@ jobs:
           trap cleanup EXIT
 
           "${compose[@]}" run --rm api alembic upgrade head
+          "${compose[@]}" run --rm worker dbos migrate --sys-db-url postgresql://alon_ai:alon_ai@postgres:5432/alon_ai --schema dbos
           "${compose[@]}" up --detach --no-build --wait --wait-timeout 180
 
           curl --fail --silent --show-error http://127.0.0.1:8000/health/live |

@@ -47,6 +47,9 @@ database:
 migrate:
 	cd backend && uv run --locked alembic upgrade head
 
+dbos-migrate:
+	cd backend && uv run --locked dbos migrate --sys-db-url "$${ALON_AI_DBOS_SYSTEM_DATABASE_URL:?set ALON_AI_DBOS_SYSTEM_DATABASE_URL}" --schema dbos
+
 api:
 	cd backend && uv run --locked uvicorn alon_ai.api.app:app --host 127.0.0.1 --port 8000 --no-access-log
 
@@ -58,6 +61,7 @@ frontend:
 
 dev: database
 	$(COMPOSE) $(COMPOSE_ARGS) run --build --rm api alembic upgrade head
+	$(COMPOSE) $(COMPOSE_ARGS) run --build --rm worker dbos migrate --sys-db-url postgresql://alon_ai:alon_ai@postgres:5432/alon_ai --schema dbos
 	$(COMPOSE) $(COMPOSE_ARGS) up --build
 
 down:

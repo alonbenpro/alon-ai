@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260922_15"
+    "20260922_16"
   ],
   "columns": [
     {
@@ -7144,6 +7144,132 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "application_version",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "business_command_key",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_id",
+      "not_null": false,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "dbos_workflow_id",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "character varying(200)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "delivery_state",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "from_state",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "request_hash",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "to_state",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "transition_id",
+      "not_null": false,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "transition_kind",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "updated_at",
+      "not_null": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "classification",
       "not_null": true,
       "table_name": "record_negative_learning_records",
@@ -14228,6 +14354,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK ((delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'CANCELLED'::character varying]::text[])) AND transition_id IS NULL AND command_id IS NULL OR (delivery_state::text = ANY (ARRAY['BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying]::text[])) AND transition_id IS NOT NULL AND command_id IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_market_research_workflow_bindings_check1",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK ((disposition::text = 'USED'::text) = (reason_code IS NULL))",
       "enforced": true,
       "initially_deferred": false,
@@ -15034,6 +15170,16 @@
       "kind": "c",
       "name": "supply_references_definition_check",
       "table_name": "supply_references",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying, 'CANCELLED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_market_research_workflow_bindings_delivery_state_check",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -16228,6 +16374,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (request_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_market_research_workflow_bindings_request_hash_check",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (reserved >= 0::numeric AND reserved < '1000000000000000000000000'::numeric AND scale(reserved) <= 24)",
       "enforced": true,
       "initially_deferred": false,
@@ -16574,6 +16730,16 @@
       "kind": "c",
       "name": "record_conversation_operator_messages_check",
       "table_name": "record_conversation_operator_messages",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (transition_kind::text = 'IDEA_REFINEMENT_TO_MARKET_RESEARCH'::text AND from_state::text = 'IDEA_REFINEMENT'::text AND to_state::text = 'MARKET_RESEARCH'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_market_research_workflow_bindings_check",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -17942,6 +18108,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_market_research_workflow_bindings_command_id_fkey",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (command_id) REFERENCES record_commands(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_outbox_command_id_fkey",
       "table_name": "record_outbox",
       "validated": true
@@ -18454,6 +18630,16 @@
       "kind": "f",
       "name": "record_idea_acceptances_cycle_id_experiment_id_fkey",
       "table_name": "record_idea_acceptances",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_market_research_workflow_bin_cycle_id_experiment_id_fkey",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -21258,6 +21444,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (transition_id) REFERENCES record_cycle_transitions(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_market_research_workflow_bindings_transition_id_fkey",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (usage_id, call_id, component) REFERENCES gov_usage(id, call_id, component)",
       "enforced": true,
       "initially_deferred": false,
@@ -21814,6 +22010,16 @@
       "kind": "n",
       "name": "record_returns_applicable_scope_id_not_null",
       "table_name": "record_returns",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL application_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_workflow_bi_application_version_not_null",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -23064,6 +23270,16 @@
       "kind": "n",
       "name": "record_offer_proposals_bundle_id_not_null",
       "table_name": "record_offer_proposals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL business_command_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_workflow_b_business_command_key_not_null",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -25342,6 +25558,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_workflow_bindings_created_at_not_null",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_negative_learning_records_created_at_not_null",
       "table_name": "record_negative_learning_records",
       "validated": true
@@ -25882,6 +26108,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_workflow_bindings_cycle_id_not_null",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_pivot_decisions_cycle_id_not_null",
       "table_name": "record_pivot_decisions",
       "validated": true
@@ -25954,6 +26190,16 @@
       "kind": "n",
       "name": "record_conversation_follow_ups_date_kind_not_null",
       "table_name": "record_conversation_follow_ups",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL dbos_workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_workflow_bindi_dbos_workflow_id_not_null",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -26174,6 +26420,16 @@
       "kind": "n",
       "name": "record_outreach_sequence_steps_delay_days_not_null",
       "table_name": "record_outreach_sequence_steps",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL delivery_state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_workflow_binding_delivery_state_not_null",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -27302,6 +27558,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_market_research_workflow_bindings_experiment_id_not_null",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_offer_acceptances_experiment_id_not_null",
       "table_name": "record_offer_acceptances",
       "validated": true
@@ -28074,6 +28340,16 @@
       "kind": "n",
       "name": "record_cycle_transitions_from_state_not_null",
       "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL from_state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_workflow_bindings_from_state_not_null",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -33678,6 +33954,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL request_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_workflow_bindings_request_hash_not_null",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL required_evidence_kind",
       "enforced": true,
       "initially_deferred": false,
@@ -35168,12 +35454,32 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL to_state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_workflow_bindings_to_state_not_null",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL topic",
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
       "name": "record_outbox_topic_not_null",
       "table_name": "record_outbox",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL transition_kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_workflow_bindin_transition_kind_not_null",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -35234,6 +35540,16 @@
       "kind": "n",
       "name": "record_cycle_states_updated_at_not_null",
       "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL updated_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_market_research_workflow_bindings_updated_at_not_null",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -35964,6 +36280,16 @@
       "kind": "p",
       "name": "record_cycle_states_pkey",
       "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (dbos_workflow_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_market_research_workflow_bindings_pkey",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -37688,6 +38014,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (business_command_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_market_research_workflow_bindin_business_command_key_key",
+      "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (calibration_decision_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -38164,6 +38500,16 @@
       "kind": "u",
       "name": "record_cycle_states_cycle_id_experiment_id_key",
       "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (cycle_id, experiment_id, transition_kind)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_market_research_workfl_cycle_id_experiment_id_transi_key",
+      "table_name": "record_market_research_workflow_bindings",
       "validated": true
     },
     {
@@ -40032,6 +40378,11 @@
     },
     {
       "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_market_research_workflow_binding_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP='DELETE' THEN\n  RAISE EXCEPTION 'immutable market research workflow binding';\n ELSIF TG_OP='INSERT' THEN\n  IF NEW.delivery_state<>'PENDING' OR NEW.transition_id IS NOT NULL\n     OR NEW.command_id IS NOT NULL THEN\n   RAISE EXCEPTION 'invalid initial market research workflow binding';\n  END IF;\n  RETURN NEW;\n END IF;\n IF (NEW.dbos_workflow_id,NEW.application_version,NEW.request_hash,\n     NEW.business_command_key,NEW.experiment_id,NEW.cycle_id,\n     NEW.transition_kind,NEW.from_state,NEW.to_state,NEW.created_at)\n    IS DISTINCT FROM\n    (OLD.dbos_workflow_id,OLD.application_version,OLD.request_hash,\n     OLD.business_command_key,OLD.experiment_id,OLD.cycle_id,\n     OLD.transition_kind,OLD.from_state,OLD.to_state,OLD.created_at)\n THEN RAISE EXCEPTION 'immutable market research workflow identity'; END IF;\n IF NOT ((OLD.delivery_state='PENDING' AND NEW.delivery_state IN ('STARTED','CANCELLED'))\n      OR (OLD.delivery_state='STARTED' AND NEW.delivery_state IN ('BUSINESS_COMMITTED','CANCELLED'))\n      OR (OLD.delivery_state='BUSINESS_COMMITTED' AND NEW.delivery_state='RECEIPT_DELIVERED')\n      OR (OLD.delivery_state='RECEIPT_DELIVERED' AND NEW.delivery_state='RUNTIME_COMPLETED'))\n THEN RAISE EXCEPTION 'invalid market research workflow delivery transition'; END IF;\n IF NEW.delivery_state='CANCELLED' AND EXISTS(\n    SELECT 1 FROM record_cycle_transitions transition\n     WHERE transition.cycle_id=NEW.cycle_id\n       AND transition.experiment_id=NEW.experiment_id)\n THEN RAISE EXCEPTION 'committed market research workflow cannot be cancelled'; END IF;\n IF NEW.delivery_state IN\n    ('BUSINESS_COMMITTED','RECEIPT_DELIVERED','RUNTIME_COMPLETED')\n    AND NOT EXISTS(\n      SELECT 1 FROM record_cycle_transitions transition\n      JOIN record_commands command ON command.id=transition.command_id\n      WHERE transition.id=NEW.transition_id\n        AND transition.cycle_id=NEW.cycle_id\n        AND transition.experiment_id=NEW.experiment_id\n        AND transition.from_state=NEW.from_state\n        AND transition.to_state=NEW.to_state\n        AND command.id=NEW.command_id\n        AND command.command_key=NEW.business_command_key\n        AND command.request_hash=NEW.request_hash)\n THEN RAISE EXCEPTION 'invalid market research workflow receipt lineage'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_market_research_workflow_binding_guard"
+    },
+    {
+      "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_offer_acceptance_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE package record_offer_packages; qualification record_offer_qualification_profiles; policy record_initial_outreach_policies;\nBEGIN\n SELECT * INTO package FROM record_offer_packages WHERE id=NEW.offer_id;\n SELECT * INTO qualification FROM record_offer_qualification_profiles WHERE id=NEW.profile_id;\n SELECT * INTO policy FROM record_initial_outreach_policies WHERE id=NEW.policy_id;\n IF record_operator_authorized(NEW.experiment_id,NEW.accepted_by) IS NOT TRUE\n  OR package.experiment_id IS DISTINCT FROM NEW.experiment_id\n  OR qualification.offer_id IS DISTINCT FROM package.id OR policy.offer_id IS DISTINCT FROM package.id\n  OR NEW.offer_artifact_id IS DISTINCT FROM package.artifact_id\n  OR NEW.profile_artifact_id IS DISTINCT FROM qualification.artifact_id\n  OR NEW.policy_artifact_id IS DISTINCT FROM policy.artifact_id\n  OR (SELECT array_agg(field_path ORDER BY field_path)::text[] FROM record_offer_field_sources WHERE offer_id=package.id) IS DISTINCT FROM ARRAY['base_price','buyer','claims','credible_outcome','currency','customer_responsibilities','deliverables','disqualifiers','exclusions','ideal_fit','negotiation_variables','payment_terms','pilot_terms','positioning','prerequisites','problem','scope','solution_mechanism','target_customer','third_party_costs','timeline','validity']\n  OR (SELECT array_agg(DISTINCT category ORDER BY category)::text[] FROM record_qualification_criteria WHERE profile_id=qualification.id) IS DISTINCT FROM ARRAY['BUYER_FIT','CONTACT_FIT','ECONOMIC_FIT','EVIDENCE_QUESTION','FATAL_DISQUALIFIER','OFFER_SPECIFIC_ASSESSMENT','PILOT_FIT','POSITIVE_SIGNAL','REQUIRED_FIT','TECHNICAL_FIT']\n THEN RAISE EXCEPTION 'incomplete accepted offer set'; END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_offer_acceptance_guard"
     },
@@ -41220,6 +41571,24 @@
       "primary_index": false,
       "ready": true,
       "table_name": "record_initial_outreach_policies",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_market_research_workflow_bindings_cycle ON public.record_market_research_workflow_bindings USING btree (cycle_id, experiment_id)",
+      "name": "ix_record_market_research_workflow_bindings_cycle",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_market_research_workflow_bindings_pending ON public.record_market_research_workflow_bindings USING btree (application_version, delivery_state)",
+      "name": "ix_record_market_research_workflow_bindings_pending",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_market_research_workflow_bindings",
       "unique_index": false,
       "valid": true
     },
@@ -43461,6 +43830,33 @@
       "primary_index": true,
       "ready": true,
       "table_name": "record_live_strategy_observations",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_market_research_workfl_cycle_id_experiment_id_transi_key ON public.record_market_research_workflow_bindings USING btree (cycle_id, experiment_id, transition_kind)",
+      "name": "record_market_research_workfl_cycle_id_experiment_id_transi_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_market_research_workflow_bindin_business_command_key_key ON public.record_market_research_workflow_bindings USING btree (business_command_key)",
+      "name": "record_market_research_workflow_bindin_business_command_key_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_market_research_workflow_bindings",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_market_research_workflow_bindings_pkey ON public.record_market_research_workflow_bindings USING btree (dbos_workflow_id)",
+      "name": "record_market_research_workflow_bindings_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_market_research_workflow_bindings",
       "unique_index": true,
       "valid": true
     },
@@ -45959,6 +46355,12 @@
       "force_row_security": false,
       "kind": "r",
       "name": "record_live_strategy_observations",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_market_research_workflow_bindings",
       "row_security": false
     },
     {
@@ -59131,6 +59533,162 @@
       "internal": true,
       "name": null,
       "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bin_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bin_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bin_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bin_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bindings_command_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bindings_command_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bindings_command_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bindings_command_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bindings_transition_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bindings_transition_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bindings_transition_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_market_research_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_market_research_workflow_bindings_transition_id_fkey",
+      "constraint_table": "record_market_research_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
     },
     {
       "constraint_name": "record_negative_learning_records_comparison_id_fkey",
@@ -72807,6 +73365,19 @@
       "internal": false,
       "name": "record_live_strategy_observations_immutable",
       "table_name": "record_live_strategy_observations"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_market_research_workflow_bindings_guard BEFORE INSERT OR DELETE OR UPDATE ON record_market_research_workflow_bindings FOR EACH ROW EXECUTE FUNCTION record_market_research_workflow_binding_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_market_research_workflow_binding_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_market_research_workflow_bindings_guard",
+      "table_name": "record_market_research_workflow_bindings"
     },
     {
       "constraint_name": null,

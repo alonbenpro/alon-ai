@@ -527,6 +527,49 @@ cycle_states = table(
     ),
 )
 
+market_research_workflow_bindings = table(
+    "market_research_workflow_bindings",
+    gov.col("dbos_workflow_id", String(200), primary_key=True),
+    gov.col("application_version", String(64)),
+    gov.col("request_hash", String(64)),
+    gov.col("business_command_key", gov.U),
+    gov.col("experiment_id", gov.U),
+    gov.col("cycle_id", gov.U),
+    gov.col("transition_kind", String(64)),
+    gov.col("from_state", String(32)),
+    gov.col("to_state", String(32)),
+    gov.col("transition_id", gov.U, nullable=True),
+    gov.col("command_id", gov.U, nullable=True),
+    gov.col("delivery_state", String(32)),
+    gov.col("created_at", gov.T),
+    gov.col("updated_at", gov.T),
+    ForeignKeyConstraint(
+        ["cycle_id", "experiment_id"],
+        ["record_cycles.id", "record_cycles.experiment_id"],
+    ),
+    ForeignKeyConstraint(["transition_id"], ["record_cycle_transitions.id"]),
+    ForeignKeyConstraint(["command_id"], ["record_commands.id"]),
+    UniqueConstraint("business_command_key"),
+    UniqueConstraint("cycle_id", "experiment_id", "transition_kind"),
+    CheckConstraint("request_hash ~ '^[0-9a-f]{64}$'"),
+    CheckConstraint(
+        "transition_kind='IDEA_REFINEMENT_TO_MARKET_RESEARCH' "
+        "AND from_state='IDEA_REFINEMENT' AND to_state='MARKET_RESEARCH'"
+    ),
+    CheckConstraint(
+        "delivery_state IN "
+        "('PENDING','STARTED','BUSINESS_COMMITTED','RECEIPT_DELIVERED',"
+        "'RUNTIME_COMPLETED','CANCELLED')"
+    ),
+    CheckConstraint(
+        "(delivery_state IN ('PENDING','STARTED','CANCELLED') "
+        "AND transition_id IS NULL AND command_id IS NULL) OR "
+        "(delivery_state IN "
+        "('BUSINESS_COMMITTED','RECEIPT_DELIVERED','RUNTIME_COMPLETED') "
+        "AND transition_id IS NOT NULL AND command_id IS NOT NULL)"
+    ),
+)
+
 verdicts = table(
     "verdicts",
     gov.col("id", gov.U, primary_key=True),
