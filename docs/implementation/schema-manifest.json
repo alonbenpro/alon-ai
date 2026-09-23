@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260923_19"
+    "20260923_20"
   ],
   "columns": [
     {
@@ -14731,6 +14731,15 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "batch_yields",
+      "not_null": false,
+      "table_name": "supply_outcomes",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "batches_used",
       "not_null": true,
       "table_name": "supply_outcomes",
@@ -14744,6 +14753,15 @@
       "not_null": true,
       "table_name": "supply_outcomes",
       "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "classification",
+      "not_null": false,
+      "table_name": "supply_outcomes",
+      "type": "character varying(40)"
     },
     {
       "default_expression": null,
@@ -14767,6 +14785,33 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "feedback_lineage",
+      "not_null": false,
+      "table_name": "supply_outcomes",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "finalized_cost_ils",
+      "not_null": false,
+      "table_name": "supply_outcomes",
+      "type": "numeric"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "in_flight_call_count",
+      "not_null": false,
+      "table_name": "supply_outcomes",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "reason",
       "not_null": true,
       "table_name": "supply_outcomes",
@@ -14780,6 +14825,15 @@
       "not_null": true,
       "table_name": "supply_outcomes",
       "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "rejection_breakdown",
+      "not_null": false,
+      "table_name": "supply_outcomes",
+      "type": "jsonb"
     },
     {
       "default_expression": null,
@@ -15023,6 +15077,168 @@
       "not_null": true,
       "table_name": "supply_references",
       "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "application_version",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "batch_id",
+      "not_null": false,
+      "table_name": "supply_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "business_command_key",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cancellation_outcome",
+      "not_null": false,
+      "table_name": "supply_workflow_bindings",
+      "type": "character varying(40)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "candidate_id",
+      "not_null": false,
+      "table_name": "supply_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_id",
+      "not_null": false,
+      "table_name": "supply_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "contract_version",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "dbos_workflow_id",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "character varying(220)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "delivery_state",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operation_kind",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "character varying(40)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "request_hash",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "request_payload",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "result_id",
+      "not_null": false,
+      "table_name": "supply_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "slot",
+      "not_null": false,
+      "table_name": "supply_workflow_bindings",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "subject_id",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "updated_at",
+      "not_null": true,
+      "table_name": "supply_workflow_bindings",
+      "type": "timestamp with time zone"
     }
   ],
   "constraints": [
@@ -15154,6 +15370,16 @@
       "kind": "c",
       "name": "record_offer_design_workflow_bindings_check1",
       "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK ((delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'CANCELLED'::character varying]::text[])) AND command_id IS NULL AND result_id IS NULL OR (delivery_state::text = ANY (ARRAY['BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying]::text[])) AND command_id IS NOT NULL AND result_id IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "supply_workflow_bindings_check1",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -15668,6 +15894,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (cancellation_outcome IS NULL OR (cancellation_outcome::text = ANY (ARRAY['EFFECTIVE'::character varying, 'INEFFECTIVE_ALREADY_COMMITTED'::character varying]::text[])))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "supply_workflow_bindings_cancellation_outcome_check",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (candidate_count > 0 AND candidate_set_hash::text ~ '^[0-9a-f]{64}$'::text)",
       "enforced": true,
       "initially_deferred": false,
@@ -15754,6 +15990,16 @@
       "kind": "c",
       "name": "record_qualification_criteria_category_check",
       "table_name": "record_qualification_criteria",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (classification IS NULL AND finalized_cost_ils IS NULL AND in_flight_call_count IS NULL AND batch_yields IS NULL AND feedback_lineage IS NULL AND rejection_breakdown IS NULL OR (classification::text = ANY (ARRAY['TARGET_50_REACHED'::character varying, 'CAMPAIGN_SUPPLY_INSUFFICIENT'::character varying, 'CANCELLED'::character varying, 'SAFETY_STOP'::character varying]::text[])) AND finalized_cost_ils >= 0::numeric AND in_flight_call_count >= 0 AND jsonb_typeof(batch_yields) = 'object'::text AND jsonb_typeof(feedback_lineage) = 'array'::text AND jsonb_typeof(rejection_breakdown) = 'object'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "supply_outcome_snapshot_shape",
+      "table_name": "supply_outcomes",
       "validated": true
     },
     {
@@ -15874,6 +16120,16 @@
       "kind": "c",
       "name": "record_offer_design_workflow_bindings_check",
       "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (contract_version = 1 AND request_hash::text ~ '^[0-9a-f]{64}$'::text AND jsonb_typeof(request_payload) = 'object'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "supply_workflow_bindings_check",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -16034,6 +16290,16 @@
       "kind": "c",
       "name": "record_offer_design_workflow_bindings_delivery_state_check",
       "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying, 'CANCELLED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "supply_workflow_bindings_delivery_state_check",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -16788,6 +17054,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (operation_kind::text = ANY (ARRAY['CREATE'::character varying, 'BEGIN_BATCH'::character varying, 'ADMIT_CANDIDATE'::character varying, 'RESOLVE_CONTACT'::character varying, 'CLOSE_CONTACTABILITY'::character varying, 'CLOSE_QUALIFICATION'::character varying, 'STOP'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "supply_workflow_bindings_operation_kind_check",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (operation_kind::text = ANY (ARRAY['OUTCOME'::character varying, 'PIVOT_DECISION'::character varying, 'INCONCLUSIVE_SUPPLEMENT'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -17514,6 +17790,16 @@
       "kind": "c",
       "name": "supply_batches_slot_check",
       "table_name": "supply_batches",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (slot IS NULL OR slot >= 1 AND slot <= 3)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "supply_workflow_bindings_slot_check",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -18488,6 +18774,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (batch_id, experiment_id) REFERENCES supply_batches(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "supply_workflow_bindings_batch_id_experiment_id_fkey",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (binding_id, experiment_id, organization_id) REFERENCES record_org_bindings(id, experiment_id, organization_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -18998,6 +19294,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (candidate_id, experiment_id) REFERENCES supply_candidates(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "supply_workflow_bindings_candidate_id_experiment_id_fkey",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (case_id, experiment_id) REFERENCES contact_cases(candidate_id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -19114,6 +19420,16 @@
       "kind": "f",
       "name": "record_research_return_blocks_command_id_fkey",
       "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (command_id) REFERENCES record_commands(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "supply_workflow_bindings_command_id_fkey",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -20214,6 +20530,16 @@
       "kind": "f",
       "name": "supply_references_experiment_id_fkey",
       "table_name": "supply_references",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES gov_experiments(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "supply_workflow_bindings_experiment_id_fkey",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -23308,6 +23634,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL application_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_application_version_not_null",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL approved_at",
       "enforced": true,
       "initially_deferred": false,
@@ -24604,6 +24940,16 @@
       "kind": "n",
       "name": "record_offer_design_workflow_bind_business_command_key_not_null",
       "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL business_command_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_business_command_key_not_null",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -26378,6 +26724,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL contract_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_contract_version_not_null",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL contradictory_fields",
       "enforced": true,
       "initially_deferred": false,
@@ -27318,6 +27674,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_created_at_not_null",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL created_by",
       "enforced": true,
       "initially_deferred": false,
@@ -27708,6 +28074,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL dbos_workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_dbos_workflow_id_not_null",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL deadline",
       "enforced": true,
       "initially_deferred": false,
@@ -27974,6 +28350,16 @@
       "kind": "n",
       "name": "record_offer_design_workflow_bindings_delivery_state_not_null",
       "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL delivery_state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_delivery_state_not_null",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -29714,6 +30100,16 @@
       "kind": "n",
       "name": "supply_references_experiment_id_not_null",
       "table_name": "supply_references",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_experiment_id_not_null",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -33338,6 +33734,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL operation_kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_operation_kind_not_null",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL operator_id",
       "enforced": true,
       "initially_deferred": false,
@@ -35778,6 +36184,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL request_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_request_hash_not_null",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL request_payload",
       "enforced": true,
       "initially_deferred": false,
@@ -35794,6 +36210,16 @@
       "kind": "n",
       "name": "record_offer_design_workflow_bindings_request_payload_not_null",
       "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL request_payload",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_request_payload_not_null",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -37128,6 +37554,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL subject_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_subject_id_not_null",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL subject_kind",
       "enforced": true,
       "initially_deferred": false,
@@ -37434,6 +37870,16 @@
       "kind": "n",
       "name": "record_operators_updated_at_not_null",
       "table_name": "record_operators",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL updated_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "supply_workflow_bindings_updated_at_not_null",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -38234,6 +38680,16 @@
       "kind": "p",
       "name": "record_offer_design_workflow_bindings_pkey",
       "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (dbos_workflow_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "supply_workflow_bindings_pkey",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -40018,6 +40474,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (business_command_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "supply_workflow_bindings_business_command_key_key",
+      "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (calibration_decision_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -40234,6 +40700,16 @@
       "kind": "u",
       "name": "record_research_return_blocks_command_id_key",
       "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (command_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "supply_workflow_bindings_command_id_key",
+      "table_name": "supply_workflow_bindings",
       "validated": true
     },
     {
@@ -42597,7 +43073,7 @@
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_readiness_target()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF EXISTS(SELECT 1 FROM supply_plans WHERE experiment_id=NEW.experiment_id AND state='ACTIVE')\n AND (SELECT count(*) FROM record_current_supply_qualifications WHERE experiment_id=NEW.experiment_id AND outcome='QUALIFIED')=50 THEN\n  INSERT INTO supply_outcomes SELECT NEW.experiment_id,NEW.proposal_fact_id,'TARGET_50_REACHED',50,\n   (SELECT count(*) FROM supply_batches WHERE experiment_id=NEW.experiment_id),\n   (SELECT count(*) FROM supply_candidates WHERE experiment_id=NEW.experiment_id);\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_readiness_target()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF EXISTS(SELECT 1 FROM supply_plans WHERE experiment_id=NEW.experiment_id AND state='ACTIVE')\n AND (SELECT count(*) FROM record_current_supply_qualifications WHERE experiment_id=NEW.experiment_id AND outcome='QUALIFIED')=50 THEN\n  INSERT INTO supply_outcomes(experiment_id,command_key,reason,achieved,batches_used,businesses_discovered)\n  SELECT NEW.experiment_id,NEW.proposal_fact_id,'TARGET_50_REACHED',50,\n   (SELECT count(*) FROM supply_batches WHERE experiment_id=NEW.experiment_id),\n   (SELECT count(*) FROM supply_candidates WHERE experiment_id=NEW.experiment_id);\n END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_readiness_target"
     },
     {
@@ -42682,7 +43158,7 @@
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.supply_after_fact()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_TABLE_NAME='supply_batches' THEN\n  IF NEW.slot>1 THEN\n   INSERT INTO supply_plan_changes SELECT NEW.id,NEW.experiment_id,f.batch_id,f.id,f.payload->'prior_plan',NEW.plan FROM supply_feedback f WHERE f.id=NEW.feedback_id;\n  END IF;\n ELSIF TG_TABLE_NAME='supply_outcomes' THEN\n  UPDATE supply_plans SET state=NEW.reason WHERE experiment_id=NEW.experiment_id;\n  UPDATE supply_candidates SET stopped=true WHERE experiment_id=NEW.experiment_id AND NOT deep_started;\n ELSIF NEW.outcome='QUALIFIED' AND (SELECT count(*) FROM record_current_supply_qualifications WHERE experiment_id=NEW.experiment_id AND outcome='QUALIFIED')=50 THEN\n  INSERT INTO supply_outcomes SELECT NEW.experiment_id,NEW.fact_id,'TARGET_50_REACHED',50,(SELECT count(*) FROM supply_batches WHERE experiment_id=NEW.experiment_id),(SELECT count(*) FROM supply_candidates WHERE experiment_id=NEW.experiment_id);\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.supply_after_fact()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_TABLE_NAME='supply_batches' THEN\n  IF NEW.slot>1 THEN\n   INSERT INTO supply_plan_changes SELECT NEW.id,NEW.experiment_id,f.batch_id,f.id,f.payload->'prior_plan',NEW.plan FROM supply_feedback f WHERE f.id=NEW.feedback_id;\n  END IF;\n ELSIF TG_TABLE_NAME='supply_outcomes' THEN\n  UPDATE supply_plans SET state=NEW.reason WHERE experiment_id=NEW.experiment_id;\n  UPDATE supply_candidates SET stopped=true WHERE experiment_id=NEW.experiment_id AND NOT deep_started;\n ELSIF NEW.outcome='QUALIFIED' AND (SELECT count(*) FROM record_current_supply_qualifications WHERE experiment_id=NEW.experiment_id AND outcome='QUALIFIED')=50 THEN\n  INSERT INTO supply_outcomes(experiment_id,command_key,reason,achieved,batches_used,businesses_discovered)\n  SELECT NEW.experiment_id,NEW.fact_id,'TARGET_50_REACHED',50,(SELECT count(*) FROM supply_batches WHERE experiment_id=NEW.experiment_id),(SELECT count(*) FROM supply_candidates WHERE experiment_id=NEW.experiment_id);\n END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "supply_after_fact"
     },
     {
@@ -42694,6 +43170,16 @@
       "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.supply_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE p supply_plans; b supply_batches; i supply_identities; f supply_facts; v supply_facts; cl supply_facts; c supply_candidates; fb supply_feedback; op gov_operations; cfg gov_configs; payload jsonb; expected text; total integer; item jsonb; prior jsonb; diff jsonb; dim text;\nBEGIN\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n IF TG_OP='UPDATE' THEN\n  IF TG_TABLE_NAME='supply_plans' THEN\n   IF (to_jsonb(NEW)-'state')<>(to_jsonb(OLD)-'state') OR OLD.state<>'ACTIVE' OR NOT EXISTS(SELECT 1 FROM supply_outcomes WHERE experiment_id=NEW.experiment_id AND reason=NEW.state) THEN RAISE EXCEPTION 'invalid supply transition'; END IF;\n  ELSIF TG_TABLE_NAME='supply_batches' THEN\n   IF (to_jsonb(NEW)-ARRAY['stage','completed_at'])<>(to_jsonb(OLD)-ARRAY['stage','completed_at']) OR (OLD.completed_at IS NOT NULL AND NEW.completed_at IS DISTINCT FROM OLD.completed_at) OR NOT ((OLD.stage='CONTACT' AND NEW.stage IN ('EMAIL_RETRY_READY','QUALIFICATION','DONE')) OR (OLD.stage='QUALIFICATION' AND NEW.stage IN ('QUALIFICATION_RETRY_READY','DONE'))) THEN RAISE EXCEPTION 'invalid batch transition'; END IF;\n   IF OLD.stage='CONTACT' AND EXISTS(SELECT 1 FROM supply_candidates cand LEFT JOIN supply_contacts t ON t.candidate_id=cand.id WHERE cand.batch_id=NEW.id AND (t.candidate_id IS NULL OR t.outcome='SOURCE_FAILURE')) THEN RAISE EXCEPTION 'unresolved contact gate'; END IF;\n   IF NEW.stage='QUALIFICATION' AND (SELECT count(*) FROM supply_contacts WHERE experiment_id=NEW.experiment_id AND outcome='SUPPORTED')<50 THEN RAISE EXCEPTION 'email shortage'; END IF;\n   IF NEW.stage IN ('EMAIL_RETRY_READY','QUALIFICATION_RETRY_READY') AND NOT EXISTS(SELECT 1 FROM supply_feedback WHERE batch_id=NEW.id AND gate=CASE WHEN NEW.stage='EMAIL_RETRY_READY' THEN 'EMAIL' ELSE 'QUALIFICATION' END) THEN RAISE EXCEPTION 'missing feedback'; END IF;\n  ELSIF TG_TABLE_NAME='supply_candidates' THEN\n   IF (to_jsonb(NEW)-ARRAY['deep_started','stopped'])<>(to_jsonb(OLD)-ARRAY['deep_started','stopped']) OR (OLD.deep_started AND NOT NEW.deep_started) OR (OLD.stopped AND NOT NEW.stopped) THEN RAISE EXCEPTION 'immutable candidate intent'; END IF;\n   IF NEW.deep_started AND NOT OLD.deep_started THEN\n    IF NEW.stopped OR NOT EXISTS(SELECT 1 FROM supply_plans WHERE experiment_id=NEW.experiment_id AND state='ACTIVE') OR NOT EXISTS(SELECT 1 FROM supply_contacts WHERE candidate_id=NEW.id AND outcome='SUPPORTED') OR (SELECT count(*) FROM supply_contacts WHERE experiment_id=NEW.experiment_id AND outcome='SUPPORTED')<50 OR NOT EXISTS(SELECT 1 FROM supply_batches WHERE experiment_id=NEW.experiment_id AND stage='QUALIFICATION') THEN RAISE EXCEPTION 'deep work denied'; END IF;\n   END IF;\n  ELSE RAISE EXCEPTION 'immutable supply fact'; END IF;\n  RETURN NEW;\n END IF;\n SELECT * INTO p FROM supply_plans WHERE experiment_id=NEW.experiment_id;\n IF TG_TABLE_NAME='supply_plans' THEN\n  IF NEW.state<>'ACTIVE' OR NOT supply_plan_valid(NEW.initial_plan,NEW.experiment_id) OR NOT supply_filters_valid(NEW.allowed,NEW.experiment_id) OR NOT NEW.allowed @> (NEW.initial_plan->'filters') OR NOT EXISTS(SELECT 1 FROM supply_references WHERE id=NEW.verification_policy_id AND kind='VERIFICATION_POLICY') THEN RAISE EXCEPTION 'invalid supply plan'; END IF;\n ELSIF TG_TABLE_NAME='supply_identities' THEN\n  IF NOT EXISTS(SELECT 1 FROM supply_references WHERE id=NEW.provenance_ref AND experiment_id=NEW.experiment_id AND kind='INDEPENDENT_SOURCE' AND mode=NEW.mode) THEN RAISE EXCEPTION 'missing permitted provenance'; END IF;\n ELSIF TG_TABLE_NAME='supply_facts' THEN\n  SELECT * INTO i FROM supply_identities WHERE id=NEW.identity_id;\n  IF i.mode<>NEW.mode THEN RAISE EXCEPTION 'mixed evidence mode'; END IF;\n  IF NEW.kind='SOURCE_EMAIL' AND NEW.contact_ref<>NEW.id THEN RAISE EXCEPTION 'source contact identity'; END IF;\n  IF NEW.kind IN ('VERIFIED','VERIFICATION_REJECTED') AND (NOT EXISTS(SELECT 1 FROM supply_facts WHERE id=NEW.contact_ref AND identity_id=NEW.identity_id AND kind='SOURCE_EMAIL' AND observed_at<=NEW.observed_at) OR NOT EXISTS(SELECT 1 FROM supply_references WHERE id=NEW.policy_ref AND kind='VERIFICATION_POLICY')) THEN RAISE EXCEPTION 'invalid verification lineage'; END IF;\n  IF NEW.kind IN ('QUALIFIED','REJECTED_FIT','REJECTED_EVIDENCE') AND NOT EXISTS(SELECT 1 FROM supply_references WHERE id=NEW.policy_ref AND kind='QUALIFICATION_RULE') THEN RAISE EXCEPTION 'invalid qualification rule'; END IF;\n ELSIF TG_TABLE_NAME='supply_batches' THEN\n  IF p.state IS DISTINCT FROM 'ACTIVE' OR NEW.stage<>'CONTACT' OR NOT supply_plan_valid(NEW.plan,NEW.experiment_id) OR NOT p.allowed @> (NEW.plan->'filters') OR NEW.plan->>'qualification_rule_id'<>p.initial_plan->>'qualification_rule_id' THEN RAISE EXCEPTION 'invalid batch plan'; END IF;\n  IF NEW.slot=1 THEN\n   IF EXISTS(SELECT 1 FROM supply_batches WHERE experiment_id=NEW.experiment_id) OR NEW.plan<>p.initial_plan THEN RAISE EXCEPTION 'initial batch conflict'; END IF;\n  ELSE\n   SELECT * INTO b FROM supply_batches WHERE experiment_id=NEW.experiment_id ORDER BY slot DESC LIMIT 1;\n   SELECT * INTO fb FROM supply_feedback WHERE id=NEW.feedback_id;\n   IF fb.experiment_id IS DISTINCT FROM NEW.experiment_id OR fb.batch_id IS DISTINCT FROM b.id OR fb.payload IS DISTINCT FROM supply_feedback_payload(b.id,fb.gate) OR (NEW.slot=2 AND (b.slot<>1 OR b.stage<>'EMAIL_RETRY_READY' OR fb.gate<>'EMAIL')) OR (NEW.slot=3 AND (b.slot NOT IN (1,2) OR b.stage<>'QUALIFICATION_RETRY_READY' OR fb.gate<>'QUALIFICATION')) THEN RAISE EXCEPTION 'stale or wrong feedback'; END IF;\n   prior:=b.plan->'filters'; diff:='[]'::jsonb;\n   FOR item IN SELECT value FROM jsonb_array_elements(prior || (NEW.plan->'filters')) LOOP\n    IF (prior @> jsonb_build_array(item)) <> ((NEW.plan->'filters') @> jsonb_build_array(item)) THEN diff:=diff || jsonb_build_array(item); END IF;\n   END LOOP;\n   IF jsonb_array_length(diff)=0 THEN RAISE EXCEPTION 'cosmetic plan change'; END IF;\n   FOR item IN SELECT * FROM jsonb_array_elements(diff) LOOP\n    dim:=item->>'dimension';\n    IF NOT EXISTS(SELECT 1 FROM jsonb_array_elements(fb.payload->'performance') x WHERE x->>'dimension'=dim AND x->>'reason' NOT IN ('SUPPORTED','QUALIFIED','PENDING','SOURCE_FAILURE') AND EXISTS(SELECT 1 FROM jsonb_array_elements(prior) y WHERE y->>'dimension'=dim AND y->>'value'=x->>'value')) THEN RAISE EXCEPTION 'unjustified plan change'; END IF;\n   END LOOP;\n  END IF;\n ELSIF TG_TABLE_NAME='supply_candidates' THEN\n  SELECT * INTO b FROM supply_batches WHERE id=NEW.batch_id;\n  SELECT * INTO f FROM supply_facts WHERE id=NEW.clearance_id;\n  IF p.state IS DISTINCT FROM 'ACTIVE' OR b.stage<>'CONTACT' OR f.kind NOT IN ('IDENTITY_CLEAR','IDENTITY_EXCLUDED') OR NEW.deep_started OR NEW.stopped OR NOT supply_filters_valid(NEW.observations,NEW.experiment_id) OR NOT (b.plan->'filters') @> NEW.observations OR NEW.ordinal<>(SELECT count(*)+1 FROM supply_candidates WHERE batch_id=NEW.batch_id) THEN RAISE EXCEPTION 'candidate admission denied'; END IF;\n ELSIF TG_TABLE_NAME='supply_contacts' THEN\n  SELECT * INTO c FROM supply_candidates WHERE id=NEW.candidate_id;\n  SELECT * INTO b FROM supply_batches WHERE id=c.batch_id;\n  SELECT * INTO i FROM supply_identities WHERE id=c.identity_id;\n  SELECT * INTO cl FROM supply_facts WHERE id=c.clearance_id;\n  SELECT * INTO f FROM supply_facts WHERE id=NEW.source_id;\n  SELECT * INTO v FROM supply_facts WHERE id=NEW.verification_id;\n  IF p.state IS DISTINCT FROM 'ACTIVE' OR b.stage<>'CONTACT' OR f.identity_id<>c.identity_id THEN RAISE EXCEPTION 'contact scope or phase'; END IF;\n  expected:=CASE WHEN cl.kind='IDENTITY_EXCLUDED' AND f.id=cl.id THEN 'IDENTITY_EXCLUDED' WHEN cl.kind='IDENTITY_CLEAR' AND f.kind='EMAIL_ABSENT' THEN 'EMAIL_NOT_FOUND' WHEN cl.kind='IDENTITY_CLEAR' AND f.kind='SOURCE_FAILURE' THEN 'SOURCE_FAILURE' WHEN cl.kind='IDENTITY_CLEAR' AND f.kind='SOURCE_EMAIL' AND v.identity_id=c.identity_id AND v.contact_ref=f.id AND v.policy_ref=p.verification_policy_id THEN CASE v.kind WHEN 'VERIFIED' THEN 'SUPPORTED' WHEN 'VERIFICATION_REJECTED' THEN 'VERIFICATION_REJECTED' END END;\n  IF expected IS NULL OR NEW.outcome<>expected OR (NEW.verification_id IS NOT NULL)<>(expected IN ('SUPPORTED','VERIFICATION_REJECTED')) OR NEW.resolved_at<greatest(i.observed_at,cl.observed_at,f.observed_at,coalesce(v.observed_at,f.observed_at)) OR NEW.resolved_at>=NEW.valid_until OR NEW.valid_until<>least(i.valid_until,cl.valid_until,f.valid_until,coalesce(v.valid_until,f.valid_until)) THEN RAISE EXCEPTION 'invalid contact evidence'; END IF;\n ELSIF TG_TABLE_NAME='supply_contact_failures' THEN\n  IF NOT EXISTS(SELECT 1 FROM supply_candidates cand JOIN supply_facts proof ON proof.id=NEW.source_id AND proof.identity_id=cand.identity_id WHERE cand.id=NEW.candidate_id AND proof.kind='SOURCE_FAILURE') THEN RAISE EXCEPTION 'invalid failure lineage'; END IF;\n ELSIF TG_TABLE_NAME='supply_qualifications' THEN\n  SELECT * INTO c FROM supply_candidates WHERE id=NEW.candidate_id;\n  SELECT * INTO f FROM supply_facts WHERE id=NEW.fact_id;\n  IF NOT f.observed_at<=NEW.accepted_at OR NEW.accepted_at>=f.valid_until OR NOT EXISTS(SELECT 1 FROM supply_contacts WHERE candidate_id=c.id AND resolved_at<=NEW.accepted_at AND valid_until>NEW.accepted_at) OR EXISTS(SELECT 1 FROM record_current_supply_qualifications WHERE experiment_id=NEW.experiment_id AND accepted_at>NEW.accepted_at) OR EXISTS(SELECT 1 FROM record_current_supply_qualifications q JOIN supply_facts proof ON proof.id=q.fact_id JOIN supply_contacts t ON t.candidate_id=q.candidate_id WHERE q.experiment_id=NEW.experiment_id AND q.outcome='QUALIFIED' AND (proof.valid_until<=NEW.accepted_at OR t.valid_until<=NEW.accepted_at)) THEN RAISE EXCEPTION 'expired accepted evidence'; END IF;\n  IF p.state IS DISTINCT FROM 'ACTIVE' OR NOT c.deep_started OR c.stopped OR f.identity_id<>c.identity_id OR f.kind<>NEW.outcome OR f.policy_ref::text<>p.initial_plan->>'qualification_rule_id' OR NOT EXISTS(SELECT 1 FROM supply_contacts WHERE candidate_id=c.id AND outcome='SUPPORTED') OR NOT EXISTS(SELECT 1 FROM supply_batches WHERE experiment_id=NEW.experiment_id AND stage='QUALIFICATION') OR (NEW.outcome='QUALIFIED' AND (SELECT count(*) FROM record_current_supply_qualifications WHERE experiment_id=NEW.experiment_id AND outcome='QUALIFIED')>=50) THEN RAISE EXCEPTION 'qualification denied'; END IF;\n ELSIF TG_TABLE_NAME='supply_feedback' THEN\n  SELECT * INTO b FROM supply_batches WHERE id=NEW.batch_id;\n  payload:=supply_feedback_payload(NEW.batch_id,NEW.gate);\n  IF p.state IS DISTINCT FROM 'ACTIVE' OR NEW.payload IS DISTINCT FROM payload OR (payload->>'deficit')::int NOT BETWEEN 1 AND 50 OR b.slot=3 OR (NEW.gate='EMAIL' AND (b.slot<>1 OR b.stage<>'CONTACT')) OR (NEW.gate='QUALIFICATION' AND b.stage<>'QUALIFICATION') OR EXISTS(SELECT 1 FROM jsonb_array_elements(payload->'reasons') x WHERE x->>'reason' IN ('PENDING','SOURCE_FAILURE') OR (NEW.gate='QUALIFICATION' AND x->>'reason'='SUPPORTED')) THEN RAISE EXCEPTION 'incomplete or malformed feedback'; END IF;\n ELSIF TG_TABLE_NAME='supply_operations' THEN\n  SELECT * INTO op FROM gov_operations WHERE id=NEW.operation_id;\n  SELECT * INTO cfg FROM gov_configs WHERE id=NEW.config_id;\n  IF op.gate_kind IS DISTINCT FROM (CASE WHEN NEW.kind='CONTACT' THEN 'CONTACT' ELSE 'SUPPLY' END) OR p.state IS DISTINCT FROM 'ACTIVE' THEN RAISE EXCEPTION 'unbound supply gate'; END IF;\n  IF (NEW.kind='DISCOVERY' AND cfg.capability NOT IN ('BRAVE_LOCAL_DISCOVERY','BRAVE_COMPANY_DISCOVERY','BRAVE_WEB_COVERAGE')) OR (NEW.kind='CONTACT' AND cfg.capability NOT IN ('BRAVE_LOCAL_DISCOVERY','BRAVE_COMPANY_DISCOVERY','HUNTER_DOMAIN_SEARCH','HUNTER_EMAIL_FINDER','HUNTER_COMPANY_ENRICHMENT','HUNTER_PERSON_ENRICHMENT','HUNTER_EMAIL_VERIFICATION','FIRECRAWL_MAP','FIRECRAWL_PAGE_CAPTURE','FIRECRAWL_PDF_CAPTURE','FIRECRAWL_JS_RETRIEVAL')) OR (NEW.kind='DEEP' AND cfg.capability NOT IN ('OPENAI_GENERATE','FIRECRAWL_MAP','FIRECRAWL_PAGE_CAPTURE','FIRECRAWL_PDF_CAPTURE','FIRECRAWL_JS_RETRIEVAL','BRAVE_WEB_COVERAGE')) THEN RAISE EXCEPTION 'work capability mismatch'; END IF;\n ELSIF TG_TABLE_NAME='supply_discovery_completions' THEN\n  IF p.state IS DISTINCT FROM 'ACTIVE' OR NOT supply_filters_valid(jsonb_build_array(NEW.filter),NEW.experiment_id) OR NOT EXISTS(SELECT 1 FROM supply_batches WHERE id=NEW.batch_id AND stage='CONTACT' AND plan->'filters' @> jsonb_build_array(NEW.filter)) OR NOT EXISTS(SELECT 1 FROM supply_references WHERE id=(NEW.filter->>'value')::uuid AND mode=NEW.mode) THEN RAISE EXCEPTION 'invalid discovery completion'; END IF;\n ELSIF TG_TABLE_NAME='supply_plan_changes' THEN\n  IF NOT EXISTS(SELECT 1 FROM supply_batches batch JOIN supply_feedback brief ON brief.id=batch.feedback_id WHERE batch.id=NEW.batch_id AND batch.plan=NEW.new_plan AND brief.id=NEW.feedback_id AND brief.batch_id=NEW.source_batch_id AND brief.payload->'prior_plan'=NEW.prior_plan) THEN RAISE EXCEPTION 'invalid plan change lineage'; END IF;\n ELSIF TG_TABLE_NAME='supply_outcomes' THEN\n  SELECT count(*) INTO total FROM record_current_supply_qualifications WHERE experiment_id=NEW.experiment_id AND outcome='QUALIFIED';\n  IF NEW.reason='EMAIL_SUPPLY_INSUFFICIENT_AFTER_BATCH_2' AND (NOT EXISTS(SELECT 1 FROM supply_batches WHERE experiment_id=NEW.experiment_id AND slot=2 AND stage='CONTACT') OR (SELECT count(*) FROM supply_contacts WHERE experiment_id=NEW.experiment_id AND outcome='SUPPORTED')>=50 OR EXISTS(SELECT 1 FROM supply_candidates cand LEFT JOIN supply_contacts t ON t.candidate_id=cand.id WHERE cand.experiment_id=NEW.experiment_id AND (t.candidate_id IS NULL OR t.outcome='SOURCE_FAILURE'))) THEN RAISE EXCEPTION 'invalid email shortage'; END IF;\n  IF NEW.reason='QUALIFIED_SUPPLY_INSUFFICIENT_AFTER_BATCH_3' AND (NOT EXISTS(SELECT 1 FROM supply_batches WHERE experiment_id=NEW.experiment_id AND slot=3 AND stage='QUALIFICATION') OR EXISTS(SELECT 1 FROM supply_contacts t LEFT JOIN record_current_supply_qualifications q ON q.candidate_id=t.candidate_id WHERE t.experiment_id=NEW.experiment_id AND t.outcome='SUPPORTED' AND q.candidate_id IS NULL)) THEN RAISE EXCEPTION 'invalid qualification shortage'; END IF;\n  IF p.state IS DISTINCT FROM 'ACTIVE' OR NEW.achieved<>total OR NEW.batches_used<>(SELECT count(*) FROM supply_batches WHERE experiment_id=NEW.experiment_id) OR NEW.businesses_discovered<>(SELECT count(*) FROM supply_candidates WHERE experiment_id=NEW.experiment_id) OR NEW.reason='ACTIVE' THEN RAISE EXCEPTION 'invalid outcome facts'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "supply_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.supply_outcome_snapshot_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n NEW.classification:=CASE NEW.reason\n  WHEN 'TARGET_50_REACHED' THEN 'TARGET_50_REACHED'\n  WHEN 'CANCELLED' THEN 'CANCELLED'\n  WHEN 'SAFETY_STOP' THEN 'SAFETY_STOP'\n  ELSE 'CAMPAIGN_SUPPLY_INSUFFICIENT' END;\n SELECT coalesce(sum(c.accrued_ils) FILTER (WHERE c.state='FINAL'),0),\n        count(*) FILTER (WHERE c.state IN ('RESERVED','DISPATCHED','RECONCILING'))\n INTO NEW.finalized_cost_ils,NEW.in_flight_call_count\n FROM gov_calls c JOIN supply_operations o ON o.operation_id=c.operation_id\n WHERE o.experiment_id=NEW.experiment_id;\n SELECT coalesce(jsonb_object_agg(slot::text, yield ORDER BY slot),'{}'::jsonb)\n INTO NEW.batch_yields FROM (\n  SELECT b.slot,jsonb_build_object(\n   'candidates',(SELECT count(*) FROM supply_candidates x WHERE x.batch_id=b.id),\n   'supported',(SELECT count(*) FROM supply_candidates x JOIN supply_contacts t ON t.candidate_id=x.id WHERE x.batch_id=b.id AND t.outcome='SUPPORTED'),\n   'qualified',(SELECT count(*) FROM supply_candidates x JOIN record_current_supply_qualifications q ON q.candidate_id=x.id WHERE x.batch_id=b.id AND q.outcome='QUALIFIED')\n  ) yield FROM supply_batches b WHERE b.experiment_id=NEW.experiment_id\n ) per_batch;\n SELECT coalesce(jsonb_agg(jsonb_build_object('id',f.id,'batch_id',f.batch_id,'gate',f.gate) ORDER BY b.slot),'[]'::jsonb)\n INTO NEW.feedback_lineage\n FROM supply_feedback f JOIN supply_batches b ON b.id=f.batch_id\n WHERE f.experiment_id=NEW.experiment_id;\n SELECT coalesce(jsonb_object_agg(reason,n ORDER BY reason),'{}'::jsonb)\n INTO NEW.rejection_breakdown FROM (\n  SELECT coalesce(q.outcome,t.outcome,'UNTOUCHED') reason,count(*) n\n  FROM supply_candidates x\n  LEFT JOIN supply_contacts t ON t.candidate_id=x.id\n  LEFT JOIN record_current_supply_qualifications q ON q.candidate_id=x.id\n  WHERE x.experiment_id=NEW.experiment_id\n  GROUP BY 1\n ) reasons;\n RETURN NEW;\nEND $function$\n",
+      "name": "supply_outcome_snapshot_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.supply_workflow_binding_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'immutable supply workflow binding'; END IF;\n IF (to_jsonb(NEW)-ARRAY['command_id','result_id','delivery_state','cancellation_outcome','updated_at'])\n    IS DISTINCT FROM\n    (to_jsonb(OLD)-ARRAY['command_id','result_id','delivery_state','cancellation_outcome','updated_at'])\n THEN RAISE EXCEPTION 'immutable supply workflow identity'; END IF;\n IF NOT (\n  (OLD.delivery_state='PENDING' AND NEW.delivery_state IN ('PENDING','STARTED','CANCELLED')) OR\n  (OLD.delivery_state='STARTED' AND NEW.delivery_state IN ('STARTED','BUSINESS_COMMITTED','CANCELLED')) OR\n  (OLD.delivery_state='BUSINESS_COMMITTED' AND NEW.delivery_state IN ('BUSINESS_COMMITTED','RECEIPT_DELIVERED')) OR\n  (OLD.delivery_state='RECEIPT_DELIVERED' AND NEW.delivery_state IN ('RECEIPT_DELIVERED','RUNTIME_COMPLETED')) OR\n  (OLD.delivery_state='RUNTIME_COMPLETED' AND NEW.delivery_state='RUNTIME_COMPLETED') OR\n  (OLD.delivery_state='CANCELLED' AND NEW.delivery_state='CANCELLED')\n ) THEN RAISE EXCEPTION 'invalid supply workflow delivery transition'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "supply_workflow_binding_guard"
     },
     {
       "arguments": "batch uuid, gate text",
@@ -44422,6 +44908,24 @@
       "primary_index": false,
       "ready": true,
       "table_name": "record_workflows",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_supply_workflow_bindings_experiment ON public.supply_workflow_bindings USING btree (experiment_id, operation_kind)",
+      "name": "ix_supply_workflow_bindings_experiment",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "supply_workflow_bindings",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_supply_workflow_bindings_recovery ON public.supply_workflow_bindings USING btree (application_version, delivery_state)",
+      "name": "ix_supply_workflow_bindings_recovery",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "supply_workflow_bindings",
       "unique_index": false,
       "valid": true
     },
@@ -48107,6 +48611,33 @@
       "valid": true
     },
     {
+      "definition": "CREATE UNIQUE INDEX supply_workflow_bindings_business_command_key_key ON public.supply_workflow_bindings USING btree (business_command_key)",
+      "name": "supply_workflow_bindings_business_command_key_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "supply_workflow_bindings",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX supply_workflow_bindings_command_id_key ON public.supply_workflow_bindings USING btree (command_id)",
+      "name": "supply_workflow_bindings_command_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "supply_workflow_bindings",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX supply_workflow_bindings_pkey ON public.supply_workflow_bindings USING btree (dbos_workflow_id)",
+      "name": "supply_workflow_bindings_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "supply_workflow_bindings",
+      "unique_index": true,
+      "valid": true
+    },
+    {
       "definition": "CREATE UNIQUE INDEX uq_record_calibration_one_accepted_per_experiment ON public.record_calibration_decisions USING btree (experiment_id) WHERE ((outcome)::text = 'ACCEPT'::text)",
       "name": "uq_record_calibration_one_accepted_per_experiment",
       "primary_index": false,
@@ -49317,6 +49848,12 @@
       "force_row_security": false,
       "kind": "r",
       "name": "supply_references",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "supply_workflow_bindings",
       "row_security": false
     }
   ],
@@ -75647,6 +76184,214 @@
       "table_name": "gov_experiments"
     },
     {
+      "constraint_name": "supply_workflow_bindings_batch_id_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_workflow_bindings"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_batch_id_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_batches"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_batch_id_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_workflow_bindings"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_batch_id_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_batches"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_candidate_id_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_workflow_bindings"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_candidate_id_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_candidates"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_candidate_id_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_workflow_bindings"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_candidate_id_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_candidates"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_command_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_workflow_bindings"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_command_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_command_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_workflow_bindings"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_command_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_workflow_bindings"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_experiments"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "supply_workflow_bindings"
+    },
+    {
+      "constraint_name": "supply_workflow_bindings_experiment_id_fkey",
+      "constraint_table": "supply_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_experiments"
+    },
+    {
       "constraint_name": null,
       "constraint_table": null,
       "deferrable": false,
@@ -79298,6 +80043,32 @@
       "internal": false,
       "name": "supply_no_delete",
       "table_name": "supply_references"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER supply_outcome_snapshot BEFORE INSERT ON supply_outcomes FOR EACH ROW EXECUTE FUNCTION supply_outcome_snapshot_guard()",
+      "enabled": "O",
+      "events": 7,
+      "function_name": "public.supply_outcome_snapshot_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "supply_outcome_snapshot",
+      "table_name": "supply_outcomes"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER supply_workflow_binding_immutable BEFORE DELETE OR UPDATE ON supply_workflow_bindings FOR EACH ROW EXECUTE FUNCTION supply_workflow_binding_guard()",
+      "enabled": "O",
+      "events": 27,
+      "function_name": "public.supply_workflow_binding_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "supply_workflow_binding_immutable",
+      "table_name": "supply_workflow_bindings"
     }
   ],
   "views": [

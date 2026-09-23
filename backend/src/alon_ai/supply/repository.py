@@ -77,6 +77,27 @@ async def locked(c, exp):
     return await row(c, s.plans, "experiment_id", exp)
 
 
+async def require_workflow(c, workflow_id, exp, key, request_hash):
+    if workflow_id is None:
+        return
+    binding = await maybe(c, s.workflow_bindings, "dbos_workflow_id", workflow_id)
+    if (
+        binding is None
+        or binding["experiment_id"] != exp
+        or binding["business_command_key"] != key
+        or binding["request_hash"] != request_hash
+        or binding["contract_version"] != 1
+        or binding["delivery_state"]
+        not in {
+            "STARTED",
+            "BUSINESS_COMMITTED",
+            "RECEIPT_DELIVERED",
+            "RUNTIME_COMPLETED",
+        }
+    ):
+        raise SupplyDenied("WORKFLOW_BINDING_CONFLICT")
+
+
 def active(plan, now):
     if plan["state"] != "ACTIVE":
         raise SupplyDenied("TERMINAL")
@@ -193,7 +214,13 @@ class CampaignSupplyRepository:
         allowed: tuple[Filter, ...],
         verification_policy_id: UUID,
         deadline: datetime,
+        *,
+        command_key: UUID | None = None,
+        workflow_id: str | None = None,
     ) -> None:
+        from alon_ai.records import schema as records
+        from alon_ai.records.repository import _complete, _request_hash
+
         data = {
             "experiment_id": experiment_id,
             "initial_plan": initial_plan.model_dump(mode="json"),
@@ -203,14 +230,41 @@ class CampaignSupplyRepository:
         }
         async with self.engine.begin() as c:
             await lock_experiment(c, experiment_id)
+            request_hash = _request_hash(**data)
+            command = (
+                await maybe(c, records.commands, "command_key", command_key)
+                if command_key is not None
+                else None
+            )
+            if command and (
+                command["kind"] != "CREATE_CAMPAIGN_SUPPLY_PLAN"
+                or command["request_hash"] != request_hash
+            ):
+                raise SupplyDenied("COMMAND_CONFLICT")
+            await require_workflow(
+                c, workflow_id, experiment_id, command_key, request_hash
+            )
             prior = await maybe(c, s.plans, "experiment_id", experiment_id)
             if prior is not None:
                 if any(prior[k] != v for k, v in data.items()):
                     raise SupplyDenied("PLAN_CONFLICT")
+                if command_key is not None and command is None:
+                    raise SupplyDenied("PLAN_ALREADY_EXISTS")
                 return
             if deadline <= self.clock():
                 raise SupplyDenied("DEADLINE_EXHAUSTED")
             await c.execute(insert(s.plans).values(**data))
+            if command_key is not None:
+                await _complete(
+                    c,
+                    command_key=command_key,
+                    experiment_id=experiment_id,
+                    kind="CREATE_CAMPAIGN_SUPPLY_PLAN",
+                    request_hash=request_hash,
+                    result_type="CAMPAIGN_SUPPLY_PLAN",
+                    result_id=experiment_id,
+                    now=self.clock(),
+                )
 
     @safe
     async def verification_policy(self, experiment_id: UUID) -> UUID:
@@ -232,9 +286,29 @@ class CampaignSupplyRepository:
         plan: DiscoveryPlan,
         command_key: UUID,
         feedback_id: UUID | None = None,
+        *,
+        workflow_id: str | None = None,
     ) -> UUID:
+        from alon_ai.records import schema as records
+        from alon_ai.records.repository import _complete, _request_hash
+
         async with self.engine.begin() as c:
             root = await locked(c, experiment_id)
+            request_hash = _request_hash(
+                experiment_id=experiment_id,
+                slot=slot,
+                plan=plan,
+                feedback_id=feedback_id,
+            )
+            command = await maybe(c, records.commands, "command_key", command_key)
+            if command and (
+                command["kind"] != "BEGIN_CAMPAIGN_SUPPLY_BATCH"
+                or command["request_hash"] != request_hash
+            ):
+                raise SupplyDenied("COMMAND_CONFLICT")
+            await require_workflow(
+                c, workflow_id, experiment_id, command_key, request_hash
+            )
             data = {
                 "experiment_id": experiment_id,
                 "slot": slot,
@@ -271,6 +345,16 @@ class CampaignSupplyRepository:
             await c.execute(
                 insert(s.batches).values(id=id_, started_at=self.clock(), **data)
             )
+            await _complete(
+                c,
+                command_key=command_key,
+                experiment_id=experiment_id,
+                kind="BEGIN_CAMPAIGN_SUPPLY_BATCH",
+                request_hash=request_hash,
+                result_type="CAMPAIGN_SUPPLY_BATCH",
+                result_id=id_,
+                now=self.clock(),
+            )
             return id_
 
     @safe
@@ -282,10 +366,29 @@ class CampaignSupplyRepository:
         command_key: UUID,
         *,
         observations: tuple[Filter, ...] = (),
+        workflow_id: str | None = None,
     ) -> UUID:
+        from alon_ai.records import schema as records
+        from alon_ai.records.repository import _complete, _request_hash
+
         async with self.engine.begin() as c:
             batch = await row(c, s.batches, "id", batch_id)
             root = await locked(c, batch["experiment_id"])
+            request_hash = _request_hash(
+                batch_id=batch_id,
+                identity_id=identity_id,
+                clearance_id=clearance_id,
+                observations=observations,
+            )
+            command = await maybe(c, records.commands, "command_key", command_key)
+            if command and (
+                command["kind"] != "ADMIT_CAMPAIGN_SUPPLY_CANDIDATE"
+                or command["request_hash"] != request_hash
+            ):
+                raise SupplyDenied("COMMAND_CONFLICT")
+            await require_workflow(
+                c, workflow_id, batch["experiment_id"], command_key, request_hash
+            )
             data = {
                 "experiment_id": batch["experiment_id"],
                 "batch_id": batch_id,
@@ -328,22 +431,73 @@ class CampaignSupplyRepository:
                         ),
                     )
                 )
+            await _complete(
+                c,
+                command_key=command_key,
+                experiment_id=batch["experiment_id"],
+                kind="ADMIT_CAMPAIGN_SUPPLY_CANDIDATE",
+                request_hash=request_hash,
+                result_type="CAMPAIGN_SUPPLY_CANDIDATE",
+                result_id=id_,
+                now=self.clock(),
+            )
             return id_
 
     @safe
     async def resolve_contact(
-        self, candidate_id: UUID, source_id: UUID, verification_id: UUID | None = None
+        self,
+        candidate_id: UUID,
+        source_id: UUID,
+        verification_id: UUID | None = None,
+        *,
+        command_key: UUID | None = None,
+        workflow_id: str | None = None,
     ) -> str:
+        from alon_ai.records import schema as records
+        from alon_ai.records.repository import _complete, _request_hash
+
         async with self.engine.begin() as c:
             candidate = await row(c, s.candidates, "id", candidate_id)
             await locked(c, candidate["experiment_id"])
-            return await self._resolve_contact(
+            request_hash = _request_hash(
+                candidate_id=candidate_id,
+                source_id=source_id,
+                verification_id=verification_id,
+            )
+            command = (
+                await maybe(c, records.commands, "command_key", command_key)
+                if command_key is not None
+                else None
+            )
+            if command is not None:
+                if (
+                    command["kind"] != "RESOLVE_CAMPAIGN_SUPPLY_CONTACT"
+                    or command["request_hash"] != request_hash
+                ):
+                    raise SupplyDenied("COMMAND_CONFLICT")
+                return command["result_type"]
+            await require_workflow(
+                c, workflow_id, candidate["experiment_id"], command_key, request_hash
+            )
+            outcome = await self._resolve_contact(
                 c,
                 candidate_id,
                 source_id,
                 verification_id,
                 now=self.clock(),
             )
+            if command_key is not None:
+                await _complete(
+                    c,
+                    command_key=command_key,
+                    experiment_id=candidate["experiment_id"],
+                    kind="RESOLVE_CAMPAIGN_SUPPLY_CONTACT",
+                    request_hash=request_hash,
+                    result_type=outcome,
+                    result_id=candidate_id,
+                    now=self.clock(),
+                )
+            return outcome
 
     async def _resolve_contact(
         self,
@@ -460,20 +614,33 @@ class CampaignSupplyRepository:
 
     @safe
     async def close_contactability(
-        self, batch_id: UUID, command_key: UUID
+        self, batch_id: UUID, command_key: UUID, *, workflow_id: str | None = None
     ) -> UUID | None:
-        return await self._close(batch_id, command_key, "EMAIL")
+        return await self._close(batch_id, command_key, "EMAIL", workflow_id)
 
     @safe
     async def close_qualification(
-        self, batch_id: UUID, command_key: UUID
+        self, batch_id: UUID, command_key: UUID, *, workflow_id: str | None = None
     ) -> UUID | None:
-        return await self._close(batch_id, command_key, "QUALIFICATION")
+        return await self._close(batch_id, command_key, "QUALIFICATION", workflow_id)
 
-    async def _close(self, batch_id, key, gate):
+    async def _close(self, batch_id, key, gate, workflow_id=None):
+        from alon_ai.records import schema as records
+        from alon_ai.records.repository import _complete, _request_hash
+
         async with self.engine.begin() as c:
             batch = await row(c, s.batches, "id", batch_id)
             root = await locked(c, batch["experiment_id"])
+            request_hash = _request_hash(batch_id=batch_id, gate=gate)
+            command = await maybe(c, records.commands, "command_key", key)
+            if command and (
+                command["kind"] != "CLOSE_CAMPAIGN_SUPPLY_GATE"
+                or command["request_hash"] != request_hash
+            ):
+                raise SupplyDenied("COMMAND_CONFLICT")
+            await require_workflow(
+                c, workflow_id, batch["experiment_id"], key, request_hash
+            )
             prior = await maybe(c, s.closures, "command_key", key)
             if prior:
                 if prior["batch_id"] != batch_id or prior["gate"] != gate:
@@ -557,6 +724,16 @@ class CampaignSupplyRepository:
                     gate=gate,
                     feedback_id=feedback_id,
                 )
+            )
+            await _complete(
+                c,
+                command_key=key,
+                experiment_id=batch["experiment_id"],
+                kind="CLOSE_CAMPAIGN_SUPPLY_GATE",
+                request_hash=request_hash,
+                result_type="CAMPAIGN_SUPPLY_CLOSURE",
+                result_id=batch_id,
+                now=self.clock(),
             )
             return feedback_id
 
@@ -699,8 +876,16 @@ class CampaignSupplyRepository:
 
     @safe
     async def stop(
-        self, experiment_id: UUID, reason: StopReason, command_key: UUID
+        self,
+        experiment_id: UUID,
+        reason: StopReason,
+        command_key: UUID,
+        *,
+        workflow_id: str | None = None,
     ) -> SupplySnapshot:
+        from alon_ai.records import schema as records
+        from alon_ai.records.repository import _complete, _request_hash
+
         if reason not in {
             "CANCELLED",
             "BUDGET_EXHAUSTED",
@@ -713,6 +898,16 @@ class CampaignSupplyRepository:
             raise SupplyDenied("STOP_REASON")
         async with self.engine.begin() as c:
             root = await locked(c, experiment_id)
+            request_hash = _request_hash(experiment_id=experiment_id, reason=reason)
+            command = await maybe(c, records.commands, "command_key", command_key)
+            if command and (
+                command["kind"] != "STOP_CAMPAIGN_SUPPLY"
+                or command["request_hash"] != request_hash
+            ):
+                raise SupplyDenied("COMMAND_CONFLICT")
+            await require_workflow(
+                c, workflow_id, experiment_id, command_key, request_hash
+            )
             prior = await maybe(c, s.outcomes, "experiment_id", experiment_id)
             if prior:
                 if prior["command_key"] != command_key or prior["reason"] != reason:
@@ -721,6 +916,16 @@ class CampaignSupplyRepository:
                 if root["state"] != "ACTIVE":
                     raise SupplyDenied("TERMINAL")
                 await finish(c, experiment_id, reason, command_key)
+                await _complete(
+                    c,
+                    command_key=command_key,
+                    experiment_id=experiment_id,
+                    kind="STOP_CAMPAIGN_SUPPLY",
+                    request_hash=request_hash,
+                    result_type="CAMPAIGN_SUPPLY_OUTCOME",
+                    result_id=experiment_id,
+                    now=self.clock(),
+                )
         return await self.snapshot(experiment_id)
 
     @safe

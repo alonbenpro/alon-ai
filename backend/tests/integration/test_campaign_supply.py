@@ -20,7 +20,12 @@ pytestmark = pytest.mark.integration
 NOW = datetime(2026, 9, 12, 12, tzinfo=UTC)
 
 
-async def setup(engine, existing_exp=None, supply_deadline=NOW + timedelta(hours=1)):
+async def setup(
+    engine,
+    existing_exp=None,
+    supply_deadline=NOW + timedelta(hours=1),
+    supply_command_key=None,
+):
     from alon_ai.accounting.schema import experiments
     from alon_ai.supply.repository import CampaignSupplyRepository, SupplyEvidenceWriter
 
@@ -50,7 +55,9 @@ async def setup(engine, existing_exp=None, supply_deadline=NOW + timedelta(hours
             )
         )
     plan = DiscoveryPlan(qualification_rule_id=rule, filters=(filters[0],))
-    await repo.create(exp, plan, filters, verifier, supply_deadline)
+    await repo.create(
+        exp, plan, filters, verifier, supply_deadline, command_key=supply_command_key
+    )
     return repo, writer, exp, plan, filters
 
 
@@ -143,14 +150,118 @@ async def test_begin_and_admission_are_durable_unique_and_capped(governance_engi
         await repo.begin_batch(exp, 4, plan, uuid4())
 
 
+async def test_batch_transition_commits_product_receipt_audit_and_outbox(
+    governance_engine,
+):
+    from alon_ai.records import schema as records
+
+    repo, _, exp, plan, _ = await setup(governance_engine)
+    command_key = uuid4()
+    batch_id = await repo.begin_batch(exp, 1, plan, command_key)
+    assert await repo.begin_batch(exp, 1, plan, command_key) == batch_id
+    with pytest.raises(SupplyDenied, match="COMMAND_CONFLICT"):
+        changed = DiscoveryPlan(
+            qualification_rule_id=plan.qualification_rule_id,
+            filters=plan.filters + (Filter(dimension="QUERY", value=uuid4()),),
+        )
+        await repo.begin_batch(exp, 1, changed, command_key)
+    async with governance_engine.connect() as connection:
+        command = (
+            (
+                await connection.execute(
+                    select(records.commands).where(
+                        records.commands.c.command_key == command_key
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert command["result_id"] == batch_id
+        assert await connection.scalar(
+            select(records.audit.c.id).where(
+                records.audit.c.command_id == command["id"]
+            )
+        )
+        assert await connection.scalar(
+            select(records.outbox.c.id).where(
+                records.outbox.c.command_id == command["id"]
+            )
+        )
+
+
+async def test_candidate_admission_uses_its_existing_command_identity(
+    governance_engine,
+):
+    from alon_ai.records import schema as records
+    from alon_ai.supply import schema as supply_schema
+
+    repo, writer, exp, plan, _ = await setup(governance_engine)
+    batch = await repo.begin_batch(exp, 1, plan, uuid4())
+    candidate_id, _ = await candidate(repo, writer, exp, batch, 1, supported=False)
+    async with governance_engine.connect() as connection:
+        key = await connection.scalar(
+            select(supply_schema.candidates.c.command_key).where(
+                supply_schema.candidates.c.id == candidate_id
+            )
+        )
+        command = await connection.scalar(
+            select(records.commands.c.id).where(records.commands.c.command_key == key)
+        )
+        assert command is not None
+        assert await connection.scalar(
+            select(records.audit.c.id).where(records.audit.c.command_id == command)
+        )
+        assert await connection.scalar(
+            select(records.outbox.c.id).where(records.outbox.c.command_id == command)
+        )
+
+
+async def test_supply_plan_and_contact_resolution_can_commit_product_receipts(
+    governance_engine,
+):
+    from alon_ai.records import schema as records
+
+    plan_key = uuid4()
+    repo, writer, exp, plan, _ = await setup(
+        governance_engine, supply_command_key=plan_key
+    )
+    batch = await repo.begin_batch(exp, 1, plan, uuid4())
+    candidate_id, fact = await candidate(repo, writer, exp, batch, 2, supported=None)
+    missing = await fact("EMAIL_ABSENT")
+    contact_key = uuid4()
+    assert (
+        await repo.resolve_contact(candidate_id, missing, command_key=contact_key)
+        == "EMAIL_NOT_FOUND"
+    )
+    assert (
+        await repo.resolve_contact(candidate_id, missing, command_key=contact_key)
+        == "EMAIL_NOT_FOUND"
+    )
+    with pytest.raises(SupplyDenied, match="COMMAND_CONFLICT"):
+        await repo.resolve_contact(candidate_id, uuid4(), command_key=contact_key)
+    async with governance_engine.connect() as connection:
+        for key in (plan_key, contact_key):
+            assert await connection.scalar(
+                select(records.commands.c.id).where(
+                    records.commands.c.command_key == key
+                )
+            )
+
+
 async def test_email_shortage_requires_feedback_change_then_hard_stops(
     governance_engine,
 ):
+    from alon_ai.records import schema as records
+    from alon_ai.supply import schema as supply_schema
+
     repo, writer, exp, plan, filters = await setup(governance_engine)
     first = await repo.begin_batch(exp, 1, plan, uuid4())
     await candidate(repo, writer, exp, first, 0, supported=False)
-    feedback = await repo.close_contactability(first, uuid4())
+    first_close_key = uuid4()
+    feedback = await repo.close_contactability(first, first_close_key)
     assert feedback is not None
+    assert await repo.close_contactability(first, first_close_key) == feedback
     with pytest.raises(SupplyDenied):
         await repo.begin_batch(exp, 2, plan, uuid4(), feedback)
     changed = DiscoveryPlan(
@@ -159,10 +270,33 @@ async def test_email_shortage_requires_feedback_change_then_hard_stops(
     second = await repo.begin_batch(exp, 2, changed, uuid4(), feedback)
     for n in range(1, 50):
         await candidate(repo, writer, exp, second, n)
-    assert await repo.close_contactability(second, uuid4()) is None
+    second_close_key = uuid4()
+    assert await repo.close_contactability(second, second_close_key) is None
     result = await repo.snapshot(exp)
     assert result.state == "EMAIL_SUPPLY_INSUFFICIENT_AFTER_BATCH_2"
     assert result.supported_emails == 49 and result.accepted == 0
+    async with governance_engine.connect() as connection:
+        outcome = (
+            (
+                await connection.execute(
+                    select(supply_schema.outcomes).where(
+                        supply_schema.outcomes.c.experiment_id == exp
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert outcome["classification"] == "CAMPAIGN_SUPPLY_INSUFFICIENT"
+        assert outcome["finalized_cost_ils"] == 0
+        assert outcome["batch_yields"]["2"]["supported"] == 49
+        assert outcome["feedback_lineage"]
+        for key in (first_close_key, second_close_key):
+            assert await connection.scalar(
+                select(records.commands.c.id).where(
+                    records.commands.c.command_key == key
+                )
+            )
     with pytest.raises(SupplyDenied):
         await repo.begin_batch(exp, 3, changed, uuid4(), feedback)
 
@@ -213,14 +347,18 @@ async def test_logical_paths_reach_exactly_fifty_without_reset(
     governance_engine, slots
 ):
     from alon_ai.supply.repository import CampaignSupplyRepository
+    from alon_ai.workflows.campaign_supply import CampaignSupplyWorkflowRepository
 
     repo, writer, exp, plan, filters = await setup(governance_engine)
+    coordinator = CampaignSupplyWorkflowRepository(governance_engine, clock=lambda: NOW)
     batch = await repo.begin_batch(exp, 1, plan, uuid4())
     initial = 25 if 2 in slots else 50
     candidates = [await candidate(repo, writer, exp, batch, n) for n in range(initial)]
     if 2 in slots:
         await candidate(repo, writer, exp, batch, 90, supported=False)
         fb = await repo.close_contactability(batch, uuid4())
+        next_action = await coordinator.next_action(exp)
+        assert (next_action.kind, next_action.feedback_id) == ("BEGIN_BATCH_2", fb)
         plan = DiscoveryPlan(
             qualification_rule_id=plan.qualification_rule_id, filters=(filters[1],)
         )
@@ -240,6 +378,8 @@ async def test_logical_paths_reach_exactly_fifty_without_reset(
         )
     if 3 in slots:
         fb = await repo.close_qualification(batch, uuid4())
+        next_action = await coordinator.next_action(exp)
+        assert (next_action.kind, next_action.feedback_id) == ("BEGIN_BATCH_3", fb)
         changed = DiscoveryPlan(
             qualification_rule_id=plan.qualification_rule_id, filters=(filters[2],)
         )
@@ -258,6 +398,7 @@ async def test_logical_paths_reach_exactly_fifty_without_reset(
         snapshot.logical_slots,
         snapshot.batches_used,
     ) == ("TARGET_50_REACHED", 50, slots, len(slots))
+    assert (await coordinator.next_action(exp)).kind == "TARGET_50_REACHED"
     with pytest.raises(SupplyDenied):
         await reopened.begin_batch(exp, 1, plan, uuid4())
 
@@ -659,6 +800,9 @@ async def test_sql_rejects_malformed_cross_scope_and_immutable_supply_facts(
 async def test_explicit_early_stop_is_unsuccessful_and_replayable(
     governance_engine, reason
 ):
+    from alon_ai.records import schema as records
+    from alon_ai.supply import schema as supply_schema
+
     repo, writer, exp, plan, _ = await setup(governance_engine)
     batch = await repo.begin_batch(exp, 1, plan, uuid4())
     await candidate(repo, writer, exp, batch, 0)
@@ -666,6 +810,28 @@ async def test_explicit_early_stop_is_unsuccessful_and_replayable(
     result = await repo.stop(exp, reason, key)
     assert result.state == reason and result.accepted == 0
     assert await repo.stop(exp, reason, key) == result
+    async with governance_engine.connect() as connection:
+        command = await connection.scalar(
+            select(records.commands.c.id).where(records.commands.c.command_key == key)
+        )
+        outcome = (
+            (
+                await connection.execute(
+                    select(supply_schema.outcomes).where(
+                        supply_schema.outcomes.c.experiment_id == exp
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert command is not None
+        assert outcome["classification"] == (
+            reason
+            if reason in {"CANCELLED", "SAFETY_STOP"}
+            else "CAMPAIGN_SUPPLY_INSUFFICIENT"
+        )
+        assert outcome["finalized_cost_ils"] == 0
     with pytest.raises(SupplyDenied):
         await repo.begin_batch(exp, 2, plan, uuid4())
 
@@ -885,6 +1051,7 @@ async def test_previously_dispatched_call_can_reconcile_after_target(governance_
 
     from alon_ai.accounting.repository import GovernanceRepository
     from alon_ai.supply.repository import SupplyAdmissionHook
+    from alon_ai.workflows.campaign_supply import CampaignSupplyWorkflowRepository
 
     _, _, attr, config, _, _ = await seed(governance_engine, gate="SUPPLY")
     repo, writer, exp, plan, _ = await setup(governance_engine, attr.experiment_id)
@@ -900,9 +1067,12 @@ async def test_previously_dispatched_call_can_reconcile_after_target(governance_
     call = await reserve(governed, attr, config)
     dispatched = await governed.dispatch(call.call_id)
     assert dispatched.token is not None
+    coordinator = CampaignSupplyWorkflowRepository(governance_engine, clock=lambda: NOW)
+    assert (await coordinator.next_action(exp)).kind == "RECONCILE_IN_FLIGHT"
     for cid, fact in records:
         await qualify(repo, governance_engine, cid, fact, plan.qualification_rule_id)
     assert (await repo.snapshot(exp)).state == "TARGET_50_REACHED"
+    assert (await coordinator.next_action(exp)).kind == "TARGET_50_REACHED"
     await governed.finish_attempt(call.call_id, token=dispatched.token, success=True)
     await governed.record_usage(call.call_id, (observation(),), token=dispatched.token)
     settled = await governed.reconcile(

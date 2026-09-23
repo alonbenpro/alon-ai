@@ -8,6 +8,10 @@ from dbos import DBOS
 from alon_ai.config import Settings, get_settings
 from alon_ai.db.engine import create_engine
 from alon_ai.logging import configure_logging
+from alon_ai.workflows.campaign_supply import (
+    assert_campaign_supply_compatible_application_version,
+    recover_campaign_supply_workflows,
+)
 from alon_ai.workflows.market_research import (
     DBOS_APPLICATION_NAME,
     DBOS_APPLICATION_VERSION,
@@ -53,6 +57,9 @@ async def run_worker(settings: Settings) -> None:
         await assert_offer_design_compatible_application_version(
             engine, DBOS_APPLICATION_VERSION
         )
+        await assert_campaign_supply_compatible_application_version(
+            engine, DBOS_APPLICATION_VERSION
+        )
         configure_dbos(settings, executor_id=DBOS_EXECUTOR_ID)
         DBOS.launch()
         try:
@@ -61,6 +68,7 @@ async def run_worker(settings: Settings) -> None:
                 engine, DBOS_APPLICATION_VERSION
             )
             await recover_offer_design_workflows(engine, DBOS_APPLICATION_VERSION)
+            await recover_campaign_supply_workflows(engine, DBOS_APPLICATION_VERSION)
             startup_event = build_worker_startup_event(settings)
             structlog.get_logger().info(
                 cast(str, startup_event["event"]),

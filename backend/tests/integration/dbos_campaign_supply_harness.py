@@ -1,0 +1,70 @@
+"""Subprocess entry point for durable campaign-supply recovery tests."""
+
+import argparse
+import asyncio
+import json
+from pathlib import Path
+
+from dbos import DBOS
+
+from alon_ai.config import get_settings
+from alon_ai.db.engine import create_engine
+from alon_ai.workflows.campaign_supply import (
+    CampaignSupplyWorkflowRepository,
+    CampaignSupplyWorkflowRequest,
+    campaign_supply_workflow_id,
+    finalize_campaign_supply_workflow,
+    recover_campaign_supply_workflows,
+    start_campaign_supply_workflow,
+)
+from alon_ai.workflows.market_research import DBOS_APPLICATION_VERSION, configure_dbos
+
+
+async def run(args: argparse.Namespace) -> None:
+    engine = create_engine(get_settings())
+    request = CampaignSupplyWorkflowRequest.model_validate_json(
+        Path(args.request).read_text()
+    )
+    workflow_id = campaign_supply_workflow_id(request)
+    try:
+        configure_dbos(
+            get_settings(),
+            application_version=args.application_version,
+            executor_id=args.executor_id,
+        )
+        DBOS.launch()
+        runtime = CampaignSupplyWorkflowRepository(engine)
+        if args.mode == "cancel":
+            await runtime.bind(request, application_version=args.application_version)
+            await runtime.cancel(workflow_id)
+            await DBOS.cancel_workflow_async(workflow_id)
+            return
+        if args.mode == "start":
+            handle = await start_campaign_supply_workflow(
+                engine, request, application_version=args.application_version
+            )
+            result = await handle.get_result(polling_interval_sec=0.02)
+            await finalize_campaign_supply_workflow(engine, workflow_id, result)
+        else:
+            result = (
+                await recover_campaign_supply_workflows(
+                    engine, args.application_version
+                )
+            )[workflow_id]
+        print("RESULT:" + json.dumps(result, sort_keys=True), flush=True)
+    finally:
+        await engine.dispose()
+        DBOS.destroy(destroy_registry=False)
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("mode", choices=("start", "recover", "cancel"))
+    parser.add_argument("--request", required=True)
+    parser.add_argument("--application-version", default=DBOS_APPLICATION_VERSION)
+    parser.add_argument("--executor-id", default="l04-supply-test")
+    asyncio.run(run(parser.parse_args()))
+
+
+if __name__ == "__main__":
+    main()
