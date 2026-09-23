@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260922_17"
+    "20260922_18"
   ],
   "columns": [
     {
@@ -5101,6 +5101,24 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "offer_design_decision_id",
+      "not_null": false,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_design_run_id",
+      "not_null": false,
+      "table_name": "record_cycle_transitions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "ordinal",
       "not_null": true,
       "table_name": "record_cycle_transitions",
@@ -7774,6 +7792,375 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "artifact_hash",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "artifact_id",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "artifact_kind",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "artifact_version",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operator_id",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "outcome",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "character varying(40)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "run_id",
+      "not_null": true,
+      "table_name": "record_offer_design_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "bundle_id",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "envelope_id",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "model_config_id",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "model_config_version",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "model_config_workflow_id",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "prompt_artifact_id",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "prompt_hash",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "prompt_version",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "started_by",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "verdict_id",
+      "not_null": true,
+      "table_name": "record_offer_design_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "application_version",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "business_command_key",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cancellation_outcome",
+      "not_null": false,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "character varying(40)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_id",
+      "not_null": false,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "contract_version",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "dbos_workflow_id",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "character varying(200)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "delivery_state",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operation_kind",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "character varying(48)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "request_hash",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "request_payload",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "result_id",
+      "not_null": false,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "run_id",
+      "not_null": false,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "updated_at",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "verdict_id",
+      "not_null": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "bundle_id",
       "not_null": true,
       "table_name": "record_offer_field_sources",
@@ -8089,6 +8476,15 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "offer_design_run_id",
+      "not_null": false,
+      "table_name": "record_offer_packages",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "proposal_id",
       "not_null": true,
       "table_name": "record_offer_packages",
@@ -8116,6 +8512,15 @@
       "default_expression": null,
       "generated": "",
       "identity": "",
+      "name": "offer_gap_brief_id",
+      "not_null": false,
+      "table_name": "record_offer_proposal_invalidations",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
       "name": "proposal_id",
       "not_null": true,
       "table_name": "record_offer_proposal_invalidations",
@@ -8135,7 +8540,7 @@
       "generated": "",
       "identity": "",
       "name": "superseding_bundle_id",
-      "not_null": true,
+      "not_null": false,
       "table_name": "record_offer_proposal_invalidations",
       "type": "uuid"
     },
@@ -8217,6 +8622,15 @@
       "identity": "",
       "name": "id",
       "not_null": true,
+      "table_name": "record_offer_proposals",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "offer_design_run_id",
+      "not_null": false,
       "table_name": "record_offer_proposals",
       "type": "uuid"
     },
@@ -14734,6 +15148,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK ((delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'CANCELLED'::character varying]::text[])) AND command_id IS NULL AND result_id IS NULL OR (delivery_state::text = ANY (ARRAY['BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying]::text[])) AND command_id IS NOT NULL AND result_id IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_offer_design_workflow_bindings_check1",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK ((delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'CANCELLED'::character varying]::text[])) AND transition_id IS NULL AND command_id IS NULL OR (delivery_state::text = ANY (ARRAY['BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying]::text[])) AND transition_id IS NOT NULL AND command_id IS NOT NULL)",
       "enforced": true,
       "initially_deferred": false,
@@ -15234,6 +15658,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (cancellation_outcome IS NULL OR (cancellation_outcome::text = ANY (ARRAY['EFFECTIVE'::character varying, 'INEFFECTIVE_ALREADY_COMMITTED'::character varying]::text[])))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_offer_design_workflow_binding_cancellation_outcome_check",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (candidate_count > 0 AND candidate_set_hash::text ~ '^[0-9a-f]{64}$'::text)",
       "enforced": true,
       "initially_deferred": false,
@@ -15434,6 +15868,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (contract_version = 1 AND (operation_kind::text = ANY (ARRAY['START'::character varying, 'DECISION'::character varying, 'IDEA_REFINEMENT_RETURN'::character varying]::text[])) AND request_hash::text ~ '^[0-9a-f]{64}$'::text AND jsonb_typeof(request_payload) = 'object'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_offer_design_workflow_bindings_check",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (cost >= 0::numeric AND cost < '1000000000000000000000000'::numeric AND scale(cost) <= 24)",
       "enforced": true,
       "initially_deferred": false,
@@ -15580,6 +16024,16 @@
       "kind": "c",
       "name": "record_market_research_workflow_bindings_delivery_state_check",
       "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (delivery_state::text = ANY (ARRAY['PENDING'::character varying, 'STARTED'::character varying, 'BUSINESS_COMMITTED'::character varying, 'RECEIPT_DELIVERED'::character varying, 'RUNTIME_COMPLETED'::character varying, 'CANCELLED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_offer_design_workflow_bindings_delivery_state_check",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -15774,7 +16228,7 @@
     },
     {
       "deferrable": false,
-      "definition": "CHECK (idea_kind::text = 'IDEA_BRIEF'::text AND (ordinal = 1 AND from_state::text = 'IDEA_REFINEMENT'::text AND to_state::text = 'MARKET_RESEARCH'::text AND verdict_id IS NULL OR ordinal = 2 AND from_state::text = 'MARKET_RESEARCH'::text AND (to_state::text = ANY (ARRAY['PROCEED_TO_OFFER'::character varying, 'RETURN_FOR_REFINEMENT'::character varying, 'WAITING_FOR_PIVOT_APPROVAL'::character varying, 'KILLED'::character varying, 'INCONCLUSIVE_REVIEW'::character varying]::text[])) AND verdict_id IS NOT NULL OR ordinal = 3 AND (from_state::text = ANY (ARRAY['WAITING_FOR_PIVOT_APPROVAL'::character varying, 'INCONCLUSIVE_REVIEW'::character varying]::text[])) AND to_state::text = 'RETURN_FOR_REFINEMENT'::text AND verdict_id IS NOT NULL))",
+      "definition": "CHECK (idea_kind::text = 'IDEA_BRIEF'::text AND (ordinal = 1 AND from_state::text = 'IDEA_REFINEMENT'::text AND to_state::text = 'MARKET_RESEARCH'::text AND verdict_id IS NULL AND offer_design_run_id IS NULL AND offer_design_decision_id IS NULL OR ordinal = 2 AND from_state::text = 'MARKET_RESEARCH'::text AND (to_state::text = ANY (ARRAY['PROCEED_TO_OFFER'::character varying, 'RETURN_FOR_REFINEMENT'::character varying, 'WAITING_FOR_PIVOT_APPROVAL'::character varying, 'KILLED'::character varying, 'INCONCLUSIVE_REVIEW'::character varying]::text[])) AND verdict_id IS NOT NULL AND offer_design_run_id IS NULL AND offer_design_decision_id IS NULL OR ordinal = 3 AND (from_state::text = ANY (ARRAY['WAITING_FOR_PIVOT_APPROVAL'::character varying, 'INCONCLUSIVE_REVIEW'::character varying]::text[])) AND to_state::text = 'RETURN_FOR_REFINEMENT'::text AND verdict_id IS NOT NULL AND offer_design_run_id IS NULL AND offer_design_decision_id IS NULL OR from_state::text = 'PROCEED_TO_OFFER'::text AND to_state::text = 'OFFER_DESIGN'::text AND verdict_id IS NOT NULL AND offer_design_run_id IS NOT NULL AND offer_design_decision_id IS NULL OR from_state::text = 'OFFER_DESIGN'::text AND (to_state::text = ANY (ARRAY['OFFER_ACCEPTED'::character varying, 'RETURN_FOR_TARGETED_RESEARCH'::character varying, 'WAITING_FOR_OPERATOR_INPUT'::character varying]::text[])) AND verdict_id IS NOT NULL AND offer_design_run_id IS NOT NULL AND offer_design_decision_id IS NOT NULL OR from_state::text = 'WAITING_FOR_OPERATOR_INPUT'::text AND to_state::text = 'RETURN_FOR_IDEA_REFINEMENT'::text AND verdict_id IS NOT NULL AND offer_design_run_id IS NOT NULL AND offer_design_decision_id IS NOT NULL))",
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
@@ -16464,6 +16918,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (outcome::text = ANY (ARRAY['ACCEPT'::character varying, 'TARGETED_RESEARCH_REQUIRED'::character varying, 'IDEA_REFINEMENT_RECOMMENDED'::character varying, 'WAITING_FOR_OPERATOR_INPUT'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_offer_design_decisions_outcome_check",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (outcome::text = ANY (ARRAY['CONFIRMED'::character varying, 'AMBIGUOUS'::character varying, 'NO_EFFECT'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -16594,6 +17058,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (prompt_version > 0 AND prompt_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_offer_design_runs_check",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (proposal_id IS NOT NULL AND strategy_package_id IS NULL AND live_assessment_id IS NULL AND promotion_decision_id IS NULL AND rollback_decision_id IS NULL OR proposal_id IS NOT NULL AND comparison_id IS NOT NULL AND strategy_package_id IS NULL AND live_assessment_id IS NULL AND promotion_decision_id IS NOT NULL AND rollback_decision_id IS NULL OR proposal_id IS NULL AND live_assessment_id IS NOT NULL AND strategy_package_id IS NOT NULL AND promotion_decision_id IS NULL)",
       "enforced": true,
       "initially_deferred": false,
@@ -16694,7 +17168,7 @@
     },
     {
       "deferrable": false,
-      "definition": "CHECK (reason::text = 'SUPERSEDED_RESEARCH'::text)",
+      "definition": "CHECK (reason::text = 'SUPERSEDED_RESEARCH'::text AND superseding_bundle_id IS NOT NULL AND offer_gap_brief_id IS NULL OR reason::text = 'OFFER_GAP_RETURN'::text AND superseding_bundle_id IS NULL AND offer_gap_brief_id IS NOT NULL)",
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
@@ -17084,7 +17558,7 @@
     },
     {
       "deferrable": false,
-      "definition": "CHECK (state::text = 'IDEA_REFINEMENT'::text AND transition_ordinal = 0 AND last_transition_id IS NULL OR (state::text = ANY (ARRAY['MARKET_RESEARCH'::character varying, 'PROCEED_TO_OFFER'::character varying, 'RETURN_FOR_REFINEMENT'::character varying, 'WAITING_FOR_PIVOT_APPROVAL'::character varying, 'KILLED'::character varying, 'INCONCLUSIVE_REVIEW'::character varying]::text[])) AND transition_ordinal >= 1 AND transition_ordinal <= 3 AND last_transition_id IS NOT NULL)",
+      "definition": "CHECK (state::text = 'IDEA_REFINEMENT'::text AND transition_ordinal = 0 AND last_transition_id IS NULL OR (state::text = ANY (ARRAY['MARKET_RESEARCH'::character varying, 'PROCEED_TO_OFFER'::character varying, 'RETURN_FOR_REFINEMENT'::character varying, 'WAITING_FOR_PIVOT_APPROVAL'::character varying, 'KILLED'::character varying, 'INCONCLUSIVE_REVIEW'::character varying, 'OFFER_DESIGN'::character varying, 'OFFER_ACCEPTED'::character varying, 'RETURN_FOR_TARGETED_RESEARCH'::character varying, 'RETURN_FOR_IDEA_REFINEMENT'::character varying, 'WAITING_FOR_OPERATOR_INPUT'::character varying]::text[])) AND transition_ordinal >= 1 AND transition_ordinal <= 5 AND last_transition_id IS NOT NULL)",
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
@@ -17698,6 +18172,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_offer_design_decisions_artifact_id_experiment_id_ar_fkey",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (artifact_id, experiment_id, artifact_kind, artifact_version, artifact_hash) REFERENCES record_artifacts(id, experiment_id, kind, version, content_hash)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_offer_gap_briefs_artifact_id_experiment_id_artifact_fkey",
       "table_name": "record_offer_gap_briefs",
       "validated": true
@@ -18148,6 +18632,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_offer_design_runs_bundle_id_experiment_id_fkey",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (bundle_id, experiment_id) REFERENCES record_offer_bundles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_offer_field_sources_bundle_id_experiment_id_fkey",
       "table_name": "record_offer_field_sources",
       "validated": true
@@ -18590,6 +19084,16 @@
       "kind": "f",
       "name": "record_market_research_workflow_bindings_command_id_fkey",
       "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (command_id) REFERENCES record_commands(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_workflow_bindings_command_id_fkey",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -19158,6 +19662,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_offer_design_runs_cycle_id_experiment_id_fkey",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_workflow_bindin_cycle_id_experiment_id_fkey",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_pivot_decisions_cycle_id_experiment_id_fkey",
       "table_name": "record_pivot_decisions",
       "validated": true
@@ -19360,6 +19884,16 @@
       "kind": "f",
       "name": "record_org_observations_effect_id_call_id_operation_id_exp_fkey",
       "table_name": "record_org_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (envelope_id, experiment_id) REFERENCES record_commercial_envelopes(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_runs_envelope_id_experiment_id_fkey",
+      "table_name": "record_offer_design_runs",
       "validated": true
     },
     {
@@ -19610,6 +20144,36 @@
       "kind": "f",
       "name": "record_commands_experiment_id_fkey",
       "table_name": "record_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES gov_experiments(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_decisions_experiment_id_fkey",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES gov_experiments(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_runs_experiment_id_fkey",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES gov_experiments(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_workflow_bindings_experiment_id_fkey",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -20238,6 +20802,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_offer_design_runs_model_config_id_model_config_work_fkey",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (model_config_id, model_config_workflow_id, model_config_version) REFERENCES gov_configs(id, workflow_id, version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_outreach_contexts_model_config_id_model_config_work_fkey",
       "table_name": "record_outreach_contexts",
       "validated": true
@@ -20360,6 +20934,56 @@
       "kind": "f",
       "name": "record_readiness_research_pla_offer_acceptance_id_experime_fkey",
       "table_name": "record_readiness_research_plans",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (offer_design_decision_id) REFERENCES record_offer_design_decisions(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_cycle_transition_offer_decision_fk",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (offer_design_run_id) REFERENCES record_offer_design_runs(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_cycle_transition_offer_run_fk",
+      "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (offer_design_run_id) REFERENCES record_offer_design_runs(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_packages_offer_design_run_id_fkey",
+      "table_name": "record_offer_packages",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (offer_design_run_id) REFERENCES record_offer_design_runs(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_proposals_offer_design_run_id_fkey",
+      "table_name": "record_offer_proposals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (offer_gap_brief_id) REFERENCES record_offer_gap_briefs(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_proposal_invalidations_offer_gap_brief_id_fkey",
+      "table_name": "record_offer_proposal_invalidations",
       "validated": true
     },
     {
@@ -20580,6 +21204,16 @@
       "kind": "f",
       "name": "record_learning_review_controls_operator_id_fkey",
       "table_name": "record_learning_review_controls",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (operator_id) REFERENCES record_operators(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_decisions_operator_id_fkey",
+      "table_name": "record_offer_design_decisions",
       "validated": true
     },
     {
@@ -21030,6 +21664,16 @@
       "kind": "f",
       "name": "record_negative_learning_records_promotion_decision_id_fkey",
       "table_name": "record_negative_learning_records",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (prompt_artifact_id) REFERENCES record_artifacts(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_runs_prompt_artifact_id_fkey",
+      "table_name": "record_offer_design_runs",
       "validated": true
     },
     {
@@ -21604,6 +22248,26 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (run_id, experiment_id) REFERENCES record_offer_design_runs(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_decisions_run_id_experiment_id_fkey",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (run_id, experiment_id) REFERENCES record_offer_design_runs(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_workflow_bindings_run_id_experiment_id_fkey",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (run_id, experiment_id) REFERENCES record_readiness_research_runs(id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -21824,6 +22488,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (started_by) REFERENCES record_operators(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_runs_started_by_fkey",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (strategy_artifact_id, context_id) REFERENCES record_outreach_documents(artifact_id, context_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -22020,6 +22694,26 @@
       "kind": "f",
       "name": "record_cycle_transition_verdict_fk",
       "table_name": "record_cycle_transitions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (verdict_id, experiment_id) REFERENCES record_verdicts(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_runs_verdict_id_experiment_id_fkey",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (verdict_id, experiment_id) REFERENCES record_verdicts(id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_offer_design_workflow_bind_verdict_id_experiment_id_fkey",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -22604,6 +23298,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL application_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindi_application_version_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL approved_at",
       "enforced": true,
       "initially_deferred": false,
@@ -22700,6 +23404,16 @@
       "kind": "n",
       "name": "record_offer_bundles_artifact_hash_not_null",
       "table_name": "record_offer_bundles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL artifact_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_decisions_artifact_hash_not_null",
+      "table_name": "record_offer_design_decisions",
       "validated": true
     },
     {
@@ -22840,6 +23554,16 @@
       "kind": "n",
       "name": "record_offer_bundles_artifact_id_not_null",
       "table_name": "record_offer_bundles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL artifact_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_decisions_artifact_id_not_null",
+      "table_name": "record_offer_design_decisions",
       "validated": true
     },
     {
@@ -23058,6 +23782,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_decisions_artifact_kind_not_null",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL artifact_kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_offer_gap_briefs_artifact_kind_not_null",
       "table_name": "record_offer_gap_briefs",
       "validated": true
@@ -23180,6 +23914,16 @@
       "kind": "n",
       "name": "record_offer_bundles_artifact_version_not_null",
       "table_name": "record_offer_bundles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL artifact_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_decisions_artifact_version_not_null",
+      "table_name": "record_offer_design_decisions",
       "validated": true
     },
     {
@@ -23788,6 +24532,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_runs_bundle_id_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL bundle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_offer_field_sources_bundle_id_not_null",
       "table_name": "record_offer_field_sources",
       "validated": true
@@ -23840,6 +24594,16 @@
       "kind": "n",
       "name": "record_market_research_workflow_b_business_command_key_not_null",
       "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL business_command_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bind_business_command_key_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -25604,6 +26368,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL contract_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_contract_version_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL contradictory_fields",
       "enforced": true,
       "initially_deferred": false,
@@ -26198,6 +26972,36 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_decisions_created_at_not_null",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_runs_created_at_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_created_at_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_offer_gap_briefs_created_at_not_null",
       "table_name": "record_offer_gap_briefs",
       "validated": true
@@ -26758,6 +27562,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_runs_cycle_id_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_cycle_id_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_pivot_decisions_cycle_id_not_null",
       "table_name": "record_pivot_decisions",
       "validated": true
@@ -26870,6 +27694,16 @@
       "kind": "n",
       "name": "record_market_research_workflow_bindi_dbos_workflow_id_not_null",
       "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL dbos_workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_dbos_workflow_id_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -27130,6 +27964,16 @@
       "kind": "n",
       "name": "record_market_research_workflow_binding_delivery_state_not_null",
       "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL delivery_state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_delivery_state_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -27490,6 +28334,16 @@
       "kind": "n",
       "name": "record_conversation_evidence_spans_end_offset_not_null",
       "table_name": "record_conversation_evidence_spans",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL envelope_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_runs_envelope_id_not_null",
+      "table_name": "record_offer_design_runs",
       "validated": true
     },
     {
@@ -28300,6 +29154,36 @@
       "kind": "n",
       "name": "record_offer_bundles_experiment_id_not_null",
       "table_name": "record_offer_bundles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_decisions_experiment_id_not_null",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_runs_experiment_id_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_experiment_id_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -30068,6 +30952,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_decisions_id_not_null",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_runs_id_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_offer_gap_briefs_id_not_null",
       "table_name": "record_offer_gap_briefs",
       "validated": true
@@ -31628,6 +32532,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_runs_model_config_id_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL model_config_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_outreach_contexts_model_config_id_not_null",
       "table_name": "record_outreach_contexts",
       "validated": true
@@ -31648,6 +32562,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_runs_model_config_version_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL model_config_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_outreach_contexts_model_config_version_not_null",
       "table_name": "record_outreach_contexts",
       "validated": true
@@ -31660,6 +32584,16 @@
       "kind": "n",
       "name": "record_strategy_execution_binding_model_config_version_not_null",
       "table_name": "record_strategy_execution_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL model_config_workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_runs_model_config_workflow_id_not_null",
+      "table_name": "record_offer_design_runs",
       "validated": true
     },
     {
@@ -32394,6 +33328,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL operation_kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_operation_kind_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL operator_id",
       "enforced": true,
       "initially_deferred": false,
@@ -32420,6 +33364,16 @@
       "kind": "n",
       "name": "record_learning_review_controls_operator_id_not_null",
       "table_name": "record_learning_review_controls",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operator_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_decisions_operator_id_not_null",
+      "table_name": "record_offer_design_decisions",
       "validated": true
     },
     {
@@ -32800,6 +33754,16 @@
       "kind": "n",
       "name": "record_conversation_manual_outcomes_outcome_not_null",
       "table_name": "record_conversation_manual_outcomes",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL outcome",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_decisions_outcome_not_null",
+      "table_name": "record_offer_design_decisions",
       "validated": true
     },
     {
@@ -33658,6 +34622,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_runs_prompt_artifact_id_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL prompt_artifact_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_outreach_contexts_prompt_artifact_id_not_null",
       "table_name": "record_outreach_contexts",
       "validated": true
@@ -33688,6 +34662,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_runs_prompt_hash_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL prompt_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_outreach_contexts_prompt_hash_not_null",
       "table_name": "record_outreach_contexts",
       "validated": true
@@ -33710,6 +34694,16 @@
       "kind": "n",
       "name": "record_strategy_agent_versions_prompt_kind_not_null",
       "table_name": "record_strategy_agent_versions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL prompt_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_runs_prompt_version_not_null",
+      "table_name": "record_offer_design_runs",
       "validated": true
     },
     {
@@ -34774,12 +35768,32 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL request_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_request_hash_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL request_payload",
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
       "name": "record_market_research_decision_workfl_request_payload_not_null",
       "table_name": "record_market_research_decision_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL request_payload",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_request_payload_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -35398,6 +36412,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_decisions_run_id_not_null",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL run_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_readiness_evidence_links_run_id_not_null",
       "table_name": "record_readiness_evidence_links",
       "validated": true
@@ -35974,6 +36998,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL started_by",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_runs_started_by_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL state",
       "enforced": true,
       "initially_deferred": false,
@@ -36100,16 +37134,6 @@
       "kind": "n",
       "name": "record_learning_regression_assessments_subject_kind_not_null",
       "table_name": "record_learning_regression_assessments",
-      "validated": true
-    },
-    {
-      "deferrable": false,
-      "definition": "NOT NULL superseding_bundle_id",
-      "enforced": true,
-      "initially_deferred": false,
-      "kind": "n",
-      "name": "record_offer_proposal_invalidati_superseding_bundle_id_not_null",
-      "table_name": "record_offer_proposal_invalidations",
       "validated": true
     },
     {
@@ -36398,6 +37422,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_offer_design_workflow_bindings_updated_at_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL updated_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_operators_updated_at_not_null",
       "table_name": "record_operators",
       "validated": true
@@ -36580,6 +37614,26 @@
       "kind": "n",
       "name": "record_offer_bundles_verdict_id_not_null",
       "table_name": "record_offer_bundles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL verdict_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_runs_verdict_id_not_null",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL verdict_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_offer_design_workflow_bindings_verdict_id_not_null",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -37170,6 +38224,16 @@
       "kind": "p",
       "name": "record_market_research_workflow_bindings_pkey",
       "table_name": "record_market_research_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (dbos_workflow_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_offer_design_workflow_bindings_pkey",
+      "table_name": "record_offer_design_workflow_bindings",
       "validated": true
     },
     {
@@ -37880,6 +38944,26 @@
       "kind": "p",
       "name": "record_offer_bundles_pkey",
       "table_name": "record_offer_bundles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_offer_design_decisions_pkey",
+      "table_name": "record_offer_design_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_offer_design_runs_pkey",
+      "table_name": "record_offer_design_runs",
       "validated": true
     },
     {
@@ -38924,6 +40008,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (business_command_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_offer_design_workflow_bindings_business_command_key_key",
+      "table_name": "record_offer_design_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (calibration_decision_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -39434,6 +40528,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (cycle_id, verdict_id, bundle_id, envelope_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_offer_design_runs_cycle_id_verdict_id_bundle_id_enve_key",
+      "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (decision_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -39940,6 +41044,16 @@
       "kind": "u",
       "name": "record_offer_bundles_id_experiment_id_key",
       "table_name": "record_offer_bundles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (id, experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_offer_design_runs_id_experiment_id_key",
+      "table_name": "record_offer_design_runs",
       "validated": true
     },
     {
@@ -40494,6 +41608,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (offer_design_run_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_offer_packages_offer_design_run_id_key",
+      "table_name": "record_offer_packages",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (offer_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -40790,6 +41914,16 @@
       "kind": "u",
       "name": "record_learning_scopes_run_id_key",
       "table_name": "record_learning_scopes",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (run_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_offer_design_decisions_run_id_key",
+      "table_name": "record_offer_design_decisions",
       "validated": true
     },
     {
@@ -41178,7 +42312,7 @@
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_return_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NEW.ordinal>1 AND NOT EXISTS(\n  SELECT 1 FROM record_returns r JOIN record_verdicts v ON v.id=r.verdict_id\n  WHERE r.to_cycle_id=NEW.id AND r.from_cycle_id=NEW.parent_cycle_id\n    AND r.experiment_id=NEW.experiment_id\n    AND v.cycle_id=NEW.parent_cycle_id AND v.verdict IN ('REFINE_SAME_IDEA','MATERIAL_PIVOT_RECOMMENDED','INCONCLUSIVE','PROCEED_TO_OFFER'))\n THEN RAISE EXCEPTION 'research cycle requires exact committed return'; END IF;\n RETURN NULL;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_return_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NEW.ordinal>1 AND NOT EXISTS(\n  SELECT 1 FROM record_returns r JOIN record_verdicts v ON v.id=r.verdict_id\n  WHERE r.to_cycle_id=NEW.id AND r.from_cycle_id=NEW.parent_cycle_id\n    AND r.experiment_id=NEW.experiment_id\n    AND v.cycle_id=NEW.parent_cycle_id\n    AND ((r.kind IN ('SAME_INTENT','MATERIAL_PIVOT') AND v.verdict IN ('REFINE_SAME_IDEA','MATERIAL_PIVOT_RECOMMENDED'))\n      OR (r.kind='INCONCLUSIVE_SUPPLEMENT' AND v.verdict='INCONCLUSIVE')\n      OR (r.kind='OFFER_GAP' AND v.verdict='PROCEED_TO_OFFER'))\n ) AND NOT EXISTS(\n  SELECT 1 FROM record_cycle_transitions t\n  JOIN record_offer_design_decisions d ON d.id=t.offer_design_decision_id\n  JOIN record_commands c ON c.id=t.command_id\n  JOIN record_idea_acceptances child_idea ON child_idea.cycle_id=NEW.id\n  WHERE NEW.purpose='SAME_INTENT_RETURN'\n    AND t.cycle_id=NEW.parent_cycle_id\n    AND t.from_state='WAITING_FOR_OPERATOR_INPUT'\n    AND t.to_state='RETURN_FOR_IDEA_REFINEMENT'\n    AND d.outcome='IDEA_REFINEMENT_RECOMMENDED'\n    AND c.kind='CONFIRM_OFFER_IDEA_REFINEMENT'\n    AND c.result_id=d.id\n    AND child_idea.experiment_id=NEW.experiment_id\n )\n THEN RAISE EXCEPTION 'research cycle requires exact committed return'; END IF;\n RETURN NULL;\nEND $function$\n",
       "name": "record_cycle_return_guard"
     },
     {
@@ -41198,7 +42332,7 @@
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_transition_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE current_state record_cycle_states; acceptance record_idea_acceptances;\n attempt record_research_attempts; accepted_artifact record_artifacts;\n command record_commands; committed record_verdicts; expected_state TEXT;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable cycle transition'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO current_state FROM record_cycle_states WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO acceptance FROM record_idea_acceptances WHERE id=NEW.idea_acceptance_id\n  AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id\n  AND artifact_id=NEW.idea_artifact_id AND artifact_kind=NEW.idea_kind\n  AND artifact_version=NEW.idea_version AND artifact_hash=NEW.idea_hash;\n SELECT * INTO attempt FROM record_research_attempts WHERE id=NEW.research_attempt_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id;\n SELECT * INTO accepted_artifact FROM record_artifacts WHERE id=NEW.idea_artifact_id AND experiment_id=NEW.experiment_id AND kind=NEW.idea_kind AND version=NEW.idea_version AND content_hash=NEW.idea_hash;\n SELECT * INTO command FROM record_commands WHERE id=NEW.command_id;\n IF current_state.cycle_id IS NULL OR current_state.state IS DISTINCT FROM NEW.from_state\n  OR current_state.transition_ordinal+1 IS DISTINCT FROM NEW.ordinal\n  OR acceptance.id IS NULL OR attempt.id IS NULL OR accepted_artifact.id IS NULL\n  OR command.id IS NULL OR command.experiment_id IS DISTINCT FROM NEW.experiment_id\n THEN RAISE EXCEPTION 'invalid cycle transition lineage'; END IF;\n IF NEW.ordinal=1 THEN\n  IF attempt.ordinal<>1 OR NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1)\n   OR EXISTS(SELECT 1 FROM record_artifacts later WHERE later.logical_id=accepted_artifact.logical_id AND later.version>accepted_artifact.version)\n   OR EXISTS(SELECT 1 FROM record_artifact_dispositions disposition WHERE disposition.artifact_id=accepted_artifact.id AND disposition.disposition='SUPERSEDED')\n   OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=attempt.plan_artifact_id AND role='ACCEPTED_IDEA')<>1\n   OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=attempt.plan_artifact_id AND producer_id=accepted_artifact.id AND role='ACCEPTED_IDEA')\n   OR command.kind NOT IN ('START_MARKET_RESEARCH','COMMIT_MARKET_RESEARCH_OUTCOME','DECIDE_MATERIAL_PIVOT','START_INCONCLUSIVE_SUPPLEMENT')\n   OR (command.kind='START_MARKET_RESEARCH' AND (command.result_type<>'RESEARCH_ATTEMPT' OR command.result_id IS DISTINCT FROM NEW.research_attempt_id))\n  THEN RAISE EXCEPTION 'invalid idea-to-research transition'; END IF;\n ELSE\n  SELECT * INTO committed FROM record_verdicts WHERE id=NEW.verdict_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id AND attempt_id=NEW.research_attempt_id;\n  IF committed.id IS NULL THEN RAISE EXCEPTION 'invalid committed verdict transition'; END IF;\n  expected_state := CASE committed.verdict WHEN 'PROCEED_TO_OFFER' THEN 'PROCEED_TO_OFFER' WHEN 'REFINE_SAME_IDEA' THEN 'RETURN_FOR_REFINEMENT' WHEN 'MATERIAL_PIVOT_RECOMMENDED' THEN 'WAITING_FOR_PIVOT_APPROVAL' WHEN 'KILL_IDEA' THEN 'KILLED' WHEN 'INCONCLUSIVE' THEN 'INCONCLUSIVE_REVIEW' END;\n  IF NEW.ordinal=2 AND (NEW.to_state IS DISTINCT FROM expected_state\n      OR command.kind<>'COMMIT_MARKET_RESEARCH_OUTCOME'\n      OR command.result_id IS DISTINCT FROM committed.id)\n  THEN RAISE EXCEPTION 'verdict and cycle state disagree'; END IF;\n  IF NEW.ordinal=3 AND NOT EXISTS(SELECT 1 FROM record_returns r\n      WHERE r.verdict_id=committed.id AND r.experiment_id=NEW.experiment_id\n       AND r.from_cycle_id=NEW.cycle_id\n       AND ((NEW.from_state='WAITING_FOR_PIVOT_APPROVAL' AND r.kind='MATERIAL_PIVOT' AND command.kind='DECIDE_MATERIAL_PIVOT'\n         AND EXISTS(SELECT 1 FROM record_pivot_decisions p WHERE p.verdict_id=committed.id AND p.cycle_id=r.to_cycle_id AND p.decision='APPROVED'))\n        OR (NEW.from_state='INCONCLUSIVE_REVIEW' AND r.kind='INCONCLUSIVE_SUPPLEMENT' AND command.kind='START_INCONCLUSIVE_SUPPLEMENT')))\n  THEN RAISE EXCEPTION 'return transition requires exact accepted continuation'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_cycle_transition_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE current_state record_cycle_states; acceptance record_idea_acceptances;\n attempt record_research_attempts; accepted_artifact record_artifacts;\n command record_commands; committed record_verdicts; expected_state TEXT;\n offer_run record_offer_design_runs; offer_decision record_offer_design_decisions;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable cycle transition'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO current_state FROM record_cycle_states WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO acceptance FROM record_idea_acceptances WHERE id=NEW.idea_acceptance_id\n  AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id\n  AND artifact_id=NEW.idea_artifact_id AND artifact_kind=NEW.idea_kind\n  AND artifact_version=NEW.idea_version AND artifact_hash=NEW.idea_hash;\n SELECT * INTO attempt FROM record_research_attempts WHERE id=NEW.research_attempt_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id;\n SELECT * INTO accepted_artifact FROM record_artifacts WHERE id=NEW.idea_artifact_id AND experiment_id=NEW.experiment_id AND kind=NEW.idea_kind AND version=NEW.idea_version AND content_hash=NEW.idea_hash;\n SELECT * INTO command FROM record_commands WHERE id=NEW.command_id;\n IF current_state.cycle_id IS NULL OR current_state.state IS DISTINCT FROM NEW.from_state\n  OR current_state.transition_ordinal+1 IS DISTINCT FROM NEW.ordinal\n  OR acceptance.id IS NULL OR attempt.id IS NULL OR accepted_artifact.id IS NULL\n  OR command.id IS NULL OR command.experiment_id IS DISTINCT FROM NEW.experiment_id\n THEN RAISE EXCEPTION 'invalid cycle transition lineage'; END IF;\n IF NEW.from_state='PROCEED_TO_OFFER' THEN\n  SELECT * INTO offer_run FROM record_offer_design_runs WHERE id=NEW.offer_design_run_id AND experiment_id=NEW.experiment_id;\n  SELECT * INTO committed FROM record_verdicts WHERE id=NEW.verdict_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id AND attempt_id=NEW.research_attempt_id;\n  IF NEW.to_state<>'OFFER_DESIGN' OR NEW.offer_design_decision_id IS NOT NULL\n   OR offer_run.id IS NULL OR offer_run.cycle_id IS DISTINCT FROM NEW.cycle_id OR offer_run.verdict_id IS DISTINCT FROM NEW.verdict_id\n   OR committed.id IS NULL OR committed.verdict<>'PROCEED_TO_OFFER'\n   OR command.kind<>'START_OFFER_DESIGN' OR command.result_id IS DISTINCT FROM offer_run.id\n  THEN RAISE EXCEPTION 'invalid offer design start transition'; END IF;\n  RETURN NEW;\n END IF;\n IF NEW.from_state='OFFER_DESIGN' THEN\n  SELECT * INTO offer_run FROM record_offer_design_runs WHERE id=NEW.offer_design_run_id AND experiment_id=NEW.experiment_id;\n  SELECT * INTO offer_decision FROM record_offer_design_decisions WHERE id=NEW.offer_design_decision_id AND run_id=NEW.offer_design_run_id AND experiment_id=NEW.experiment_id;\n  SELECT * INTO committed FROM record_verdicts WHERE id=NEW.verdict_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id AND attempt_id=NEW.research_attempt_id;\n  expected_state:=CASE offer_decision.outcome WHEN 'ACCEPT' THEN 'OFFER_ACCEPTED' WHEN 'TARGETED_RESEARCH_REQUIRED' THEN 'RETURN_FOR_TARGETED_RESEARCH' WHEN 'IDEA_REFINEMENT_RECOMMENDED' THEN 'WAITING_FOR_OPERATOR_INPUT' WHEN 'WAITING_FOR_OPERATOR_INPUT' THEN 'WAITING_FOR_OPERATOR_INPUT' END;\n  IF offer_run.id IS NULL OR offer_run.cycle_id IS DISTINCT FROM NEW.cycle_id OR offer_run.verdict_id IS DISTINCT FROM NEW.verdict_id\n   OR offer_decision.id IS NULL OR committed.id IS NULL OR committed.verdict<>'PROCEED_TO_OFFER'\n   OR NEW.to_state IS DISTINCT FROM expected_state\n   OR (offer_decision.outcome='ACCEPT' AND (\n      command.kind<>'ACCEPT_OFFER' OR NOT EXISTS(\n        SELECT 1 FROM record_offer_acceptances offer_acceptance\n        JOIN record_offer_packages package ON package.id=offer_acceptance.offer_id\n        JOIN record_offer_qualification_profiles profile ON profile.id=offer_acceptance.profile_id AND profile.offer_id=package.id\n        JOIN record_initial_outreach_policies policy ON policy.id=offer_acceptance.policy_id AND policy.offer_id=package.id\n        WHERE offer_acceptance.id=command.result_id AND package.offer_design_run_id=offer_run.id\n      )\n   ))\n   OR (offer_decision.outcome='TARGETED_RESEARCH_REQUIRED' AND command.kind<>'RETURN_FOR_TARGETED_RESEARCH')\n   OR (offer_decision.outcome IN ('IDEA_REFINEMENT_RECOMMENDED','WAITING_FOR_OPERATOR_INPUT') AND command.kind<>'DECIDE_OFFER_DESIGN')\n  THEN RAISE EXCEPTION 'invalid offer design decision transition'; END IF;\n  RETURN NEW;\n END IF;\n IF NEW.from_state='WAITING_FOR_OPERATOR_INPUT' THEN\n  SELECT * INTO offer_run FROM record_offer_design_runs WHERE id=NEW.offer_design_run_id AND experiment_id=NEW.experiment_id;\n  SELECT * INTO offer_decision FROM record_offer_design_decisions WHERE id=NEW.offer_design_decision_id AND run_id=NEW.offer_design_run_id AND experiment_id=NEW.experiment_id;\n  SELECT * INTO committed FROM record_verdicts WHERE id=NEW.verdict_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id AND attempt_id=NEW.research_attempt_id;\n  IF NEW.to_state<>'RETURN_FOR_IDEA_REFINEMENT' OR offer_run.id IS NULL OR offer_decision.id IS NULL\n   OR offer_decision.outcome<>'IDEA_REFINEMENT_RECOMMENDED' OR committed.verdict<>'PROCEED_TO_OFFER'\n   OR command.kind<>'CONFIRM_OFFER_IDEA_REFINEMENT' OR command.result_id IS DISTINCT FROM NEW.offer_design_decision_id\n  THEN RAISE EXCEPTION 'invalid offer idea-refinement return'; END IF;\n  RETURN NEW;\n END IF;\n IF NEW.ordinal=1 THEN\n  IF attempt.ordinal<>1 OR NEW.cycle_id IS DISTINCT FROM (SELECT id FROM record_cycles WHERE experiment_id=NEW.experiment_id ORDER BY ordinal DESC LIMIT 1)\n   OR EXISTS(SELECT 1 FROM record_artifacts later WHERE later.logical_id=accepted_artifact.logical_id AND later.version>accepted_artifact.version)\n   OR EXISTS(SELECT 1 FROM record_artifact_dispositions disposition WHERE disposition.artifact_id=accepted_artifact.id AND disposition.disposition='SUPERSEDED')\n   OR (SELECT count(*) FROM record_artifact_links WHERE consumer_id=attempt.plan_artifact_id AND role='ACCEPTED_IDEA')<>1\n   OR NOT EXISTS(SELECT 1 FROM record_artifact_links WHERE consumer_id=attempt.plan_artifact_id AND producer_id=accepted_artifact.id AND role='ACCEPTED_IDEA')\n   OR command.kind NOT IN ('START_MARKET_RESEARCH','COMMIT_MARKET_RESEARCH_OUTCOME','DECIDE_MATERIAL_PIVOT','START_INCONCLUSIVE_SUPPLEMENT','RETURN_FOR_TARGETED_RESEARCH')\n   OR (command.kind='START_MARKET_RESEARCH' AND (command.result_type<>'RESEARCH_ATTEMPT' OR command.result_id IS DISTINCT FROM NEW.research_attempt_id))\n  THEN RAISE EXCEPTION 'invalid idea-to-research transition'; END IF;\n ELSE\n  SELECT * INTO committed FROM record_verdicts WHERE id=NEW.verdict_id AND cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id AND attempt_id=NEW.research_attempt_id;\n  IF committed.id IS NULL THEN RAISE EXCEPTION 'invalid committed verdict transition'; END IF;\n  expected_state := CASE committed.verdict WHEN 'PROCEED_TO_OFFER' THEN 'PROCEED_TO_OFFER' WHEN 'REFINE_SAME_IDEA' THEN 'RETURN_FOR_REFINEMENT' WHEN 'MATERIAL_PIVOT_RECOMMENDED' THEN 'WAITING_FOR_PIVOT_APPROVAL' WHEN 'KILL_IDEA' THEN 'KILLED' WHEN 'INCONCLUSIVE' THEN 'INCONCLUSIVE_REVIEW' END;\n  IF NEW.ordinal=2 AND (NEW.to_state IS DISTINCT FROM expected_state OR command.kind<>'COMMIT_MARKET_RESEARCH_OUTCOME' OR command.result_id IS DISTINCT FROM committed.id)\n  THEN RAISE EXCEPTION 'verdict and cycle state disagree'; END IF;\n  IF NEW.ordinal=3 AND NOT EXISTS(SELECT 1 FROM record_returns r WHERE r.verdict_id=committed.id AND r.experiment_id=NEW.experiment_id AND r.from_cycle_id=NEW.cycle_id AND ((NEW.from_state='WAITING_FOR_PIVOT_APPROVAL' AND r.kind='MATERIAL_PIVOT' AND command.kind='DECIDE_MATERIAL_PIVOT' AND EXISTS(SELECT 1 FROM record_pivot_decisions p WHERE p.verdict_id=committed.id AND p.cycle_id=r.to_cycle_id AND p.decision='APPROVED')) OR (NEW.from_state='INCONCLUSIVE_REVIEW' AND r.kind='INCONCLUSIVE_SUPPLEMENT' AND command.kind='START_INCONCLUSIVE_SUPPLEMENT')))\n  THEN RAISE EXCEPTION 'return transition requires exact accepted continuation'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_cycle_transition_guard"
     },
     {
@@ -41330,6 +42464,16 @@
       "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_offer_calibration_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE d record_calibration_decisions; base record_offer_packages;\nBEGIN\n IF NEW.calibration_decision_id IS NULL THEN RETURN NEW; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO d FROM record_calibration_decisions WHERE id=NEW.calibration_decision_id;\n SELECT * INTO base FROM record_offer_packages WHERE id=d.base_offer_id;\n IF d.outcome IS DISTINCT FROM 'ACCEPT' OR d.experiment_id IS DISTINCT FROM NEW.experiment_id\n OR base.bundle_id IS DISTINCT FROM NEW.bundle_id\n OR d.base_offer_acceptance_id IS DISTINCT FROM (SELECT id FROM record_offer_acceptances WHERE experiment_id=NEW.experiment_id ORDER BY accepted_at DESC,id DESC LIMIT 1)\n OR EXISTS(SELECT 1 FROM record_calibration_fulfillments WHERE calibration_decision_id=d.id)\n OR EXISTS(SELECT 1 FROM record_qualification_cohorts WHERE experiment_id=NEW.experiment_id)\n THEN RAISE EXCEPTION 'calibration cannot bypass offer acceptance'; END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_offer_calibration_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_offer_design_decision_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE run record_offer_design_runs; state record_cycle_states;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable offer design decision'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO run FROM record_offer_design_runs WHERE id=NEW.run_id AND experiment_id=NEW.experiment_id;\n SELECT * INTO state FROM record_cycle_states WHERE cycle_id=run.cycle_id AND experiment_id=NEW.experiment_id FOR UPDATE;\n IF run.id IS NULL OR state.cycle_id IS NULL OR state.state IS DISTINCT FROM 'OFFER_DESIGN'\n  OR NOT EXISTS(SELECT 1 FROM record_artifacts a WHERE a.id=NEW.artifact_id AND a.experiment_id=NEW.experiment_id AND a.kind=NEW.artifact_kind AND a.version=NEW.artifact_version AND a.content_hash=NEW.artifact_hash)\n  OR (NEW.outcome='ACCEPT' AND (\n    NOT EXISTS(SELECT 1 FROM record_artifacts a WHERE a.id=NEW.artifact_id AND a.kind='VALIDATION_RESULT' AND a.payload->>'disposition'='PASS')\n    OR (SELECT count(*) FROM record_artifact_links l WHERE l.consumer_id=NEW.artifact_id AND l.role='OFFER_DESIGN_PROPOSAL')<>1\n    OR (SELECT count(*) FROM record_artifact_links l WHERE l.consumer_id=NEW.artifact_id AND l.role='OFFER_PACKAGE')<>1\n    OR (SELECT count(*) FROM record_artifact_links l WHERE l.consumer_id=NEW.artifact_id AND l.role='OFFER_QUALIFICATION_PROFILE')<>1\n    OR (SELECT count(*) FROM record_artifact_links l WHERE l.consumer_id=NEW.artifact_id AND l.role='INITIAL_OUTREACH_POLICY')<>1\n    OR NOT EXISTS(\n      SELECT 1 FROM record_offer_proposals proposal\n      JOIN record_offer_packages package ON package.proposal_id=proposal.id AND package.offer_design_run_id=NEW.run_id\n      JOIN record_offer_qualification_profiles profile ON profile.offer_id=package.id\n      JOIN record_initial_outreach_policies policy ON policy.offer_id=package.id\n      JOIN record_offer_acceptances acceptance ON acceptance.offer_id=package.id AND acceptance.profile_id=profile.id AND acceptance.policy_id=policy.id\n      JOIN record_artifact_links proposal_link ON proposal_link.consumer_id=NEW.artifact_id AND proposal_link.role='OFFER_DESIGN_PROPOSAL' AND proposal_link.producer_id=proposal.artifact_id\n      JOIN record_artifact_links package_link ON package_link.consumer_id=NEW.artifact_id AND package_link.role='OFFER_PACKAGE' AND package_link.producer_id=package.artifact_id\n      JOIN record_artifact_links profile_link ON profile_link.consumer_id=NEW.artifact_id AND profile_link.role='OFFER_QUALIFICATION_PROFILE' AND profile_link.producer_id=profile.artifact_id\n      JOIN record_artifact_links policy_link ON policy_link.consumer_id=NEW.artifact_id AND policy_link.role='INITIAL_OUTREACH_POLICY' AND policy_link.producer_id=policy.artifact_id\n      WHERE proposal.offer_design_run_id=NEW.run_id\n    )\n  ))\n THEN RAISE EXCEPTION 'invalid offer design decision lineage'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_offer_design_decision_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_offer_design_run_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE verdict record_verdicts; bundle record_offer_bundles; envelope record_commercial_envelopes; state record_cycle_states;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'immutable offer design run'; END IF;\n PERFORM 1 FROM gov_experiments WHERE id=NEW.experiment_id FOR UPDATE;\n SELECT * INTO verdict FROM record_verdicts WHERE id=NEW.verdict_id AND experiment_id=NEW.experiment_id;\n SELECT * INTO bundle FROM record_offer_bundles WHERE id=NEW.bundle_id AND experiment_id=NEW.experiment_id;\n SELECT * INTO envelope FROM record_commercial_envelopes WHERE id=NEW.envelope_id AND experiment_id=NEW.experiment_id;\n SELECT * INTO state FROM record_cycle_states WHERE cycle_id=NEW.cycle_id AND experiment_id=NEW.experiment_id FOR UPDATE;\n IF verdict.id IS NULL OR verdict.verdict IS DISTINCT FROM 'PROCEED_TO_OFFER' OR verdict.cycle_id IS DISTINCT FROM NEW.cycle_id\n  OR bundle.id IS NULL OR bundle.verdict_id IS DISTINCT FROM NEW.verdict_id OR envelope.id IS NULL OR envelope.bundle_id IS DISTINCT FROM NEW.bundle_id OR envelope.status IS DISTINCT FROM 'READY'\n  OR state.cycle_id IS NULL OR state.state IS DISTINCT FROM 'PROCEED_TO_OFFER'\n  OR NOT EXISTS(SELECT 1 FROM record_artifacts a WHERE a.id=envelope.artifact_id AND a.experiment_id=NEW.experiment_id AND a.kind='COMMERCIAL_DESIGN_ENVELOPE' AND a.version=envelope.artifact_version AND a.content_hash=envelope.artifact_hash)\n  OR EXISTS(SELECT 1 FROM record_artifacts a JOIN record_artifacts later ON later.logical_id=a.logical_id AND later.version>a.version WHERE a.id=envelope.artifact_id)\n  OR EXISTS(SELECT 1 FROM record_artifact_dispositions d WHERE d.artifact_id=envelope.artifact_id AND d.disposition='SUPERSEDED')\n  OR NOT EXISTS(SELECT 1 FROM record_artifacts a WHERE a.id=NEW.prompt_artifact_id AND a.experiment_id=NEW.experiment_id AND a.kind='OUTREACH_PROMPT_CONFIGURATION' AND a.version=NEW.prompt_version AND a.content_hash=NEW.prompt_hash)\n  OR NOT EXISTS(SELECT 1 FROM gov_configs c WHERE c.id=NEW.model_config_id AND c.workflow_id=NEW.model_config_workflow_id AND c.version=NEW.model_config_version)\n THEN RAISE EXCEPTION 'invalid offer design run lineage'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_offer_design_run_guard"
     },
     {
       "arguments": "",
@@ -42612,6 +43756,24 @@
       "primary_index": false,
       "ready": true,
       "table_name": "record_offer_bundles",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_offer_design_decisions_run ON public.record_offer_design_decisions USING btree (run_id, experiment_id)",
+      "name": "ix_record_offer_design_decisions_run",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_offer_design_decisions",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_offer_design_runs_cycle ON public.record_offer_design_runs USING btree (cycle_id, experiment_id)",
+      "name": "ix_record_offer_design_runs_cycle",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_offer_design_runs",
       "unique_index": false,
       "valid": true
     },
@@ -45010,6 +46172,69 @@
       "valid": true
     },
     {
+      "definition": "CREATE UNIQUE INDEX record_offer_design_decisions_pkey ON public.record_offer_design_decisions USING btree (id)",
+      "name": "record_offer_design_decisions_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_offer_design_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_offer_design_decisions_run_id_key ON public.record_offer_design_decisions USING btree (run_id)",
+      "name": "record_offer_design_decisions_run_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_offer_design_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_offer_design_runs_cycle_id_verdict_id_bundle_id_enve_key ON public.record_offer_design_runs USING btree (cycle_id, verdict_id, bundle_id, envelope_id)",
+      "name": "record_offer_design_runs_cycle_id_verdict_id_bundle_id_enve_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_offer_design_runs",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_offer_design_runs_id_experiment_id_key ON public.record_offer_design_runs USING btree (id, experiment_id)",
+      "name": "record_offer_design_runs_id_experiment_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_offer_design_runs",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_offer_design_runs_pkey ON public.record_offer_design_runs USING btree (id)",
+      "name": "record_offer_design_runs_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_offer_design_runs",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_offer_design_workflow_bindings_business_command_key_key ON public.record_offer_design_workflow_bindings USING btree (business_command_key)",
+      "name": "record_offer_design_workflow_bindings_business_command_key_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_offer_design_workflow_bindings_pkey ON public.record_offer_design_workflow_bindings USING btree (dbos_workflow_id)",
+      "name": "record_offer_design_workflow_bindings_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_offer_design_workflow_bindings",
+      "unique_index": true,
+      "valid": true
+    },
+    {
       "definition": "CREATE UNIQUE INDEX record_offer_field_sources_pkey ON public.record_offer_field_sources USING btree (offer_id, field_path)",
       "name": "record_offer_field_sources_pkey",
       "primary_index": true,
@@ -45066,6 +46291,15 @@
     {
       "definition": "CREATE UNIQUE INDEX record_offer_packages_id_experiment_id_key ON public.record_offer_packages USING btree (id, experiment_id)",
       "name": "record_offer_packages_id_experiment_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_offer_packages",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_offer_packages_offer_design_run_id_key ON public.record_offer_packages USING btree (offer_design_run_id)",
+      "name": "record_offer_packages_offer_design_run_id_key",
       "primary_index": false,
       "ready": true,
       "table_name": "record_offer_packages",
@@ -46891,6 +48125,24 @@
       "valid": true
     },
     {
+      "definition": "CREATE UNIQUE INDEX uq_record_offer_acceptance_run ON public.record_offer_packages USING btree (proposal_id)",
+      "name": "uq_record_offer_acceptance_run",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_offer_packages",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX uq_record_offer_design_accepted_run ON public.record_offer_design_decisions USING btree (run_id) WHERE ((outcome)::text = 'ACCEPT'::text)",
+      "name": "uq_record_offer_design_accepted_run",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_offer_design_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
       "definition": "CREATE UNIQUE INDEX uq_record_offer_uncalibrated_bundle ON public.record_offer_packages USING btree (bundle_id) WHERE (calibration_decision_id IS NULL)",
       "name": "uq_record_offer_uncalibrated_bundle",
       "primary_index": false,
@@ -47513,6 +48765,24 @@
       "force_row_security": false,
       "kind": "r",
       "name": "record_offer_bundles",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_offer_design_decisions",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_offer_design_runs",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_offer_design_workflow_bindings",
       "row_security": false
     },
     {
@@ -56840,6 +58110,110 @@
       "table_name": "record_cycle_transitions"
     },
     {
+      "constraint_name": "record_cycle_transition_offer_decision_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transition_offer_decision_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_cycle_transition_offer_decision_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transition_offer_decision_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_cycle_transition_offer_run_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transition_offer_run_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_cycle_transition_offer_run_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycle_transitions"
+    },
+    {
+      "constraint_name": "record_cycle_transition_offer_run_fk",
+      "constraint_table": "record_cycle_transitions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
       "constraint_name": "record_cycle_transition_verdict_fk",
       "constraint_table": "record_cycle_transitions",
       "deferrable": false,
@@ -61754,6 +63128,890 @@
       "table_name": "record_verdicts"
     },
     {
+      "constraint_name": "record_offer_design_decisions_artifact_id_experiment_id_ar_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_artifact_id_experiment_id_ar_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_artifact_id_experiment_id_ar_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_artifact_id_experiment_id_ar_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_experiment_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_experiment_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_experiments"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_experiment_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_experiment_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_experiments"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_operator_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_operator_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_operator_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_operator_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_run_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_run_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_run_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": "record_offer_design_decisions_run_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_bundle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_bundle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_bundles"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_bundle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_bundle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_bundles"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_envelope_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_envelope_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commercial_envelopes"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_envelope_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_envelope_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commercial_envelopes"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_experiments"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_experiments"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_model_config_id_model_config_work_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_model_config_id_model_config_work_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_model_config_id_model_config_work_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_model_config_id_model_config_work_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_prompt_artifact_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_prompt_artifact_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_prompt_artifact_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_prompt_artifact_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_started_by_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_started_by_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_started_by_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_started_by_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_runs_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bind_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bind_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bind_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bind_verdict_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_verdicts"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindin_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindin_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindin_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindin_cycle_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_command_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_command_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_command_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_command_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_commands"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_experiments"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_experiments"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_run_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_run_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_run_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_workflow_bindings"
+    },
+    {
+      "constraint_name": "record_offer_design_workflow_bindings_run_id_experiment_id_fkey",
+      "constraint_table": "record_offer_design_workflow_bindings",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
       "constraint_name": "record_offer_field_sources_bundle_id_experiment_id_fkey",
       "constraint_table": "record_offer_field_sources",
       "deferrable": false,
@@ -62170,6 +64428,58 @@
       "table_name": "record_artifacts"
     },
     {
+      "constraint_name": "record_offer_packages_offer_design_run_id_fkey",
+      "constraint_table": "record_offer_packages",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_packages"
+    },
+    {
+      "constraint_name": "record_offer_packages_offer_design_run_id_fkey",
+      "constraint_table": "record_offer_packages",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_packages_offer_design_run_id_fkey",
+      "constraint_table": "record_offer_packages",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_packages"
+    },
+    {
+      "constraint_name": "record_offer_packages_offer_design_run_id_fkey",
+      "constraint_table": "record_offer_packages",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
       "constraint_name": "record_offer_packages_proposal_id_experiment_id_fkey",
       "constraint_table": "record_offer_packages",
       "deferrable": false,
@@ -62326,6 +64636,58 @@
       "table_name": "record_offer_proposals"
     },
     {
+      "constraint_name": "record_offer_proposal_invalidations_offer_gap_brief_id_fkey",
+      "constraint_table": "record_offer_proposal_invalidations",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_proposal_invalidations"
+    },
+    {
+      "constraint_name": "record_offer_proposal_invalidations_offer_gap_brief_id_fkey",
+      "constraint_table": "record_offer_proposal_invalidations",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_gap_briefs"
+    },
+    {
+      "constraint_name": "record_offer_proposal_invalidations_offer_gap_brief_id_fkey",
+      "constraint_table": "record_offer_proposal_invalidations",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_proposal_invalidations"
+    },
+    {
+      "constraint_name": "record_offer_proposal_invalidations_offer_gap_brief_id_fkey",
+      "constraint_table": "record_offer_proposal_invalidations",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_gap_briefs"
+    },
+    {
       "constraint_name": "record_offer_proposals_artifact_id_experiment_id_artifact__fkey",
       "constraint_table": "record_offer_proposals",
       "deferrable": false,
@@ -62480,6 +64842,58 @@
       "internal": true,
       "name": null,
       "table_name": "record_commercial_envelopes"
+    },
+    {
+      "constraint_name": "record_offer_proposals_offer_design_run_id_fkey",
+      "constraint_table": "record_offer_proposals",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_proposals"
+    },
+    {
+      "constraint_name": "record_offer_proposals_offer_design_run_id_fkey",
+      "constraint_table": "record_offer_proposals",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
+    },
+    {
+      "constraint_name": "record_offer_proposals_offer_design_run_id_fkey",
+      "constraint_table": "record_offer_proposals",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_proposals"
+    },
+    {
+      "constraint_name": "record_offer_proposals_offer_design_run_id_fkey",
+      "constraint_table": "record_offer_proposals",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_offer_design_runs"
     },
     {
       "constraint_name": "record_offer_qualification_pr_artifact_id_experiment_id_ar_fkey",
@@ -75181,6 +77595,32 @@
       "internal": false,
       "name": "record_offer_calibration_guard",
       "table_name": "record_offer_packages"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_offer_design_decisions_guard BEFORE INSERT OR DELETE OR UPDATE ON record_offer_design_decisions FOR EACH ROW EXECUTE FUNCTION record_offer_design_decision_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_offer_design_decision_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_offer_design_decisions_guard",
+      "table_name": "record_offer_design_decisions"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_offer_design_runs_guard BEFORE INSERT OR DELETE OR UPDATE ON record_offer_design_runs FOR EACH ROW EXECUTE FUNCTION record_offer_design_run_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_offer_design_run_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_offer_design_runs_guard",
+      "table_name": "record_offer_design_runs"
     },
     {
       "constraint_name": null,

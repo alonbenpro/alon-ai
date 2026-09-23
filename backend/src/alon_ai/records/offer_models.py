@@ -14,6 +14,7 @@ from alon_ai.records.models import (
     ArtifactKind,
     CommandReceipt,
     CycleReceipt,
+    ResearchCycleBudgetInput,
 )
 
 REQUIRED_RESEARCH_ROLES = (
@@ -248,3 +249,85 @@ class OfferAcceptanceReceipt(CommandReceipt):
 
 class OfferGapReceipt(CycleReceipt):
     pass
+
+
+class OfferDesignStartRequest(StrictDTO):
+    """Pinned inputs for beginning one durable Offer Design run."""
+
+    verdict_id: UUID
+    input_bundle: ArtifactInput
+    envelope: ArtifactInput
+    scope_estimate: ArtifactInput
+    prompt_configuration: ArtifactInput
+    model_config_id: UUID
+    model_config_workflow_id: UUID
+    model_config_version: UUID
+    started_by: UUID
+
+
+class OfferDesignStartReceipt(CommandReceipt):
+    id: UUID
+    cycle_id: UUID
+    bundle_id: UUID
+    envelope_id: UUID
+    transition_id: UUID
+
+
+class OfferDesignDecisionRequest(StrictDTO):
+    run_id: UUID
+    outcome: Literal[
+        "ACCEPT",
+        "TARGETED_RESEARCH_REQUIRED",
+        "IDEA_REFINEMENT_RECOMMENDED",
+        "WAITING_FOR_OPERATOR_INPUT",
+    ]
+    decision_artifact: ArtifactInput
+    operator_id: UUID
+
+
+class OfferDesignDecisionReceipt(CommandReceipt):
+    id: UUID
+    run_id: UUID
+    outcome: str
+    transition_id: UUID
+
+
+class OfferTargetedResearchReturnRequest(StrictDTO):
+    """Supplied, bounded continuation after an unaccepted Offer Design run."""
+
+    run_id: UUID
+    proposal_id: UUID
+    decision_artifact: ArtifactInput
+    gap: OfferGapRequest
+    plan: ArtifactInput
+    budget: ResearchCycleBudgetInput
+    operator_id: UUID
+    accepted_by: UUID
+
+
+class OfferTargetedResearchReturnReceipt(CommandReceipt):
+    id: UUID
+    run_id: UUID
+    decision_id: UUID
+    child_cycle_id: UUID
+    research_attempt_id: UUID
+    parent_transition_id: UUID
+    child_transition_id: UUID
+
+
+class OfferIdeaRefinementReturnRequest(StrictDTO):
+    """An operator's explicit, supplied next-IdeaBrief confirmation."""
+
+    run_id: UUID
+    decision_id: UUID
+    commercial_failure_evidence: ArtifactInput
+    proposed_idea: ArtifactInput
+    accepted_by: UUID
+
+
+class OfferIdeaRefinementReturnReceipt(CommandReceipt):
+    id: UUID
+    run_id: UUID
+    decision_id: UUID
+    child_cycle_id: UUID
+    transition_id: UUID

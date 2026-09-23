@@ -166,6 +166,7 @@ offer_proposals = table(
     gov.col("artifact_hash", String(64)),
     gov.col("bundle_id", gov.U),
     gov.col("envelope_id", gov.U),
+    gov.col("offer_design_run_id", gov.U, nullable=True),
     gov.col("created_at", gov.T),
     ForeignKeyConstraint(
         [
@@ -183,6 +184,7 @@ offer_proposals = table(
             "record_artifacts.content_hash",
         ],
     ),
+    ForeignKeyConstraint(["offer_design_run_id"], ["record_offer_design_runs.id"]),
     ForeignKeyConstraint(
         ["bundle_id", "experiment_id"],
         ["record_offer_bundles.id", "record_offer_bundles.experiment_id"],
@@ -200,7 +202,8 @@ offer_proposal_invalidations = table(
     "offer_proposal_invalidations",
     gov.col("proposal_id", gov.U, primary_key=True),
     gov.col("experiment_id", gov.U),
-    gov.col("superseding_bundle_id", gov.U),
+    gov.col("superseding_bundle_id", gov.U, nullable=True),
+    gov.col("offer_gap_brief_id", gov.U, nullable=True),
     gov.col("reason", String(64)),
     gov.col("created_at", gov.T),
     ForeignKeyConstraint(
@@ -211,7 +214,11 @@ offer_proposal_invalidations = table(
         ["superseding_bundle_id", "experiment_id"],
         ["record_offer_bundles.id", "record_offer_bundles.experiment_id"],
     ),
-    CheckConstraint("reason='SUPERSEDED_RESEARCH'"),
+    ForeignKeyConstraint(["offer_gap_brief_id"], ["record_offer_gap_briefs.id"]),
+    CheckConstraint(
+        "(reason='SUPERSEDED_RESEARCH' AND superseding_bundle_id IS NOT NULL AND offer_gap_brief_id IS NULL) "
+        "OR (reason='OFFER_GAP_RETURN' AND superseding_bundle_id IS NULL AND offer_gap_brief_id IS NOT NULL)"
+    ),
 )
 
 offer_packages = table(
@@ -229,6 +236,7 @@ offer_packages = table(
     gov.col("base_price", Numeric(18, 2)),
     gov.col("created_at", gov.T),
     gov.col("calibration_decision_id", gov.U, nullable=True, unique=True),
+    gov.col("offer_design_run_id", gov.U, nullable=True, unique=True),
     ForeignKeyConstraint(
         [
             "artifact_id",
@@ -245,6 +253,7 @@ offer_packages = table(
             "record_artifacts.content_hash",
         ],
     ),
+    ForeignKeyConstraint(["offer_design_run_id"], ["record_offer_design_runs.id"]),
     ForeignKeyConstraint(
         ["proposal_id", "experiment_id"],
         ["record_offer_proposals.id", "record_offer_proposals.experiment_id"],
@@ -508,6 +517,106 @@ offer_gap_briefs = table(
     ),
 )
 
+
+offer_design_runs = table(
+    "offer_design_runs",
+    gov.col("id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("cycle_id", gov.U),
+    gov.col("verdict_id", gov.U),
+    gov.col("bundle_id", gov.U),
+    gov.col("envelope_id", gov.U),
+    gov.col("prompt_artifact_id", gov.U),
+    gov.col("prompt_version", Integer),
+    gov.col("prompt_hash", String(64)),
+    gov.col("model_config_id", gov.U),
+    gov.col("model_config_workflow_id", gov.U),
+    gov.col("model_config_version", gov.U),
+    gov.col("started_by", gov.U),
+    gov.col("created_at", gov.T),
+    ForeignKeyConstraint(
+        ["cycle_id", "experiment_id"],
+        ["record_cycles.id", "record_cycles.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["verdict_id", "experiment_id"],
+        ["record_verdicts.id", "record_verdicts.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["bundle_id", "experiment_id"],
+        ["record_offer_bundles.id", "record_offer_bundles.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["envelope_id", "experiment_id"],
+        ["record_commercial_envelopes.id", "record_commercial_envelopes.experiment_id"],
+    ),
+    ForeignKeyConstraint(["prompt_artifact_id"], ["record_artifacts.id"]),
+    ForeignKeyConstraint(
+        ["model_config_id", "model_config_workflow_id", "model_config_version"],
+        ["gov_configs.id", "gov_configs.workflow_id", "gov_configs.version"],
+    ),
+    UniqueConstraint("id", "experiment_id"),
+    UniqueConstraint("cycle_id", "verdict_id", "bundle_id", "envelope_id"),
+    CheckConstraint("prompt_version>0 AND prompt_hash ~ '^[0-9a-f]{64}$'"),
+)
+
+
+offer_design_decisions = table(
+    "offer_design_decisions",
+    gov.col("id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("run_id", gov.U),
+    gov.col("artifact_id", gov.U),
+    gov.col("artifact_kind", String(64)),
+    gov.col("artifact_version", Integer),
+    gov.col("artifact_hash", String(64)),
+    gov.col("outcome", String(40)),
+    gov.col("operator_id", gov.U),
+    gov.col("created_at", gov.T),
+    ForeignKeyConstraint(
+        ["run_id", "experiment_id"],
+        ["record_offer_design_runs.id", "record_offer_design_runs.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["artifact_id", "experiment_id", "artifact_kind", "artifact_version", "artifact_hash"],
+        ["record_artifacts.id", "record_artifacts.experiment_id", "record_artifacts.kind", "record_artifacts.version", "record_artifacts.content_hash"],
+    ),
+    UniqueConstraint("run_id"),
+    CheckConstraint(
+        "outcome IN ('ACCEPT','TARGETED_RESEARCH_REQUIRED','IDEA_REFINEMENT_RECOMMENDED','WAITING_FOR_OPERATOR_INPUT')"
+    ),
+)
+
+
+offer_design_workflow_bindings = table(
+    "offer_design_workflow_bindings",
+    gov.col("dbos_workflow_id", String(200), primary_key=True),
+    gov.col("application_version", String(64)),
+    gov.col("contract_version", Integer),
+    gov.col("operation_kind", String(48)),
+    gov.col("request_hash", String(64)),
+    gov.col("request_payload", gov.JSONB),
+    gov.col("business_command_key", gov.U, unique=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("cycle_id", gov.U),
+    gov.col("verdict_id", gov.U),
+    gov.col("run_id", gov.U, nullable=True),
+    gov.col("command_id", gov.U, nullable=True),
+    gov.col("result_id", gov.U, nullable=True),
+    gov.col("delivery_state", String(32)),
+    gov.col("cancellation_outcome", String(40), nullable=True),
+    gov.col("created_at", gov.T),
+    gov.col("updated_at", gov.T),
+    ForeignKeyConstraint(["cycle_id", "experiment_id"], ["record_cycles.id", "record_cycles.experiment_id"]),
+    ForeignKeyConstraint(["verdict_id", "experiment_id"], ["record_verdicts.id", "record_verdicts.experiment_id"]),
+    ForeignKeyConstraint(["run_id", "experiment_id"], ["record_offer_design_runs.id", "record_offer_design_runs.experiment_id"]),
+    ForeignKeyConstraint(["command_id"], ["record_commands.id"]),
+    CheckConstraint(
+        "contract_version=1 AND operation_kind IN ('START','DECISION','IDEA_REFINEMENT_RETURN') "
+        "AND request_hash ~ '^[0-9a-f]{64}$'"
+    ),
+)
+
 OFFER_TABLES = (
     offer_bundles,
     offer_bundle_inputs,
@@ -521,6 +630,9 @@ OFFER_TABLES = (
     initial_outreach_policies,
     offer_acceptances,
     offer_gap_briefs,
+    offer_design_runs,
+    offer_design_decisions,
+    offer_design_workflow_bindings,
 )
 
 for offer_table in OFFER_TABLES:

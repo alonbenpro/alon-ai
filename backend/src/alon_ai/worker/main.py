@@ -16,6 +16,10 @@ from alon_ai.workflows.market_research import (
     recover_market_research_decision_workflows,
     recover_market_research_workflows,
 )
+from alon_ai.workflows.offer_design import (
+    assert_offer_design_compatible_application_version,
+    recover_offer_design_workflows,
+)
 
 DBOS_EXECUTOR_ID = "alon-ai-worker"
 
@@ -46,6 +50,9 @@ async def run_worker(settings: Settings) -> None:
     engine = create_engine(settings)
     try:
         await assert_compatible_application_version(engine, DBOS_APPLICATION_VERSION)
+        await assert_offer_design_compatible_application_version(
+            engine, DBOS_APPLICATION_VERSION
+        )
         configure_dbos(settings, executor_id=DBOS_EXECUTOR_ID)
         DBOS.launch()
         try:
@@ -53,6 +60,7 @@ async def run_worker(settings: Settings) -> None:
             await recover_market_research_decision_workflows(
                 engine, DBOS_APPLICATION_VERSION
             )
+            await recover_offer_design_workflows(engine, DBOS_APPLICATION_VERSION)
             startup_event = build_worker_startup_event(settings)
             structlog.get_logger().info(
                 cast(str, startup_event["event"]),

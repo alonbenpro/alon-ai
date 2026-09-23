@@ -7,9 +7,10 @@ from datetime import UTC, datetime
 from decimal import ROUND_CEILING, Decimal
 from uuid import UUID, uuid4
 
-from sqlalchemy import func, insert, select
+from sqlalchemy import func, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncConnection, AsyncEngine
 
+from alon_ai.accounting import schema as gov
 from alon_ai.accounting.repository import lock_experiment
 from alon_ai.records import offer_schema as s
 from alon_ai.records import schema as records
@@ -31,15 +32,102 @@ from alon_ai.records.offer_models import (
     InputBundleReceipt,
     OfferAcceptanceReceipt,
     OfferAcceptanceRequest,
+    OfferDesignDecisionReceipt,
+    OfferDesignDecisionRequest,
+    OfferDesignStartReceipt,
+    OfferDesignStartRequest,
     OfferGapRequest,
+    OfferIdeaRefinementReturnReceipt,
+    OfferIdeaRefinementReturnRequest,
     OfferProposalReceipt,
+    OfferTargetedResearchReturnReceipt,
+    OfferTargetedResearchReturnRequest,
 )
 from alon_ai.records.repository import (
     _complete,
     _existing,
     _request_hash,
+    _supplied_budget_block_reason,
     safe_records,
 )
+
+
+async def _require_active_offer_design_workflow(
+    connection: AsyncConnection,
+    *,
+    workflow_id: str | None,
+    command_key: UUID,
+    request_hash: str,
+) -> None:
+    """Make DBOS cancellation and a business command share one lock boundary."""
+    if workflow_id is None:
+        return
+    binding = (
+        (
+            await connection.execute(
+                select(s.offer_design_workflow_bindings)
+                .where(
+                    s.offer_design_workflow_bindings.c.dbos_workflow_id == workflow_id,
+                    s.offer_design_workflow_bindings.c.business_command_key
+                    == command_key,
+                    s.offer_design_workflow_bindings.c.request_hash == request_hash,
+                )
+                .with_for_update()
+            )
+        )
+        .mappings()
+        .one_or_none()
+    )
+    if binding is None or binding["delivery_state"] not in {
+        "STARTED",
+        "BUSINESS_COMMITTED",
+        "RECEIPT_DELIVERED",
+        "RUNTIME_COMPLETED",
+    }:
+        raise ProductRecordsDenied("WORKFLOW_NOT_EXECUTABLE")
+
+
+async def _exact_offer_validation_lineage(
+    connection: AsyncConnection,
+    *,
+    validation_id: UUID,
+    proposal_artifact_id: UUID,
+    package_artifact_id: UUID,
+    profile_artifact_id: UUID,
+    policy_artifact_id: UUID,
+) -> bool:
+    expected = {
+        "OFFER_DESIGN_PROPOSAL": proposal_artifact_id,
+        "OFFER_PACKAGE": package_artifact_id,
+        "OFFER_QUALIFICATION_PROFILE": profile_artifact_id,
+        "INITIAL_OUTREACH_POLICY": policy_artifact_id,
+    }
+    links = set(
+        (
+            await connection.execute(
+                select(
+                    records.artifact_links.c.role, records.artifact_links.c.producer_id
+                ).where(
+                    records.artifact_links.c.consumer_id == validation_id,
+                    records.artifact_links.c.role.in_(expected),
+                )
+            )
+        ).all()
+    )
+    if links != set(expected.items()):
+        return False
+    for role in expected:
+        count = await connection.scalar(
+            select(func.count())
+            .select_from(records.artifact_links)
+            .where(
+                records.artifact_links.c.consumer_id == validation_id,
+                records.artifact_links.c.role == role,
+            )
+        )
+        if count != 1:
+            return False
+    return True
 
 
 async def _exact_artifact(connection: AsyncConnection, value: ArtifactInput):
@@ -59,6 +147,18 @@ async def _exact_artifact(connection: AsyncConnection, value: ArtifactInput):
     )
     if row is None:
         raise ProductRecordsDenied("EXACT_ARTIFACT")
+    if await connection.scalar(
+        select(records.artifacts.c.id).where(
+            records.artifacts.c.logical_id == row["logical_id"],
+            records.artifacts.c.version > row["version"],
+        )
+    ) or await connection.scalar(
+        select(records.artifact_dispositions.c.id).where(
+            records.artifact_dispositions.c.artifact_id == row["id"],
+            records.artifact_dispositions.c.disposition == "SUPERSEDED",
+        )
+    ):
+        raise ProductRecordsDenied("STALE_INPUT")
     return row
 
 
@@ -75,6 +175,1290 @@ class OfferRecordsRepository:
     ) -> None:
         self.engine = engine
         self.clock = clock
+
+    async def start_offer_design(
+        self,
+        request: OfferDesignStartRequest,
+        *,
+        command_key: UUID,
+        workflow_id: str | None = None,
+    ) -> OfferDesignStartReceipt:
+        """Begin one pinned Offer Design run after a committed proceed verdict."""
+        async with self.engine.begin() as connection:
+            bundle_artifact = (
+                (
+                    await connection.execute(
+                        select(records.artifacts).where(
+                            records.artifacts.c.id == request.input_bundle.artifact_id,
+                            records.artifacts.c.kind == request.input_bundle.kind,
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if bundle_artifact is None:
+                raise ProductRecordsDenied("EXACT_ARTIFACT")
+            await lock_experiment(connection, bundle_artifact["experiment_id"])
+            request_hash = _request_hash(request=request)
+            await _require_active_offer_design_workflow(
+                connection,
+                workflow_id=workflow_id,
+                command_key=command_key,
+                request_hash=request_hash,
+            )
+            old = await _existing(
+                connection, command_key, "START_OFFER_DESIGN", request_hash
+            )
+            if old:
+                run = (
+                    (
+                        await connection.execute(
+                            select(s.offer_design_runs).where(
+                                s.offer_design_runs.c.id == old["result_id"]
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                transition = await connection.scalar(
+                    select(records.cycle_transitions.c.id).where(
+                        records.cycle_transitions.c.offer_design_run_id == run["id"],
+                        records.cycle_transitions.c.command_id == old["id"],
+                    )
+                )
+                if transition is None:
+                    raise ProductRecordsDenied("OFFER_RUN_LINEAGE")
+                return OfferDesignStartReceipt(
+                    command_id=old["id"],
+                    result_id=run["id"],
+                    id=run["id"],
+                    cycle_id=run["cycle_id"],
+                    bundle_id=run["bundle_id"],
+                    envelope_id=run["envelope_id"],
+                    transition_id=transition,
+                )
+            bundle_artifact = await _exact_artifact(connection, request.input_bundle)
+            envelope_artifact = await _exact_artifact(connection, request.envelope)
+            scope_artifact = await _exact_artifact(connection, request.scope_estimate)
+            if request.input_bundle.kind is not ArtifactKind.OFFER_DESIGN_INPUT_BUNDLE:
+                raise ProductRecordsDenied("BUNDLE_KIND")
+            verdict = (
+                (
+                    await connection.execute(
+                        select(records.verdicts).where(
+                            records.verdicts.c.id == request.verdict_id,
+                            records.verdicts.c.experiment_id
+                            == bundle_artifact["experiment_id"],
+                            records.verdicts.c.verdict == "PROCEED_TO_OFFER",
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if verdict is None:
+                raise ProductRecordsDenied("PROCEED_REQUIRED")
+            state = (
+                (
+                    await connection.execute(
+                        select(records.cycle_states)
+                        .where(records.cycle_states.c.cycle_id == verdict["cycle_id"])
+                        .with_for_update()
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            if state["state"] != "PROCEED_TO_OFFER":
+                raise ProductRecordsDenied("STALE_PROCEED")
+            bundle = (
+                (
+                    await connection.execute(
+                        select(s.offer_bundles).where(
+                            s.offer_bundles.c.artifact_id
+                            == request.input_bundle.artifact_id,
+                            s.offer_bundles.c.verdict_id == request.verdict_id,
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            envelope = (
+                (
+                    await connection.execute(
+                        select(s.commercial_envelopes).where(
+                            s.commercial_envelopes.c.artifact_id
+                            == envelope_artifact["id"],
+                            s.commercial_envelopes.c.artifact_kind
+                            == request.envelope.kind,
+                            s.commercial_envelopes.c.artifact_version
+                            == request.envelope.version,
+                            s.commercial_envelopes.c.artifact_hash
+                            == request.envelope.content_hash,
+                            s.commercial_envelopes.c.bundle_id
+                            == (bundle["id"] if bundle else None),
+                            s.commercial_envelopes.c.status == "READY",
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            prompt = await _exact_artifact(connection, request.prompt_configuration)
+            report = (
+                (
+                    await connection.execute(
+                        select(records.artifacts).where(
+                            records.artifacts.c.id == verdict["report_artifact_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if (
+                bundle is None
+                or envelope is None
+                or report is None
+                or request.envelope.kind is not ArtifactKind.COMMERCIAL_DESIGN_ENVELOPE
+                or envelope_artifact["experiment_id"] != bundle["experiment_id"]
+                or request.scope_estimate.artifact_id != envelope["scope_artifact_id"]
+                or scope_artifact["experiment_id"] != bundle["experiment_id"]
+                or prompt["experiment_id"] != bundle["experiment_id"]
+                or request.prompt_configuration.kind
+                is not ArtifactKind.OUTREACH_PROMPT_CONFIGURATION
+                or not await connection.scalar(
+                    select(records.artifacts.c.id).where(
+                        records.artifacts.c.id == request.scope_estimate.artifact_id,
+                        records.artifacts.c.kind
+                        == ArtifactKind.DELIVERY_SCOPE_ESTIMATE,
+                        records.artifacts.c.experiment_id == bundle["experiment_id"],
+                        records.artifacts.c.content_hash
+                        == request.scope_estimate.content_hash,
+                    )
+                )
+                or await connection.scalar(
+                    select(records.artifacts.c.id).where(
+                        records.artifacts.c.logical_id == report["logical_id"],
+                        records.artifacts.c.version > report["version"],
+                    )
+                )
+                or await connection.scalar(
+                    select(records.artifact_dispositions.c.id).where(
+                        records.artifact_dispositions.c.artifact_id == report["id"],
+                        records.artifact_dispositions.c.disposition == "SUPERSEDED",
+                    )
+                )
+                or not await connection.scalar(
+                    select(records.experiments.c.id).where(
+                        records.experiments.c.id == bundle["experiment_id"]
+                    )
+                )
+                or not await connection.scalar(
+                    select(records.operator_profiles.c.id).where(
+                        records.operator_profiles.c.operator_id == request.started_by
+                    )
+                )
+                or not await connection.scalar(
+                    select(records.artifacts.c.id).where(
+                        records.artifacts.c.id == request.input_bundle.artifact_id,
+                        records.artifacts.c.experiment_id == bundle["experiment_id"],
+                    )
+                )
+                or not await connection.scalar(
+                    select(records.artifacts.c.id).where(
+                        records.artifacts.c.id == request.envelope.artifact_id,
+                        records.artifacts.c.experiment_id == bundle["experiment_id"],
+                    )
+                )
+                or not await connection.scalar(
+                    select(records.artifacts.c.id).where(
+                        records.artifacts.c.id
+                        == request.prompt_configuration.artifact_id,
+                        records.artifacts.c.version
+                        == request.prompt_configuration.version,
+                        records.artifacts.c.content_hash
+                        == request.prompt_configuration.content_hash,
+                    )
+                )
+            ):
+                raise ProductRecordsDenied("STALE_OFFER_INPUT")
+            config = await connection.scalar(
+                select(gov.configs.c.id).where(
+                    gov.configs.c.id == request.model_config_id,
+                    gov.configs.c.workflow_id == request.model_config_workflow_id,
+                    gov.configs.c.version == request.model_config_version,
+                )
+            )
+            if config is None:
+                raise ProductRecordsDenied("STALE_MODEL_CONFIG")
+            acceptance = (
+                (
+                    await connection.execute(
+                        select(records.idea_acceptances).where(
+                            records.idea_acceptances.c.cycle_id == verdict["cycle_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            run_id, transition_id = uuid4(), uuid4()
+            now = self.clock()
+            await connection.execute(
+                insert(s.offer_design_runs).values(
+                    id=run_id,
+                    experiment_id=bundle["experiment_id"],
+                    cycle_id=verdict["cycle_id"],
+                    verdict_id=verdict["id"],
+                    bundle_id=bundle["id"],
+                    envelope_id=envelope["id"],
+                    prompt_artifact_id=request.prompt_configuration.artifact_id,
+                    prompt_version=request.prompt_configuration.version,
+                    prompt_hash=request.prompt_configuration.content_hash,
+                    model_config_id=request.model_config_id,
+                    model_config_workflow_id=request.model_config_workflow_id,
+                    model_config_version=request.model_config_version,
+                    started_by=request.started_by,
+                    created_at=now,
+                )
+            )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=bundle["experiment_id"],
+                kind="START_OFFER_DESIGN",
+                request_hash=request_hash,
+                result_type="OFFER_DESIGN_RUN",
+                result_id=run_id,
+                now=now,
+            )
+            await connection.execute(
+                insert(records.cycle_transitions).values(
+                    id=transition_id,
+                    experiment_id=bundle["experiment_id"],
+                    cycle_id=verdict["cycle_id"],
+                    ordinal=state["transition_ordinal"] + 1,
+                    from_state="PROCEED_TO_OFFER",
+                    to_state="OFFER_DESIGN",
+                    idea_acceptance_id=acceptance["id"],
+                    idea_artifact_id=acceptance["artifact_id"],
+                    idea_kind=acceptance["artifact_kind"],
+                    idea_version=acceptance["artifact_version"],
+                    idea_hash=acceptance["artifact_hash"],
+                    research_attempt_id=verdict["attempt_id"],
+                    verdict_id=verdict["id"],
+                    offer_design_run_id=run_id,
+                    offer_design_decision_id=None,
+                    command_id=command_id,
+                    created_at=now,
+                )
+            )
+            advanced = await connection.execute(
+                update(records.cycle_states)
+                .where(
+                    records.cycle_states.c.cycle_id == verdict["cycle_id"],
+                    records.cycle_states.c.state == "PROCEED_TO_OFFER",
+                    records.cycle_states.c.transition_ordinal
+                    == state["transition_ordinal"],
+                )
+                .values(
+                    state="OFFER_DESIGN",
+                    transition_ordinal=state["transition_ordinal"] + 1,
+                    last_transition_id=transition_id,
+                    updated_at=now,
+                )
+            )
+            if advanced.rowcount != 1:
+                raise ProductRecordsDenied("INVALID_STATE")
+            return OfferDesignStartReceipt(
+                command_id=command_id,
+                result_id=run_id,
+                id=run_id,
+                cycle_id=verdict["cycle_id"],
+                bundle_id=bundle["id"],
+                envelope_id=envelope["id"],
+                transition_id=transition_id,
+            )
+
+    @safe_records
+    async def decide_offer_design(
+        self,
+        request: OfferDesignDecisionRequest,
+        *,
+        command_key: UUID,
+        workflow_id: str | None = None,
+    ) -> OfferDesignDecisionReceipt:
+        """Persist one non-accepting terminal Offer Design decision."""
+        if request.outcome == "ACCEPT":
+            raise ProductRecordsDenied("ACCEPT_REQUIRES_PACKAGE")
+        if request.outcome == "TARGETED_RESEARCH_REQUIRED":
+            raise ProductRecordsDenied("TARGETED_RETURN_REQUIRES_PLAN")
+        async with self.engine.begin() as connection:
+            run = (
+                (
+                    await connection.execute(
+                        select(s.offer_design_runs).where(
+                            s.offer_design_runs.c.id == request.run_id
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            await lock_experiment(connection, run["experiment_id"])
+            request_hash = _request_hash(request=request)
+            await _require_active_offer_design_workflow(
+                connection,
+                workflow_id=workflow_id,
+                command_key=command_key,
+                request_hash=request_hash,
+            )
+            old = await _existing(
+                connection, command_key, "DECIDE_OFFER_DESIGN", request_hash
+            )
+            if old:
+                row = (
+                    (
+                        await connection.execute(
+                            select(s.offer_design_decisions).where(
+                                s.offer_design_decisions.c.id == old["result_id"]
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                transition_id = await connection.scalar(
+                    select(records.cycle_transitions.c.id).where(
+                        records.cycle_transitions.c.offer_design_decision_id
+                        == row["id"],
+                        records.cycle_transitions.c.command_id == old["id"],
+                    )
+                )
+                if transition_id is None:
+                    raise ProductRecordsDenied("OFFER_DECISION_LINEAGE")
+                return OfferDesignDecisionReceipt(
+                    command_id=old["id"],
+                    result_id=row["id"],
+                    id=row["id"],
+                    run_id=row["run_id"],
+                    outcome=row["outcome"],
+                    transition_id=transition_id,
+                )
+            state = (
+                (
+                    await connection.execute(
+                        select(records.cycle_states)
+                        .where(records.cycle_states.c.cycle_id == run["cycle_id"])
+                        .with_for_update()
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            if state["state"] != "OFFER_DESIGN":
+                raise ProductRecordsDenied("INVALID_STATE")
+            artifact = await _exact_artifact(connection, request.decision_artifact)
+            if artifact["experiment_id"] != run["experiment_id"]:
+                raise ProductRecordsDenied("DECISION_LINEAGE")
+            target = {
+                "IDEA_REFINEMENT_RECOMMENDED": "WAITING_FOR_OPERATOR_INPUT",
+                "WAITING_FOR_OPERATOR_INPUT": "WAITING_FOR_OPERATOR_INPUT",
+            }[request.outcome]
+            decision_id, transition_id = uuid4(), uuid4()
+            now = self.clock()
+            await connection.execute(
+                insert(s.offer_design_decisions).values(
+                    id=decision_id,
+                    experiment_id=run["experiment_id"],
+                    run_id=run["id"],
+                    artifact_id=request.decision_artifact.artifact_id,
+                    artifact_kind=request.decision_artifact.kind,
+                    artifact_version=request.decision_artifact.version,
+                    artifact_hash=request.decision_artifact.content_hash,
+                    outcome=request.outcome,
+                    operator_id=request.operator_id,
+                    created_at=now,
+                )
+            )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=run["experiment_id"],
+                kind="DECIDE_OFFER_DESIGN",
+                request_hash=request_hash,
+                result_type="OFFER_DESIGN_DECISION",
+                result_id=decision_id,
+                now=now,
+            )
+            acceptance = (
+                (
+                    await connection.execute(
+                        select(records.idea_acceptances).where(
+                            records.idea_acceptances.c.cycle_id == run["cycle_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            verdict = (
+                (
+                    await connection.execute(
+                        select(records.verdicts).where(
+                            records.verdicts.c.id == run["verdict_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            await connection.execute(
+                insert(records.cycle_transitions).values(
+                    id=transition_id,
+                    experiment_id=run["experiment_id"],
+                    cycle_id=run["cycle_id"],
+                    ordinal=state["transition_ordinal"] + 1,
+                    from_state="OFFER_DESIGN",
+                    to_state=target,
+                    idea_acceptance_id=acceptance["id"],
+                    idea_artifact_id=acceptance["artifact_id"],
+                    idea_kind=acceptance["artifact_kind"],
+                    idea_version=acceptance["artifact_version"],
+                    idea_hash=acceptance["artifact_hash"],
+                    research_attempt_id=verdict["attempt_id"],
+                    verdict_id=verdict["id"],
+                    offer_design_run_id=run["id"],
+                    offer_design_decision_id=decision_id,
+                    command_id=command_id,
+                    created_at=now,
+                )
+            )
+            advanced = await connection.execute(
+                update(records.cycle_states)
+                .where(
+                    records.cycle_states.c.cycle_id == run["cycle_id"],
+                    records.cycle_states.c.state == "OFFER_DESIGN",
+                    records.cycle_states.c.transition_ordinal
+                    == state["transition_ordinal"],
+                )
+                .values(
+                    state=target,
+                    transition_ordinal=state["transition_ordinal"] + 1,
+                    last_transition_id=transition_id,
+                    updated_at=now,
+                )
+            )
+            if advanced.rowcount != 1:
+                raise ProductRecordsDenied("INVALID_STATE")
+            return OfferDesignDecisionReceipt(
+                command_id=command_id,
+                result_id=decision_id,
+                id=decision_id,
+                run_id=run["id"],
+                outcome=request.outcome,
+                transition_id=transition_id,
+            )
+
+    @safe_records
+    async def return_for_targeted_research(
+        self,
+        request: OfferTargetedResearchReturnRequest,
+        *,
+        command_key: UUID,
+        workflow_id: str | None = None,
+    ) -> OfferTargetedResearchReturnReceipt:
+        """Atomically return one unaccepted Offer Design run to scoped research."""
+        async with self.engine.begin() as connection:
+            run = (
+                (
+                    await connection.execute(
+                        select(s.offer_design_runs).where(
+                            s.offer_design_runs.c.id == request.run_id
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            await lock_experiment(connection, run["experiment_id"])
+            request_hash = _request_hash(request=request)
+            await _require_active_offer_design_workflow(
+                connection,
+                workflow_id=workflow_id,
+                command_key=command_key,
+                request_hash=request_hash,
+            )
+            old = await _existing(
+                connection, command_key, "RETURN_FOR_TARGETED_RESEARCH", request_hash
+            )
+            if old:
+                decision = (
+                    (
+                        await connection.execute(
+                            select(s.offer_design_decisions).where(
+                                s.offer_design_decisions.c.id == old["result_id"],
+                                s.offer_design_decisions.c.run_id == run["id"],
+                                s.offer_design_decisions.c.outcome
+                                == "TARGETED_RESEARCH_REQUIRED",
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                gap_id = await connection.scalar(
+                    select(s.offer_gap_briefs.c.id).where(
+                        s.offer_gap_briefs.c.proposal_id == request.proposal_id,
+                        s.offer_gap_briefs.c.bundle_id == run["bundle_id"],
+                        s.offer_gap_briefs.c.artifact_id
+                        == request.gap.artifact.artifact_id,
+                        s.offer_gap_briefs.c.artifact_version
+                        == request.gap.artifact.version,
+                        s.offer_gap_briefs.c.artifact_hash
+                        == request.gap.artifact.content_hash,
+                    )
+                )
+                returned = (
+                    (
+                        await connection.execute(
+                            select(records.returns).where(
+                                records.returns.c.experiment_id == run["experiment_id"],
+                                records.returns.c.from_cycle_id == run["cycle_id"],
+                                records.returns.c.verdict_id == run["verdict_id"],
+                                records.returns.c.kind == "OFFER_GAP",
+                                records.returns.c.feedback_artifact_id
+                                == request.gap.artifact.artifact_id,
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if decision is None or gap_id is None or returned is None:
+                    raise ProductRecordsDenied("TARGETED_RETURN_LINEAGE")
+                child = returned["to_cycle_id"]
+                parent_transition = await connection.scalar(
+                    select(records.cycle_transitions.c.id).where(
+                        records.cycle_transitions.c.command_id == old["id"],
+                        records.cycle_transitions.c.cycle_id == run["cycle_id"],
+                        records.cycle_transitions.c.from_state == "OFFER_DESIGN",
+                        records.cycle_transitions.c.to_state
+                        == "RETURN_FOR_TARGETED_RESEARCH",
+                        records.cycle_transitions.c.offer_design_run_id == run["id"],
+                        records.cycle_transitions.c.offer_design_decision_id
+                        == decision["id"],
+                        records.cycle_transitions.c.verdict_id == run["verdict_id"],
+                    )
+                )
+                child_transition = (
+                    (
+                        await connection.execute(
+                            select(records.cycle_transitions).where(
+                                records.cycle_transitions.c.command_id == old["id"],
+                                records.cycle_transitions.c.cycle_id == child,
+                                records.cycle_transitions.c.from_state
+                                == "IDEA_REFINEMENT",
+                                records.cycle_transitions.c.to_state
+                                == "MARKET_RESEARCH",
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if parent_transition is None or child_transition is None:
+                    raise ProductRecordsDenied("TARGETED_RETURN_LINEAGE")
+                attempt = child_transition["research_attempt_id"]
+                if not await connection.scalar(
+                    select(records.research_attempts.c.id).where(
+                        records.research_attempts.c.id == attempt,
+                        records.research_attempts.c.cycle_id == child,
+                        records.research_attempts.c.ordinal == 1,
+                    )
+                ):
+                    raise ProductRecordsDenied("TARGETED_RETURN_LINEAGE")
+                return OfferTargetedResearchReturnReceipt(
+                    command_id=old["id"],
+                    result_id=decision["id"],
+                    id=decision["id"],
+                    run_id=run["id"],
+                    decision_id=decision["id"],
+                    child_cycle_id=child,
+                    research_attempt_id=attempt,
+                    parent_transition_id=parent_transition,
+                    child_transition_id=child_transition["id"],
+                )
+            existing_acceptance = (
+                (
+                    await connection.execute(
+                        select(records.idea_acceptances).where(
+                            records.idea_acceptances.c.cycle_id == run["cycle_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            if await connection.scalar(
+                select(records.returns.c.id).where(
+                    records.returns.c.experiment_id == run["experiment_id"],
+                    records.returns.c.kind == "OFFER_GAP",
+                    records.returns.c.applicable_scope_id
+                    == existing_acceptance["artifact_id"],
+                )
+            ):
+                raise ProductRecordsDenied("OFFER_TARGETED_RETURN_LIMIT")
+            state = (
+                (
+                    await connection.execute(
+                        select(records.cycle_states)
+                        .where(records.cycle_states.c.cycle_id == run["cycle_id"])
+                        .with_for_update()
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            if state["state"] != "OFFER_DESIGN":
+                raise ProductRecordsDenied("INVALID_STATE")
+            if request.gap.proposal_id != request.proposal_id:
+                raise ProductRecordsDenied("GAP_PROPOSAL_MISMATCH")
+            named_fields = set(request.gap.missing_fields) | set(
+                request.gap.contradictory_fields
+            )
+            if not named_fields.issubset(PROTECTED_OFFER_FIELDS):
+                raise ProductRecordsDenied("UNNAMED_OFFER_GAP")
+            proposal = (
+                (
+                    await connection.execute(
+                        select(s.offer_proposals).where(
+                            s.offer_proposals.c.id == request.proposal_id,
+                            s.offer_proposals.c.offer_design_run_id == run["id"],
+                            s.offer_proposals.c.experiment_id == run["experiment_id"],
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if proposal is None or await connection.scalar(
+                select(s.offer_packages.c.id).where(
+                    s.offer_packages.c.proposal_id == request.proposal_id
+                )
+            ):
+                raise ProductRecordsDenied("UNACCEPTED_PROPOSAL_REQUIRED")
+            if await connection.scalar(
+                select(s.offer_proposal_invalidations.c.proposal_id).where(
+                    s.offer_proposal_invalidations.c.proposal_id == request.proposal_id
+                )
+            ):
+                raise ProductRecordsDenied("PROPOSAL_INVALIDATED")
+            bundle = (
+                (
+                    await connection.execute(
+                        select(s.offer_bundles).where(
+                            s.offer_bundles.c.id == proposal["bundle_id"],
+                            s.offer_bundles.c.experiment_id == run["experiment_id"],
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if bundle is None:
+                raise ProductRecordsDenied("TARGETED_RETURN_LINEAGE")
+            gap = await _exact_artifact(connection, request.gap.artifact)
+            plan = await _exact_artifact(connection, request.plan)
+            decision_artifact = await _exact_artifact(
+                connection, request.decision_artifact
+            )
+            if (
+                request.gap.artifact.kind is not ArtifactKind.OFFER_RESEARCH_GAP_BRIEF
+                or request.plan.kind is not ArtifactKind.RESEARCH_PLAN
+                or gap["experiment_id"] != run["experiment_id"]
+                or plan["experiment_id"] != run["experiment_id"]
+                or decision_artifact["experiment_id"] != run["experiment_id"]
+                or plan["workflow_id"] != request.budget.workflow_id
+            ):
+                raise ProductRecordsDenied("TARGETED_RETURN_LINEAGE")
+            if not await connection.scalar(
+                select(records.artifact_dispositions.c.id).where(
+                    records.artifact_dispositions.c.artifact_id == gap["id"],
+                    records.artifact_dispositions.c.disposition == "ACCEPTED",
+                )
+            ):
+                raise ProductRecordsDenied("UNACCEPTED_OFFER_GAP")
+            acceptance = (
+                (
+                    await connection.execute(
+                        select(records.idea_acceptances).where(
+                            records.idea_acceptances.c.cycle_id == run["cycle_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            plan_links = set(
+                (
+                    await connection.execute(
+                        select(
+                            records.artifact_links.c.role,
+                            records.artifact_links.c.producer_id,
+                        ).where(
+                            records.artifact_links.c.consumer_id
+                            == request.plan.artifact_id
+                        )
+                    )
+                ).all()
+            )
+            if ("ACCEPTED_IDEA", acceptance["artifact_id"]) not in plan_links or (
+                "RETURN_FEEDBACK",
+                gap["id"],
+            ) not in plan_links:
+                raise ProductRecordsDenied("TARGETED_PLAN_LINEAGE")
+            now = self.clock()
+            block_reason = await _supplied_budget_block_reason(
+                connection, run["experiment_id"], request.budget, now
+            )
+            if block_reason is not None:
+                raise ProductRecordsDenied(block_reason)
+            parent = (
+                (
+                    await connection.execute(
+                        select(records.cycles).where(
+                            records.cycles.c.id == run["cycle_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            verdict = (
+                (
+                    await connection.execute(
+                        select(records.verdicts).where(
+                            records.verdicts.c.id == run["verdict_id"],
+                            records.verdicts.c.verdict == "PROCEED_TO_OFFER",
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if verdict is None:
+                raise ProductRecordsDenied("STALE_PROCEED")
+            decision_id, gap_id = uuid4(), uuid4()
+            child_cycle_id, return_id, child_acceptance_id = uuid4(), uuid4(), uuid4()
+            attempt_id, parent_transition_id, child_transition_id = (
+                uuid4(),
+                uuid4(),
+                uuid4(),
+            )
+            await connection.execute(
+                insert(s.offer_design_decisions).values(
+                    id=decision_id,
+                    experiment_id=run["experiment_id"],
+                    run_id=run["id"],
+                    artifact_id=request.decision_artifact.artifact_id,
+                    artifact_kind=request.decision_artifact.kind,
+                    artifact_version=request.decision_artifact.version,
+                    artifact_hash=request.decision_artifact.content_hash,
+                    outcome="TARGETED_RESEARCH_REQUIRED",
+                    operator_id=request.operator_id,
+                    created_at=now,
+                )
+            )
+            await connection.execute(
+                insert(s.offer_gap_briefs).values(
+                    id=gap_id,
+                    experiment_id=run["experiment_id"],
+                    artifact_id=request.gap.artifact.artifact_id,
+                    artifact_kind=request.gap.artifact.kind,
+                    artifact_version=request.gap.artifact.version,
+                    artifact_hash=request.gap.artifact.content_hash,
+                    proposal_id=proposal["id"],
+                    bundle_id=proposal["bundle_id"],
+                    missing_fields=list(request.gap.missing_fields),
+                    contradictory_fields=list(request.gap.contradictory_fields),
+                    required_source_types=list(request.gap.required_source_types),
+                    targeted_questions=list(request.gap.targeted_questions),
+                    created_at=now,
+                )
+            )
+            await connection.execute(
+                insert(s.offer_proposal_invalidations).values(
+                    proposal_id=proposal["id"],
+                    experiment_id=run["experiment_id"],
+                    superseding_bundle_id=None,
+                    offer_gap_brief_id=gap_id,
+                    reason="OFFER_GAP_RETURN",
+                    created_at=now,
+                )
+            )
+            ordinal = (
+                await connection.scalar(
+                    select(func.count())
+                    .select_from(records.cycles)
+                    .where(records.cycles.c.experiment_id == run["experiment_id"])
+                )
+                or 0
+            ) + 1
+            await connection.execute(
+                insert(records.cycles).values(
+                    id=child_cycle_id,
+                    experiment_id=run["experiment_id"],
+                    ordinal=ordinal,
+                    parent_cycle_id=parent["id"],
+                    idea_mode=parent["idea_mode"],
+                    selection_id=parent["selection_id"],
+                    purpose="OFFER_GAP_RETURN",
+                    episode_id=parent["episode_id"],
+                    seed_artifact_id=parent["seed_artifact_id"],
+                    seed_kind=parent["seed_kind"],
+                    seed_version=parent["seed_version"],
+                    seed_hash=parent["seed_hash"],
+                    created_at=now,
+                )
+            )
+            await connection.execute(
+                insert(records.returns).values(
+                    id=return_id,
+                    experiment_id=run["experiment_id"],
+                    from_cycle_id=parent["id"],
+                    verdict_id=verdict["id"],
+                    to_cycle_id=child_cycle_id,
+                    ordinal=1,
+                    kind="OFFER_GAP",
+                    applicable_scope_id=acceptance["artifact_id"],
+                    idea_artifact_id=acceptance["artifact_id"],
+                    offer_input_bundle_id=bundle["artifact_id"],
+                    feedback_artifact_id=request.gap.artifact.artifact_id,
+                    feedback_kind=request.gap.artifact.kind,
+                    feedback_version=request.gap.artifact.version,
+                    feedback_hash=request.gap.artifact.content_hash,
+                    created_at=now,
+                )
+            )
+            await connection.execute(
+                insert(records.idea_acceptances).values(
+                    id=child_acceptance_id,
+                    experiment_id=run["experiment_id"],
+                    cycle_id=child_cycle_id,
+                    artifact_id=acceptance["artifact_id"],
+                    artifact_kind=acceptance["artifact_kind"],
+                    artifact_version=acceptance["artifact_version"],
+                    artifact_hash=acceptance["artifact_hash"],
+                    pivot_approval_id=None,
+                    accepted_by=request.accepted_by,
+                    accepted_at=now,
+                )
+            )
+            await connection.execute(
+                insert(records.research_cycle_budgets).values(
+                    cycle_id=child_cycle_id,
+                    experiment_id=run["experiment_id"],
+                    **request.budget.model_dump(exclude={"schema_version"}),
+                    created_at=now,
+                )
+            )
+            await connection.execute(
+                insert(records.research_attempts).values(
+                    id=attempt_id,
+                    experiment_id=run["experiment_id"],
+                    cycle_id=child_cycle_id,
+                    ordinal=1,
+                    plan_artifact_id=request.plan.artifact_id,
+                    plan_kind=request.plan.kind,
+                    plan_version=request.plan.version,
+                    plan_hash=request.plan.content_hash,
+                    created_at=now,
+                )
+            )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=run["experiment_id"],
+                kind="RETURN_FOR_TARGETED_RESEARCH",
+                request_hash=request_hash,
+                result_type="OFFER_DESIGN_DECISION",
+                result_id=decision_id,
+                now=now,
+            )
+            for (
+                transition_id,
+                cycle_id,
+                ordinal_value,
+                from_state,
+                to_state,
+                idea_id,
+                attempt,
+            ) in (
+                (
+                    parent_transition_id,
+                    parent["id"],
+                    state["transition_ordinal"] + 1,
+                    "OFFER_DESIGN",
+                    "RETURN_FOR_TARGETED_RESEARCH",
+                    acceptance["id"],
+                    verdict["attempt_id"],
+                ),
+                (
+                    child_transition_id,
+                    child_cycle_id,
+                    1,
+                    "IDEA_REFINEMENT",
+                    "MARKET_RESEARCH",
+                    child_acceptance_id,
+                    attempt_id,
+                ),
+            ):
+                await connection.execute(
+                    insert(records.cycle_transitions).values(
+                        id=transition_id,
+                        experiment_id=run["experiment_id"],
+                        cycle_id=cycle_id,
+                        ordinal=ordinal_value,
+                        from_state=from_state,
+                        to_state=to_state,
+                        idea_acceptance_id=idea_id,
+                        idea_artifact_id=acceptance["artifact_id"],
+                        idea_kind=acceptance["artifact_kind"],
+                        idea_version=acceptance["artifact_version"],
+                        idea_hash=acceptance["artifact_hash"],
+                        research_attempt_id=attempt,
+                        verdict_id=verdict["id"] if cycle_id == parent["id"] else None,
+                        offer_design_run_id=run["id"]
+                        if cycle_id == parent["id"]
+                        else None,
+                        offer_design_decision_id=decision_id
+                        if cycle_id == parent["id"]
+                        else None,
+                        command_id=command_id,
+                        created_at=now,
+                    )
+                )
+            parent_updated = await connection.execute(
+                update(records.cycle_states)
+                .where(
+                    records.cycle_states.c.cycle_id == parent["id"],
+                    records.cycle_states.c.state == "OFFER_DESIGN",
+                    records.cycle_states.c.transition_ordinal
+                    == state["transition_ordinal"],
+                )
+                .values(
+                    state="RETURN_FOR_TARGETED_RESEARCH",
+                    transition_ordinal=state["transition_ordinal"] + 1,
+                    last_transition_id=parent_transition_id,
+                    updated_at=now,
+                )
+            )
+            if parent_updated.rowcount != 1:
+                raise ProductRecordsDenied("INVALID_STATE")
+            child_updated = await connection.execute(
+                update(records.cycle_states)
+                .where(
+                    records.cycle_states.c.cycle_id == child_cycle_id,
+                    records.cycle_states.c.state == "IDEA_REFINEMENT",
+                )
+                .values(
+                    state="MARKET_RESEARCH",
+                    transition_ordinal=1,
+                    last_transition_id=child_transition_id,
+                    updated_at=now,
+                )
+            )
+            if child_updated.rowcount != 1:
+                raise ProductRecordsDenied("INVALID_STATE")
+            return OfferTargetedResearchReturnReceipt(
+                command_id=command_id,
+                result_id=decision_id,
+                id=decision_id,
+                run_id=run["id"],
+                decision_id=decision_id,
+                child_cycle_id=child_cycle_id,
+                research_attempt_id=attempt_id,
+                parent_transition_id=parent_transition_id,
+                child_transition_id=child_transition_id,
+            )
+
+    @safe_records
+    async def confirm_offer_idea_refinement(
+        self,
+        request: OfferIdeaRefinementReturnRequest,
+        *,
+        command_key: UUID,
+        workflow_id: str | None = None,
+    ) -> OfferIdeaRefinementReturnReceipt:
+        """Create an operator-confirmed next IdeaBrief; never infer one."""
+        async with self.engine.begin() as connection:
+            run = (
+                (
+                    await connection.execute(
+                        select(s.offer_design_runs).where(
+                            s.offer_design_runs.c.id == request.run_id
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            await lock_experiment(connection, run["experiment_id"])
+            request_hash = _request_hash(request=request)
+            await _require_active_offer_design_workflow(
+                connection,
+                workflow_id=workflow_id,
+                command_key=command_key,
+                request_hash=request_hash,
+            )
+            old = await _existing(
+                connection, command_key, "CONFIRM_OFFER_IDEA_REFINEMENT", request_hash
+            )
+            if old:
+                transition_id = await connection.scalar(
+                    select(records.cycle_transitions.c.id).where(
+                        records.cycle_transitions.c.command_id == old["id"],
+                        records.cycle_transitions.c.cycle_id == run["cycle_id"],
+                        records.cycle_transitions.c.from_state
+                        == "WAITING_FOR_OPERATOR_INPUT",
+                        records.cycle_transitions.c.to_state
+                        == "RETURN_FOR_IDEA_REFINEMENT",
+                        records.cycle_transitions.c.offer_design_run_id == run["id"],
+                        records.cycle_transitions.c.offer_design_decision_id
+                        == request.decision_id,
+                    )
+                )
+                child_cycle_id = await connection.scalar(
+                    select(records.cycles.c.id)
+                    .join(
+                        records.idea_acceptances,
+                        records.idea_acceptances.c.cycle_id == records.cycles.c.id,
+                    )
+                    .where(
+                        records.cycles.c.experiment_id == run["experiment_id"],
+                        records.cycles.c.parent_cycle_id == run["cycle_id"],
+                        records.cycles.c.purpose == "SAME_INTENT_RETURN",
+                        records.idea_acceptances.c.artifact_id
+                        == request.proposed_idea.artifact_id,
+                        records.idea_acceptances.c.artifact_version
+                        == request.proposed_idea.version,
+                        records.idea_acceptances.c.artifact_hash
+                        == request.proposed_idea.content_hash,
+                    )
+                )
+                if child_cycle_id is None or transition_id is None:
+                    raise ProductRecordsDenied("IDEA_REFINEMENT_LINEAGE")
+                return OfferIdeaRefinementReturnReceipt(
+                    command_id=old["id"],
+                    result_id=request.decision_id,
+                    id=request.decision_id,
+                    run_id=run["id"],
+                    decision_id=request.decision_id,
+                    child_cycle_id=child_cycle_id,
+                    transition_id=transition_id,
+                )
+            state = (
+                (
+                    await connection.execute(
+                        select(records.cycle_states)
+                        .where(records.cycle_states.c.cycle_id == run["cycle_id"])
+                        .with_for_update()
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            decision = (
+                (
+                    await connection.execute(
+                        select(s.offer_design_decisions).where(
+                            s.offer_design_decisions.c.id == request.decision_id,
+                            s.offer_design_decisions.c.run_id == run["id"],
+                            s.offer_design_decisions.c.outcome
+                            == "IDEA_REFINEMENT_RECOMMENDED",
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if decision is None or state["state"] != "WAITING_FOR_OPERATOR_INPUT":
+                raise ProductRecordsDenied("OPERATOR_CONFIRMATION_REQUIRED")
+            evidence = await _exact_artifact(
+                connection, request.commercial_failure_evidence
+            )
+            proposed = await _exact_artifact(connection, request.proposed_idea)
+            acceptance = (
+                (
+                    await connection.execute(
+                        select(records.idea_acceptances).where(
+                            records.idea_acceptances.c.cycle_id == run["cycle_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            current_idea = (
+                (
+                    await connection.execute(
+                        select(records.artifacts).where(
+                            records.artifacts.c.id == acceptance["artifact_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            if (
+                evidence["id"] != decision["artifact_id"]
+                or proposed["experiment_id"] != run["experiment_id"]
+                or request.proposed_idea.kind is not ArtifactKind.IDEA_BRIEF
+                or proposed["logical_id"] != current_idea["logical_id"]
+                or proposed["version"] != current_idea["version"] + 1
+                or proposed["payload"].get("core_intent")
+                != current_idea["payload"].get("core_intent")
+                or proposed["payload"].get("material_pivot") is not False
+            ):
+                raise ProductRecordsDenied("INVALID_PROPOSED_IDEA_LINEAGE")
+            if not await connection.scalar(
+                select(records.artifact_dispositions.c.id).where(
+                    records.artifact_dispositions.c.artifact_id == proposed["id"],
+                    records.artifact_dispositions.c.disposition.in_(
+                        ("VALIDATED", "ACCEPTED")
+                    ),
+                )
+            ):
+                raise ProductRecordsDenied("UNVALIDATED_PROPOSED_IDEA")
+            parent = (
+                (
+                    await connection.execute(
+                        select(records.cycles).where(
+                            records.cycles.c.id == run["cycle_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            verdict = (
+                (
+                    await connection.execute(
+                        select(records.verdicts).where(
+                            records.verdicts.c.id == run["verdict_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            now = self.clock()
+            child_cycle_id, child_acceptance_id, transition_id = (
+                uuid4(),
+                uuid4(),
+                uuid4(),
+            )
+            cycle_ordinal = (
+                await connection.scalar(
+                    select(func.count())
+                    .select_from(records.cycles)
+                    .where(records.cycles.c.experiment_id == run["experiment_id"])
+                )
+                or 0
+            ) + 1
+            await connection.execute(
+                insert(records.cycles).values(
+                    id=child_cycle_id,
+                    experiment_id=run["experiment_id"],
+                    ordinal=cycle_ordinal,
+                    parent_cycle_id=parent["id"],
+                    idea_mode=parent["idea_mode"],
+                    selection_id=parent["selection_id"],
+                    purpose="SAME_INTENT_RETURN",
+                    episode_id=parent["episode_id"],
+                    seed_artifact_id=parent["seed_artifact_id"],
+                    seed_kind=parent["seed_kind"],
+                    seed_version=parent["seed_version"],
+                    seed_hash=parent["seed_hash"],
+                    created_at=now,
+                )
+            )
+            await connection.execute(
+                insert(records.idea_acceptances).values(
+                    id=child_acceptance_id,
+                    experiment_id=run["experiment_id"],
+                    cycle_id=child_cycle_id,
+                    artifact_id=request.proposed_idea.artifact_id,
+                    artifact_kind=request.proposed_idea.kind,
+                    artifact_version=request.proposed_idea.version,
+                    artifact_hash=request.proposed_idea.content_hash,
+                    pivot_approval_id=None,
+                    accepted_by=request.accepted_by,
+                    accepted_at=now,
+                )
+            )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=run["experiment_id"],
+                kind="CONFIRM_OFFER_IDEA_REFINEMENT",
+                request_hash=request_hash,
+                result_type="OFFER_DESIGN_DECISION",
+                result_id=decision["id"],
+                now=now,
+            )
+            await connection.execute(
+                insert(records.cycle_transitions).values(
+                    id=transition_id,
+                    experiment_id=run["experiment_id"],
+                    cycle_id=run["cycle_id"],
+                    ordinal=state["transition_ordinal"] + 1,
+                    from_state="WAITING_FOR_OPERATOR_INPUT",
+                    to_state="RETURN_FOR_IDEA_REFINEMENT",
+                    idea_acceptance_id=acceptance["id"],
+                    idea_artifact_id=acceptance["artifact_id"],
+                    idea_kind=acceptance["artifact_kind"],
+                    idea_version=acceptance["artifact_version"],
+                    idea_hash=acceptance["artifact_hash"],
+                    research_attempt_id=verdict["attempt_id"],
+                    verdict_id=verdict["id"],
+                    offer_design_run_id=run["id"],
+                    offer_design_decision_id=decision["id"],
+                    command_id=command_id,
+                    created_at=now,
+                )
+            )
+            advanced = await connection.execute(
+                update(records.cycle_states)
+                .where(
+                    records.cycle_states.c.cycle_id == run["cycle_id"],
+                    records.cycle_states.c.state == "WAITING_FOR_OPERATOR_INPUT",
+                    records.cycle_states.c.transition_ordinal
+                    == state["transition_ordinal"],
+                )
+                .values(
+                    state="RETURN_FOR_IDEA_REFINEMENT",
+                    transition_ordinal=state["transition_ordinal"] + 1,
+                    last_transition_id=transition_id,
+                    updated_at=now,
+                )
+            )
+            if advanced.rowcount != 1:
+                raise ProductRecordsDenied("INVALID_STATE")
+            return OfferIdeaRefinementReturnReceipt(
+                command_id=command_id,
+                result_id=decision["id"],
+                id=decision["id"],
+                run_id=run["id"],
+                decision_id=decision["id"],
+                child_cycle_id=child_cycle_id,
+                transition_id=transition_id,
+            )
 
     @safe_records
     async def freeze_input_bundle(
@@ -494,6 +1878,7 @@ class OfferRecordsRepository:
         *,
         bundle_id: UUID,
         envelope_id: UUID,
+        offer_design_run_id: UUID | None = None,
         command_key: UUID,
     ) -> OfferProposalReceipt:
         async with self.engine.begin() as connection:
@@ -508,7 +1893,10 @@ class OfferRecordsRepository:
             )
             await lock_experiment(connection, bundle["experiment_id"])
             request_hash = _request_hash(
-                artifact=artifact, bundle_id=bundle_id, envelope_id=envelope_id
+                artifact=artifact,
+                bundle_id=bundle_id,
+                envelope_id=envelope_id,
+                offer_design_run_id=offer_design_run_id,
             )
             old = await _existing(
                 connection, command_key, "REGISTER_OFFER_PROPOSAL", request_hash
@@ -538,6 +1926,15 @@ class OfferRecordsRepository:
                 or envelope["status"] != "READY"
             ):
                 raise ProductRecordsDenied("ENVELOPE_NOT_READY")
+            if offer_design_run_id is not None and not await connection.scalar(
+                select(s.offer_design_runs.c.id).where(
+                    s.offer_design_runs.c.id == offer_design_run_id,
+                    s.offer_design_runs.c.bundle_id == bundle_id,
+                    s.offer_design_runs.c.envelope_id == envelope_id,
+                    s.offer_design_runs.c.experiment_id == bundle["experiment_id"],
+                )
+            ):
+                raise ProductRecordsDenied("OFFER_RUN_LINEAGE")
             if (
                 value["payload"]["currency"] != envelope["currency"]
                 or Decimal(value["payload"]["base_price"]) < envelope["minimum_price"]
@@ -554,6 +1951,7 @@ class OfferRecordsRepository:
                     artifact_hash=artifact.content_hash,
                     bundle_id=bundle_id,
                     envelope_id=envelope_id,
+                    offer_design_run_id=offer_design_run_id,
                     created_at=self.clock(),
                 )
             )
@@ -576,7 +1974,12 @@ class OfferRecordsRepository:
 
     @safe_records
     async def accept_offer(
-        self, request: OfferAcceptanceRequest, *, command_key: UUID
+        self,
+        request: OfferAcceptanceRequest,
+        *,
+        command_key: UUID,
+        offer_design_run_id: UUID | None = None,
+        decision_artifact: ArtifactInput | None = None,
     ) -> OfferAcceptanceReceipt:
         if {item.field_path for item in request.field_sources} != set(
             PROTECTED_OFFER_FIELDS
@@ -610,7 +2013,15 @@ class OfferRecordsRepository:
                 .one()
             )
             await lock_experiment(connection, proposal["experiment_id"])
-            request_hash = _request_hash(request=request)
+            request_hash = (
+                _request_hash(request=request)
+                if offer_design_run_id is None
+                else _request_hash(
+                    request=request,
+                    offer_design_run_id=offer_design_run_id,
+                    decision_artifact=decision_artifact,
+                )
+            )
             old = await _existing(connection, command_key, "ACCEPT_OFFER", request_hash)
             if old:
                 row = (
@@ -650,6 +2061,56 @@ class OfferRecordsRepository:
                 )
             ):
                 raise ProductRecordsDenied("PROPOSAL_INVALIDATED")
+            run = None
+            state = None
+            if (offer_design_run_id is None) != (decision_artifact is None):
+                raise ProductRecordsDenied("OFFER_RUN_DECISION_REQUIRED")
+            if offer_design_run_id is not None:
+                run = (
+                    (
+                        await connection.execute(
+                            select(s.offer_design_runs)
+                            .where(
+                                s.offer_design_runs.c.id == offer_design_run_id,
+                                s.offer_design_runs.c.experiment_id
+                                == proposal["experiment_id"],
+                                s.offer_design_runs.c.bundle_id
+                                == proposal["bundle_id"],
+                                s.offer_design_runs.c.envelope_id
+                                == proposal["envelope_id"],
+                            )
+                            .with_for_update()
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if (
+                    run is None
+                    or proposal["offer_design_run_id"] != offer_design_run_id
+                ):
+                    raise ProductRecordsDenied("OFFER_RUN_LINEAGE")
+                state = (
+                    (
+                        await connection.execute(
+                            select(records.cycle_states)
+                            .where(records.cycle_states.c.cycle_id == run["cycle_id"])
+                            .with_for_update()
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                if state["state"] != "OFFER_DESIGN":
+                    raise ProductRecordsDenied("INVALID_STATE")
+                assert decision_artifact is not None
+                decision_value = await _exact_artifact(connection, decision_artifact)
+                if (
+                    decision_artifact.kind is not ArtifactKind.VALIDATION_RESULT
+                    or decision_value["payload"].get("disposition") != "PASS"
+                    or decision_value["experiment_id"] != proposal["experiment_id"]
+                ):
+                    raise ProductRecordsDenied("DECISION_LINEAGE")
             if request.calibration_decision_id is not None:
                 from alon_ai.records import calibration_schema as calibration
                 from alon_ai.records import qualification_schema as qualification
@@ -719,6 +2180,17 @@ class OfferRecordsRepository:
                 .mappings()
                 .one()
             )
+            if run is not None:
+                assert decision_artifact is not None
+                if not await _exact_offer_validation_lineage(
+                    connection,
+                    validation_id=decision_artifact.artifact_id,
+                    proposal_artifact_id=proposal_artifact["id"],
+                    package_artifact_id=package["id"],
+                    profile_artifact_id=request.qualification_profile.artifact_id,
+                    policy_artifact_id=request.outreach_policy.artifact_id,
+                ):
+                    raise ProductRecordsDenied("DECISION_LINEAGE")
             envelope = (
                 (
                     await connection.execute(
@@ -783,6 +2255,7 @@ class OfferRecordsRepository:
                     artifact_hash=request.package.content_hash,
                     proposal_id=request.proposal_id,
                     calibration_decision_id=request.calibration_decision_id,
+                    offer_design_run_id=offer_design_run_id,
                     bundle_id=proposal["bundle_id"],
                     envelope_id=proposal["envelope_id"],
                     currency=package["payload"]["currency"],
@@ -869,6 +2342,84 @@ class OfferRecordsRepository:
                 result_id=acceptance_id,
                 now=self.clock(),
             )
+            if run is not None:
+                assert state is not None
+                decision_id, transition_id = uuid4(), uuid4()
+                assert decision_artifact is not None
+                await connection.execute(
+                    insert(s.offer_design_decisions).values(
+                        id=decision_id,
+                        experiment_id=proposal["experiment_id"],
+                        run_id=run["id"],
+                        artifact_id=decision_artifact.artifact_id,
+                        artifact_kind=decision_artifact.kind,
+                        artifact_version=decision_artifact.version,
+                        artifact_hash=decision_artifact.content_hash,
+                        outcome="ACCEPT",
+                        operator_id=request.accepted_by,
+                        created_at=self.clock(),
+                    )
+                )
+                acceptance = (
+                    (
+                        await connection.execute(
+                            select(records.idea_acceptances).where(
+                                records.idea_acceptances.c.cycle_id == run["cycle_id"]
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                source_verdict = (
+                    (
+                        await connection.execute(
+                            select(records.verdicts).where(
+                                records.verdicts.c.id == run["verdict_id"]
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                await connection.execute(
+                    insert(records.cycle_transitions).values(
+                        id=transition_id,
+                        experiment_id=proposal["experiment_id"],
+                        cycle_id=run["cycle_id"],
+                        ordinal=state["transition_ordinal"] + 1,
+                        from_state="OFFER_DESIGN",
+                        to_state="OFFER_ACCEPTED",
+                        idea_acceptance_id=acceptance["id"],
+                        idea_artifact_id=acceptance["artifact_id"],
+                        idea_kind=acceptance["artifact_kind"],
+                        idea_version=acceptance["artifact_version"],
+                        idea_hash=acceptance["artifact_hash"],
+                        research_attempt_id=source_verdict["attempt_id"],
+                        verdict_id=run["verdict_id"],
+                        offer_design_run_id=run["id"],
+                        offer_design_decision_id=decision_id,
+                        command_id=command_id,
+                        created_at=self.clock(),
+                    )
+                )
+                advanced = await connection.execute(
+                    update(records.cycle_states)
+                    .where(
+                        records.cycle_states.c.cycle_id == run["cycle_id"],
+                        records.cycle_states.c.state == "OFFER_DESIGN",
+                        records.cycle_states.c.transition_ordinal
+                        == state["transition_ordinal"],
+                    )
+                    .values(
+                        state="OFFER_ACCEPTED",
+                        transition_ordinal=state["transition_ordinal"] + 1,
+                        last_transition_id=transition_id,
+                        updated_at=self.clock(),
+                    )
+                )
+                if advanced.rowcount != 1:
+                    raise ProductRecordsDenied("INVALID_STATE")
             return OfferAcceptanceReceipt(
                 command_id=command_id,
                 result_id=acceptance_id,

@@ -167,7 +167,7 @@ async def complete_research(
         },
         inputs=(ArtifactInput.from_receipt(report, role="REPORT"),),
     )
-    verdict = await repo.commit_verdict(
+    verdict = await repo.commit_market_research_outcome(
         attempt.id,
         report=ArtifactInput.from_receipt(report, role="REPORT"),
         recommendation=ArtifactInput.from_receipt(

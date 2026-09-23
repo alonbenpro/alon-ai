@@ -458,10 +458,16 @@ cycle_transitions = table(
     gov.col("idea_hash", String(64)),
     gov.col("research_attempt_id", gov.U),
     gov.col("verdict_id", gov.U, nullable=True),
+    gov.col("offer_design_run_id", gov.U, nullable=True),
+    gov.col("offer_design_decision_id", gov.U, nullable=True),
     gov.col("command_id", gov.U),
     ForeignKeyConstraint(
         ["verdict_id", "experiment_id"],
         ["record_verdicts.id", "record_verdicts.experiment_id"],
+    ),
+    ForeignKeyConstraint(["offer_design_run_id"], ["record_offer_design_runs.id"]),
+    ForeignKeyConstraint(
+        ["offer_design_decision_id"], ["record_offer_design_decisions.id"]
     ),
     gov.col("created_at", gov.T),
     ForeignKeyConstraint(
@@ -500,7 +506,7 @@ cycle_transitions = table(
     UniqueConstraint("cycle_id", "ordinal"),
     UniqueConstraint("id", "cycle_id", "experiment_id", "ordinal", "to_state"),
     CheckConstraint(
-        "idea_kind='IDEA_BRIEF' AND ((ordinal=1 AND from_state='IDEA_REFINEMENT' AND to_state='MARKET_RESEARCH' AND verdict_id IS NULL) OR (ordinal=2 AND from_state='MARKET_RESEARCH' AND to_state IN ('PROCEED_TO_OFFER','RETURN_FOR_REFINEMENT','WAITING_FOR_PIVOT_APPROVAL','KILLED','INCONCLUSIVE_REVIEW') AND verdict_id IS NOT NULL) OR (ordinal=3 AND from_state IN ('WAITING_FOR_PIVOT_APPROVAL','INCONCLUSIVE_REVIEW') AND to_state='RETURN_FOR_REFINEMENT' AND verdict_id IS NOT NULL))"
+        "idea_kind='IDEA_BRIEF' AND ((ordinal=1 AND from_state='IDEA_REFINEMENT' AND to_state='MARKET_RESEARCH' AND verdict_id IS NULL AND offer_design_run_id IS NULL AND offer_design_decision_id IS NULL) OR (ordinal=2 AND from_state='MARKET_RESEARCH' AND to_state IN ('PROCEED_TO_OFFER','RETURN_FOR_REFINEMENT','WAITING_FOR_PIVOT_APPROVAL','KILLED','INCONCLUSIVE_REVIEW') AND verdict_id IS NOT NULL AND offer_design_run_id IS NULL AND offer_design_decision_id IS NULL) OR (ordinal=3 AND from_state IN ('WAITING_FOR_PIVOT_APPROVAL','INCONCLUSIVE_REVIEW') AND to_state='RETURN_FOR_REFINEMENT' AND verdict_id IS NOT NULL AND offer_design_run_id IS NULL AND offer_design_decision_id IS NULL) OR (from_state='PROCEED_TO_OFFER' AND to_state='OFFER_DESIGN' AND verdict_id IS NOT NULL AND offer_design_run_id IS NOT NULL AND offer_design_decision_id IS NULL) OR (from_state='OFFER_DESIGN' AND to_state IN ('OFFER_ACCEPTED','RETURN_FOR_TARGETED_RESEARCH','WAITING_FOR_OPERATOR_INPUT') AND verdict_id IS NOT NULL AND offer_design_run_id IS NOT NULL AND offer_design_decision_id IS NOT NULL) OR (from_state='WAITING_FOR_OPERATOR_INPUT' AND to_state='RETURN_FOR_IDEA_REFINEMENT' AND verdict_id IS NOT NULL AND offer_design_run_id IS NOT NULL AND offer_design_decision_id IS NOT NULL))"
     ),
 )
 
@@ -536,7 +542,7 @@ cycle_states = table(
     CheckConstraint(
         "(state='IDEA_REFINEMENT' AND transition_ordinal=0 "
         "AND last_transition_id IS NULL) OR "
-        "(state IN ('MARKET_RESEARCH','PROCEED_TO_OFFER','RETURN_FOR_REFINEMENT','WAITING_FOR_PIVOT_APPROVAL','KILLED','INCONCLUSIVE_REVIEW') AND transition_ordinal BETWEEN 1 AND 3 AND last_transition_id IS NOT NULL)"
+        "(state IN ('MARKET_RESEARCH','PROCEED_TO_OFFER','RETURN_FOR_REFINEMENT','WAITING_FOR_PIVOT_APPROVAL','KILLED','INCONCLUSIVE_REVIEW','OFFER_DESIGN','OFFER_ACCEPTED','RETURN_FOR_TARGETED_RESEARCH','RETURN_FOR_IDEA_REFINEMENT','WAITING_FOR_OPERATOR_INPUT') AND transition_ordinal BETWEEN 1 AND 5 AND last_transition_id IS NOT NULL)"
     ),
 )
 

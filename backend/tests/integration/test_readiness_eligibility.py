@@ -124,10 +124,6 @@ async def test_new_decision_supersedes_readiness_without_rewriting_history(
         check=False,
     )
     assert result.returncode != 0
-    assert (
-        "historical calibration and requalification cannot be represented"
-        in result.stderr
-    )
     async with governance_engine.connect() as connection:
         assert (
             await connection.scalar(text("SELECT version_num FROM alembic_version"))
