@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260923_20"
+    "20260923_21"
   ],
   "columns": [
     {
@@ -1784,6 +1784,78 @@
       "not_null": true,
       "table_name": "gov_workflows",
       "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "attempted_at",
+      "not_null": true,
+      "table_name": "operator_login_failures",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "auth_subject",
+      "not_null": true,
+      "table_name": "operator_login_failures",
+      "type": "character varying(255)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "table_name": "operator_login_failures",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "expires_at",
+      "not_null": true,
+      "table_name": "operator_sessions",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "id",
+      "not_null": true,
+      "table_name": "operator_sessions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "issued_at",
+      "not_null": true,
+      "table_name": "operator_sessions",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operator_id",
+      "not_null": true,
+      "table_name": "operator_sessions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "revoked_at",
+      "not_null": false,
+      "table_name": "operator_sessions",
+      "type": "timestamp with time zone"
     },
     {
       "default_expression": null,
@@ -16404,6 +16476,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (expires_at > issued_at)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "operator_sessions_check",
+      "table_name": "operator_sessions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (few_shot_artifact_id IS NULL AND few_shot_experiment_id IS NULL AND few_shot_kind IS NULL AND few_shot_version IS NULL AND few_shot_hash IS NULL OR few_shot_artifact_id IS NOT NULL AND few_shot_experiment_id IS NOT NULL AND few_shot_kind IS NOT NULL AND few_shot_version IS NOT NULL AND few_shot_hash IS NOT NULL)",
       "enforced": true,
       "initially_deferred": false,
@@ -17630,6 +17712,16 @@
       "kind": "c",
       "name": "record_research_return_blocks_return_kind_check",
       "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (revoked_at IS NULL OR revoked_at >= issued_at)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "operator_sessions_check1",
+      "table_name": "operator_sessions",
       "validated": true
     },
     {
@@ -21508,6 +21600,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "operator_sessions_operator_id_fkey",
+      "table_name": "operator_sessions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (operator_id) REFERENCES record_operators(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_conversation_manual_outcomes_operator_id_fkey",
       "table_name": "record_conversation_manual_outcomes",
       "validated": true
@@ -24374,6 +24476,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL attempted_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "operator_login_failures_attempted_at_not_null",
+      "table_name": "operator_login_failures",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL attendee_hash",
       "enforced": true,
       "initially_deferred": false,
@@ -24410,6 +24522,16 @@
       "kind": "n",
       "name": "gov_calls_attribution_not_null",
       "table_name": "gov_calls",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL auth_subject",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "operator_login_failures_auth_subject_not_null",
+      "table_name": "operator_login_failures",
       "validated": true
     },
     {
@@ -30168,6 +30290,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "operator_sessions_expires_at_not_null",
+      "table_name": "operator_sessions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL expires_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_org_evidence_expires_at_not_null",
       "table_name": "record_org_evidence",
       "validated": true
@@ -30860,6 +30992,26 @@
       "kind": "n",
       "name": "gov_workflows_id_not_null",
       "table_name": "gov_workflows",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "operator_login_failures_id_not_null",
+      "table_name": "operator_login_failures",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "operator_sessions_id_not_null",
+      "table_name": "operator_sessions",
       "validated": true
     },
     {
@@ -32210,6 +32362,16 @@
       "kind": "n",
       "name": "record_conversation_booking_observations_intent_id_not_null",
       "table_name": "record_conversation_booking_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL issued_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "operator_sessions_issued_at_not_null",
+      "table_name": "operator_sessions",
       "validated": true
     },
     {
@@ -33740,6 +33902,16 @@
       "kind": "n",
       "name": "supply_workflow_bindings_operation_kind_not_null",
       "table_name": "supply_workflow_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operator_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "operator_sessions_operator_id_not_null",
+      "table_name": "operator_sessions",
       "validated": true
     },
     {
@@ -38928,6 +39100,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "p",
+      "name": "operator_login_failures_pkey",
+      "table_name": "operator_login_failures",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "operator_sessions_pkey",
+      "table_name": "operator_sessions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
       "name": "record_agents_pkey",
       "table_name": "record_agents",
       "validated": true
@@ -42723,6 +42915,16 @@
     },
     {
       "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.operator_login_failure_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP <> 'INSERT' THEN RAISE EXCEPTION 'operator login failure history is immutable'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "operator_login_failure_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.operator_session_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP = 'DELETE' THEN RAISE EXCEPTION 'operator session history cannot be deleted'; END IF;\n IF TG_OP = 'UPDATE' THEN\n  IF ROW(NEW.id, NEW.operator_id, NEW.issued_at, NEW.expires_at)\n     IS DISTINCT FROM ROW(OLD.id, OLD.operator_id, OLD.issued_at, OLD.expires_at)\n     OR OLD.revoked_at IS NOT NULL OR NEW.revoked_at IS NULL\n  THEN RAISE EXCEPTION 'operator session history is immutable'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "operator_session_guard"
+    },
+    {
+      "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_artifact_version_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NEW.version=1 THEN\n  IF EXISTS(SELECT 1 FROM record_artifacts WHERE logical_id=NEW.logical_id AND version<>1)\n  THEN RAISE EXCEPTION 'invalid initial artifact version'; END IF;\n ELSIF NOT EXISTS(\n   SELECT 1 FROM record_artifact_links link\n   JOIN record_artifacts prior ON prior.id=link.producer_id\n   WHERE link.consumer_id=NEW.id AND link.role='SUPERSEDES'\n     AND prior.logical_id=NEW.logical_id AND prior.version=NEW.version-1\n     AND prior.experiment_id=NEW.experiment_id)\n THEN RAISE EXCEPTION 'missing exact artifact predecessor';\n END IF;\n RETURN NULL;\nEND $function$\n",
       "name": "record_artifact_version_guard"
     },
@@ -43855,6 +44057,24 @@
       "primary_index": false,
       "ready": true,
       "table_name": "gov_workflows",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_operator_login_failures_window ON public.operator_login_failures USING btree (auth_subject, attempted_at DESC)",
+      "name": "ix_operator_login_failures_window",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "operator_login_failures",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_operator_sessions_active ON public.operator_sessions USING btree (operator_id, expires_at) WHERE (revoked_at IS NULL)",
+      "name": "ix_operator_sessions_active",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "operator_sessions",
       "unique_index": false,
       "valid": true
     },
@@ -45376,6 +45596,24 @@
       "primary_index": true,
       "ready": true,
       "table_name": "gov_workflows",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX operator_login_failures_pkey ON public.operator_login_failures USING btree (id)",
+      "name": "operator_login_failures_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "operator_login_failures",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX operator_sessions_pkey ON public.operator_sessions USING btree (id)",
+      "name": "operator_sessions_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "operator_sessions",
       "unique_index": true,
       "valid": true
     },
@@ -48882,6 +49120,18 @@
       "force_row_security": false,
       "kind": "r",
       "name": "gov_workflows",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "operator_login_failures",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "operator_sessions",
       "row_security": false
     },
     {
@@ -53081,6 +53331,58 @@
       "internal": true,
       "name": null,
       "table_name": "gov_experiments"
+    },
+    {
+      "constraint_name": "operator_sessions_operator_id_fkey",
+      "constraint_table": "operator_sessions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "operator_sessions"
+    },
+    {
+      "constraint_name": "operator_sessions_operator_id_fkey",
+      "constraint_table": "operator_sessions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "operator_sessions_operator_id_fkey",
+      "constraint_table": "operator_sessions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "operator_sessions"
+    },
+    {
+      "constraint_name": "operator_sessions_operator_id_fkey",
+      "constraint_table": "operator_sessions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
     },
     {
       "constraint_name": "record_agents_id_workflow_id_fkey",
@@ -76728,6 +77030,32 @@
       "internal": false,
       "name": "immutable",
       "table_name": "gov_workflows"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER operator_login_failure_guard BEFORE DELETE OR UPDATE ON operator_login_failures FOR EACH ROW EXECUTE FUNCTION operator_login_failure_guard()",
+      "enabled": "O",
+      "events": 27,
+      "function_name": "public.operator_login_failure_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "operator_login_failure_guard",
+      "table_name": "operator_login_failures"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER operator_session_guard BEFORE DELETE OR UPDATE ON operator_sessions FOR EACH ROW EXECUTE FUNCTION operator_session_guard()",
+      "enabled": "O",
+      "events": 27,
+      "function_name": "public.operator_session_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "operator_session_guard",
+      "table_name": "operator_sessions"
     },
     {
       "constraint_name": null,

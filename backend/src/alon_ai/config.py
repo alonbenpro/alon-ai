@@ -56,6 +56,9 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     outreach_enabled: bool = False
     frontend_origin: str = "http://localhost:3000"
+    operator_auth_subject: str | None = None
+    operator_password_hash: SecretStr | None = None
+    session_signing_key: SecretStr | None = None
     # Configuration selects an execution mode; it never grants call/effect authority.
     provider_mode: Literal["disabled", "fake", "live"] = "disabled"
     generative_ai_provider: Literal["openai"] = "openai"
@@ -165,9 +168,12 @@ class Settings(BaseSettings):
         if not self.frontend_origin.startswith("https://"):
             raise ValueError("Production requires an HTTPS frontend origin")
         for name in type(self).model_fields:
-            if name not in {"database_url", "dbos_system_database_url"} and isinstance(
-                getattr(self, name), SecretStr
-            ):
+            if name not in {
+                "database_url",
+                "dbos_system_database_url",
+                "operator_password_hash",
+                "session_signing_key",
+            } and isinstance(getattr(self, name), SecretStr):
                 raise ValueError(
                     "Production provider credentials require secret handles"
                 )

@@ -13,6 +13,7 @@
     "lint": "eslint",
     "typecheck": "tsc --noEmit",
     "test": "vitest",
+    "test:visual": "npm run build && node scripts/visual-regression.mjs",
     "api:export": "../backend/.venv/bin/python ../scripts/export_openapi.py --output openapi.json",
     "api:generate": "npm run api:export && openapi-typescript openapi.json -o src/lib/api/schema.d.ts"
   },

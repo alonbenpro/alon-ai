@@ -2,12 +2,16 @@ import json
 import logging
 import re
 from typing import cast
+from unittest.mock import AsyncMock
+from uuid import uuid4
 
 from fastapi.testclient import TestClient
+from pydantic import SecretStr
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alon_ai.api.app import create_app
+from alon_ai.api.auth import OperatorSession
 from alon_ai.config import Settings
 from alon_ai.db.engine import DatabaseHealthChecker
 from alon_ai.logging import configure_logging
@@ -19,6 +23,9 @@ def production_settings() -> Settings:
         database_url="postgresql+psycopg://app:unique-pass@db.internal/app",
         dbos_system_database_url="postgresql://worker:unique-pass@db.internal/system",
         frontend_origin="https://app.example.org",
+        operator_auth_subject="operator@example.org",
+        operator_password_hash=SecretStr("test-only-verifier"),
+        session_signing_key=SecretStr("test-only-signing-key-with-32-bytes"),
         _env_file=None,
     )
 
@@ -98,6 +105,10 @@ def test_production_exception_request_log_does_not_expose_exception(capsys) -> N
     app.add_api_route("/failure", fail)
 
     with TestClient(app, raise_server_exceptions=False) as client:
+        app.state.auth.resolve = AsyncMock(
+            return_value=OperatorSession(id=uuid4(), display_name="Test operator")
+        )
+        client.cookies.set("alon_ai_session", "test-cookie")
         response = client.get("/failure?secret=do-not-log")
 
     try:
@@ -208,6 +219,10 @@ def test_unmatched_and_parameterized_request_paths_do_not_log_user_values(
 
     app.add_api_route("/items/{item_id}", item)
     with TestClient(app) as client:
+        app.state.auth.resolve = AsyncMock(
+            return_value=OperatorSession(id=uuid4(), display_name="Test operator")
+        )
+        client.cookies.set("alon_ai_session", "test-cookie")
         client.get("/unrecognized/private-path-value")
         client.get("/items/private-item-value")
     rendered = capsys.readouterr().err
