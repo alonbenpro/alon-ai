@@ -11,7 +11,7 @@ from typing import Literal, cast
 from uuid import UUID, uuid4
 
 import pytest
-from sqlalchemy import func, select, update
+from sqlalchemy import func, select, text, update
 from test_governance import seed as governance_seed
 from test_market_research_outcomes import child_governance, governed_research
 from test_offer_records import (
@@ -52,11 +52,15 @@ from alon_ai.records.offer_models import (
     QualificationCriterion,
 )
 from alon_ai.records.offers import OfferRecordsRepository
+from alon_ai.workflows.market_research import DBOS_APPLICATION_VERSION
 from alon_ai.workflows.offer_design import (
     OfferDesignDecisionWorkflowRequest,
     OfferDesignWorkflowRepository,
+    OfferIdeaRefinementWorkflowRequest,
+    OfferTargetedResearchWorkflowRequest,
     assert_offer_design_compatible_application_version,
     offer_design_decision_workflow_id,
+    offer_idea_refinement_workflow_id,
 )
 
 pytestmark = pytest.mark.integration
@@ -779,6 +783,98 @@ async def test_targeted_research_return_is_atomic_and_replays_exact_roles(
         )
     with pytest.raises(ProductRecordsDenied, match="OFFER_TARGETED_RETURN_LIMIT"):
         await offer_repo.return_for_targeted_research(request, command_key=uuid4())
+    async with governance_engine.connect() as connection:
+        run_row = (
+            (
+                await connection.execute(
+                    select(offers.offer_design_runs).where(
+                        offers.offer_design_runs.c.id == run.id
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        envelope_row = (
+            (
+                await connection.execute(
+                    select(offers.commercial_envelopes).where(
+                        offers.commercial_envelopes.c.id == run_row["envelope_id"]
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        artifact_rows = (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.id.in_(
+                            (
+                                run_row["prompt_artifact_id"],
+                                envelope_row["scope_artifact_id"],
+                                envelope_row["artifact_id"],
+                                run_row["bundle_id"],
+                            )
+                        )
+                    )
+                )
+            )
+            .mappings()
+            .all()
+        )
+        bundle_row = (
+            (
+                await connection.execute(
+                    select(offers.offer_bundles).where(
+                        offers.offer_bundles.c.id == run_row["bundle_id"]
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        artifact_rows += (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.id == bundle_row["artifact_id"]
+                    )
+                )
+            )
+            .mappings()
+            .all()
+        )
+    by_id = {row["id"]: row for row in artifact_rows}
+
+    def pinned(artifact_id, role):
+        row = by_id[artifact_id]
+        return ArtifactInput(
+            artifact_id=row["id"],
+            kind=ArtifactKind(row["kind"]),
+            version=row["version"],
+            content_hash=row["content_hash"],
+            role=role,
+        )
+
+    with pytest.raises(ProductRecordsDenied, match="STALE_PROCEED"):
+        await offer_repo.start_offer_design(
+            OfferDesignStartRequest(
+                verdict_id=run_row["verdict_id"],
+                input_bundle=pinned(bundle_row["artifact_id"], "INPUT_BUNDLE"),
+                envelope=pinned(envelope_row["artifact_id"], "ENVELOPE"),
+                scope_estimate=pinned(
+                    envelope_row["scope_artifact_id"], "SCOPE_ESTIMATE"
+                ),
+                prompt_configuration=pinned(run_row["prompt_artifact_id"], "PROMPT"),
+                model_config_id=run_row["model_config_id"],
+                model_config_workflow_id=run_row["model_config_workflow_id"],
+                model_config_version=run_row["model_config_version"],
+                started_by=run_row["started_by"],
+            ),
+            command_key=uuid4(),
+        )
 
 
 async def test_targeted_research_return_rolls_back_without_partial_graph(
@@ -821,7 +917,7 @@ async def test_targeted_research_return_rolls_back_without_partial_graph(
     assert after == before
 
 
-async def test_operator_confirmed_refinement_uses_only_the_supplied_validated_idea(
+async def _operator_refinement_request(
     governance_engine,
 ):
     offer_repo, context, prompt, run, _, _ = await _started_offer_design_run(
@@ -899,6 +995,15 @@ async def test_operator_confirmed_refinement_uses_only_the_supplied_validated_id
         commercial_failure_evidence=ArtifactInput.from_receipt(prompt, role="FAILURE"),
         proposed_idea=ArtifactInput.from_receipt(proposed, role="NEXT_IDEA"),
         accepted_by=UUID(int=1),
+    )
+    return offer_repo, run, request, prompt
+
+
+async def test_operator_confirmed_refinement_uses_only_the_supplied_validated_idea(
+    governance_engine,
+):
+    offer_repo, _, request, prompt = await _operator_refinement_request(
+        governance_engine
     )
     key = uuid4()
     receipt = await offer_repo.confirm_offer_idea_refinement(request, command_key=key)
@@ -993,6 +1098,131 @@ async def test_dbos_offer_decision_crash_replays_one_receipt(
                 )
             )
             == "RUNTIME_COMPLETED"
+        )
+
+
+@pytest.mark.parametrize("operation", ("TARGETED", "REFINEMENT"))
+@pytest.mark.parametrize("barrier", ("before-business", "after-business"))
+async def test_dbos_offer_return_crash_recovers_original_command(
+    governance_engine, tmp_path, operation, barrier
+):
+    if operation == "TARGETED":
+        _, _, _, run, business_request = await _targeted_return_request(
+            governance_engine
+        )
+        # The shared fixture pins its clock to September 12; the DBOS process
+        # uses the real clock and needs a genuinely active governed budget.
+        async with governance_engine.begin() as connection:
+            await connection.execute(
+                update(gov.budget_accounts)
+                .where(
+                    gov.budget_accounts.c.id
+                    == business_request.budget.budget_account_id
+                )
+                .values(expires_at=func.now() + text("INTERVAL '30 days'"))
+            )
+        workflow_request = OfferTargetedResearchWorkflowRequest(
+            request=business_request, command_key=uuid4()
+        )
+        workflow_id = offer_design_decision_workflow_id(
+            run.id, workflow_request.command_key
+        )
+    else:
+        _, run, business_request, _ = await _operator_refinement_request(
+            governance_engine
+        )
+        workflow_request = OfferIdeaRefinementWorkflowRequest(
+            request=business_request, command_key=uuid4()
+        )
+        workflow_id = offer_idea_refinement_workflow_id(
+            business_request.decision_id, workflow_request.command_key
+        )
+    request_path = tmp_path / "offer-return.json"
+    request_path.write_text(
+        workflow_request.model_dump_json(exclude_computed_fields=True)
+    )
+    _migrate_dbos(governance_engine)
+    ready, release = tmp_path / "ready", tmp_path / "release"
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        str(HARNESS),
+        "start",
+        "--request",
+        str(request_path),
+        cwd=Path(__file__).parents[2],
+        env={
+            **_dbos_environment(governance_engine),
+            "ALON_AI_OFFER_DBOS_TEST_BARRIER": barrier,
+            "ALON_AI_OFFER_DBOS_TEST_READY": str(ready),
+            "ALON_AI_OFFER_DBOS_TEST_RELEASE": str(release),
+        },
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    await _wait_for(ready, process)
+    process.send_signal(signal.SIGKILL)
+    await asyncio.wait_for(process.wait(), timeout=10)
+    recovered = await asyncio.to_thread(
+        subprocess.run,
+        [sys.executable, str(HARNESS), "recover", "--request", str(request_path)],
+        cwd=Path(__file__).parents[2],
+        env=_dbos_environment(governance_engine),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert recovered.returncode == 0, recovered.stderr
+    runtime = OfferDesignWorkflowRepository(governance_engine)
+    with pytest.raises(ProductRecordsDenied, match="WORKFLOW_BINDING_CONFLICT"):
+        await runtime.bind(
+            workflow_request.model_copy(
+                update={
+                    "request": business_request.model_copy(
+                        update={"accepted_by": uuid4()}
+                    )
+                }
+            ),
+            application_version=DBOS_APPLICATION_VERSION,
+        )
+    async with governance_engine.connect() as connection:
+        binding = (
+            (
+                await connection.execute(
+                    select(offers.offer_design_workflow_bindings).where(
+                        offers.offer_design_workflow_bindings.c.dbos_workflow_id
+                        == workflow_id
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert binding["delivery_state"] == "RUNTIME_COMPLETED"
+        assert binding["command_id"] is not None
+        assert (
+            await connection.scalar(
+                select(func.count())
+                .select_from(records.commands)
+                .where(records.commands.c.command_key == workflow_request.command_key)
+            )
+            == 1
+        )
+        assert (
+            await connection.scalar(
+                select(func.count())
+                .select_from(records.audit)
+                .where(records.audit.c.command_id == binding["command_id"])
+            )
+            == 1
+        )
+        assert (
+            await connection.scalar(
+                select(func.count())
+                .select_from(records.outbox)
+                .where(records.outbox.c.command_id == binding["command_id"])
+            )
+            == 1
         )
 
 

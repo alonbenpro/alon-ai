@@ -169,7 +169,7 @@ async def _phase2_graph(engine):
     await repo.record_documents(
         RecordConversationDocumentsRequest(
             context_id=turn_id,
-            documents=(ConversationDocumentInput(id=document_id, kind="REPLY_INTERPRETATION", version=1, content={"classification": "EXPLICIT"}, content_hash=_hash("interpretation"), spans=(ReplyEvidenceSpan(message_id=message_id, start_offset=start, end_offset=start + 5), ReplyEvidenceSpan(message_id=message_id, start_offset=6, end_offset=lead_end), ReplyEvidenceSpan(message_id=message_id, start_offset=date_start, end_offset=len(body) - 1))),),
+            documents=(ConversationDocumentInput(id=document_id, kind="REPLY_INTERPRETATION", version=1, content={"classification": "EXPLICIT", "follow_up": {"disposition": "EXPLICIT", "span_ordinal": 3, "date_kind": "RANGE", "start_date": "2026-10-01", "end_date": "2026-10-03", "timezone": "Asia/Jerusalem"}}, content_hash=_hash("interpretation"), spans=(ReplyEvidenceSpan(message_id=message_id, start_offset=start, end_offset=start + 5), ReplyEvidenceSpan(message_id=message_id, start_offset=6, end_offset=lead_end), ReplyEvidenceSpan(message_id=message_id, start_offset=date_start, end_offset=len(body) - 1))),),
             facts=(),
             recorded_by=OWNER,
         ),
@@ -232,6 +232,68 @@ async def test_phase2_normalized_commands_preserve_lineage_and_locks(governance_
         FollowUpRequest(id=UUID(int=6005), context_id=graph["context_id"], source_span=graph["date_span"], disposition="EXPLICIT", date_kind="DATE", start_date=date(2026, 10, 1), timezone="not/a-timezone", content_hash=_hash("vague"))
     with pytest.raises(ValidationError):
         FollowUpRequest.model_validate({"id": UUID(int=6005), "context_id": graph["context_id"], "source_span": graph["date_span"], "disposition": "VAGUE", "date_kind": "DATE", "start_date": date(2026, 10, 1), "timezone": "Asia/Jerusalem", "content_hash": _hash("vague")})
+    with pytest.raises(ProductRecordsDenied, match="FOLLOW_UP_EVIDENCE_MISMATCH"):
+        await repo.record_follow_up(
+            follow_up.model_copy(
+                update={"id": UUID(int=6095), "start_date": date(2026, 10, 2)}
+            ),
+            command_key=UUID(int=6095),
+        )
+    vague_document_id = UUID(int=6100)
+    async with governance_engine.begin() as connection:
+        await connection.execute(
+            text("""INSERT INTO record_conversation_documents
+            (id,experiment_id,conversation_id,context_id,kind,version,content,content_hash,rule_version,created_by,created_at)
+            SELECT :id,experiment_id,conversation_id,context_id,kind,2,
+              '{"classification":"VAGUE"}'::jsonb,:hash,rule_version,created_by,created_at
+            FROM record_conversation_documents WHERE id=:source"""),
+            {
+                "id": vague_document_id,
+                "source": graph["document_id"],
+                "hash": _hash("vague interpretation"),
+            },
+        )
+        await connection.execute(
+            text("""INSERT INTO record_conversation_evidence_spans
+            (document_id,message_id,ordinal,start_offset,end_offset,excerpt_hash)
+            SELECT :id,message_id,ordinal,start_offset,end_offset,excerpt_hash
+            FROM record_conversation_evidence_spans WHERE document_id=:source"""),
+            {"id": vague_document_id, "source": graph["document_id"]},
+        )
+    vague_follow_up = follow_up.model_copy(
+        update={
+            "id": UUID(int=6101),
+            "source_span": EvidenceSpanReference(
+                document_id=vague_document_id, ordinal=3
+            ),
+        }
+    )
+    with pytest.raises(ProductRecordsDenied, match="FOLLOW_UP_EVIDENCE_MISMATCH"):
+        await repo.record_follow_up(vague_follow_up, command_key=UUID(int=6101))
+    async with governance_engine.connect() as connection:
+        with pytest.raises(
+            SQLAlchemyError, match="follow-up explicit interpretation mismatch"
+        ):
+            await connection.execute(
+                text("""INSERT INTO record_conversation_follow_ups
+                (id,experiment_id,conversation_id,context_id,source_document_id,source_span_ordinal,
+                 disposition,date_kind,start_date,end_date,timezone,content_hash,created_at)
+                VALUES (:id,:experiment_id,:conversation_id,:context_id,:source_document_id,3,
+                 'EXPLICIT','RANGE',:start_date,:end_date,:timezone,:content_hash,:created_at)"""),
+                {
+                    "id": vague_follow_up.id,
+                    "experiment_id": graph["experiment_id"],
+                    "conversation_id": graph["conversation_id"],
+                    "context_id": graph["context_id"],
+                    "source_document_id": vague_document_id,
+                    "start_date": date(2026, 10, 1),
+                    "end_date": date(2026, 10, 3),
+                    "timezone": "Asia/Jerusalem",
+                    "content_hash": _hash("forged follow-up"),
+                    "created_at": NOW,
+                },
+            )
+        await connection.rollback()
     scheduling = HandoffRequest(id=UUID(int=6006), context_id=graph["context_id"], source_span=graph["date_span"], kind="MEETING_SCHEDULING", content={"request": "schedule"}, content_hash=_hash("scheduling"), action_id=UUID(int=6007), recorded_by=OWNER)
     scheduling_receipt = await repo.record_handoff(scheduling, command_key=UUID(int=6008))
     assert await repo.record_handoff(scheduling, command_key=UUID(int=6008)) == scheduling_receipt
@@ -246,6 +308,147 @@ async def test_phase2_normalized_commands_preserve_lineage_and_locks(governance_
     with pytest.raises(ProductRecordsDenied, match="SCHEDULING_ONLY_RESTRICTED"):
         await repo.assert_automation_allowed(graph["context_id"], "NEGOTIATE_PRICE")
     intent = BookingIntentRequest(id=UUID(int=6009), context_id=graph["context_id"], scheduling_handoff_id=scheduling.id, source_span=graph["date_span"], slot_hash=_hash("slot"), attendee_hash=_hash("attendee"), intent_hash=_hash("intent"), content_hash=_hash("booking intent"))
+    async with governance_engine.connect() as connection:
+        lineage = (
+            (
+                await connection.execute(
+                    text("""SELECT t.offer_acceptance_id,t.offer_id,t.profile_id,t.policy_id,c.recipient_id
+            FROM record_conversation_turn_contexts t JOIN record_conversations c ON c.id=t.conversation_id
+            WHERE t.id=:id"""),
+                    {"id": graph["context_id"]},
+                )
+            )
+            .mappings()
+            .one()
+        )
+    for changed in ("offer_acceptance_id", "profile_id"):
+        forged = dict(lineage)
+        forged[changed] = UUID(int=6199)
+        async with governance_engine.connect() as connection:
+            with pytest.raises(
+                SQLAlchemyError, match="booking intent commercial lineage mismatch"
+            ):
+                await connection.execute(
+                    text("""INSERT INTO record_conversation_booking_intents
+                    (id,experiment_id,conversation_id,context_id,scheduling_handoff_id,source_document_id,
+                     source_span_ordinal,offer_acceptance_id,offer_id,profile_id,policy_id,recipient_id,
+                     slot_hash,attendee_hash,intent_hash,content_hash,created_at)
+                    VALUES (:id,:experiment_id,:conversation_id,:context_id,:scheduling_handoff_id,
+                     :source_document_id,3,:offer_acceptance_id,:offer_id,:profile_id,:policy_id,
+                     :recipient_id,:slot_hash,:attendee_hash,:intent_hash,:content_hash,:created_at)"""),
+                    {
+                        **forged,
+                        "id": UUID(int=6102),
+                        "experiment_id": graph["experiment_id"],
+                        "conversation_id": graph["conversation_id"],
+                        "context_id": graph["context_id"],
+                        "scheduling_handoff_id": scheduling.id,
+                        "source_document_id": graph["document_id"],
+                        "slot_hash": _hash("slot"),
+                        "attendee_hash": _hash("attendee"),
+                        "intent_hash": _hash("intent"),
+                        "content_hash": _hash("forged booking"),
+                        "created_at": NOW,
+                    },
+                )
+            await connection.rollback()
+    # A legacy intent inserted under an older guard cannot launder its commercial
+    # lineage through an otherwise valid booking observation and final handoff.
+    async with governance_engine.connect() as connection:
+        await connection.execute(
+            text(
+                "ALTER TABLE record_conversation_booking_intents DISABLE TRIGGER record_conversation_booking_intent_lineage"
+            )
+        )
+        forged = {
+            **dict(lineage),
+            "offer_acceptance_id": UUID(int=6199),
+            "id": UUID(int=6200),
+            "experiment_id": graph["experiment_id"],
+            "conversation_id": graph["conversation_id"],
+            "context_id": graph["context_id"],
+            "scheduling_handoff_id": scheduling.id,
+            "source_document_id": graph["document_id"],
+            "slot_hash": _hash("slot"),
+            "attendee_hash": _hash("attendee"),
+            "intent_hash": _hash("legacy intent"),
+            "content_hash": _hash("legacy content"),
+            "created_at": NOW,
+        }
+        await connection.execute(
+            text("""INSERT INTO record_conversation_booking_intents
+            (id,experiment_id,conversation_id,context_id,scheduling_handoff_id,source_document_id,
+             source_span_ordinal,offer_acceptance_id,offer_id,profile_id,policy_id,recipient_id,
+             slot_hash,attendee_hash,intent_hash,content_hash,created_at)
+            VALUES (:id,:experiment_id,:conversation_id,:context_id,:scheduling_handoff_id,
+             :source_document_id,3,:offer_acceptance_id,:offer_id,:profile_id,:policy_id,
+             :recipient_id,:slot_hash,:attendee_hash,:intent_hash,:content_hash,:created_at)"""),
+            forged,
+        )
+        await connection.execute(
+            text(
+                "ALTER TABLE record_conversation_booking_intents ENABLE TRIGGER record_conversation_booking_intent_lineage"
+            )
+        )
+        await connection.execute(
+            text("""INSERT INTO record_conversation_booking_confirmations
+            (id,intent_id,source_document_id,source_span_ordinal,confirmation_hash,slot_hash,
+             attendee_hash,content_hash,created_at)
+            VALUES (:id,:intent_id,:source_document_id,3,:confirmation_hash,:slot_hash,
+             :attendee_hash,:content_hash,:created_at)"""),
+            {
+                "id": UUID(int=6201),
+                "intent_id": forged["id"],
+                "source_document_id": graph["document_id"],
+                "confirmation_hash": _hash("legacy confirmation"),
+                "slot_hash": _hash("slot"),
+                "attendee_hash": _hash("attendee"),
+                "content_hash": _hash("legacy confirmation content"),
+                "created_at": NOW,
+            },
+        )
+        await connection.execute(
+            text("""INSERT INTO record_conversation_booking_observations
+            (id,intent_id,confirmation_id,provider_call_id,provider_evidence_id,provider_event_hash,
+             slot_hash,attendee_hash,content_hash,observed_at)
+            VALUES (:id,:intent_id,:confirmation_id,:provider_call_id,:provider_evidence_id,
+             :provider_event_hash,:slot_hash,:attendee_hash,:content_hash,:observed_at)"""),
+            {
+                "id": UUID(int=6202),
+                "intent_id": forged["id"],
+                "confirmation_id": UUID(int=6201),
+                "provider_call_id": graph["provider_call_id"],
+                "provider_evidence_id": graph["provider_evidence_id"],
+                "provider_event_hash": _hash("legacy provider event"),
+                "slot_hash": _hash("slot"),
+                "attendee_hash": _hash("attendee"),
+                "content_hash": _hash("legacy observation"),
+                "observed_at": NOW,
+            },
+        )
+        with pytest.raises(SQLAlchemyError, match="booking handoff mismatch"):
+            await connection.execute(
+                text("""INSERT INTO record_conversation_handoffs
+                (id,experiment_id,conversation_id,context_id,kind,source_document_id,
+                 source_span_ordinal,source_intent_hash,offer_acceptance_id,offer_id,profile_id,
+                 policy_id,recipient_id,booking_observation_id,content,content_hash,created_at)
+                VALUES (:id,:experiment_id,:conversation_id,:context_id,'MEETING_BOOKING',
+                 :source_document_id,3,:source_intent_hash,:offer_acceptance_id,:offer_id,:profile_id,
+                 :policy_id,:recipient_id,:booking_observation_id,'{}'::jsonb,:content_hash,:created_at)"""),
+                {
+                    **dict(lineage),
+                    "id": UUID(int=6203),
+                    "experiment_id": graph["experiment_id"],
+                    "conversation_id": graph["conversation_id"],
+                    "context_id": graph["context_id"],
+                    "source_document_id": graph["document_id"],
+                    "source_intent_hash": _hash("legacy handoff"),
+                    "booking_observation_id": UUID(int=6202),
+                    "content_hash": _hash("legacy handoff content"),
+                    "created_at": NOW,
+                },
+            )
+        await connection.rollback()
     await repo.record_booking_intent(intent, command_key=UUID(int=6010))
     confirmation = BookingConfirmationRequest(id=UUID(int=6011), intent_id=intent.id, source_span=graph["date_span"], confirmation_hash=_hash("confirmation"), slot_hash=_hash("slot"), attendee_hash=_hash("attendee"), content_hash=_hash("booking confirmation"))
     await repo.record_booking_confirmation(confirmation, command_key=UUID(int=6012))

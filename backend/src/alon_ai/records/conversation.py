@@ -63,6 +63,39 @@ class ConversationRecordsRepository:
             )
         )
 
+    async def _explicit_follow_up_evidence(
+        self, connection, context, request: FollowUpRequest
+    ) -> bool:
+        return bool(
+            await connection.scalar(
+                text("""SELECT 1 FROM record_conversation_documents d
+                JOIN record_conversation_evidence_spans s ON s.document_id=d.id
+                WHERE d.id=:document_id AND s.ordinal=:ordinal
+                  AND d.experiment_id=:experiment_id AND d.conversation_id=:conversation_id
+                  AND d.context_id=:context_id AND d.kind='REPLY_INTERPRETATION'
+                  AND d.content->'follow_up'->>'disposition'='EXPLICIT'
+                  AND d.content->'follow_up'->>'span_ordinal'=:span_ordinal
+                  AND d.content->'follow_up'->>'date_kind'=:date_kind
+                  AND d.content->'follow_up'->>'start_date'=:start_date
+                  AND d.content->'follow_up'->>'end_date' IS NOT DISTINCT FROM :end_date
+                  AND d.content->'follow_up'->>'timezone'=:timezone"""),
+                {
+                    "document_id": request.source_span.document_id,
+                    "ordinal": request.source_span.ordinal,
+                    "experiment_id": context["experiment_id"],
+                    "conversation_id": context["conversation_id"],
+                    "context_id": context["context_id"],
+                    "span_ordinal": str(request.source_span.ordinal),
+                    "date_kind": request.date_kind,
+                    "start_date": request.start_date.isoformat(),
+                    "end_date": request.end_date.isoformat()
+                    if request.end_date
+                    else None,
+                    "timezone": request.timezone,
+                },
+            )
+        )
+
     async def _active_lock(self, connection, conversation_id: UUID):
         row = (
             (
@@ -189,7 +222,7 @@ class ConversationRecordsRepository:
     async def record_follow_up(self, request: FollowUpRequest, *, command_key: UUID) -> CommandReceipt:
         async with self.engine.begin() as connection:
             context = await self._context(connection, request.context_id)
-            if context is None or not await self._span_exists(connection, context, request.source_span):
+            if context is None or not await self._explicit_follow_up_evidence(connection, context, request):
                 raise ProductRecordsDenied("FOLLOW_UP_EVIDENCE_MISMATCH")
             await lock_experiment(connection, context["experiment_id"])
             request_hash = _request_hash(request=request)

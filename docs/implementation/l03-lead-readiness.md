@@ -91,5 +91,6 @@ research output, immutable requalification history, pending-calibration gates,
 and a complete 50-lead calibrated-offer/requalification/cohort freeze. A populated
 history downgrade refusal is checked without losing records.
 
-L03 remains in progress. Later campaign/conversation, handoff, checkpoint and
-learning persistence and live execution workflows remain outside this checkpoint.
+At this lead-readiness checkpoint, L03 remained in progress. Conversation,
+handoff, checkpoint, and learning persistence were completed in subsequent L03
+checkpoints. Live execution belongs to later roadmap tasks.
