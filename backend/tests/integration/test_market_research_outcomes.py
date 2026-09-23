@@ -301,6 +301,7 @@ async def pivot_inputs(
     recommendation,
     *,
     material_pivot: bool = True,
+    next_version: int = 2,
 ):
     workflow, agent, child_config, account = await child_governance(
         engine, admin, attr, config, now
@@ -355,7 +356,7 @@ async def pivot_inputs(
                 "material_pivot": material_pivot,
             },
             logical_id=idea_draft.logical_id,
-            version=2,
+            version=next_version,
             workflow_id=workflow,
             agent_id=agent,
         ),
@@ -415,6 +416,227 @@ async def pivot_inputs(
         max_openai_calls=10,
     )
     return feedback, feedback_validation, next_idea, plan, budget
+
+
+async def _child_research_outputs(engine, repo, experiment_id, cycle_id):
+    async with engine.connect() as connection:
+        attempt = (
+            (
+                await connection.execute(
+                    select(records.research_attempts).where(
+                        records.research_attempts.c.cycle_id == cycle_id
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        plan = (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.id == attempt["plan_artifact_id"]
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+    plan_ref = ArtifactInput(
+        artifact_id=plan["id"],
+        kind=ArtifactKind.RESEARCH_PLAN,
+        version=plan["version"],
+        content_hash=plan["content_hash"],
+        role="PLAN",
+    )
+    report = await repo.append_artifact(
+        artifact(
+            experiment_id,
+            ArtifactKind.MARKET_RESEARCH_REPORT,
+            {
+                "finding": "Bounded follow-up evidence",
+                "limitations": ["Synthetic sample"],
+            },
+            workflow_id=plan["workflow_id"],
+            agent_id=plan["agent_id"],
+        ),
+        inputs=(plan_ref,),
+        command_key=uuid4(),
+    )
+    recommendation = await repo.append_artifact(
+        artifact(
+            experiment_id,
+            ArtifactKind.MARKET_RESEARCH_RECOMMENDATION,
+            {
+                "recommendation": "REFINE_SAME_IDEA",
+                "rationale": "Evidence remains narrow",
+            },
+            workflow_id=plan["workflow_id"],
+            agent_id=plan["agent_id"],
+        ),
+        inputs=(ArtifactInput.from_receipt(report, role="REPORT"),),
+        command_key=uuid4(),
+    )
+    return attempt["id"], report, recommendation
+
+
+async def test_third_same_intent_return_blocks_without_child_graph(governance_engine):
+    (
+        repo,
+        admin,
+        attr,
+        config,
+        _agent,
+        _cycle,
+        idea_draft,
+        idea,
+        attempt,
+        report,
+        recommendation,
+        now,
+    ) = await governed_research(governance_engine, "REFINE_SAME_IDEA")
+    attempt_id = attempt.id
+    for next_version in (2, 3):
+        feedback, validation, proposed, plan, budget = await pivot_inputs(
+            governance_engine,
+            repo,
+            admin,
+            attr,
+            config,
+            now,
+            idea_draft,
+            idea,
+            report,
+            recommendation,
+            material_pivot=False,
+            next_version=next_version,
+        )
+        prior = await repo.commit_market_research_outcome(
+            attempt_id,
+            report=ArtifactInput.from_receipt(report, role="REPORT"),
+            recommendation=ArtifactInput.from_receipt(
+                recommendation, role="RECOMMENDATION"
+            ),
+            verdict="REFINE_SAME_IDEA",
+            committed_by=UUID(int=1),
+            feedback=ArtifactInput.from_receipt(feedback, role="FEEDBACK"),
+            feedback_validation=ArtifactInput.from_receipt(
+                validation, role="VALIDATION"
+            ),
+            proposed_idea=ArtifactInput.from_receipt(proposed, role="PROPOSED_IDEA"),
+            plan=ArtifactInput.from_receipt(plan, role="PLAN"),
+            budget=budget,
+            accepted_by=UUID(int=1),
+            command_key=uuid4(),
+        )
+        assert prior.child_cycle_id is not None and prior.block_id is None
+        idea = proposed
+        attempt_id, report, recommendation = await _child_research_outputs(
+            governance_engine, repo, attr.experiment_id, prior.child_cycle_id
+        )
+
+    watched = (
+        records.cycles,
+        records.idea_acceptances,
+        records.research_attempts,
+        records.research_cycle_budgets,
+        records.returns,
+    )
+    async with governance_engine.connect() as connection:
+        before = {
+            table.name: await connection.scalar(
+                select(func.count())
+                .select_from(table)
+                .where(table.c.experiment_id == attr.experiment_id)
+            )
+            for table in watched
+        }
+        plan_count = await connection.scalar(
+            select(func.count())
+            .select_from(records.artifacts)
+            .where(
+                records.artifacts.c.experiment_id == attr.experiment_id,
+                records.artifacts.c.kind == ArtifactKind.RESEARCH_PLAN,
+            )
+        )
+    key = uuid4()
+    report_input = ArtifactInput.from_receipt(report, role="REPORT")
+    recommendation_input = ArtifactInput.from_receipt(
+        recommendation, role="RECOMMENDATION"
+    )
+    blocked = await repo.commit_market_research_outcome(
+        attempt_id,
+        report=report_input,
+        recommendation=recommendation_input,
+        verdict="REFINE_SAME_IDEA",
+        committed_by=UUID(int=1),
+        command_key=key,
+    )
+    assert blocked.verdict == "REFINE_SAME_IDEA"
+    assert blocked.state == "RETURN_FOR_REFINEMENT"
+    assert blocked.child_cycle_id is None and blocked.block_id is not None
+    assert (
+        await repo.commit_market_research_outcome(
+            attempt_id,
+            report=report_input,
+            recommendation=recommendation_input,
+            verdict="REFINE_SAME_IDEA",
+            committed_by=UUID(int=1),
+            command_key=key,
+        )
+        == blocked
+    )
+    async with governance_engine.connect() as connection:
+        assert (
+            await connection.scalar(
+                select(records.research_return_blocks.c.reason_code).where(
+                    records.research_return_blocks.c.id == blocked.block_id
+                )
+            )
+            == "SAME_INTENT_LIMIT_REACHED"
+        )
+        for table in watched:
+            assert (
+                await connection.scalar(
+                    select(func.count())
+                    .select_from(table)
+                    .where(table.c.experiment_id == attr.experiment_id)
+                )
+                == before[table.name]
+            )
+        assert (
+            await connection.scalar(
+                select(func.count())
+                .select_from(records.artifacts)
+                .where(
+                    records.artifacts.c.experiment_id == attr.experiment_id,
+                    records.artifacts.c.kind == ArtifactKind.RESEARCH_PLAN,
+                )
+            )
+            == plan_count
+        )
+        command = (
+            (
+                await connection.execute(
+                    select(records.commands).where(
+                        records.commands.c.command_key == key
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert command["id"] == blocked.command_id
+        assert command["result_id"] == blocked.result_id
+        for table in (records.audit, records.outbox):
+            assert (
+                await connection.scalar(
+                    select(func.count())
+                    .select_from(table)
+                    .where(table.c.command_id == blocked.command_id)
+                )
+                == 1
+            )
 
 
 async def test_proceed_outcome_commits_exact_verdict_and_state_once(

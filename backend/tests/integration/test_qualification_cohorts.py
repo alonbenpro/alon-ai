@@ -167,7 +167,7 @@ async def accepted_offer(engine):
 
 
 async def qualified_pool(
-    engine, size=52, *, verify_first=None, first_contact_rejected=False
+    engine, size=52, *, verify_first=None, first_contact_rejected=False, deep_count=None
 ):
     experiment_id, acceptance, criteria = await accepted_offer(engine)
     supply, writer, _, plan, _ = await setup(engine, existing_exp=experiment_id)
@@ -274,18 +274,21 @@ async def qualified_pool(
         leads.append((candidate_id, fact, identity, admission, recipient))
     assert await supply.close_contactability(batch_id, uuid4()) is None
     async with engine.begin() as connection:
-        await connection.execute(
-            update(supply_schema.candidates)
-            .where(
-                supply_schema.candidates.c.experiment_id == experiment_id,
-                supply_schema.candidates.c.id.in_(
-                    select(supply_schema.contacts.c.candidate_id).where(
-                        supply_schema.contacts.c.outcome == "SUPPORTED"
-                    )
-                ),
-            )
-            .values(deep_started=True)
+        deep_candidates = update(supply_schema.candidates).where(
+            supply_schema.candidates.c.experiment_id == experiment_id,
+            supply_schema.candidates.c.id.in_(
+                select(supply_schema.contacts.c.candidate_id).where(
+                    supply_schema.contacts.c.outcome == "SUPPORTED"
+                )
+            ),
         )
+        if deep_count is not None:
+            deep_candidates = deep_candidates.where(
+                supply_schema.candidates.c.id.in_(
+                    candidate_id for candidate_id, _ in candidates[:deep_count]
+                )
+            )
+        await connection.execute(deep_candidates.values(deep_started=True))
     return experiment_id, acceptance, criteria, plan, supply, org_repo, leads
 
 
@@ -631,6 +634,8 @@ async def test_matrix_rejects_incomplete_failed_stale_and_protected_inputs(
 
 
 async def test_exact_fifty_freeze_is_atomic_protected_and_replayable(governance_engine):
+    from alon_ai.workflows.campaign_supply import CampaignSupplyWorkflowRepository
+
     (
         experiment_id,
         acceptance,
@@ -639,12 +644,12 @@ async def test_exact_fifty_freeze_is_atomic_protected_and_replayable(governance_
         _,
         org_repo,
         leads,
-    ) = await qualified_pool(governance_engine, size=50)
+    ) = await qualified_pool(governance_engine, size=51, deep_count=50)
     repo = QualificationCohortRepository(
         governance_engine, lookup_key=KEY, clock=lambda: NOW
     )
     decisions = []
-    for index, lead in enumerate(leads):
+    for index, lead in enumerate(leads[:50]):
         request = dossier_request(acceptance, lead, index)
         dossier = await repo.record_dossier(request, command_key=uuid4())
         decisions.append(
@@ -660,7 +665,7 @@ async def test_exact_fifty_freeze_is_atomic_protected_and_replayable(governance_
         )
 
     preexisting = await org_repo.reserve(
-        leads[-1][4].result_id, acted_by=OWNER, command_key=uuid4()
+        leads[49][4].result_id, acted_by=OWNER, command_key=uuid4()
     )
     freeze = FreezeCohortRequest(
         offer_acceptance_id=acceptance["id"],
@@ -731,6 +736,23 @@ async def test_exact_fifty_freeze_is_atomic_protected_and_replayable(governance_
             )
             == "TARGET_50_REACHED"
         )
+        untouched = (
+            (
+                await connection.execute(
+                    select(supply_schema.candidates).where(
+                        supply_schema.candidates.c.id == leads[50][0]
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert untouched["stopped"] and not untouched["deep_started"]
+    assert (
+        await CampaignSupplyWorkflowRepository(
+            governance_engine, clock=lambda: NOW
+        ).next_action(experiment_id)
+    ).kind == "TARGET_50_REACHED"
 
 
 async def test_outreach_context_and_draft_are_complete_safe_and_replayable(

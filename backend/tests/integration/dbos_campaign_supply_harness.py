@@ -51,6 +51,9 @@ async def run(args: argparse.Namespace) -> None:
                     engine, args.application_version
                 )
             )[workflow_id]
+        if args.report_next_action:
+            next_action = await runtime.next_action(request.experiment_id)
+            print("NEXT_ACTION:" + next_action.model_dump_json(), flush=True)
         print("RESULT:" + json.dumps(result, sort_keys=True), flush=True)
     finally:
         await engine.dispose()
@@ -63,6 +66,7 @@ def main() -> None:
     parser.add_argument("--request", required=True)
     parser.add_argument("--application-version", default=DBOS_APPLICATION_VERSION)
     parser.add_argument("--executor-id", default="l04-supply-test")
+    parser.add_argument("--report-next-action", action="store_true")
     asyncio.run(run(parser.parse_args()))
 
 

@@ -1,6 +1,7 @@
 """Durable L04 campaign-supply command delivery against isolated PostgreSQL."""
 
 import asyncio
+import json
 import os
 import signal
 import subprocess
@@ -13,19 +14,23 @@ from uuid import uuid4
 import pytest
 from sqlalchemy import func, insert, select, text
 from sqlalchemy.exc import DBAPIError
-from test_campaign_supply import NOW, candidate, setup
+from test_campaign_supply import NOW, candidate, qualify, setup
 
 from alon_ai.accounting import schema as gov
 from alon_ai.policies.campaign_supply import (
     DiscoveryCompletionEvidence,
     DiscoveryPlan,
+    IdentityEvidence,
+    ReferenceEvidence,
     SupplyDenied,
+    SupplyFact,
 )
 from alon_ai.records import schema as records
 from alon_ai.supply import schema as supply
 from alon_ai.workflows.campaign_supply import (
     CampaignSupplyWorkflowRepository,
     CampaignSupplyWorkflowRequest,
+    OperationKind,
     campaign_supply_workflow_id,
 )
 
@@ -80,6 +85,173 @@ async def _wait_for(path: Path, process: asyncio.subprocess.Process) -> None:
     process.kill()
     await process.wait()
     pytest.fail("supply workflow never reached its barrier")
+
+
+async def _completed_discovery(writer, batch_id, filter_, *, exhausted=False):
+    await writer.discovery_completion(
+        DiscoveryCompletionEvidence(
+            id=uuid4(),
+            batch_id=batch_id,
+            filter=filter_,
+            kind="SEARCH_SPACE_EXHAUSTED" if exhausted else "QUERY_COMPLETE",
+            mode="SYNTHETIC",
+            registered_by=uuid4(),
+            observed_at=NOW,
+        )
+    )
+
+
+async def _prepared_supply_command(governance_engine, kind: OperationKind):
+    deadline = datetime.now(UTC) + timedelta(days=2)
+    repo, writer, experiment_id, plan, filters = await setup(
+        governance_engine,
+        supply_deadline=deadline,
+        create_plan=kind != "CREATE",
+    )
+    payload = {
+        "operation_kind": kind,
+        "experiment_id": experiment_id,
+        "command_key": uuid4(),
+    }
+    watched = {
+        "CREATE": {"plans": 1},
+        "ADMIT_CANDIDATE": {"candidates": 1},
+        "RESOLVE_CONTACT": {"contacts": 1},
+        "CLOSE_CONTACTABILITY": {"closures": 1, "outcomes": 1},
+        "CLOSE_QUALIFICATION": {"closures": 1, "feedback": 1},
+        "STOP": {"outcomes": 1},
+    }[kind]
+    if kind == "CREATE":
+        async with governance_engine.connect() as connection:
+            policy_id = await connection.scalar(
+                select(supply.references.c.id).where(
+                    supply.references.c.experiment_id == experiment_id,
+                    supply.references.c.kind == "VERIFICATION_POLICY",
+                )
+            )
+        payload.update(
+            plan=plan,
+            allowed=filters,
+            verification_policy_id=policy_id,
+            deadline=deadline,
+        )
+    elif kind == "ADMIT_CANDIDATE":
+        batch_id = await repo.begin_batch(experiment_id, 1, plan, uuid4())
+        provenance_id = uuid4()
+        await writer.reference(
+            ReferenceEvidence(
+                id=provenance_id,
+                experiment_id=experiment_id,
+                kind="INDEPENDENT_SOURCE",
+                definition="synthetic admitted source",
+                mode="SYNTHETIC",
+                registered_by=uuid4(),
+            )
+        )
+        identity = IdentityEvidence(
+            id=uuid4(),
+            experiment_id=experiment_id,
+            provenance_ref=provenance_id,
+            normalized_key="durable-admission",
+            mode="SYNTHETIC",
+            registered_by=uuid4(),
+            observed_at=NOW,
+            valid_until=deadline,
+        )
+        await writer.identity(identity)
+        clearance = SupplyFact(
+            id=uuid4(),
+            identity_id=identity.id,
+            kind="IDENTITY_CLEAR",
+            mode="SYNTHETIC",
+            registered_by=identity.registered_by,
+            observed_at=NOW,
+            valid_until=deadline,
+        )
+        await writer.fact(clearance)
+        payload.update(
+            batch_id=batch_id,
+            identity_id=identity.id,
+            clearance_id=clearance.id,
+            observations=plan.filters,
+        )
+    elif kind == "RESOLVE_CONTACT":
+        batch_id = await repo.begin_batch(experiment_id, 1, plan, uuid4())
+        candidate_id, fact = await candidate(
+            repo,
+            writer,
+            experiment_id,
+            batch_id,
+            0,
+            supported=None,
+            until=deadline,
+        )
+        address_id = uuid4()
+        source_id = await fact("SOURCE_EMAIL", contact_ref=address_id)
+        verification_id = await fact(
+            "VERIFIED",
+            contact_ref=address_id,
+            policy_ref=await repo.verification_policy(experiment_id),
+        )
+        payload.update(
+            candidate_id=candidate_id,
+            source_id=source_id,
+            verification_id=verification_id,
+        )
+    elif kind == "CLOSE_CONTACTABILITY":
+        first = await repo.begin_batch(experiment_id, 1, plan, uuid4())
+        await _completed_discovery(writer, first, filters[0])
+        feedback_id = await repo.close_contactability(first, uuid4())
+        changed = DiscoveryPlan(
+            qualification_rule_id=plan.qualification_rule_id, filters=(filters[1],)
+        )
+        second = await repo.begin_batch(experiment_id, 2, changed, uuid4(), feedback_id)
+        await _completed_discovery(writer, second, filters[1])
+        payload.update(batch_id=second)
+    elif kind == "CLOSE_QUALIFICATION":
+        batch_id = await repo.begin_batch(experiment_id, 1, plan, uuid4())
+        leads = [
+            await candidate(
+                repo, writer, experiment_id, batch_id, index, until=deadline
+            )
+            for index in range(50)
+        ]
+        await repo.close_contactability(batch_id, uuid4())
+        for candidate_id, fact in leads:
+            await qualify(
+                repo,
+                governance_engine,
+                candidate_id,
+                fact,
+                plan.qualification_rule_id,
+                "REJECTED_FIT",
+            )
+        payload.update(batch_id=batch_id)
+    else:
+        batch_id = await repo.begin_batch(experiment_id, 1, plan, uuid4())
+        await _completed_discovery(writer, batch_id, filters[0], exhausted=True)
+        payload.update(reason="SEARCH_EXHAUSTED")
+    return CampaignSupplyWorkflowRequest(**payload), watched
+
+
+async def _supply_graph_counts(engine, experiment_id):
+    tables = {
+        "plans": supply.plans,
+        "candidates": supply.candidates,
+        "contacts": supply.contacts,
+        "closures": supply.closures,
+        "feedback": supply.feedback,
+        "outcomes": supply.outcomes,
+    }
+    async with engine.connect() as connection:
+        return {
+            name: await connection.scalar(
+                select(func.count())
+                .select_from(table)
+                .where(table.c.experiment_id == experiment_id)
+            )
+            for name, table in tables.items()
+        }
 
 
 async def test_supply_workflow_binding_replay_conflict_and_next_action(
@@ -328,6 +500,197 @@ async def test_dbos_supply_batch_crash_replays_one_business_graph(
             )
             == "RUNTIME_COMPLETED"
         )
+
+
+@pytest.mark.parametrize(
+    "operation_kind",
+    (
+        "CREATE",
+        "ADMIT_CANDIDATE",
+        "RESOLVE_CONTACT",
+        "CLOSE_CONTACTABILITY",
+        "CLOSE_QUALIFICATION",
+        "STOP",
+    ),
+)
+async def test_dbos_supply_remaining_commands_recover_after_commit_once(
+    governance_engine, tmp_path, operation_kind
+):
+    request, expected_growth = await _prepared_supply_command(
+        governance_engine, operation_kind
+    )
+    before = await _supply_graph_counts(governance_engine, request.experiment_id)
+    request_path = tmp_path / "supply-request.json"
+    request_path.write_text(request.model_dump_json(exclude_computed_fields=True))
+    _migrate_dbos(governance_engine)
+    ready, release = tmp_path / "ready", tmp_path / "release"
+    process = await asyncio.create_subprocess_exec(
+        sys.executable,
+        str(HARNESS),
+        "start",
+        "--request",
+        str(request_path),
+        cwd=Path(__file__).parents[2],
+        env={
+            **_environment(governance_engine),
+            "ALON_AI_SUPPLY_DBOS_TEST_BARRIER": "after-business",
+            "ALON_AI_SUPPLY_DBOS_TEST_READY": str(ready),
+            "ALON_AI_SUPPLY_DBOS_TEST_RELEASE": str(release),
+        },
+        stdout=asyncio.subprocess.PIPE,
+        stderr=asyncio.subprocess.PIPE,
+    )
+    await _wait_for(ready, process)
+    committed = await _supply_graph_counts(governance_engine, request.experiment_id)
+    for name, count in before.items():
+        assert committed[name] == count + expected_growth.get(name, 0), name
+    async with governance_engine.connect() as connection:
+        assert (
+            await connection.scalar(
+                select(func.count())
+                .select_from(records.commands)
+                .where(records.commands.c.command_key == request.command_key)
+            )
+            == 1
+        )
+    process.send_signal(signal.SIGKILL)
+    await asyncio.wait_for(process.wait(), timeout=10)
+    workflow_id = campaign_supply_workflow_id(request)
+    recovered = await asyncio.to_thread(
+        subprocess.run,
+        [
+            sys.executable,
+            str(HARNESS),
+            "recover",
+            "--request",
+            str(request_path),
+            "--report-next-action",
+        ],
+        cwd=Path(__file__).parents[2],
+        env=_environment(governance_engine),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert recovered.returncode == 0, recovered.stderr
+    result = json.loads(
+        next(
+            line.removeprefix("RESULT:")
+            for line in recovered.stdout.splitlines()
+            if line.startswith("RESULT:")
+        )
+    )
+    next_action = json.loads(
+        next(
+            line.removeprefix("NEXT_ACTION:")
+            for line in recovered.stdout.splitlines()
+            if line.startswith("NEXT_ACTION:")
+        )
+    )
+    assert (
+        next_action["kind"]
+        == {
+            "CREATE": "BEGIN_BATCH_1",
+            "ADMIT_CANDIDATE": "WAIT_CONTACTABILITY",
+            "RESOLVE_CONTACT": "CLOSE_CONTACTABILITY",
+            "CLOSE_CONTACTABILITY": "CAMPAIGN_SUPPLY_INSUFFICIENT",
+            "CLOSE_QUALIFICATION": "BEGIN_BATCH_3",
+            "STOP": "CAMPAIGN_SUPPLY_INSUFFICIENT",
+        }[operation_kind]
+    )
+    replay = await asyncio.to_thread(
+        subprocess.run,
+        [sys.executable, str(HARNESS), "start", "--request", str(request_path)],
+        cwd=Path(__file__).parents[2],
+        env=_environment(governance_engine),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=30,
+    )
+    assert replay.returncode == 0, replay.stderr
+    assert (
+        json.loads(
+            next(
+                line.removeprefix("RESULT:")
+                for line in replay.stdout.splitlines()
+                if line.startswith("RESULT:")
+            )
+        )
+        == result
+    )
+    assert (
+        await _supply_graph_counts(governance_engine, request.experiment_id)
+        == committed
+    )
+    async with governance_engine.connect() as connection:
+        command = (
+            (
+                await connection.execute(
+                    select(records.commands).where(
+                        records.commands.c.command_key == request.command_key
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert result == {
+            "command_id": str(command["id"]),
+            "result_id": str(command["result_id"]),
+        }
+        for table in (records.audit, records.outbox):
+            assert (
+                await connection.scalar(
+                    select(func.count())
+                    .select_from(table)
+                    .where(table.c.command_id == command["id"])
+                )
+                == 1
+            )
+        binding = (
+            (
+                await connection.execute(
+                    select(supply.workflow_bindings).where(
+                        supply.workflow_bindings.c.dbos_workflow_id == workflow_id
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert binding["delivery_state"] == "RUNTIME_COMPLETED"
+        assert binding["command_id"] == command["id"]
+        assert binding["result_id"] == command["result_id"]
+        if operation_kind in {"CLOSE_CONTACTABILITY", "STOP"}:
+            outcome = (
+                (
+                    await connection.execute(
+                        select(supply.outcomes).where(
+                            supply.outcomes.c.experiment_id == request.experiment_id
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            assert outcome["classification"] == "CAMPAIGN_SUPPLY_INSUFFICIENT"
+            assert outcome["achieved"] == 0
+            assert outcome["batch_yields"]
+            assert outcome["reason"] == (
+                "EMAIL_SUPPLY_INSUFFICIENT_AFTER_BATCH_2"
+                if operation_kind == "CLOSE_CONTACTABILITY"
+                else "SEARCH_EXHAUSTED"
+            )
+            assert (
+                await connection.scalar(
+                    select(func.count())
+                    .select_from(supply.contacts)
+                    .where(supply.contacts.c.experiment_id == request.experiment_id)
+                )
+                == 0
+            )
 
 
 @pytest.mark.parametrize(

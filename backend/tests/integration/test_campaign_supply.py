@@ -25,6 +25,7 @@ async def setup(
     existing_exp=None,
     supply_deadline=NOW + timedelta(hours=1),
     supply_command_key=None,
+    create_plan=True,
 ):
     from alon_ai.accounting.schema import experiments
     from alon_ai.supply.repository import CampaignSupplyRepository, SupplyEvidenceWriter
@@ -55,9 +56,15 @@ async def setup(
             )
         )
     plan = DiscoveryPlan(qualification_rule_id=rule, filters=(filters[0],))
-    await repo.create(
-        exp, plan, filters, verifier, supply_deadline, command_key=supply_command_key
-    )
+    if create_plan:
+        await repo.create(
+            exp,
+            plan,
+            filters,
+            verifier,
+            supply_deadline,
+            command_key=supply_command_key,
+        )
     return repo, writer, exp, plan, filters
 
 
