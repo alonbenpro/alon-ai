@@ -218,7 +218,20 @@ async def governed_research(engine, verdict: str, *, max_count: int = 10):
         inputs=(ArtifactInput.from_receipt(report, role="REPORT"),),
         command_key=uuid4(),
     )
-    return repo, admin, attr, config, agent_id, cycle, idea_draft, idea, attempt, report, recommendation, now
+    return (
+        repo,
+        admin,
+        attr,
+        config,
+        agent_id,
+        cycle,
+        idea_draft,
+        idea,
+        attempt,
+        report,
+        recommendation,
+        now,
+    )
 
 
 async def _workflow_account(engine, workflow_id):
@@ -336,9 +349,7 @@ async def pivot_inputs(
         ArtifactInput.from_receipt(feedback, role="TARGET"),
         experiment_id=attr.experiment_id,
         disposition="VALIDATED",
-        validation=ArtifactInput.from_receipt(
-            feedback_validation, role="VALIDATION"
-        ),
+        validation=ArtifactInput.from_receipt(feedback_validation, role="VALIDATION"),
         decided_by=UUID(int=1),
         command_key=uuid4(),
     )
@@ -716,9 +727,15 @@ async def test_proceed_outcome_commits_exact_verdict_and_state_once(
 async def test_outcome_rejects_superseded_report_without_partial_graph(
     governance_engine,
 ):
-    repo, experiment_id, cycle, _idea, attempt, report, recommendation = (
-        await prepared_research(governance_engine, "PROCEED_TO_OFFER")
-    )
+    (
+        repo,
+        experiment_id,
+        cycle,
+        _idea,
+        attempt,
+        report,
+        recommendation,
+    ) = await prepared_research(governance_engine, "PROCEED_TO_OFFER")
     await repo.record_disposition(
         ArtifactInput.from_receipt(report, role="REPORT"),
         experiment_id=experiment_id,
@@ -741,9 +758,7 @@ async def test_outcome_rejects_superseded_report_without_partial_graph(
 
     async with governance_engine.connect() as connection:
         assert not await connection.scalar(
-            select(records.verdicts.c.id).where(
-                records.verdicts.c.cycle_id == cycle.id
-            )
+            select(records.verdicts.c.id).where(records.verdicts.c.cycle_id == cycle.id)
         )
 
 
@@ -912,9 +927,7 @@ async def test_outcome_runtime_binding_pins_payload_hash_and_cancels_cleanly(
 
     async with governance_engine.connect() as connection:
         assert not await connection.scalar(
-            select(records.verdicts.c.id).where(
-                records.verdicts.c.cycle_id == cycle.id
-            )
+            select(records.verdicts.c.id).where(records.verdicts.c.cycle_id == cycle.id)
         )
         assert (
             await connection.scalar(
@@ -964,8 +977,8 @@ async def test_same_intent_outcome_atomically_starts_targeted_child(
         recommendation,
         now,
     ) = await governed_research(governance_engine, "REFINE_SAME_IDEA")
-    child_workflow, child_agent, child_config, child_account = (
-        await child_governance(governance_engine, admin, attr, config, now)
+    child_workflow, child_agent, child_config, child_account = await child_governance(
+        governance_engine, admin, attr, config, now
     )
     feedback = await repo.append_artifact(
         artifact(
@@ -1004,9 +1017,7 @@ async def test_same_intent_outcome_atomically_starts_targeted_child(
         ArtifactInput.from_receipt(feedback, role="TARGET"),
         experiment_id=attr.experiment_id,
         disposition="VALIDATED",
-        validation=ArtifactInput.from_receipt(
-            feedback_validation, role="VALIDATION"
-        ),
+        validation=ArtifactInput.from_receipt(feedback_validation, role="VALIDATION"),
         decided_by=UUID(int=1),
         command_key=uuid4(),
     )
@@ -1097,9 +1108,7 @@ async def test_same_intent_outcome_atomically_starts_targeted_child(
         "feedback_validation": ArtifactInput.from_receipt(
             feedback_validation, role="VALIDATION"
         ),
-        "proposed_idea": ArtifactInput.from_receipt(
-            next_idea, role="PROPOSED_IDEA"
-        ),
+        "proposed_idea": ArtifactInput.from_receipt(next_idea, role="PROPOSED_IDEA"),
         "plan": ArtifactInput.from_receipt(child_plan, role="PLAN"),
         "budget": budget,
         "accepted_by": UUID(int=1),
@@ -1117,11 +1126,14 @@ async def test_same_intent_outcome_atomically_starts_targeted_child(
             )
         )
         assert child_state == "MARKET_RESEARCH"
-        assert await connection.scalar(
-            select(records.idea_acceptances.c.artifact_id).where(
-                records.idea_acceptances.c.cycle_id == receipt.child_cycle_id
+        assert (
+            await connection.scalar(
+                select(records.idea_acceptances.c.artifact_id).where(
+                    records.idea_acceptances.c.cycle_id == receipt.child_cycle_id
+                )
             )
-        ) == next_idea.artifact_id
+            == next_idea.artifact_id
+        )
         assert (
             await connection.scalar(
                 select(func.count())
@@ -1177,9 +1189,7 @@ async def test_approved_material_pivot_commits_supplied_idea_and_child(
         "decision": "APPROVED",
         "decided_by": UUID(int=1),
         "reason_code": "OPERATOR_APPROVED",
-        "proposed_idea": ArtifactInput.from_receipt(
-            next_idea, role="PROPOSED_IDEA"
-        ),
+        "proposed_idea": ArtifactInput.from_receipt(next_idea, role="PROPOSED_IDEA"),
         "feedback": ArtifactInput.from_receipt(feedback, role="FEEDBACK"),
         "feedback_validation": ArtifactInput.from_receipt(
             feedback_validation, role="VALIDATION"
@@ -1194,21 +1204,30 @@ async def test_approved_material_pivot_commits_supplied_idea_and_child(
     assert await repo.decide_material_pivot(**kwargs) == receipt
 
     async with governance_engine.connect() as connection:
-        assert await connection.scalar(
-            select(records.idea_acceptances.c.artifact_id).where(
-                records.idea_acceptances.c.cycle_id == receipt.child_cycle_id
+        assert (
+            await connection.scalar(
+                select(records.idea_acceptances.c.artifact_id).where(
+                    records.idea_acceptances.c.cycle_id == receipt.child_cycle_id
+                )
             )
-        ) == next_idea.artifact_id
-        assert await connection.scalar(
-            select(records.cycle_states.c.state).where(
-                records.cycle_states.c.cycle_id == receipt.child_cycle_id
+            == next_idea.artifact_id
+        )
+        assert (
+            await connection.scalar(
+                select(records.cycle_states.c.state).where(
+                    records.cycle_states.c.cycle_id == receipt.child_cycle_id
+                )
             )
-        ) == "MARKET_RESEARCH"
-        assert await connection.scalar(
-            select(records.cycle_states.c.state).where(
-                records.cycle_states.c.cycle_id == cycle.id
+            == "MARKET_RESEARCH"
+        )
+        assert (
+            await connection.scalar(
+                select(records.cycle_states.c.state).where(
+                    records.cycle_states.c.cycle_id == cycle.id
+                )
             )
-        ) == "RETURN_FOR_REFINEMENT"
+            == "RETURN_FOR_REFINEMENT"
+        )
 
 
 async def test_inconclusive_allows_one_atomic_supplement(governance_engine):
@@ -1347,9 +1366,7 @@ async def test_exhausted_budget_commits_block_without_child_cycle(governance_eng
         report,
         recommendation,
         now,
-    ) = await governed_research(
-        governance_engine, "REFINE_SAME_IDEA", max_count=0
-    )
+    ) = await governed_research(governance_engine, "REFINE_SAME_IDEA", max_count=0)
     feedback, feedback_validation, proposed, plan, budget = await pivot_inputs(
         governance_engine,
         repo,
@@ -1403,11 +1420,14 @@ async def test_exhausted_budget_commits_block_without_child_cycle(governance_eng
                 .where(records.cycles.c.experiment_id == attr.experiment_id)
             )
         ) == 1
-        assert await connection.scalar(
-            select(records.cycle_states.c.state).where(
-                records.cycle_states.c.cycle_id == cycle.id
+        assert (
+            await connection.scalar(
+                select(records.cycle_states.c.state).where(
+                    records.cycle_states.c.cycle_id == cycle.id
+                )
             )
-        ) == "RETURN_FOR_REFINEMENT"
+            == "RETURN_FOR_REFINEMENT"
+        )
 
     with pytest.raises(ProductRecordsDenied, match="MANAGED_RETURN_COMMAND_REQUIRED"):
         await repo.return_to_research(
@@ -1564,14 +1584,10 @@ async def test_same_intent_child_failure_rolls_back_entire_graph(governance_engi
             )
     async with governance_engine.connect() as connection:
         assert not await connection.scalar(
-            select(records.verdicts.c.id).where(
-                records.verdicts.c.cycle_id == cycle.id
-            )
+            select(records.verdicts.c.id).where(records.verdicts.c.cycle_id == cycle.id)
         )
         assert not await connection.scalar(
-            select(records.commands.c.id).where(
-                records.commands.c.command_key == key
-            )
+            select(records.commands.c.id).where(records.commands.c.command_key == key)
         )
         assert (
             await connection.scalar(
@@ -1580,11 +1596,14 @@ async def test_same_intent_child_failure_rolls_back_entire_graph(governance_engi
                 .where(records.cycles.c.experiment_id == attr.experiment_id)
             )
         ) == 1
-        assert await connection.scalar(
-            select(records.cycle_states.c.state).where(
-                records.cycle_states.c.cycle_id == cycle.id
+        assert (
+            await connection.scalar(
+                select(records.cycle_states.c.state).where(
+                    records.cycle_states.c.cycle_id == cycle.id
+                )
             )
-        ) == "MARKET_RESEARCH"
+            == "MARKET_RESEARCH"
+        )
 
 
 @pytest.mark.parametrize(

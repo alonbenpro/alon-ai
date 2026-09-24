@@ -521,9 +521,7 @@ async def test_cycle_acceptance_verdict_return_and_material_pivot_gates(
     attempt = await repo.start_market_research(
         experiment_id,
         cycle.id,
-        accepted_idea=ArtifactInput.from_receipt(
-            idea_receipt, role="ACCEPTED_IDEA"
-        ),
+        accepted_idea=ArtifactInput.from_receipt(idea_receipt, role="ACCEPTED_IDEA"),
         plan=ArtifactInput.from_receipt(plan_receipt, role="PLAN"),
         command_key=uuid4(),
     )

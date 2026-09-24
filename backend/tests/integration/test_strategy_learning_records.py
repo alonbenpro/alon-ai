@@ -127,7 +127,11 @@ async def bound_strategy(engine):
     repository, request, proposal, package, _governed = await strategy_package(engine)
     await repository.record_strategy_package(package, command_key=uuid4())
     return await bind_recorded_package(
-        engine, repository=repository, request=request, proposal=proposal, package=package
+        engine,
+        repository=repository,
+        request=request,
+        proposal=proposal,
+        package=package,
     )
 
 
@@ -255,7 +259,9 @@ async def live_observation_request(engine, *, binding_fixture):
         )
     inputs = LearningInputBundleInput(
         id=uuid4(),
-        artifacts=(request.inputs.artifacts[0].model_copy(update={"role": "ARTIFACT"}),),
+        artifacts=(
+            request.inputs.artifacts[0].model_copy(update={"role": "ARTIFACT"}),
+        ),
         evidence=(
             LearningEvidenceReference(
                 evidence_id=evidence_id, call_id=call_id, role="EVIDENCE"
@@ -419,14 +425,24 @@ async def test_complete_package_is_sealed_replay_safe_and_phase3a_inputs_reject_
     replay = await repository.record_strategy_package(package, command_key=key)
     assert replay == first
     async with governance_engine.connect() as connection:
-        assert await connection.scalar(
-            text("SELECT count(*) FROM record_strategy_package_members WHERE package_id=:id"),
-            {"id": first.package_id},
-        ) == 4
-        assert await connection.scalar(
-            text("SELECT count(*) FROM record_strategy_package_seals WHERE package_id=:id"),
-            {"id": first.package_id},
-        ) == 1
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT count(*) FROM record_strategy_package_members WHERE package_id=:id"
+                ),
+                {"id": first.package_id},
+            )
+            == 4
+        )
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT count(*) FROM record_strategy_package_seals WHERE package_id=:id"
+                ),
+                {"id": first.package_id},
+            )
+            == 1
+        )
     async with governance_engine.begin() as connection:
         with pytest.raises(SQLAlchemyError):
             await connection.execute(
@@ -605,7 +621,9 @@ async def test_promotion_uses_exact_passing_assessment_and_changes_only_future_s
             decision.model_copy(
                 update={
                     "id": uuid4(),
-                    "package": promoted.model_copy(update={"members": tampered_members}),
+                    "package": promoted.model_copy(
+                        update={"members": tampered_members}
+                    ),
                 }
             ),
             command_key=uuid4(),
@@ -632,11 +650,15 @@ async def test_promotion_uses_exact_passing_assessment_and_changes_only_future_s
     assert receipt.result_id == decision.id
     async with governance_engine.connect() as connection:
         frozen_package = await connection.scalar(
-            text("SELECT package_id FROM record_experiment_strategy_bindings WHERE experiment_id=:id"),
+            text(
+                "SELECT package_id FROM record_experiment_strategy_bindings WHERE experiment_id=:id"
+            ),
             {"id": request.experiment_id},
         )
         selected_package = await connection.scalar(
-            text("SELECT package_id FROM record_learning_review_controls WHERE registry_scope AND kind='PROMOTE_PACKAGE' ORDER BY event_ordinal DESC LIMIT 1")
+            text(
+                "SELECT package_id FROM record_learning_review_controls WHERE registry_scope AND kind='PROMOTE_PACKAGE' ORDER BY event_ordinal DESC LIMIT 1"
+            )
         )
     assert frozen_package == baseline.id
     assert selected_package == promoted.id
@@ -680,14 +702,24 @@ async def test_rejected_promotion_retains_candidate_and_negative_learning(
     )
     await repository.record_promotion(decision, command_key=uuid4())
     async with governance_engine.connect() as connection:
-        assert await connection.scalar(
-            text("SELECT count(*) FROM record_learning_candidate_versions WHERE id=:id"),
-            {"id": proposal.candidate_id},
-        ) == 1
-        assert await connection.scalar(
-            text("SELECT count(*) FROM record_negative_learning_records WHERE promotion_decision_id=:id"),
-            {"id": decision.id},
-        ) == 1
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT count(*) FROM record_learning_candidate_versions WHERE id=:id"
+                ),
+                {"id": proposal.candidate_id},
+            )
+            == 1
+        )
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT count(*) FROM record_negative_learning_records WHERE promotion_decision_id=:id"
+                ),
+                {"id": decision.id},
+            )
+            == 1
+        )
 
 
 async def test_live_observation_and_negative_assessment_are_sealed_replay_safe_and_immutable(
@@ -701,9 +733,12 @@ async def test_live_observation_and_negative_assessment_are_sealed_replay_safe_a
     first = await repository.record_live_observation(
         observation, command_key=observation_key
     )
-    assert await repository.record_live_observation(
-        observation, command_key=observation_key
-    ) == first
+    assert (
+        await repository.record_live_observation(
+            observation, command_key=observation_key
+        )
+        == first
+    )
     with pytest.raises(ProductRecordsDenied, match="COMMAND_CONFLICT"):
         await repository.record_live_observation(
             observation.model_copy(update={"segment_key": "OTHER"}),
@@ -728,13 +763,18 @@ async def test_live_observation_and_negative_assessment_are_sealed_replay_safe_a
     assessment_receipt = await repository.record_live_regression_assessment(
         assessment, command_key=assessment_key
     )
-    assert await repository.record_live_regression_assessment(
-        assessment, command_key=assessment_key
-    ) == assessment_receipt
+    assert (
+        await repository.record_live_regression_assessment(
+            assessment, command_key=assessment_key
+        )
+        == assessment_receipt
+    )
     async with governance_engine.begin() as connection:
         with pytest.raises(SQLAlchemyError):
             await connection.execute(
-                text("UPDATE record_live_strategy_observations SET segment_key='changed' WHERE id=:id"),
+                text(
+                    "UPDATE record_live_strategy_observations SET segment_key='changed' WHERE id=:id"
+                ),
                 {"id": observation.id},
             )
     async with governance_engine.connect() as connection:
@@ -749,14 +789,24 @@ async def test_live_observation_and_negative_assessment_are_sealed_replay_safe_a
             .mappings()
             .one()
         )
-        assert await connection.scalar(
-            text("SELECT count(*) FROM record_learning_failure_analyses WHERE live_assessment_id=:id"),
-            {"id": assessment.id},
-        ) == 1
-        assert await connection.scalar(
-            text("SELECT count(*) FROM record_negative_learning_records WHERE live_assessment_id=:id"),
-            {"id": assessment.id},
-        ) == 1
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT count(*) FROM record_learning_failure_analyses WHERE live_assessment_id=:id"
+                ),
+                {"id": assessment.id},
+            )
+            == 1
+        )
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT count(*) FROM record_negative_learning_records WHERE live_assessment_id=:id"
+                ),
+                {"id": assessment.id},
+            )
+            == 1
+        )
     assert dict(evaluator) == {
         "live_evaluator_version": assessment.evaluator_version,
         "live_evaluator_hash": assessment.evaluator_hash,
@@ -766,9 +816,13 @@ async def test_live_observation_and_negative_assessment_are_sealed_replay_safe_a
 async def test_rollback_selects_highest_confidence_retained_package_and_controls_append(
     governance_engine,
 ):
-    repository, first_request, first_proposal, baseline, _governed = (
-        await strategy_package(governance_engine)
-    )
+    (
+        repository,
+        first_request,
+        first_proposal,
+        baseline,
+        _governed,
+    ) = await strategy_package(governance_engine)
     await repository.record_strategy_package(baseline, command_key=uuid4())
     second = await promote_strategy(
         repository,
@@ -867,11 +921,17 @@ async def test_rollback_selects_highest_confidence_retained_package_and_controls
             id=uuid4(), kind="PAUSE", operator_id=UUID(int=1), reason_codes=("REVIEW",)
         ),
         StrategyControlRequest(
-            id=uuid4(), kind="PIN", package_id=second.id,
-            operator_id=UUID(int=1), reason_codes=("KNOWN_GOOD",)
+            id=uuid4(),
+            kind="PIN",
+            package_id=second.id,
+            operator_id=UUID(int=1),
+            reason_codes=("KNOWN_GOOD",),
         ),
         StrategyControlRequest(
-            id=uuid4(), kind="RESUME", operator_id=UUID(int=1), reason_codes=("REVIEWED",)
+            id=uuid4(),
+            kind="RESUME",
+            operator_id=UUID(int=1),
+            reason_codes=("REVIEWED",),
         ),
         StrategyControlRequest(
             id=uuid4(), kind="UNPIN", operator_id=UUID(int=1), reason_codes=("EXPIRED",)
@@ -880,7 +940,10 @@ async def test_rollback_selects_highest_confidence_retained_package_and_controls
     for control in controls:
         key = uuid4()
         receipt = await repository.record_strategy_control(control, command_key=key)
-        assert await repository.record_strategy_control(control, command_key=key) == receipt
+        assert (
+            await repository.record_strategy_control(control, command_key=key)
+            == receipt
+        )
     async with governance_engine.connect() as connection:
         selected = await connection.scalar(
             text("""SELECT package_id FROM record_learning_review_controls
@@ -893,12 +956,16 @@ async def test_rollback_selects_highest_confidence_retained_package_and_controls
             {"id": assessment.id},
         )
         kinds = (
-            await connection.execute(
-                text("""SELECT kind FROM record_learning_review_controls
+            (
+                await connection.execute(
+                    text("""SELECT kind FROM record_learning_review_controls
                 WHERE id=ANY(:ids) ORDER BY event_ordinal"""),
-                {"ids": [item.id for item in controls]},
+                    {"ids": [item.id for item in controls]},
+                )
             )
-        ).scalars().all()
+            .scalars()
+            .all()
+        )
     assert selected == baseline.id
     assert retained == 1
     assert kinds == ["PAUSE", "PIN", "RESUME", "UNPIN"]

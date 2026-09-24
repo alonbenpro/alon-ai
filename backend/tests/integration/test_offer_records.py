@@ -616,9 +616,7 @@ async def test_new_bundle_invalidates_unaccepted_proposal_and_gap_activates_once
     attempt = await context[0].start_market_research(
         context[1],
         cycle.id,
-        accepted_idea=ArtifactInput.from_receipt(
-            context[3], role="ACCEPTED_IDEA"
-        ),
+        accepted_idea=ArtifactInput.from_receipt(context[3], role="ACCEPTED_IDEA"),
         plan=ArtifactInput.from_receipt(next_plan, role="PLAN"),
         command_key=uuid4(),
     )

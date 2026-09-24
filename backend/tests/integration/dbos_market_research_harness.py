@@ -108,9 +108,7 @@ async def run(args: argparse.Namespace) -> None:
             workflow_id = market_research.market_research_outcome_workflow_id(
                 request.attempt_id, request.command_key
             )
-            await finalize_market_research_outcome_workflow(
-                engine, workflow_id, result
-            )
+            await finalize_market_research_outcome_workflow(engine, workflow_id, result)
         elif args.mode == "recover-outcome":
             assert isinstance(request, MarketResearchOutcomeWorkflowRequest)
             workflow_id = market_research.market_research_outcome_workflow_id(

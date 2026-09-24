@@ -59,7 +59,9 @@ class ConversationFactInput(StrictDTO):
     id: UUID
     fact_key: str = Field(pattern=r"^[A-Z][A-Z0-9_]{0,63}$")
     version: int = Field(ge=1)
-    status: Literal["EXPLICITLY_STATED", "REASONABLE_INTERPRETATION", "UNKNOWN", "CONTRADICTED"]
+    status: Literal[
+        "EXPLICITLY_STATED", "REASONABLE_INTERPRETATION", "UNKNOWN", "CONTRADICTED"
+    ]
     value: dict | None = None
     source_document_id: UUID
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
@@ -68,16 +70,24 @@ class ConversationFactInput(StrictDTO):
 
 class RecordConversationDocumentsRequest(StrictDTO):
     context_id: UUID
-    documents: tuple[ConversationDocumentInput, ...] = Field(min_length=1, max_length=30)
+    documents: tuple[ConversationDocumentInput, ...] = Field(
+        min_length=1, max_length=30
+    )
     facts: tuple[ConversationFactInput, ...] = Field(max_length=30)
     recorded_by: UUID
 
     @model_validator(mode="after")
     def document_keys_are_unique(self):
         keys = {(item.kind, item.version) for item in self.documents}
-        if len(keys) != len(self.documents) or len({item.id for item in self.documents}) != len(self.documents):
-            raise ValueError("conversation documents must have unique identities and versions")
-        if len({(item.fact_key, item.version) for item in self.facts}) != len(self.facts):
+        if len(keys) != len(self.documents) or len(
+            {item.id for item in self.documents}
+        ) != len(self.documents):
+            raise ValueError(
+                "conversation documents must have unique identities and versions"
+            )
+        if len({(item.fact_key, item.version) for item in self.facts}) != len(
+            self.facts
+        ):
             raise ValueError("fact keys and versions must be unique")
         return self
 
@@ -155,7 +165,23 @@ class ManualOutcomeRequest(StrictDTO):
     context_id: UUID
     operator_id: UUID
     active_lock_event_id: UUID
-    outcome: Literal["DEMO_PREPARING", "DEMO_SENT", "DEMO_ACCEPTED", "DEMO_DECLINED", "INVOICE_PREPARING", "INVOICE_SENT", "PAYMENT_PENDING", "PAID", "PAYMENT_FAILED", "MEETING_BOOKED", "MEETING_COMPLETED", "MEETING_CANCELLED", "NO_SHOW", "MANUAL_NEGOTIATION", "MANUALLY_CLOSED"]
+    outcome: Literal[
+        "DEMO_PREPARING",
+        "DEMO_SENT",
+        "DEMO_ACCEPTED",
+        "DEMO_DECLINED",
+        "INVOICE_PREPARING",
+        "INVOICE_SENT",
+        "PAYMENT_PENDING",
+        "PAID",
+        "PAYMENT_FAILED",
+        "MEETING_BOOKED",
+        "MEETING_COMPLETED",
+        "MEETING_CANCELLED",
+        "NO_SHOW",
+        "MANUAL_NEGOTIATION",
+        "MANUALLY_CLOSED",
+    ]
     content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
 
 

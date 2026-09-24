@@ -18,9 +18,7 @@ pytestmark = pytest.mark.integration
 async def test_start_market_research_commits_transition_and_attempt_atomically(
     governance_engine,
 ):
-    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(
-        governance_engine
-    )
+    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(governance_engine)
 
     receipt = await repo.start_market_research(
         experiment_id,
@@ -189,9 +187,7 @@ async def test_start_market_research_rejects_stale_idea_version(
 async def test_start_market_research_rejects_superseded_or_mismatched_lineage(
     governance_engine,
 ):
-    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(
-        governance_engine
-    )
+    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(governance_engine)
     idea_ref = ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA")
     await repo.record_disposition(
         idea_ref,
@@ -218,9 +214,7 @@ async def test_start_market_research_rejects_superseded_or_mismatched_lineage(
 async def test_start_market_research_replays_and_rejects_changed_request(
     governance_engine,
 ):
-    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(
-        governance_engine
-    )
+    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(governance_engine)
     key = uuid4()
     idea_ref = ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA")
     plan_ref = ArtifactInput.from_receipt(plan, role="PLAN")
@@ -261,9 +255,7 @@ async def test_start_market_research_replays_and_rejects_changed_request(
 
 
 async def test_concurrent_start_market_research_advances_once(governance_engine):
-    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(
-        governance_engine
-    )
+    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(governance_engine)
     idea_ref = ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA")
     plan_ref = ArtifactInput.from_receipt(plan, role="PLAN")
 
@@ -307,9 +299,7 @@ async def test_concurrent_start_market_research_advances_once(governance_engine)
 async def test_start_market_research_rolls_back_every_record_on_failure(
     governance_engine,
 ):
-    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(
-        governance_engine
-    )
+    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(governance_engine)
     async with governance_engine.begin() as connection:
         await connection.execute(
             text(
@@ -332,9 +322,7 @@ async def test_start_market_research_rolls_back_every_record_on_failure(
             await repo.start_market_research(
                 experiment_id,
                 cycle.id,
-                accepted_idea=ArtifactInput.from_receipt(
-                    idea, role="ACCEPTED_IDEA"
-                ),
+                accepted_idea=ArtifactInput.from_receipt(idea, role="ACCEPTED_IDEA"),
                 plan=ArtifactInput.from_receipt(plan, role="PLAN"),
                 command_key=uuid4(),
             )
@@ -393,8 +381,7 @@ async def test_start_market_research_rolls_back_every_record_on_failure(
         assert not (
             await connection.execute(
                 select(records.outbox).where(
-                    records.outbox.c.topic
-                    == "product-record.start-market-research"
+                    records.outbox.c.topic == "product-record.start-market-research"
                 )
             )
         ).all()
@@ -403,9 +390,7 @@ async def test_start_market_research_rolls_back_every_record_on_failure(
 async def test_cycle_state_and_transition_history_reject_inconsistent_mutation(
     governance_engine,
 ):
-    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(
-        governance_engine
-    )
+    repo, experiment_id, _, cycle, idea, plan = await cycle_fixture(governance_engine)
     receipt = await repo.start_market_research(
         experiment_id,
         cycle.id,
@@ -433,9 +418,7 @@ async def test_cycle_state_and_transition_history_reject_inconsistent_mutation(
 async def test_raw_transition_without_audit_and_outbox_cannot_commit(
     governance_engine,
 ):
-    _, experiment_id, _, cycle, idea, plan = await cycle_fixture(
-        governance_engine
-    )
+    _, experiment_id, _, cycle, idea, plan = await cycle_fixture(governance_engine)
     attempt_id, command_id, transition_id = uuid4(), uuid4(), uuid4()
     async with governance_engine.connect() as connection:
         acceptance = (
@@ -526,9 +509,7 @@ async def test_start_market_research_rejects_non_current_cycle(
     verdict, report, recommendation = await research_verdict(
         repo, experiment_id, cycle, idea, "REFINE_SAME_IDEA"
     )
-    feedback = await return_feedback(
-        repo, experiment_id, idea, report, recommendation
-    )
+    feedback = await return_feedback(repo, experiment_id, idea, report, recommendation)
     await repo.return_to_refinement(
         verdict.id,
         feedback=ArtifactInput.from_receipt(feedback, role="FEEDBACK"),

@@ -189,21 +189,15 @@ def market_research_workflow_id(cycle_id: UUID, request_hash: str) -> str:
     return f"market-research:{cycle_id}:{request_hash}"
 
 
-def market_research_outcome_workflow_id(
-    attempt_id: UUID, command_key: UUID
-) -> str:
+def market_research_outcome_workflow_id(attempt_id: UUID, command_key: UUID) -> str:
     return f"market-research-outcome:{attempt_id}:{command_key}"
 
 
-def material_pivot_decision_workflow_id(
-    verdict_id: UUID, decision_id: UUID
-) -> str:
+def material_pivot_decision_workflow_id(verdict_id: UUID, decision_id: UUID) -> str:
     return f"material-pivot-decision:{verdict_id}:{decision_id}"
 
 
-def inconclusive_supplement_workflow_id(
-    verdict_id: UUID, command_key: UUID
-) -> str:
+def inconclusive_supplement_workflow_id(verdict_id: UUID, command_key: UUID) -> str:
     return f"inconclusive-supplement:{verdict_id}:{command_key}"
 
 
@@ -500,7 +494,9 @@ class MarketResearchDecisionWorkflowRepository:
             existing = (
                 (
                     await connection.execute(
-                        select(records.market_research_decision_workflow_bindings).where(
+                        select(
+                            records.market_research_decision_workflow_bindings
+                        ).where(
                             or_(
                                 records.market_research_decision_workflow_bindings.c.dbos_workflow_id
                                 == workflow_id,
@@ -547,7 +543,9 @@ class MarketResearchDecisionWorkflowRepository:
             existing = (
                 (
                     await connection.execute(
-                        select(records.market_research_decision_workflow_bindings).where(
+                        select(
+                            records.market_research_decision_workflow_bindings
+                        ).where(
                             or_(
                                 records.market_research_decision_workflow_bindings.c.dbos_workflow_id
                                 == workflow_id,
@@ -733,9 +731,7 @@ class MarketResearchDecisionWorkflowRepository:
         application_version: str,
     ) -> MarketResearchDecisionWorkflowBinding:
         return await self._start_bound(
-            await self.bind_supplement(
-                request, application_version=application_version
-            )
+            await self.bind_supplement(request, application_version=application_version)
         )
 
     async def require_started(
@@ -1286,9 +1282,7 @@ async def _deliver_inconclusive_supplement_receipt_step(
 async def material_pivot_decision_workflow(
     payload_json: str, workflow_id: str
 ) -> dict[str, object]:
-    receipt_json = await _decide_material_pivot_business_step(
-        payload_json, workflow_id
-    )
+    receipt_json = await _decide_material_pivot_business_step(payload_json, workflow_id)
     await _deliver_material_pivot_receipt_step(workflow_id, receipt_json)
     return json.loads(receipt_json)
 

@@ -96,44 +96,79 @@ class LearningRecordsRepository:
                  :model_identifier,:reasoning_effort,:budget_policy_version,:max_tool_calls,:max_searches,:max_pages,
                  CAST(:configuration AS jsonb),:configuration_hash,:created_at)"""),
                 {
-                    "id": member.id, "logical_id": member.logical_id, "version": member.version,
-                    "supersedes_id": member.supersedes_id, "origin_candidate_id": member.origin_candidate_id,
-                    "role": member.configuration.role, "prompt_artifact_id": member.prompt.id,
-                    "prompt_experiment_id": prompt_experiment_id, "prompt_kind": member.prompt.kind,
-                    "prompt_version": member.prompt.version, "prompt_hash": member.prompt.content_hash,
+                    "id": member.id,
+                    "logical_id": member.logical_id,
+                    "version": member.version,
+                    "supersedes_id": member.supersedes_id,
+                    "origin_candidate_id": member.origin_candidate_id,
+                    "role": member.configuration.role,
+                    "prompt_artifact_id": member.prompt.id,
+                    "prompt_experiment_id": prompt_experiment_id,
+                    "prompt_kind": member.prompt.kind,
+                    "prompt_version": member.prompt.version,
+                    "prompt_hash": member.prompt.content_hash,
                     "few_shot_artifact_id": few_shot.id if few_shot else None,
                     "few_shot_experiment_id": few_shot_experiment_id,
                     "few_shot_kind": few_shot.kind if few_shot else None,
                     "few_shot_version": few_shot.version if few_shot else None,
                     "few_shot_hash": few_shot.content_hash if few_shot else None,
-                    "model_identifier": member.model_identifier, "reasoning_effort": member.reasoning_effort,
-                    "budget_policy_version": member.budget_policy_version, "max_tool_calls": member.max_tool_calls,
-                    "max_searches": member.max_searches, "max_pages": member.max_pages,
+                    "model_identifier": member.model_identifier,
+                    "reasoning_effort": member.reasoning_effort,
+                    "budget_policy_version": member.budget_policy_version,
+                    "max_tool_calls": member.max_tool_calls,
+                    "max_searches": member.max_searches,
+                    "max_pages": member.max_pages,
                     "configuration": json.dumps(configuration, sort_keys=True),
-                    "configuration_hash": configuration_hash, "created_at": now,
+                    "configuration_hash": configuration_hash,
+                    "created_at": now,
                 },
             )
-            member_hashes.append((member.configuration.role, member.id, configuration_hash))
+            member_hashes.append(
+                (member.configuration.role, member.id, configuration_hash)
+            )
         package_hash = _canonical_hash(
-            {"logical_id": request.logical_id, "version": request.version,
-             "supersedes_id": request.supersedes_id, "members": sorted(member_hashes)}
+            {
+                "logical_id": request.logical_id,
+                "version": request.version,
+                "supersedes_id": request.supersedes_id,
+                "members": sorted(member_hashes),
+            }
         )
         await connection.execute(
             text("""INSERT INTO record_global_strategy_packages
             (id,logical_id,version,supersedes_id,package_hash,created_by,created_at)
             VALUES (:id,:logical_id,:version,:supersedes_id,:package_hash,:created_by,:created_at)"""),
-            {"id": request.id, "logical_id": request.logical_id, "version": request.version,
-             "supersedes_id": request.supersedes_id, "package_hash": package_hash,
-             "created_by": request.created_by, "created_at": now},
+            {
+                "id": request.id,
+                "logical_id": request.logical_id,
+                "version": request.version,
+                "supersedes_id": request.supersedes_id,
+                "package_hash": package_hash,
+                "created_by": request.created_by,
+                "created_at": now,
+            },
         )
         for role, agent_version_id, configuration_hash in member_hashes:
             await connection.execute(
-                text("INSERT INTO record_strategy_package_members (package_id,role,agent_version_id,configuration_hash) VALUES (:package_id,:role,:agent_version_id,:configuration_hash)"),
-                {"package_id": request.id, "role": role, "agent_version_id": agent_version_id, "configuration_hash": configuration_hash},
+                text(
+                    "INSERT INTO record_strategy_package_members (package_id,role,agent_version_id,configuration_hash) VALUES (:package_id,:role,:agent_version_id,:configuration_hash)"
+                ),
+                {
+                    "package_id": request.id,
+                    "role": role,
+                    "agent_version_id": agent_version_id,
+                    "configuration_hash": configuration_hash,
+                },
             )
         await connection.execute(
-            text("INSERT INTO record_strategy_package_seals (package_id,member_count,member_set_hash,sealed_at) VALUES (:package_id,4,:member_set_hash,:sealed_at)"),
-            {"package_id": request.id, "member_set_hash": _canonical_hash(sorted(member_hashes)), "sealed_at": now},
+            text(
+                "INSERT INTO record_strategy_package_seals (package_id,member_count,member_set_hash,sealed_at) VALUES (:package_id,4,:member_set_hash,:sealed_at)"
+            ),
+            {
+                "package_id": request.id,
+                "member_set_hash": _canonical_hash(sorted(member_hashes)),
+                "sealed_at": now,
+            },
         )
         return package_hash
 
@@ -312,7 +347,9 @@ class LearningRecordsRepository:
                 row = (
                     (
                         await connection.execute(
-                            text("SELECT version,package_hash FROM record_global_strategy_packages WHERE id=:id"),
+                            text(
+                                "SELECT version,package_hash FROM record_global_strategy_packages WHERE id=:id"
+                            ),
                             {"id": old["result_id"]},
                         )
                     )
@@ -331,15 +368,23 @@ class LearningRecordsRepository:
             now = self.clock()
             package_hash = await self._insert_strategy_package(connection, request, now)
             prior_event_id = await connection.scalar(
-                text("SELECT id FROM record_learning_review_controls WHERE registry_scope ORDER BY event_ordinal DESC LIMIT 1")
+                text(
+                    "SELECT id FROM record_learning_review_controls WHERE registry_scope ORDER BY event_ordinal DESC LIMIT 1"
+                )
             )
             await connection.execute(
                 text("""INSERT INTO record_learning_review_controls
                 (id,run_id,kind,baseline_candidate_id,operator_id,content_hash,created_at,registry_scope,package_id,reason_codes,prior_event_id)
                 VALUES (:id,NULL,'BOOTSTRAP_PACKAGE',NULL,:operator_id,:content_hash,:created_at,true,:package_id,CAST(:reason_codes AS jsonb),:prior_event_id)"""),
-                {"id": uuid4(), "operator_id": request.created_by, "content_hash": package_hash,
-                 "created_at": now, "package_id": request.id,
-                 "reason_codes": json.dumps(["BOOTSTRAP_PACKAGE"]), "prior_event_id": prior_event_id},
+                {
+                    "id": uuid4(),
+                    "operator_id": request.created_by,
+                    "content_hash": package_hash,
+                    "created_at": now,
+                    "package_id": request.id,
+                    "reason_codes": json.dumps(["BOOTSTRAP_PACKAGE"]),
+                    "prior_event_id": prior_event_id,
+                },
             )
             command_id = await _complete(
                 connection,
@@ -380,16 +425,20 @@ class LearningRecordsRepository:
             ):
                 raise ProductRecordsDenied("STRATEGY_MUST_FREEZE_BEFORE_EXECUTION")
             control_rows = (
-                await connection.execute(
-                    text("""SELECT DISTINCT ON (family) family,kind,package_id FROM (
+                (
+                    await connection.execute(
+                        text("""SELECT DISTINCT ON (family) family,kind,package_id FROM (
                     SELECT CASE WHEN kind IN ('PAUSE','RESUME') THEN 'PAUSE'
                                 WHEN kind IN ('PIN','UNPIN') THEN 'PIN'
                                 ELSE 'SELECTION' END AS family,
                            kind,package_id,event_ordinal
                     FROM record_learning_review_controls WHERE registry_scope
                     ) events ORDER BY family,event_ordinal DESC""")
+                    )
                 )
-            ).mappings().all()
+                .mappings()
+                .all()
+            )
             state = {row["family"]: row for row in control_rows}
             if state.get("PAUSE", {}).get("kind") == "PAUSE":
                 raise ProductRecordsDenied("STRATEGY_REGISTRY_PAUSED")
@@ -437,7 +486,9 @@ class LearningRecordsRepository:
                 result_id=request.experiment_id,
                 now=now,
             )
-            return CommandReceipt(command_id=command_id, result_id=request.experiment_id)
+            return CommandReceipt(
+                command_id=command_id, result_id=request.experiment_id
+            )
 
     @safe_records
     async def bind_strategy_execution(
@@ -452,7 +503,9 @@ class LearningRecordsRepository:
             if old:
                 return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
             configuration_hash = await connection.scalar(
-                text("SELECT configuration_hash FROM record_strategy_agent_versions WHERE id=:id AND role=:role"),
+                text(
+                    "SELECT configuration_hash FROM record_strategy_agent_versions WHERE id=:id AND role=:role"
+                ),
                 {"id": request.agent_version_id, "role": request.role},
             )
             if configuration_hash is None:
@@ -517,7 +570,9 @@ class LearningRecordsRepository:
                         text("""SELECT w.id AS workflow_id,a.id AS agent_id FROM record_workflows w
                         JOIN record_agents a ON a.workflow_id=w.id
                         WHERE w.id=:workflow_id AND w.experiment_id=:experiment_id AND a.id=:agent_id"""),
-                        request.model_dump(include={"workflow_id", "experiment_id", "agent_id"}),
+                        request.model_dump(
+                            include={"workflow_id", "experiment_id", "agent_id"}
+                        ),
                     )
                 )
                 .mappings()
@@ -527,7 +582,9 @@ class LearningRecordsRepository:
                 raise ProductRecordsDenied("LEARNING_LINEAGE_MISMATCH")
             await lock_experiment(connection, request.experiment_id)
             request_hash = _request_hash(request=request)
-            old = await _existing(connection, command_key, "RECORD_LEARNING_PROPOSAL", request_hash)
+            old = await _existing(
+                connection, command_key, "RECORD_LEARNING_PROPOSAL", request_hash
+            )
             if old:
                 if old["result_id"] != request.id:
                     raise ProductRecordsDenied("COMMAND_CONFLICT")
@@ -554,23 +611,69 @@ class LearningRecordsRepository:
             await connection.execute(
                 text("""INSERT INTO record_learning_input_bundles (id,run_id,experiment_id,content_hash,created_at)
                 VALUES (:id,:run_id,:experiment_id,:content_hash,:created_at)"""),
-                {"id": request.inputs.id, "run_id": run_id, "experiment_id": request.experiment_id, "content_hash": request.inputs.content_hash, "created_at": now},
+                {
+                    "id": request.inputs.id,
+                    "run_id": run_id,
+                    "experiment_id": request.experiment_id,
+                    "content_hash": request.inputs.content_hash,
+                    "created_at": now,
+                },
             )
             for item in request.inputs.artifacts:
                 await connection.execute(
                     text("""INSERT INTO record_learning_input_artifacts
                     (bundle_id,role,artifact_id,experiment_id,artifact_kind,artifact_version,artifact_hash)
                     VALUES (:bundle_id,:role,:artifact_id,:experiment_id,:artifact_kind,:artifact_version,:artifact_hash)"""),
-                    {"bundle_id": request.inputs.id, "role": item.role, "artifact_id": item.id, "experiment_id": request.experiment_id, "artifact_kind": item.kind, "artifact_version": item.version, "artifact_hash": item.content_hash},
+                    {
+                        "bundle_id": request.inputs.id,
+                        "role": item.role,
+                        "artifact_id": item.id,
+                        "experiment_id": request.experiment_id,
+                        "artifact_kind": item.kind,
+                        "artifact_version": item.version,
+                        "artifact_hash": item.content_hash,
+                    },
                 )
             for item in request.inputs.evidence:
-                await connection.execute(text("INSERT INTO record_learning_input_evidence (bundle_id,role,evidence_id,call_id) VALUES (:bundle_id,:role,:evidence_id,:call_id)"), {"bundle_id": request.inputs.id, **item.model_dump()})
+                await connection.execute(
+                    text(
+                        "INSERT INTO record_learning_input_evidence (bundle_id,role,evidence_id,call_id) VALUES (:bundle_id,:role,:evidence_id,:call_id)"
+                    ),
+                    {"bundle_id": request.inputs.id, **item.model_dump()},
+                )
             for item in request.inputs.call_snapshots:
-                await connection.execute(text("INSERT INTO record_learning_input_call_snapshots (bundle_id,role,call_id,snapshot,snapshot_hash) VALUES (:bundle_id,:role,:call_id,CAST(:snapshot AS jsonb),:snapshot_hash)"), {"bundle_id": request.inputs.id, "role": item.role, "call_id": item.call_id, "snapshot": json.dumps(item.snapshot, sort_keys=True), "snapshot_hash": item.snapshot_hash})
+                await connection.execute(
+                    text(
+                        "INSERT INTO record_learning_input_call_snapshots (bundle_id,role,call_id,snapshot,snapshot_hash) VALUES (:bundle_id,:role,:call_id,CAST(:snapshot AS jsonb),:snapshot_hash)"
+                    ),
+                    {
+                        "bundle_id": request.inputs.id,
+                        "role": item.role,
+                        "call_id": item.call_id,
+                        "snapshot": json.dumps(item.snapshot, sort_keys=True),
+                        "snapshot_hash": item.snapshot_hash,
+                    },
+                )
             for item in request.inputs.usage:
-                await connection.execute(text("INSERT INTO record_learning_input_usage (bundle_id,role,usage_id,call_id,component) VALUES (:bundle_id,:role,:usage_id,:call_id,:component)"), {"bundle_id": request.inputs.id, **item.model_dump()})
+                await connection.execute(
+                    text(
+                        "INSERT INTO record_learning_input_usage (bundle_id,role,usage_id,call_id,component) VALUES (:bundle_id,:role,:usage_id,:call_id,:component)"
+                    ),
+                    {"bundle_id": request.inputs.id, **item.model_dump()},
+                )
             for item in request.inputs.costs:
-                await connection.execute(text("INSERT INTO record_learning_input_costs (bundle_id,role,cost_id,call_id,kind) VALUES (:bundle_id,:role,:cost_id,:call_id,:kind)"), {"bundle_id": request.inputs.id, "role": item.role, "cost_id": item.id, "call_id": item.call_id, "kind": item.kind})
+                await connection.execute(
+                    text(
+                        "INSERT INTO record_learning_input_costs (bundle_id,role,cost_id,call_id,kind) VALUES (:bundle_id,:role,:cost_id,:call_id,:kind)"
+                    ),
+                    {
+                        "bundle_id": request.inputs.id,
+                        "role": item.role,
+                        "cost_id": item.id,
+                        "call_id": item.call_id,
+                        "kind": item.kind,
+                    },
+                )
             reference_count = (
                 len(request.inputs.artifacts)
                 + len(request.inputs.evidence)
@@ -589,74 +692,329 @@ class LearningRecordsRepository:
                     "sealed_at": now,
                 },
             )
-            await connection.execute(text("INSERT INTO record_learning_scopes (id,run_id,target_subsystem,protected_components,content_hash,created_at) VALUES (:id,:run_id,:target_subsystem,CAST(:protected_components AS jsonb),:content_hash,:created_at)"), {"id": request.scope.id, "run_id": run_id, "target_subsystem": request.scope.target_subsystem, "protected_components": json.dumps(request.scope.protected_components), "content_hash": request.scope.content_hash, "created_at": now})
+            await connection.execute(
+                text(
+                    "INSERT INTO record_learning_scopes (id,run_id,target_subsystem,protected_components,content_hash,created_at) VALUES (:id,:run_id,:target_subsystem,CAST(:protected_components AS jsonb),:content_hash,:created_at)"
+                ),
+                {
+                    "id": request.scope.id,
+                    "run_id": run_id,
+                    "target_subsystem": request.scope.target_subsystem,
+                    "protected_components": json.dumps(
+                        request.scope.protected_components
+                    ),
+                    "content_hash": request.scope.content_hash,
+                    "created_at": now,
+                },
+            )
             await connection.execute(
                 text("""INSERT INTO record_learning_proposals
                 (id,logical_id,version,run_id,input_bundle_id,scope_id,class,bottleneck,expected_effect,target_metrics,protected_metrics,confidence,sample_size,confounders,evaluation_criteria,rollback_criteria,content_hash,proposed_by,created_at)
                 VALUES (:id,:logical_id,:version,:run_id,:input_bundle_id,:scope_id,:class,:bottleneck,CAST(:expected_effect AS jsonb),CAST(:target_metrics AS jsonb),CAST(:protected_metrics AS jsonb),:confidence,:sample_size,CAST(:confounders AS jsonb),CAST(:evaluation_criteria AS jsonb),CAST(:rollback_criteria AS jsonb),:content_hash,:proposed_by,:created_at)"""),
-                {"id": request.id, "logical_id": request.logical_id, "version": request.version, "run_id": run_id, "input_bundle_id": request.inputs.id, "scope_id": request.scope.id, "class": request.proposal_class, "bottleneck": request.bottleneck, "expected_effect": json.dumps(request.expected_effect, sort_keys=True), "target_metrics": json.dumps([item.model_dump() for item in request.target_metrics], sort_keys=True), "protected_metrics": json.dumps([item.model_dump() for item in request.protected_metrics], sort_keys=True), "confidence": request.confidence, "sample_size": request.sample_size, "confounders": json.dumps(request.confounders), "evaluation_criteria": json.dumps(request.evaluation_criteria, sort_keys=True), "rollback_criteria": json.dumps(request.rollback_criteria, sort_keys=True), "content_hash": request.content_hash, "proposed_by": request.proposed_by, "created_at": now},
+                {
+                    "id": request.id,
+                    "logical_id": request.logical_id,
+                    "version": request.version,
+                    "run_id": run_id,
+                    "input_bundle_id": request.inputs.id,
+                    "scope_id": request.scope.id,
+                    "class": request.proposal_class,
+                    "bottleneck": request.bottleneck,
+                    "expected_effect": json.dumps(
+                        request.expected_effect, sort_keys=True
+                    ),
+                    "target_metrics": json.dumps(
+                        [item.model_dump() for item in request.target_metrics],
+                        sort_keys=True,
+                    ),
+                    "protected_metrics": json.dumps(
+                        [item.model_dump() for item in request.protected_metrics],
+                        sort_keys=True,
+                    ),
+                    "confidence": request.confidence,
+                    "sample_size": request.sample_size,
+                    "confounders": json.dumps(request.confounders),
+                    "evaluation_criteria": json.dumps(
+                        request.evaluation_criteria, sort_keys=True
+                    ),
+                    "rollback_criteria": json.dumps(
+                        request.rollback_criteria, sort_keys=True
+                    ),
+                    "content_hash": request.content_hash,
+                    "proposed_by": request.proposed_by,
+                    "created_at": now,
+                },
             )
             if request.candidate is not None:
                 candidate = request.candidate
-                await connection.execute(text("""INSERT INTO record_learning_candidate_versions
+                await connection.execute(
+                    text("""INSERT INTO record_learning_candidate_versions
                 (id,logical_id,version,proposal_id,baseline_artifact_id,baseline_experiment_id,baseline_artifact_kind,baseline_artifact_version,baseline_artifact_hash,candidate_configuration,config_diff,diff_hash,content_hash,created_at)
-                VALUES (:id,:logical_id,:version,:proposal_id,:baseline_artifact_id,:baseline_experiment_id,:baseline_artifact_kind,:baseline_artifact_version,:baseline_artifact_hash,CAST(:candidate_configuration AS jsonb),CAST(:config_diff AS jsonb),:diff_hash,:content_hash,:created_at)"""), {"id": candidate.id, "logical_id": candidate.logical_id, "version": candidate.version, "proposal_id": request.id, "baseline_artifact_id": candidate.baseline_artifact.id, "baseline_experiment_id": request.experiment_id, "baseline_artifact_kind": candidate.baseline_artifact.kind, "baseline_artifact_version": candidate.baseline_artifact.version, "baseline_artifact_hash": candidate.baseline_artifact.content_hash, "candidate_configuration": json.dumps(candidate.candidate_configuration, sort_keys=True), "config_diff": json.dumps(candidate.config_diff), "diff_hash": candidate.diff_hash, "content_hash": candidate.content_hash, "created_at": now})
-            command_id = await _complete(connection, command_key=command_key, experiment_id=request.experiment_id, kind="RECORD_LEARNING_PROPOSAL", request_hash=request_hash, result_type="LEARNING_PROPOSAL", result_id=request.id, now=now)
+                VALUES (:id,:logical_id,:version,:proposal_id,:baseline_artifact_id,:baseline_experiment_id,:baseline_artifact_kind,:baseline_artifact_version,:baseline_artifact_hash,CAST(:candidate_configuration AS jsonb),CAST(:config_diff AS jsonb),:diff_hash,:content_hash,:created_at)"""),
+                    {
+                        "id": candidate.id,
+                        "logical_id": candidate.logical_id,
+                        "version": candidate.version,
+                        "proposal_id": request.id,
+                        "baseline_artifact_id": candidate.baseline_artifact.id,
+                        "baseline_experiment_id": request.experiment_id,
+                        "baseline_artifact_kind": candidate.baseline_artifact.kind,
+                        "baseline_artifact_version": candidate.baseline_artifact.version,
+                        "baseline_artifact_hash": candidate.baseline_artifact.content_hash,
+                        "candidate_configuration": json.dumps(
+                            candidate.candidate_configuration, sort_keys=True
+                        ),
+                        "config_diff": json.dumps(candidate.config_diff),
+                        "diff_hash": candidate.diff_hash,
+                        "content_hash": candidate.content_hash,
+                        "created_at": now,
+                    },
+                )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=request.experiment_id,
+                kind="RECORD_LEARNING_PROPOSAL",
+                request_hash=request_hash,
+                result_type="LEARNING_PROPOSAL",
+                result_id=request.id,
+                now=now,
+            )
             return await self._proposal_receipt(connection, request.id, command_id)
 
     @safe_records
-    async def record_evaluation(self, request: LearningEvaluationRequest, *, command_key: UUID) -> LearningEvaluationReceipt:
+    async def record_evaluation(
+        self, request: LearningEvaluationRequest, *, command_key: UUID
+    ) -> LearningEvaluationReceipt:
         async with self.engine.begin() as connection:
-            proposal = ((await connection.execute(text("""SELECT p.id,r.experiment_id,p.input_bundle_id FROM record_learning_proposals p JOIN record_learning_runs r ON r.id=p.run_id WHERE p.id=:id"""), {"id": request.proposal_id})).mappings().one_or_none())
+            proposal = (
+                (
+                    await connection.execute(
+                        text(
+                            """SELECT p.id,r.experiment_id,p.input_bundle_id FROM record_learning_proposals p JOIN record_learning_runs r ON r.id=p.run_id WHERE p.id=:id"""
+                        ),
+                        {"id": request.proposal_id},
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
             if proposal is None:
                 raise ProductRecordsDenied("MISSING_REFERENCE")
             await lock_experiment(connection, proposal["experiment_id"])
             request_hash = _request_hash(request=request)
-            old = await _existing(connection, command_key, "RECORD_LEARNING_EVALUATION", request_hash)
+            old = await _existing(
+                connection, command_key, "RECORD_LEARNING_EVALUATION", request_hash
+            )
             if old:
-                row = ((await connection.execute(text("SELECT id FROM record_learning_regression_assessments WHERE comparison_id=:id"), {"id": request.id})).mappings().one())
-                return LearningEvaluationReceipt(command_id=old["id"], result_id=request.id, comparison_id=request.id, assessment_id=row["id"])
+                row = (
+                    (
+                        await connection.execute(
+                            text(
+                                "SELECT id FROM record_learning_regression_assessments WHERE comparison_id=:id"
+                            ),
+                            {"id": request.id},
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                return LearningEvaluationReceipt(
+                    command_id=old["id"],
+                    result_id=request.id,
+                    comparison_id=request.id,
+                    assessment_id=row["id"],
+                )
             now, assessment_id = self.clock(), uuid4()
-            await connection.execute(text("""INSERT INTO record_learning_offline_comparisons (id,proposal_id,candidate_id,input_bundle_id,evaluator_version,evaluator_hash,baseline_hash,candidate_hash,metric_results,content_hash,created_at)
-            VALUES (:id,:proposal_id,:candidate_id,:input_bundle_id,:evaluator_version,:evaluator_hash,:baseline_hash,:candidate_hash,CAST(:metric_results AS jsonb),:content_hash,:created_at)"""), {"id": request.id, "proposal_id": request.proposal_id, "candidate_id": request.candidate_id, "input_bundle_id": proposal["input_bundle_id"], "evaluator_version": request.evaluator_version, "evaluator_hash": request.evaluator_hash, "baseline_hash": request.baseline_hash, "candidate_hash": request.candidate_hash, "metric_results": json.dumps(request.metric_results, sort_keys=True), "content_hash": request.content_hash, "created_at": now})
-            await connection.execute(text("INSERT INTO record_learning_regression_assessments (id,comparison_id,disposition,metric_results,rollback_satisfied,content_hash,created_at) VALUES (:id,:comparison_id,:disposition,CAST(:metric_results AS jsonb),:rollback_satisfied,:content_hash,:created_at)"), {"id": assessment_id, "comparison_id": request.id, "disposition": request.disposition, "metric_results": json.dumps(request.metric_results, sort_keys=True), "rollback_satisfied": request.rollback_satisfied, "content_hash": request.content_hash, "created_at": now})
+            await connection.execute(
+                text("""INSERT INTO record_learning_offline_comparisons (id,proposal_id,candidate_id,input_bundle_id,evaluator_version,evaluator_hash,baseline_hash,candidate_hash,metric_results,content_hash,created_at)
+            VALUES (:id,:proposal_id,:candidate_id,:input_bundle_id,:evaluator_version,:evaluator_hash,:baseline_hash,:candidate_hash,CAST(:metric_results AS jsonb),:content_hash,:created_at)"""),
+                {
+                    "id": request.id,
+                    "proposal_id": request.proposal_id,
+                    "candidate_id": request.candidate_id,
+                    "input_bundle_id": proposal["input_bundle_id"],
+                    "evaluator_version": request.evaluator_version,
+                    "evaluator_hash": request.evaluator_hash,
+                    "baseline_hash": request.baseline_hash,
+                    "candidate_hash": request.candidate_hash,
+                    "metric_results": json.dumps(
+                        request.metric_results, sort_keys=True
+                    ),
+                    "content_hash": request.content_hash,
+                    "created_at": now,
+                },
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO record_learning_regression_assessments (id,comparison_id,disposition,metric_results,rollback_satisfied,content_hash,created_at) VALUES (:id,:comparison_id,:disposition,CAST(:metric_results AS jsonb),:rollback_satisfied,:content_hash,:created_at)"
+                ),
+                {
+                    "id": assessment_id,
+                    "comparison_id": request.id,
+                    "disposition": request.disposition,
+                    "metric_results": json.dumps(
+                        request.metric_results, sort_keys=True
+                    ),
+                    "rollback_satisfied": request.rollback_satisfied,
+                    "content_hash": request.content_hash,
+                    "created_at": now,
+                },
+            )
             if request.failure_reason_codes:
-                await connection.execute(text("INSERT INTO record_learning_failure_analyses (id,comparison_id,reason_codes,content_hash,created_at) VALUES (:id,:comparison_id,CAST(:reason_codes AS jsonb),:content_hash,:created_at)"), {"id": uuid4(), "comparison_id": request.id, "reason_codes": json.dumps(request.failure_reason_codes), "content_hash": request.content_hash, "created_at": now})
-                await connection.execute(text("INSERT INTO record_negative_learning_records (id,proposal_id,comparison_id,classification,reason_codes,content_hash,created_at) VALUES (:id,:proposal_id,:comparison_id,:classification,CAST(:reason_codes AS jsonb),:content_hash,:created_at)"), {"id": uuid4(), "proposal_id": request.proposal_id, "comparison_id": request.id, "classification": request.negative_classification, "reason_codes": json.dumps(request.failure_reason_codes), "content_hash": request.content_hash, "created_at": now})
-            command_id = await _complete(connection, command_key=command_key, experiment_id=proposal["experiment_id"], kind="RECORD_LEARNING_EVALUATION", request_hash=request_hash, result_type="LEARNING_COMPARISON", result_id=request.id, now=now)
-            return LearningEvaluationReceipt(command_id=command_id, result_id=request.id, comparison_id=request.id, assessment_id=assessment_id)
+                await connection.execute(
+                    text(
+                        "INSERT INTO record_learning_failure_analyses (id,comparison_id,reason_codes,content_hash,created_at) VALUES (:id,:comparison_id,CAST(:reason_codes AS jsonb),:content_hash,:created_at)"
+                    ),
+                    {
+                        "id": uuid4(),
+                        "comparison_id": request.id,
+                        "reason_codes": json.dumps(request.failure_reason_codes),
+                        "content_hash": request.content_hash,
+                        "created_at": now,
+                    },
+                )
+                await connection.execute(
+                    text(
+                        "INSERT INTO record_negative_learning_records (id,proposal_id,comparison_id,classification,reason_codes,content_hash,created_at) VALUES (:id,:proposal_id,:comparison_id,:classification,CAST(:reason_codes AS jsonb),:content_hash,:created_at)"
+                    ),
+                    {
+                        "id": uuid4(),
+                        "proposal_id": request.proposal_id,
+                        "comparison_id": request.id,
+                        "classification": request.negative_classification,
+                        "reason_codes": json.dumps(request.failure_reason_codes),
+                        "content_hash": request.content_hash,
+                        "created_at": now,
+                    },
+                )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=proposal["experiment_id"],
+                kind="RECORD_LEARNING_EVALUATION",
+                request_hash=request_hash,
+                result_type="LEARNING_COMPARISON",
+                result_id=request.id,
+                now=now,
+            )
+            return LearningEvaluationReceipt(
+                command_id=command_id,
+                result_id=request.id,
+                comparison_id=request.id,
+                assessment_id=assessment_id,
+            )
 
     @safe_records
-    async def record_engineering_capability_request(self, request: EngineeringCapabilityRequestInput, *, command_key: UUID) -> CommandReceipt:
+    async def record_engineering_capability_request(
+        self, request: EngineeringCapabilityRequestInput, *, command_key: UUID
+    ) -> CommandReceipt:
         async with self.engine.begin() as connection:
-            row = ((await connection.execute(text("""SELECT p.run_id,r.experiment_id FROM record_learning_proposals p JOIN record_learning_runs r ON r.id=p.run_id WHERE p.id=:id"""), {"id": request.proposal_id})).mappings().one_or_none())
+            row = (
+                (
+                    await connection.execute(
+                        text(
+                            """SELECT p.run_id,r.experiment_id FROM record_learning_proposals p JOIN record_learning_runs r ON r.id=p.run_id WHERE p.id=:id"""
+                        ),
+                        {"id": request.proposal_id},
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
             if row is None:
                 raise ProductRecordsDenied("MISSING_REFERENCE")
             await lock_experiment(connection, row["experiment_id"])
             request_hash = _request_hash(request=request)
-            old = await _existing(connection, command_key, "RECORD_ENGINEERING_CAPABILITY_REQUEST", request_hash)
+            old = await _existing(
+                connection,
+                command_key,
+                "RECORD_ENGINEERING_CAPABILITY_REQUEST",
+                request_hash,
+            )
             if old:
                 return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
             now, gap_id = self.clock(), uuid4()
-            await connection.execute(text("INSERT INTO record_capability_gaps (id,run_id,proposal_id,description,content_hash,created_at) VALUES (:id,:run_id,:proposal_id,:description,:content_hash,:created_at)"), {"id": gap_id, "run_id": row["run_id"], "proposal_id": request.proposal_id, "description": request.description, "content_hash": request.content_hash, "created_at": now})
-            await connection.execute(text("INSERT INTO record_engineering_capability_requests (id,gap_id,proposal_id,description,boundary,expected_benefit,risk,content_hash,created_at) VALUES (:id,:gap_id,:proposal_id,:description,:boundary,:expected_benefit,:risk,:content_hash,:created_at)"), {"id": request.id, "gap_id": gap_id, "proposal_id": request.proposal_id, **request.model_dump(exclude={"id", "proposal_id"}), "created_at": now})
-            command_id = await _complete(connection, command_key=command_key, experiment_id=row["experiment_id"], kind="RECORD_ENGINEERING_CAPABILITY_REQUEST", request_hash=request_hash, result_type="ENGINEERING_CAPABILITY_REQUEST", result_id=request.id, now=now)
+            await connection.execute(
+                text(
+                    "INSERT INTO record_capability_gaps (id,run_id,proposal_id,description,content_hash,created_at) VALUES (:id,:run_id,:proposal_id,:description,:content_hash,:created_at)"
+                ),
+                {
+                    "id": gap_id,
+                    "run_id": row["run_id"],
+                    "proposal_id": request.proposal_id,
+                    "description": request.description,
+                    "content_hash": request.content_hash,
+                    "created_at": now,
+                },
+            )
+            await connection.execute(
+                text(
+                    "INSERT INTO record_engineering_capability_requests (id,gap_id,proposal_id,description,boundary,expected_benefit,risk,content_hash,created_at) VALUES (:id,:gap_id,:proposal_id,:description,:boundary,:expected_benefit,:risk,:content_hash,:created_at)"
+                ),
+                {
+                    "id": request.id,
+                    "gap_id": gap_id,
+                    "proposal_id": request.proposal_id,
+                    **request.model_dump(exclude={"id", "proposal_id"}),
+                    "created_at": now,
+                },
+            )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=row["experiment_id"],
+                kind="RECORD_ENGINEERING_CAPABILITY_REQUEST",
+                request_hash=request_hash,
+                result_type="ENGINEERING_CAPABILITY_REQUEST",
+                result_id=request.id,
+                now=now,
+            )
             return CommandReceipt(command_id=command_id, result_id=request.id)
 
     @safe_records
-    async def record_review_control(self, request: LearningReviewControlRequest, *, command_key: UUID) -> CommandReceipt:
+    async def record_review_control(
+        self, request: LearningReviewControlRequest, *, command_key: UUID
+    ) -> CommandReceipt:
         async with self.engine.begin() as connection:
-            row = ((await connection.execute(text("SELECT experiment_id FROM record_learning_runs WHERE id=:id"), {"id": request.run_id})).mappings().one_or_none())
+            row = (
+                (
+                    await connection.execute(
+                        text(
+                            "SELECT experiment_id FROM record_learning_runs WHERE id=:id"
+                        ),
+                        {"id": request.run_id},
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
             if row is None:
                 raise ProductRecordsDenied("MISSING_REFERENCE")
             await lock_experiment(connection, row["experiment_id"])
             request_hash = _request_hash(request=request)
-            old = await _existing(connection, command_key, "RECORD_LEARNING_REVIEW_CONTROL", request_hash)
+            old = await _existing(
+                connection, command_key, "RECORD_LEARNING_REVIEW_CONTROL", request_hash
+            )
             if old:
                 return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
             now = self.clock()
-            await connection.execute(text("INSERT INTO record_learning_review_controls (id,run_id,kind,baseline_candidate_id,operator_id,content_hash,created_at) VALUES (:id,:run_id,:kind,:baseline_candidate_id,:operator_id,:content_hash,:created_at)"), {**request.model_dump(), "created_at": now})
-            command_id = await _complete(connection, command_key=command_key, experiment_id=row["experiment_id"], kind="RECORD_LEARNING_REVIEW_CONTROL", request_hash=request_hash, result_type="LEARNING_REVIEW_CONTROL", result_id=request.id, now=now)
+            await connection.execute(
+                text(
+                    "INSERT INTO record_learning_review_controls (id,run_id,kind,baseline_candidate_id,operator_id,content_hash,created_at) VALUES (:id,:run_id,:kind,:baseline_candidate_id,:operator_id,:content_hash,:created_at)"
+                ),
+                {**request.model_dump(), "created_at": now},
+            )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=row["experiment_id"],
+                kind="RECORD_LEARNING_REVIEW_CONTROL",
+                request_hash=request_hash,
+                result_type="LEARNING_REVIEW_CONTROL",
+                result_id=request.id,
+                now=now,
+            )
             return CommandReceipt(command_id=command_id, result_id=request.id)
 
     @safe_records
@@ -668,7 +1026,9 @@ class LearningRecordsRepository:
             await connection.execute(
                 text("SELECT id FROM record_strategy_registry WHERE id=1 FOR UPDATE")
             )
-            old = await _existing(connection, command_key, "RECORD_STRATEGY_PROMOTION", request_hash)
+            old = await _existing(
+                connection, command_key, "RECORD_STRATEGY_PROMOTION", request_hash
+            )
             if old:
                 return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
             if await connection.scalar(
@@ -689,7 +1049,12 @@ class LearningRecordsRepository:
                         WHERE o.id=:comparison_id AND a.id=:assessment_id
                           AND o.proposal_id=:proposal_id AND o.candidate_id=:candidate_id"""),
                         request.model_dump(
-                            include={"comparison_id", "assessment_id", "proposal_id", "candidate_id"}
+                            include={
+                                "comparison_id",
+                                "assessment_id",
+                                "proposal_id",
+                                "candidate_id",
+                            }
                         ),
                     )
                 )
@@ -709,9 +1074,13 @@ class LearningRecordsRepository:
                     for member in package.members
                     if member.origin_candidate_id == request.candidate_id
                 ]
-                if len(origins) != 1 or origins[0].configuration.model_dump(
-                    mode="json", exclude={"schema_version"}
-                ) != evidence["candidate_configuration"]:
+                if (
+                    len(origins) != 1
+                    or origins[0].configuration.model_dump(
+                        mode="json", exclude={"schema_version"}
+                    )
+                    != evidence["candidate_configuration"]
+                ):
                     raise ProductRecordsDenied("PROMOTION_CANDIDATE_MISMATCH")
                 if any(
                     member.origin_candidate_id not in {None, request.candidate_id}
@@ -719,13 +1088,17 @@ class LearningRecordsRepository:
                 ):
                     raise ProductRecordsDenied("UNEVALUATED_STRATEGY_CHANGE")
                 predecessor_rows = (
-                    await connection.execute(
-                        text("""SELECT m.role,v.* FROM record_strategy_package_members m
+                    (
+                        await connection.execute(
+                            text("""SELECT m.role,v.* FROM record_strategy_package_members m
                         JOIN record_strategy_agent_versions v ON v.id=m.agent_version_id
                         WHERE m.package_id=:package_id"""),
-                        {"package_id": request.baseline_package_id},
+                            {"package_id": request.baseline_package_id},
+                        )
                     )
-                ).mappings().all()
+                    .mappings()
+                    .all()
+                )
                 predecessors = {row["role"]: row for row in predecessor_rows}
                 for member in package.members:
                     prior = predecessors.get(member.configuration.role)
@@ -736,10 +1109,18 @@ class LearningRecordsRepository:
                         "prompt_kind": member.prompt.kind,
                         "prompt_version": member.prompt.version,
                         "prompt_hash": member.prompt.content_hash,
-                        "few_shot_artifact_id": member.few_shot.id if member.few_shot else None,
-                        "few_shot_kind": member.few_shot.kind if member.few_shot else None,
-                        "few_shot_version": member.few_shot.version if member.few_shot else None,
-                        "few_shot_hash": member.few_shot.content_hash if member.few_shot else None,
+                        "few_shot_artifact_id": member.few_shot.id
+                        if member.few_shot
+                        else None,
+                        "few_shot_kind": member.few_shot.kind
+                        if member.few_shot
+                        else None,
+                        "few_shot_version": member.few_shot.version
+                        if member.few_shot
+                        else None,
+                        "few_shot_hash": member.few_shot.content_hash
+                        if member.few_shot
+                        else None,
                         "model_identifier": member.model_identifier,
                         "reasoning_effort": member.reasoning_effort,
                         "budget_policy_version": member.budget_policy_version,
@@ -752,7 +1133,8 @@ class LearningRecordsRepository:
                     if member.origin_candidate_id is not None and (
                         prior["prompt_artifact_id"] != evidence["baseline_artifact_id"]
                         or prior["prompt_kind"] != evidence["baseline_artifact_kind"]
-                        or prior["prompt_version"] != evidence["baseline_artifact_version"]
+                        or prior["prompt_version"]
+                        != evidence["baseline_artifact_version"]
                         or prior["prompt_hash"] != evidence["baseline_artifact_hash"]
                     ):
                         raise ProductRecordsDenied("PROMOTION_CANDIDATE_MISMATCH")
@@ -829,7 +1211,9 @@ class LearningRecordsRepository:
             binding = (
                 (
                     await connection.execute(
-                        text("SELECT * FROM record_strategy_execution_bindings WHERE id=:id"),
+                        text(
+                            "SELECT * FROM record_strategy_execution_bindings WHERE id=:id"
+                        ),
                         {"id": request.execution_binding_id},
                     )
                 )
@@ -839,11 +1223,18 @@ class LearningRecordsRepository:
             if binding is None:
                 raise ProductRecordsDenied("STRATEGY_EXECUTION_LINEAGE")
             await lock_experiment(connection, binding["experiment_id"])
-            old = await _existing(connection, command_key, "RECORD_LIVE_STRATEGY_OBSERVATION", request_hash)
+            old = await _existing(
+                connection,
+                command_key,
+                "RECORD_LIVE_STRATEGY_OBSERVATION",
+                request_hash,
+            )
             if old:
                 return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
             now = self.clock()
-            await self._insert_live_input_bundle(connection, request=request, binding=binding, now=now)
+            await self._insert_live_input_bundle(
+                connection, request=request, binding=binding, now=now
+            )
             segment_hash = _canonical_hash(
                 {"kind": request.segment_kind, "key": request.segment_key}
             )
@@ -877,12 +1268,24 @@ class LearningRecordsRepository:
             metric_rows = []
             for metric in request.metrics:
                 metric_hash = _canonical_hash(metric.model_dump(mode="json"))
-                metric_rows.append((metric.category, metric.code, metric.value, metric.unit, metric_hash))
+                metric_rows.append(
+                    (
+                        metric.category,
+                        metric.code,
+                        metric.value,
+                        metric.unit,
+                        metric_hash,
+                    )
+                )
                 await connection.execute(
                     text("""INSERT INTO record_live_strategy_metrics
                     (observation_id,category,code,value,unit,content_hash)
                     VALUES (:observation_id,:category,:code,:value,:unit,:content_hash)"""),
-                    {"observation_id": request.id, **metric.model_dump(), "content_hash": metric_hash},
+                    {
+                        "observation_id": request.id,
+                        **metric.model_dump(),
+                        "content_hash": metric_hash,
+                    },
                 )
             await connection.execute(
                 text("""INSERT INTO record_live_strategy_observation_seals
@@ -914,16 +1317,28 @@ class LearningRecordsRepository:
         request_hash = _request_hash(request=request)
         async with self.engine.begin() as connection:
             experiment_ids = (
-                await connection.execute(
-                    text("""SELECT DISTINCT experiment_id FROM record_live_strategy_observations
+                (
+                    await connection.execute(
+                        text("""SELECT DISTINCT experiment_id FROM record_live_strategy_observations
                     WHERE id=ANY(:ids) AND package_id=:package_id"""),
-                    {"ids": list(request.observation_ids), "package_id": request.package_id},
+                        {
+                            "ids": list(request.observation_ids),
+                            "package_id": request.package_id,
+                        },
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             if len(experiment_ids) != 1:
                 raise ProductRecordsDenied("LIVE_ASSESSMENT_LINEAGE")
             await lock_experiment(connection, experiment_ids[0])
-            old = await _existing(connection, command_key, "RECORD_LIVE_REGRESSION_ASSESSMENT", request_hash)
+            old = await _existing(
+                connection,
+                command_key,
+                "RECORD_LIVE_REGRESSION_ASSESSMENT",
+                request_hash,
+            )
             if old:
                 return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
             content_hash = _canonical_hash(request.model_dump(mode="json"))
@@ -939,7 +1354,9 @@ class LearningRecordsRepository:
                 {
                     "id": request.id,
                     "disposition": request.disposition,
-                    "metric_results": json.dumps(request.metric_results, sort_keys=True),
+                    "metric_results": json.dumps(
+                        request.metric_results, sort_keys=True
+                    ),
                     "rollback_satisfied": request.rollback_satisfied,
                     "content_hash": content_hash,
                     "created_at": now,
@@ -963,7 +1380,9 @@ class LearningRecordsRepository:
                 {
                     "assessment_id": request.id,
                     "observation_count": len(request.observation_ids),
-                    "observation_set_hash": _canonical_hash(sorted(request.observation_ids)),
+                    "observation_set_hash": _canonical_hash(
+                        sorted(request.observation_ids)
+                    ),
                     "sealed_at": now,
                 },
             )
@@ -973,8 +1392,13 @@ class LearningRecordsRepository:
                     text("""INSERT INTO record_learning_failure_analyses
                     (id,comparison_id,live_assessment_id,reason_codes,content_hash,created_at)
                     VALUES (:id,NULL,:assessment_id,CAST(:reason_codes AS jsonb),:content_hash,:created_at)"""),
-                    {"id": uuid4(), "assessment_id": request.id, "reason_codes": reasons,
-                     "content_hash": content_hash, "created_at": now},
+                    {
+                        "id": uuid4(),
+                        "assessment_id": request.id,
+                        "reason_codes": reasons,
+                        "content_hash": content_hash,
+                        "created_at": now,
+                    },
                 )
                 await connection.execute(
                     text("""INSERT INTO record_negative_learning_records
@@ -982,9 +1406,15 @@ class LearningRecordsRepository:
                      classification,reason_codes,content_hash,created_at)
                     VALUES (:id,NULL,NULL,:assessment_id,:package_id,:classification,
                      CAST(:reason_codes AS jsonb),:content_hash,:created_at)"""),
-                    {"id": uuid4(), "assessment_id": request.id, "package_id": request.package_id,
-                     "classification": request.negative_classification, "reason_codes": reasons,
-                     "content_hash": content_hash, "created_at": now},
+                    {
+                        "id": uuid4(),
+                        "assessment_id": request.id,
+                        "package_id": request.package_id,
+                        "classification": request.negative_classification,
+                        "reason_codes": reasons,
+                        "content_hash": content_hash,
+                        "created_at": now,
+                    },
                 )
             command_id = await _complete(
                 connection,
@@ -1007,7 +1437,9 @@ class LearningRecordsRepository:
             await connection.execute(
                 text("SELECT id FROM record_strategy_registry WHERE id=1 FOR UPDATE")
             )
-            old = await _existing(connection, command_key, "RECORD_STRATEGY_ROLLBACK", request_hash)
+            old = await _existing(
+                connection, command_key, "RECORD_STRATEGY_ROLLBACK", request_hash
+            )
             if old:
                 return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
             assessment = (
@@ -1015,7 +1447,10 @@ class LearningRecordsRepository:
                     await connection.execute(
                         text("""SELECT disposition,rollback_satisfied FROM record_learning_regression_assessments
                         WHERE id=:id AND subject_kind='LIVE' AND live_package_id=:package_id"""),
-                        {"id": request.assessment_id, "package_id": request.current_package_id},
+                        {
+                            "id": request.assessment_id,
+                            "package_id": request.current_package_id,
+                        },
                     )
                 )
                 .mappings()
@@ -1029,30 +1464,38 @@ class LearningRecordsRepository:
             current = (
                 (
                     await connection.execute(
-                        text("SELECT logical_id,version,created_at FROM record_global_strategy_packages WHERE id=:id"),
+                        text(
+                            "SELECT logical_id,version,created_at FROM record_global_strategy_packages WHERE id=:id"
+                        ),
                         {"id": request.current_package_id},
                     )
                 )
                 .mappings()
                 .one_or_none()
             )
-            eligible_ids = [item.package_id for item in request.candidates if item.eligible]
+            eligible_ids = [
+                item.package_id for item in request.candidates if item.eligible
+            ]
             valid_ids = (
-                await connection.execute(
-                    text("""SELECT p.id FROM record_global_strategy_packages p
+                (
+                    await connection.execute(
+                        text("""SELECT p.id FROM record_global_strategy_packages p
                     JOIN record_strategy_package_seals s ON s.package_id=p.id
                     WHERE p.id=ANY(:ids) AND p.logical_id=:logical_id AND p.version<:version
                       AND p.created_at<=:created_at
                       AND NOT EXISTS(SELECT 1 FROM record_strategy_rollback_decisions r
                                      WHERE r.current_package_id=p.id)"""),
-                    {
-                        "ids": eligible_ids,
-                        "logical_id": current["logical_id"] if current else None,
-                        "version": current["version"] if current else 0,
-                        "created_at": current["created_at"] if current else now,
-                    },
+                        {
+                            "ids": eligible_ids,
+                            "logical_id": current["logical_id"] if current else None,
+                            "version": current["version"] if current else 0,
+                            "created_at": current["created_at"] if current else now,
+                        },
+                    )
                 )
-            ).scalars().all()
+                .scalars()
+                .all()
+            )
             if current is None or set(valid_ids) != set(eligible_ids):
                 raise ProductRecordsDenied("ROLLBACK_TARGET_NOT_ELIGIBLE")
             content_hash = _canonical_hash(request.model_dump(mode="json"))
@@ -1062,9 +1505,12 @@ class LearningRecordsRepository:
                  decided_by,reason_codes,content_hash,decided_at)
                 VALUES (:id,:current_package_id,:target_package_id,:assessment_id,:forced,:policy_version,
                  :decided_by,CAST(:reason_codes AS jsonb),:content_hash,:decided_at)"""),
-                {**request.model_dump(exclude={"candidates", "reason_codes"}),
-                 "reason_codes": json.dumps(request.reason_codes), "content_hash": content_hash,
-                 "decided_at": now},
+                {
+                    **request.model_dump(exclude={"candidates", "reason_codes"}),
+                    "reason_codes": json.dumps(request.reason_codes),
+                    "content_hash": content_hash,
+                    "decided_at": now,
+                },
             )
             candidate_rows = []
             for candidate in request.candidates:
@@ -1073,16 +1519,24 @@ class LearningRecordsRepository:
                     text("""INSERT INTO record_strategy_rollback_candidates
                     (rollback_id,package_id,confidence,eligible,reason_codes)
                     VALUES (:rollback_id,:package_id,:confidence,:eligible,CAST(:reason_codes AS jsonb))"""),
-                    {"rollback_id": request.id, **candidate.model_dump(exclude={"reason_codes"}),
-                     "reason_codes": json.dumps(candidate.reason_codes)},
+                    {
+                        "rollback_id": request.id,
+                        **candidate.model_dump(exclude={"reason_codes"}),
+                        "reason_codes": json.dumps(candidate.reason_codes),
+                    },
                 )
             await connection.execute(
                 text("""INSERT INTO record_strategy_rollback_seals
                 (rollback_id,candidate_count,candidate_set_hash,sealed_at)
                 VALUES (:rollback_id,:candidate_count,:candidate_set_hash,:sealed_at)"""),
-                {"rollback_id": request.id, "candidate_count": len(candidate_rows),
-                 "candidate_set_hash": _canonical_hash(sorted(candidate_rows, key=lambda item: str(item["package_id"]))),
-                 "sealed_at": now},
+                {
+                    "rollback_id": request.id,
+                    "candidate_count": len(candidate_rows),
+                    "candidate_set_hash": _canonical_hash(
+                        sorted(candidate_rows, key=lambda item: str(item["package_id"]))
+                    ),
+                    "sealed_at": now,
+                },
             )
             await connection.execute(
                 text("""INSERT INTO record_learning_failure_analyses
@@ -1104,10 +1558,15 @@ class LearningRecordsRepository:
                  rollback_decision_id,classification,reason_codes,content_hash,created_at)
                 VALUES (:id,NULL,NULL,:assessment_id,:package_id,:rollback_decision_id,
                  'ROLLED_BACK_STRATEGY',CAST(:reason_codes AS jsonb),:content_hash,:created_at)"""),
-                {"id": uuid4(), "assessment_id": request.assessment_id,
-                 "package_id": request.current_package_id, "rollback_decision_id": request.id,
-                 "reason_codes": json.dumps(request.reason_codes),
-                 "content_hash": content_hash, "created_at": now},
+                {
+                    "id": uuid4(),
+                    "assessment_id": request.assessment_id,
+                    "package_id": request.current_package_id,
+                    "rollback_decision_id": request.id,
+                    "reason_codes": json.dumps(request.reason_codes),
+                    "content_hash": content_hash,
+                    "created_at": now,
+                },
             )
             await self._insert_registry_event(
                 connection,
@@ -1141,13 +1600,17 @@ class LearningRecordsRepository:
             await connection.execute(
                 text("SELECT id FROM record_strategy_registry WHERE id=1 FOR UPDATE")
             )
-            old = await _existing(connection, command_key, "RECORD_STRATEGY_CONTROL", request_hash)
+            old = await _existing(
+                connection, command_key, "RECORD_STRATEGY_CONTROL", request_hash
+            )
             if old:
                 return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
             package_id = request.package_id
             if request.kind == "FORCED_ROLLBACK":
                 package_id = await connection.scalar(
-                    text("SELECT target_package_id FROM record_strategy_rollback_decisions WHERE id=:id AND forced"),
+                    text(
+                        "SELECT target_package_id FROM record_strategy_rollback_decisions WHERE id=:id AND forced"
+                    ),
                     {"id": request.rollback_decision_id},
                 )
                 if package_id is None:

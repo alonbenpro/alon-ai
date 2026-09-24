@@ -98,7 +98,10 @@ QUERIES = {
 def canonicalize_columns(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
     """Exclude physical PostgreSQL attribute positions from logical schema review."""
     return sorted(
-        ({key: value for key, value in row.items() if key != "ordinal"} for row in rows),
+        (
+            {key: value for key, value in row.items() if key != "ordinal"}
+            for row in rows
+        ),
         key=lambda row: (row["table_name"], row["name"]),
     )
 

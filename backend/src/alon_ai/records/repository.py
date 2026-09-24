@@ -346,15 +346,10 @@ async def _continuation_block_reason(
             elif row["component"] == "CAPTURE_PAGE":
                 captured_pages += quantity
         config = (
-            (
-                await connection.execute(
-                    select(gov.configs.c.data).where(
-                        gov.configs.c.id == call["config_id"]
-                    )
-                )
+            await connection.execute(
+                select(gov.configs.c.data).where(gov.configs.c.id == call["config_id"])
             )
-            .scalar_one()
-        )
+        ).scalar_one()
         if config["intended_use"]["provider"] == "OPENAI":
             openai_calls += 1
     if (
@@ -407,11 +402,14 @@ async def _supplied_budget_block_reason(
     budget: ResearchCycleBudgetInput,
     now: datetime,
 ) -> str | None:
-    if min(
-        budget.max_search_results,
-        budget.max_capture_pages,
-        budget.max_openai_calls,
-    ) <= 0:
+    if (
+        min(
+            budget.max_search_results,
+            budget.max_capture_pages,
+            budget.max_openai_calls,
+        )
+        <= 0
+    ):
         return "BUDGET_EXHAUSTED"
     if not await connection.scalar(
         select(gov.configs.c.id).where(
@@ -1554,9 +1552,7 @@ class ProductRecordsRepository:
                 connection, command_key, "BIND_RESEARCH_CYCLE_BUDGET", request_hash
             )
             if old:
-                return CommandReceipt(
-                    command_id=old["id"], result_id=old["result_id"]
-                )
+                return CommandReceipt(command_id=old["id"], result_id=old["result_id"])
             await connection.execute(
                 insert(s.research_cycle_budgets).values(
                     cycle_id=cycle_id,
@@ -1740,8 +1736,7 @@ class ProductRecordsRepository:
                         select(s.cycle_states)
                         .where(
                             s.cycle_states.c.cycle_id == attempt["cycle_id"],
-                            s.cycle_states.c.experiment_id
-                            == attempt["experiment_id"],
+                            s.cycle_states.c.experiment_id == attempt["experiment_id"],
                         )
                         .with_for_update()
                     )
@@ -1771,9 +1766,7 @@ class ProductRecordsRepository:
                 parent = (
                     (
                         await connection.execute(
-                            select(s.cycles).where(
-                                s.cycles.c.id == attempt["cycle_id"]
-                            )
+                            select(s.cycles).where(s.cycles.c.id == attempt["cycle_id"])
                         )
                     )
                     .mappings()
@@ -1909,8 +1902,7 @@ class ProductRecordsRepository:
                     s.cycle_states.c.cycle_id == attempt["cycle_id"],
                     s.cycle_states.c.experiment_id == attempt["experiment_id"],
                     s.cycle_states.c.state == "MARKET_RESEARCH",
-                    s.cycle_states.c.transition_ordinal
-                    == state["transition_ordinal"],
+                    s.cycle_states.c.transition_ordinal == state["transition_ordinal"],
                 )
                 .values(
                     state=states[verdict],
@@ -1962,8 +1954,7 @@ class ProductRecordsRepository:
                         await connection.execute(
                             select(s.artifacts).where(
                                 s.artifacts.c.id == proposed_idea.artifact_id,
-                                s.artifacts.c.experiment_id
-                                == attempt["experiment_id"],
+                                s.artifacts.c.experiment_id == attempt["experiment_id"],
                                 s.artifacts.c.kind == proposed_idea.kind,
                                 s.artifacts.c.version == proposed_idea.version,
                                 s.artifacts.c.content_hash
@@ -2019,8 +2010,7 @@ class ProductRecordsRepository:
                     raise ProductRecordsDenied("INVALID_PROPOSED_IDEA_LINEAGE")
                 if not await connection.scalar(
                     select(s.artifact_dispositions.c.id).where(
-                        s.artifact_dispositions.c.artifact_id
-                        == feedback.artifact_id,
+                        s.artifact_dispositions.c.artifact_id == feedback.artifact_id,
                         s.artifact_dispositions.c.disposition == "ACCEPTED",
                     )
                 ):
@@ -2044,9 +2034,7 @@ class ProductRecordsRepository:
                 parent = (
                     (
                         await connection.execute(
-                            select(s.cycles).where(
-                                s.cycles.c.id == attempt["cycle_id"]
-                            )
+                            select(s.cycles).where(s.cycles.c.id == attempt["cycle_id"])
                         )
                     )
                     .mappings()
@@ -2118,8 +2106,7 @@ class ProductRecordsRepository:
                         await connection.execute(
                             select(s.artifacts).where(
                                 s.artifacts.c.id == plan.artifact_id,
-                                s.artifacts.c.experiment_id
-                                == attempt["experiment_id"],
+                                s.artifacts.c.experiment_id == attempt["experiment_id"],
                                 s.artifacts.c.kind == plan.kind,
                                 s.artifacts.c.version == plan.version,
                                 s.artifacts.c.content_hash == plan.content_hash,
@@ -2334,9 +2321,7 @@ class ProductRecordsRepository:
                 (
                     await connection.execute(
                         select(s.cycle_states)
-                        .where(
-                            s.cycle_states.c.cycle_id == verdict_row["cycle_id"]
-                        )
+                        .where(s.cycle_states.c.cycle_id == verdict_row["cycle_id"])
                         .with_for_update()
                     )
                 )
@@ -2446,8 +2431,7 @@ class ProductRecordsRepository:
                     (
                         await connection.execute(
                             select(s.idea_acceptances).where(
-                                s.idea_acceptances.c.cycle_id
-                                == verdict_row["cycle_id"]
+                                s.idea_acceptances.c.cycle_id == verdict_row["cycle_id"]
                             )
                         )
                     )
@@ -2526,8 +2510,7 @@ class ProductRecordsRepository:
                     raise ProductRecordsDenied("INVALID_PROPOSED_IDEA_LINEAGE")
                 if not await connection.scalar(
                     select(s.artifact_dispositions.c.id).where(
-                        s.artifact_dispositions.c.artifact_id
-                        == feedback.artifact_id,
+                        s.artifact_dispositions.c.artifact_id == feedback.artifact_id,
                         s.artifact_dispositions.c.disposition == "ACCEPTED",
                     )
                 ):
@@ -2555,9 +2538,7 @@ class ProductRecordsRepository:
                     await connection.scalar(
                         select(func.count())
                         .select_from(s.cycles)
-                        .where(
-                            s.cycles.c.experiment_id == verdict_row["experiment_id"]
-                        )
+                        .where(s.cycles.c.experiment_id == verdict_row["experiment_id"])
                     )
                     or 0
                 ) + 1
@@ -2566,8 +2547,7 @@ class ProductRecordsRepository:
                         select(func.count())
                         .select_from(s.returns)
                         .where(
-                            s.returns.c.experiment_id
-                            == verdict_row["experiment_id"],
+                            s.returns.c.experiment_id == verdict_row["experiment_id"],
                             s.returns.c.kind == "MATERIAL_PIVOT",
                             s.returns.c.applicable_scope_id
                             == source_cycle["episode_id"],
@@ -2925,7 +2905,10 @@ class ProductRecordsRepository:
                 .mappings()
                 .one()
             )
-            if verdict["verdict"] != "INCONCLUSIVE" or state["state"] != "INCONCLUSIVE_REVIEW":
+            if (
+                verdict["verdict"] != "INCONCLUSIVE"
+                or state["state"] != "INCONCLUSIVE_REVIEW"
+            ):
                 raise ProductRecordsDenied("INVALID_STATE")
             for supplied in (feedback, feedback_validation, plan):
                 await _require_exact_artifact(

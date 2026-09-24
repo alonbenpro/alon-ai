@@ -43,7 +43,9 @@ async def proposal_request(
     proposal_class: ProposalClass = "PROMPT_CHANGE",
     candidate: bool = True,
 ):
-    product, _, experiment_id, workflow_id, agent_id = await roots(engine, suffix="learning")
+    product, _, experiment_id, workflow_id, agent_id = await roots(
+        engine, suffix="learning"
+    )
     baseline = artifact(
         experiment_id,
         ArtifactKind.OUTREACH_PROMPT_CONFIGURATION,
@@ -75,7 +77,13 @@ async def proposal_request(
                 "drafting_rule_version": "draft-v1",
                 "validation_rule_version": "validate-v1",
             },
-            config_diff=({"op": "REPLACE", "path": "/drafting_rule_version", "value": "draft-v1"},),
+            config_diff=(
+                {
+                    "op": "REPLACE",
+                    "path": "/drafting_rule_version",
+                    "value": "draft-v1",
+                },
+            ),
             diff_hash=digest("diff"),
             content_hash=digest("candidate"),
         )
@@ -110,8 +118,14 @@ async def proposal_request(
         proposal_class=proposal_class,
         bottleneck="Synthetic offline evaluation bottleneck.",
         expected_effect={"metric": "SYNTHETIC_RESPONSE_QUALITY"},
-        target_metrics=(LearningMetric(code="SYNTHETIC_RESPONSE_QUALITY", comparator="GTE", threshold=0.8),),
-        protected_metrics=(LearningMetric(code="SYNTHETIC_SAFETY", comparator="GTE", threshold=1),),
+        target_metrics=(
+            LearningMetric(
+                code="SYNTHETIC_RESPONSE_QUALITY", comparator="GTE", threshold=0.8
+            ),
+        ),
+        protected_metrics=(
+            LearningMetric(code="SYNTHETIC_SAFETY", comparator="GTE", threshold=1),
+        ),
         confidence=0.7,
         sample_size=20,
         confounders=("SYNTHETIC_DATA",),
@@ -134,14 +148,20 @@ async def test_learning_proposal_replays_and_retains_exact_offline_lineage(
 
     assert replay == first
     async with governance_engine.connect() as connection:
-        assert await connection.scalar(
-            text("SELECT count(*) FROM record_learning_proposals WHERE id=:id"),
-            {"id": request.id},
-        ) == 1
-        assert await connection.scalar(
-            text("SELECT count(*) FROM record_outbox WHERE aggregate_id=:id"),
-            {"id": request.id},
-        ) == 1
+        assert (
+            await connection.scalar(
+                text("SELECT count(*) FROM record_learning_proposals WHERE id=:id"),
+                {"id": request.id},
+            )
+            == 1
+        )
+        assert (
+            await connection.scalar(
+                text("SELECT count(*) FROM record_outbox WHERE aggregate_id=:id"),
+                {"id": request.id},
+            )
+            == 1
+        )
     with pytest.raises(ProductRecordsDenied, match="COMMAND_CONFLICT"):
         await repository.record_proposal(
             request.model_copy(update={"bottleneck": "Changed immutable request."}),
@@ -156,11 +176,16 @@ async def test_only_allowed_classes_can_create_candidates_and_protected_diff_is_
     assert prompt.candidate is not None
     with pytest.raises(ValueError, match="invalid provider contract"):
         LearningCandidateInput(
-            id=uuid4(), logical_id=uuid4(), version=1,
+            id=uuid4(),
+            logical_id=uuid4(),
+            version=1,
             baseline_artifact=prompt.candidate.baseline_artifact,
             candidate_configuration={"mode": "open"},
-            config_diff=({"op": "REPLACE", "path": "/authorization/mode", "value": "open"},),
-            diff_hash=digest("bad-diff"), content_hash=digest("bad-candidate"),
+            config_diff=(
+                {"op": "REPLACE", "path": "/authorization/mode", "value": "open"},
+            ),
+            diff_hash=digest("bad-diff"),
+            content_hash=digest("bad-candidate"),
         )
     with pytest.raises(ValueError, match="invalid provider contract"):
         await proposal_request(
@@ -191,11 +216,32 @@ async def test_negative_evaluation_is_retained_immutably_and_rolls_back_without_
     )
     result = await repository.record_evaluation(evaluation, command_key=uuid4())
     async with governance_engine.connect() as connection:
-        assert await connection.scalar(text("SELECT count(*) FROM record_learning_failure_analyses WHERE comparison_id=:id"), {"id": result.comparison_id}) == 1
-        assert await connection.scalar(text("SELECT count(*) FROM record_negative_learning_records WHERE comparison_id=:id"), {"id": result.comparison_id}) == 1
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT count(*) FROM record_learning_failure_analyses WHERE comparison_id=:id"
+                ),
+                {"id": result.comparison_id},
+            )
+            == 1
+        )
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT count(*) FROM record_negative_learning_records WHERE comparison_id=:id"
+                ),
+                {"id": result.comparison_id},
+            )
+            == 1
+        )
     async with governance_engine.begin() as connection:
         with pytest.raises(SQLAlchemyError):
-            await connection.execute(text("UPDATE record_learning_offline_comparisons SET content_hash=:hash WHERE id=:id"), {"hash": digest("changed"), "id": result.comparison_id})
+            await connection.execute(
+                text(
+                    "UPDATE record_learning_offline_comparisons SET content_hash=:hash WHERE id=:id"
+                ),
+                {"hash": digest("changed"), "id": result.comparison_id},
+            )
 
     bad = request.model_copy(
         update={
@@ -210,20 +256,30 @@ async def test_negative_evaluation_is_retained_immutably_and_rolls_back_without_
             ),
             "scope": request.scope.model_copy(update={"id": uuid4()}),
             "logical_id": uuid4(),
-            "candidate": request.candidate.model_copy(update={"id": uuid4(), "logical_id": uuid4()}),
+            "candidate": request.candidate.model_copy(
+                update={"id": uuid4(), "logical_id": uuid4()}
+            ),
         }
     )
     with pytest.raises(ProductRecordsDenied):
         await repository.record_proposal(bad, command_key=uuid4())
     async with governance_engine.connect() as connection:
-        assert await connection.scalar(text("SELECT count(*) FROM record_learning_proposals WHERE id=:id"), {"id": bad.id}) == 0
+        assert (
+            await connection.scalar(
+                text("SELECT count(*) FROM record_learning_proposals WHERE id=:id"),
+                {"id": bad.id},
+            )
+            == 0
+        )
 
 
 async def test_engineering_request_and_review_controls_remain_descriptive_records(
     governance_engine,
 ):
     repository, request = await proposal_request(
-        governance_engine, proposal_class="ENGINEERING_CAPABILITY_REQUEST", candidate=False
+        governance_engine,
+        proposal_class="ENGINEERING_CAPABILITY_REQUEST",
+        candidate=False,
     )
     proposal = await repository.record_proposal(request, command_key=uuid4())
     engineering = EngineeringCapabilityRequestInput(
@@ -235,13 +291,27 @@ async def test_engineering_request_and_review_controls_remain_descriptive_record
         risk="Requires operator review.",
         content_hash=digest("engineering"),
     )
-    await repository.record_engineering_capability_request(engineering, command_key=uuid4())
+    await repository.record_engineering_capability_request(
+        engineering, command_key=uuid4()
+    )
     await repository.record_review_control(
         LearningReviewControlRequest(
-            id=uuid4(), run_id=proposal.run_id, kind="PAUSE_OFFLINE_REVIEW", operator_id=UUID(int=1), content_hash=digest("pause")
+            id=uuid4(),
+            run_id=proposal.run_id,
+            kind="PAUSE_OFFLINE_REVIEW",
+            operator_id=UUID(int=1),
+            content_hash=digest("pause"),
         ),
         command_key=uuid4(),
     )
     async with governance_engine.connect() as connection:
-        assert await connection.scalar(text("SELECT count(*) FROM record_engineering_capability_requests WHERE id=:id"), {"id": engineering.id}) == 1
+        assert (
+            await connection.scalar(
+                text(
+                    "SELECT count(*) FROM record_engineering_capability_requests WHERE id=:id"
+                ),
+                {"id": engineering.id},
+            )
+            == 1
+        )
         assert await connection.scalar(text("SELECT count(*) FROM gov_operations")) == 0

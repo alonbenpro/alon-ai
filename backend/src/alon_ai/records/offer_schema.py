@@ -578,8 +578,20 @@ offer_design_decisions = table(
         ["record_offer_design_runs.id", "record_offer_design_runs.experiment_id"],
     ),
     ForeignKeyConstraint(
-        ["artifact_id", "experiment_id", "artifact_kind", "artifact_version", "artifact_hash"],
-        ["record_artifacts.id", "record_artifacts.experiment_id", "record_artifacts.kind", "record_artifacts.version", "record_artifacts.content_hash"],
+        [
+            "artifact_id",
+            "experiment_id",
+            "artifact_kind",
+            "artifact_version",
+            "artifact_hash",
+        ],
+        [
+            "record_artifacts.id",
+            "record_artifacts.experiment_id",
+            "record_artifacts.kind",
+            "record_artifacts.version",
+            "record_artifacts.content_hash",
+        ],
     ),
     UniqueConstraint("run_id"),
     CheckConstraint(
@@ -607,9 +619,18 @@ offer_design_workflow_bindings = table(
     gov.col("cancellation_outcome", String(40), nullable=True),
     gov.col("created_at", gov.T),
     gov.col("updated_at", gov.T),
-    ForeignKeyConstraint(["cycle_id", "experiment_id"], ["record_cycles.id", "record_cycles.experiment_id"]),
-    ForeignKeyConstraint(["verdict_id", "experiment_id"], ["record_verdicts.id", "record_verdicts.experiment_id"]),
-    ForeignKeyConstraint(["run_id", "experiment_id"], ["record_offer_design_runs.id", "record_offer_design_runs.experiment_id"]),
+    ForeignKeyConstraint(
+        ["cycle_id", "experiment_id"],
+        ["record_cycles.id", "record_cycles.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["verdict_id", "experiment_id"],
+        ["record_verdicts.id", "record_verdicts.experiment_id"],
+    ),
+    ForeignKeyConstraint(
+        ["run_id", "experiment_id"],
+        ["record_offer_design_runs.id", "record_offer_design_runs.experiment_id"],
+    ),
     ForeignKeyConstraint(["command_id"], ["record_commands.id"]),
     CheckConstraint(
         "contract_version=1 AND operation_kind IN ('START','DECISION','IDEA_REFINEMENT_RETURN') "

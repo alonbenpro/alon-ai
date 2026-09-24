@@ -77,7 +77,9 @@ class LearningCostReference(StrictDTO):
 
 class LearningInputBundleInput(StrictDTO):
     id: UUID
-    artifacts: tuple[LearningArtifactReference, ...] = Field(min_length=1, max_length=100)
+    artifacts: tuple[LearningArtifactReference, ...] = Field(
+        min_length=1, max_length=100
+    )
     evidence: tuple[LearningEvidenceReference, ...] = Field(default=(), max_length=100)
     call_snapshots: tuple[LearningCallSnapshot, ...] = Field(default=(), max_length=100)
     usage: tuple[LearningUsageReference, ...] = Field(default=(), max_length=100)
@@ -130,13 +132,14 @@ class LearningCandidateInput(StrictDTO):
         for patch in self.config_diff:
             if set(patch) != {"op", "path", "value"}:
                 raise ValueError("config diff must be an explicit JSON patch")
-            if patch["op"] not in {"ADD", "REMOVE", "REPLACE"} or not isinstance(
-                patch["path"], str
-            ) or not patch["path"].startswith("/"):
+            if (
+                patch["op"] not in {"ADD", "REMOVE", "REPLACE"}
+                or not isinstance(patch["path"], str)
+                or not patch["path"].startswith("/")
+            ):
                 raise ValueError("config diff must be a bounded JSON patch")
             if any(
-                protected.lower() in patch["path"].lower()
-                for protected in _PROTECTED
+                protected.lower() in patch["path"].lower() for protected in _PROTECTED
             ):
                 raise ValueError("config diff cannot change protected components")
         return self
@@ -172,18 +175,25 @@ class LearningProposalRequest(StrictDTO):
     def proposal_class_has_only_allowed_effect(self):
         has_candidate = self.candidate is not None
         if (self.proposal_class in _CANDIDATE_CLASSES) != has_candidate:
-            raise ValueError("only prompt, config, and strategy proposals require a candidate")
+            raise ValueError(
+                "only prompt, config, and strategy proposals require a candidate"
+            )
         expected_target = {
             "OFFER_OR_PRODUCT_CHANGE": "PRODUCT_REVIEW",
             "ENGINEERING_CAPABILITY_REQUEST": "ENGINEERING_REVIEW",
         }.get(self.proposal_class)
-        if expected_target is not None and self.scope.target_subsystem != expected_target:
+        if (
+            expected_target is not None
+            and self.scope.target_subsystem != expected_target
+        ):
             raise ValueError("review-only proposals have a review-only target")
         if expected_target is None and self.scope.target_subsystem in {
             "PRODUCT_REVIEW",
             "ENGINEERING_REVIEW",
         }:
-            raise ValueError("executable learning proposals require an allowed subsystem")
+            raise ValueError(
+                "executable learning proposals require an allowed subsystem"
+            )
         if len({item.code for item in self.target_metrics}) != len(self.target_metrics):
             raise ValueError("target metrics must be unique")
         if len({item.code for item in self.protected_metrics}) != len(
@@ -495,7 +505,9 @@ class RollbackDecisionRequest(StrictDTO):
             key=lambda item: str(item.package_id),
         )
         if self.target_package_id != winners[0].package_id:
-            raise ValueError("rollback target is not the deterministic highest confidence package")
+            raise ValueError(
+                "rollback target is not the deterministic highest confidence package"
+            )
         return self
 
 
