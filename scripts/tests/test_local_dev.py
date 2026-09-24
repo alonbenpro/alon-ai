@@ -31,12 +31,13 @@ class LocalDevTests(unittest.TestCase):
         docker = self.bin / "docker"
         docker.write_text(
             "#!/bin/sh\n"
-            "printf 'project=%s %s\\n' \"${COMPOSE_PROJECT_NAME:-default}\" \"$*\" >> \"$FAKE_DOCKER_LOG\"\n"
+            "printf 'project=%s auth_env=%s/%s %s\\n' \"${COMPOSE_PROJECT_NAME:-default}\" \"${ALON_AI_OPERATOR_PASSWORD_HASH+set}\" \"${ALON_AI_SESSION_SIGNING_KEY+set}\" \"$*\" >> \"$FAKE_DOCKER_LOG\"\n"
             "if [ \"$1\" = info ] && [ \"${FAKE_DOCKER_DOWN:-0}\" = 1 ]; then exit 1; fi\n"
             "case \"$*\" in\n"
-            "  *'config --format json'*) printf '%s\\n' '{\"volumes\":{\"postgres_data\":{\"name\":\"l05_disposable_postgres_data\"}}}'; exit 0;;\n"
+            "  *'config --format json'*) printf 'volume=%s_postgres_data\\n' \"${COMPOSE_PROJECT_NAME:-default}\" >> \"$FAKE_DOCKER_LOG\"; printf '{\"volumes\":{\"postgres_data\":{\"name\":\"%s_postgres_data\"}}}\\n' \"${COMPOSE_PROJECT_NAME:-default}\"; exit 0;;\n"
+            "  *'up -d --wait postgres'*) printf 'volume=%s_postgres_data\\n' \"${COMPOSE_PROJECT_NAME:-default}\" >> \"$FAKE_DOCKER_LOG\";;\n"
             "esac\n"
-            "if [ \"$1 $2\" = 'volume ls' ] && [ \"${FAKE_VOLUME_PRESENT:-0}\" = 1 ]; then printf '%s\\n' l05_disposable_postgres_data; exit 0; fi\n"
+            "if [ \"$1 $2\" = 'volume ls' ] && [ \"${FAKE_VOLUME_PRESENT:-0}\" = 1 ]; then printf '%s_postgres_data\\n' \"${COMPOSE_PROJECT_NAME:-default}\"; exit 0; fi\n"
             "if [ -n \"${FAKE_FAIL_CONTAINS:-}\" ]; then case \"$*\" in *\"$FAKE_FAIL_CONTAINS\"*) exit 1;; esac; fi\n"
             "case \"$*\" in *'ps --status running --services worker'*) [ \"${FAKE_WORKER_DOWN:-0}\" = 1 ] || printf '%s\\n' worker; exit 0;; esac\n"
             "if [ \"$1\" = compose ] && [ \"$2\" = version ]; then exit 0; fi\n"
@@ -61,15 +62,17 @@ class LocalDevTests(unittest.TestCase):
         python.chmod(0o755)
         self.log = self.root / "docker.log"
 
-    def run_script(self, *args, extra_env=None):
+    def run_script(self, *args, extra_env=None, checkout=None):
         env = dict(os.environ)
+        for name in ("COMPOSE_PROJECT_NAME", "ALON_AI_OPERATOR_PASSWORD_HASH", "ALON_AI_SESSION_SIGNING_KEY"):
+            env.pop(name, None)
         env.update(
             PATH=f"{self.bin}:{env.get('PATH', '')}",
             FAKE_DOCKER_LOG=str(self.log),
         )
         env.update(extra_env or {})
         return subprocess.run(
-            ["sh", str(self.root / "scripts/local-dev.sh"), *args],
+            ["sh", str((checkout or self.root) / "scripts/local-dev.sh"), *args],
             env=env,
             capture_output=True,
             text=True,
@@ -98,6 +101,12 @@ class LocalDevTests(unittest.TestCase):
         self.assertIn("up", result.stdout)
         self.assertIn("down", result.stdout)
         self.assertIn("status", result.stdout)
+
+    def test_help_does_not_need_python_or_docker(self):
+        (self.bin / "python3").write_text("#!/bin/sh\nexit 86\n")
+        result = self.run_script("help")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Usage:", result.stdout)
 
     def test_down_preserves_database_volume(self):
         result = self.run_script("down")
@@ -130,6 +139,58 @@ class LocalDevTests(unittest.TestCase):
         self.assertLess(commands.index("provision_operator.py"), commands.index("up -d --wait api worker frontend"))
         self.assertIn("http://localhost:13000/login", result.stdout)
         self.assertNotIn("scrypt$", result.stdout + result.stderr + commands)
+
+    def test_exported_auth_cannot_override_validated_private_file(self):
+        self.write_auth()
+        result = self.run_script(
+            "up",
+            extra_env={
+                "ALON_AI_POSTGRES_PORT": "55432",
+                "ALON_AI_OPERATOR_PASSWORD_HASH": "injected-verifier",
+                "ALON_AI_SESSION_SIGNING_KEY": "injected-key",
+            },
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn("auth_env=set", self.log.read_text())
+        self.assertIn("--env-file", self.log.read_text())
+        self.assertNotIn("injected-", result.stdout + result.stderr + self.log.read_text())
+
+    def test_default_projects_and_volumes_are_isolated_by_checkout(self):
+        self.write_auth()
+        other = self.root / "another-checkout"
+        (other / "scripts").mkdir(parents=True)
+        (other / "infra").mkdir()
+        (other / "scripts/local-dev.sh").write_bytes(SCRIPT.read_bytes())
+        (other / "infra/compose.yaml").write_text("services: {}\n")
+        (other / ".env.example").write_text("ALON_AI_ENVIRONMENT=development\n")
+        other_local = other / ".local"
+        other_local.mkdir(mode=0o700)
+        other_secret = other_local / "operator.env"
+        other_secret.write_bytes((self.root / ".local/operator.env").read_bytes())
+        other_secret.chmod(0o600)
+        env = {"ALON_AI_POSTGRES_PORT": "55432"}
+
+        first = self.run_script("up", extra_env=env)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        first_log = self.log.read_text()
+        first_project = first_log.split("project=", 1)[1].split()[0]
+        self.assertNotEqual(first_project, "default")
+        self.assertIn(f"volume={first_project}_postgres_data", first_log)
+
+        self.log.write_text("")
+        second = self.run_script("up", extra_env=env, checkout=other)
+        self.assertEqual(second.returncode, 0, second.stderr)
+        second_log = self.log.read_text()
+        second_project = second_log.split("project=", 1)[1].split()[0]
+        self.assertNotEqual(second_project, first_project)
+        self.assertIn(f"volume={second_project}_postgres_data", second_log)
+
+        self.log.write_text("")
+        stopped = self.run_script("down")
+        self.assertEqual(stopped.returncode, 0, stopped.stderr)
+        self.assertIn(f"project={first_project}", self.log.read_text())
+        self.assertNotIn(f"project={second_project}", self.log.read_text())
+        self.assertNotIn("--volumes", self.log.read_text())
 
     def test_docker_failure_does_not_create_secrets(self):
         result = self.run_script("up", extra_env={"FAKE_DOCKER_DOWN": "1"})

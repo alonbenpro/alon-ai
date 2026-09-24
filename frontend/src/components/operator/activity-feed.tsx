@@ -11,6 +11,7 @@ export function ActivityFeed({ initial }: { initial: ActivityProjection | null }
   const [selected, setSelected] = useState<ActivityItem | null>(null);
   const dialogRef = useRef<HTMLDialogElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const headingRef = useRef<HTMLHeadingElement>(null);
 
   useEffect(() => {
     if (selected && dialogRef.current && !dialogRef.current.open) {
@@ -69,7 +70,7 @@ export function ActivityFeed({ initial }: { initial: ActivityProjection | null }
       <div className="panel-heading">
         <div>
           <p className="eyebrow">Server activity</p>
-          <h2 id="activity-heading">Activity log</h2>
+          <h2 id="activity-heading" ref={headingRef} tabIndex={-1}>Activity log</h2>
         </div>
         <span className="connection-label" role="status">
           <span aria-hidden="true" className={`connection-light connection-light--${connection}`} />
@@ -113,7 +114,7 @@ export function ActivityFeed({ initial }: { initial: ActivityProjection | null }
         </ol>
       )}
       {selected && (
-        <dialog ref={dialogRef} className="activity-drawer" aria-modal="true" aria-labelledby="activity-details-title" onClose={() => { setSelected(null); triggerRef.current?.focus(); }}>
+        <dialog ref={dialogRef} className="activity-drawer" aria-modal="true" aria-labelledby="activity-details-title" onClose={() => { setSelected(null); (triggerRef.current?.isConnected ? triggerRef.current : headingRef.current)?.focus(); }}>
           <div className="activity-drawer__heading"><div><p className="eyebrow">Server activity</p><h3 id="activity-details-title">Activity details</h3></div><button type="button" onClick={closeDetails} aria-label="Close details">Close <span aria-hidden="true">×</span></button></div>
           <p className="activity-drawer__label">{selected.label}</p>
           <dl className="activity-drawer__fields">

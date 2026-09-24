@@ -2,7 +2,10 @@
 # Private, loopback-only L05 operator stack. Run from any directory.
 set -eu
 
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
+# Compose gives exported variables precedence over --env-file. Only the validated
+# private file may provide these values to the local stack.
+unset ALON_AI_OPERATOR_PASSWORD_HASH ALON_AI_SESSION_SIGNING_KEY
 AUTH_FILE=${ALON_AI_LOCAL_AUTH_FILE:-$ROOT/.local/operator.env}
 case "$AUTH_FILE" in
     /*) ;;
@@ -24,6 +27,20 @@ EOF
 fail() {
     printf 'local-dev: %s\n' "$*" >&2
     exit 1
+}
+
+init_compose_project() {
+    if [ -z "${COMPOSE_PROJECT_NAME:-}" ]; then
+        command -v python3 >/dev/null 2>&1 || fail 'Python 3 is required to identify this checkout.'
+        COMPOSE_PROJECT_NAME=$(python3 - "$ROOT" <<'PY'
+import hashlib
+import sys
+
+print("alon-ai-" + hashlib.sha256(sys.argv[1].encode()).hexdigest()[:12])
+PY
+)
+    fi
+    export COMPOSE_PROJECT_NAME
 }
 
 docker_preflight() {
@@ -202,6 +219,7 @@ case "${1:-help}" in
         ;;
     up)
         [ "$#" -eq 1 ] || fail 'Usage: scripts/local-dev.sh up'
+        init_compose_project
         command -v python3 >/dev/null 2>&1 || fail 'Python 3 is required for secure local setup.'
         command -v curl >/dev/null 2>&1 || fail 'curl is required for readiness checks.'
         docker_preflight
@@ -222,12 +240,14 @@ case "${1:-help}" in
         ;;
     down)
         [ "$#" -eq 1 ] || fail 'Usage: scripts/local-dev.sh down'
+        init_compose_project
         docker_preflight
         compose down
         printf 'Stack stopped; PostgreSQL data and local login material retained.\n'
         ;;
     status)
         [ "$#" -eq 1 ] || fail 'Usage: scripts/local-dev.sh status'
+        init_compose_project
         docker_preflight
         compose ps
         ;;

@@ -82,4 +82,18 @@ describe("ActivityFeed", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(button).toHaveFocus();
   });
+
+  it("returns focus to the activity heading when a refresh removes the drawer trigger", async () => {
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: function (this: HTMLDialogElement) { this.open = true; } });
+    Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value: function (this: HTMLDialogElement) { this.open = false; this.dispatchEvent(new Event("close")); } });
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue({ ok: true, json: async () => ({ cursor: null, items: [] }) }));
+    render(<ActivityFeed initial={{ cursor: null, items: [{ id: "item-1", kind: "research", state: "completed", label: "Research completed", occurred_at: "2026-09-23T10:00:00Z" }] }} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "View details for Research completed" }));
+    TestEventSource.current.emit("activity");
+    await waitFor(() => expect(screen.getByText("No recorded activity")).toBeInTheDocument());
+    fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Close details" }));
+
+    expect(screen.getByRole("heading", { name: "Activity log" })).toHaveFocus();
+  });
 });
