@@ -280,9 +280,14 @@ class OpenAIRunStore:
                 elif status == "REFUSED":
                     outcome = OpenAIRunOutcome.REFUSED
                 elif status == "FAILED":
+                    error_code = metadata.get("error_code")
                     outcome = (
-                        OpenAIRunOutcome.SCHEMA_MISMATCH
-                        if metadata.get("error_code") == "MALFORMED_RESPONSE"
+                        {
+                            "MALFORMED_RESPONSE": OpenAIRunOutcome.SCHEMA_MISMATCH,
+                            "INCOMPLETE_RESULT": OpenAIRunOutcome.INCOMPLETE,
+                            "CANCELLED_RESULT": OpenAIRunOutcome.CANCELLED,
+                        }.get(error_code, OpenAIRunOutcome.FAILED)
+                        if isinstance(error_code, str)
                         else OpenAIRunOutcome.FAILED
                     )
                 elif ledger["state"] == "RELEASED":

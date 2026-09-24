@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
@@ -11,6 +12,8 @@ from types import MappingProxyType
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from pydantic import SecretStr
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alon_ai.accounting.models import (
     CallReceipt,
@@ -55,6 +58,8 @@ from alon_ai.providers.contracts import (
 )
 from alon_ai.providers.execution import GovernedExecutor
 from alon_ai.providers.rights import GrantEvent, ProviderUsageGrant, RuntimeContent
+from alon_ai.records import schema as record_schema
+from alon_ai.records.models import ArtifactInput, ArtifactKind
 from alon_ai.security.secrets import SecretStore
 
 
@@ -66,6 +71,28 @@ class AcceptedSource:
     content: RuntimeContent
     current_grant: ProviderUsageGrant
     events: tuple[GrantEvent, ...] = ()
+
+
+@dataclass(frozen=True)
+class AcceptedArtifact:
+    """An exact persisted product record reference, resolved by the runtime."""
+
+    artifact: ArtifactInput
+    experiment_id: UUID
+    schema_version: int
+    selection_id: UUID | None = None
+    cycle_id: UUID | None = None
+
+
+@dataclass(frozen=True)
+class AcceptedOperatorProfile:
+    """Exact experiment-bound first-party capability context."""
+
+    profile_id: UUID
+    version: int
+    content_hash: str
+    experiment_id: UUID
+    profile_schema_version: int = 2
 
 
 @dataclass(frozen=True)
@@ -112,6 +139,198 @@ def _source_input(
             }
         )
     return canonical_json({"sources": scoped})
+
+
+async def _accepted_input(
+    engine: AsyncEngine,
+    sources: tuple[AcceptedSource, ...],
+    artifacts: tuple[AcceptedArtifact, ...],
+    operator_profiles: tuple[AcceptedOperatorProfile, ...],
+    experiment_id: UUID,
+    now: datetime,
+    *,
+    grants: Mapping[tuple[UUID, int], ProviderUsageGrant] | None = None,
+    events: tuple[GrantEvent, ...] = (),
+) -> str:
+    if not sources and not artifacts and not operator_profiles:
+        raise PermissionError("accepted input required")
+    source_entries = (
+        json.loads(_source_input(sources, now, grants, events))["sources"]
+        if sources
+        else []
+    )
+    if not artifacts and not operator_profiles:
+        return canonical_json({"sources": source_entries})
+    entries = []
+    profiles = []
+    async with engine.connect() as connection:
+        if len(operator_profiles) > 1:
+            raise PermissionError("only one experiment profile is accepted")
+        for accepted_profile in operator_profiles:
+            if accepted_profile.experiment_id != experiment_id:
+                raise PermissionError("operator profile scope mismatch")
+            profile = (
+                (
+                    await connection.execute(
+                        select(record_schema.operator_profiles)
+                        .select_from(
+                            record_schema.experiments.join(
+                                record_schema.operator_profiles,
+                                record_schema.experiments.c.operator_profile_id
+                                == record_schema.operator_profiles.c.id,
+                            )
+                        )
+                        .where(
+                            record_schema.experiments.c.id == experiment_id,
+                            record_schema.experiments.c.operator_profile_version
+                            == record_schema.operator_profiles.c.version,
+                            record_schema.operator_profiles.c.id
+                            == accepted_profile.profile_id,
+                            record_schema.operator_profiles.c.version
+                            == accepted_profile.version,
+                            record_schema.operator_profiles.c.content_hash
+                            == accepted_profile.content_hash,
+                            record_schema.operator_profiles.c.profile_schema_version
+                            == accepted_profile.profile_schema_version,
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if profile is None:
+                raise PermissionError("accepted operator profile changed")
+            profiles.append(
+                {
+                    "ref": str(accepted_profile.profile_id),
+                    "version": accepted_profile.version,
+                    "schema_version": accepted_profile.profile_schema_version,
+                    "hash": accepted_profile.content_hash,
+                    "capabilities": profile["capabilities"],
+                    "constraints": profile["constraints"],
+                }
+            )
+        for accepted in artifacts:
+            ref = accepted.artifact
+            if accepted.experiment_id != experiment_id or ref.kind not in {
+                ArtifactKind.IDEA_SEED,
+                ArtifactKind.IDEA_CANDIDATE,
+            }:
+                raise PermissionError("artifact is outside accepted idea inputs")
+            row = (
+                (
+                    await connection.execute(
+                        select(record_schema.artifacts).where(
+                            record_schema.artifacts.c.id == ref.artifact_id,
+                            record_schema.artifacts.c.experiment_id == experiment_id,
+                            record_schema.artifacts.c.kind == ref.kind,
+                            record_schema.artifacts.c.version == ref.version,
+                            record_schema.artifacts.c.content_hash == ref.content_hash,
+                            record_schema.artifacts.c.schema_version
+                            == accepted.schema_version,
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if row is None:
+                raise PermissionError("accepted artifact identity changed")
+            if await connection.scalar(
+                select(record_schema.source_refs.c.id).where(
+                    record_schema.source_refs.c.artifact_id == ref.artifact_id
+                )
+            ) or await connection.scalar(
+                select(record_schema.artifact_links.c.consumer_id).where(
+                    record_schema.artifact_links.c.consumer_id == ref.artifact_id
+                )
+            ):
+                raise PermissionError("artifact has external or linked inputs")
+            if ref.kind is ArtifactKind.IDEA_SEED:
+                operator_id = await connection.scalar(
+                    select(record_schema.operator_profiles.c.operator_id)
+                    .select_from(
+                        record_schema.experiments.join(
+                            record_schema.operator_profiles,
+                            record_schema.experiments.c.operator_profile_id
+                            == record_schema.operator_profiles.c.id,
+                        )
+                    )
+                    .where(
+                        record_schema.experiments.c.id == experiment_id,
+                        record_schema.experiments.c.operator_profile_version
+                        == record_schema.operator_profiles.c.version,
+                    )
+                )
+                if (
+                    row["created_by"] != operator_id
+                    or row["payload"].get("origin") != "USER_SUPPLIED"
+                    or accepted.selection_id is not None
+                    or accepted.cycle_id is None
+                ):
+                    raise PermissionError("idea seed is not operator supplied")
+                seeded_cycle = await connection.scalar(
+                    select(record_schema.cycles.c.id).where(
+                        record_schema.cycles.c.id == accepted.cycle_id,
+                        record_schema.cycles.c.experiment_id == experiment_id,
+                        record_schema.cycles.c.idea_mode == "USER_SEEDED_REFINEMENT",
+                        record_schema.cycles.c.purpose == "INITIAL",
+                        record_schema.cycles.c.seed_artifact_id == ref.artifact_id,
+                        record_schema.cycles.c.seed_version == ref.version,
+                        record_schema.cycles.c.seed_hash == ref.content_hash,
+                    )
+                )
+                if seeded_cycle is None:
+                    raise PermissionError("idea seed is outside its cycle")
+            else:
+                if accepted.selection_id is None or accepted.cycle_id is None:
+                    raise PermissionError("candidate requires selected cycle")
+                selected = await connection.scalar(
+                    select(record_schema.cycles.c.id)
+                    .select_from(
+                        record_schema.cycles.join(
+                            record_schema.candidate_selections,
+                            record_schema.cycles.c.selection_id
+                            == record_schema.candidate_selections.c.id,
+                        )
+                    )
+                    .where(
+                        record_schema.cycles.c.id == accepted.cycle_id,
+                        record_schema.cycles.c.experiment_id == experiment_id,
+                        record_schema.cycles.c.idea_mode == "SYSTEM_DISCOVERY",
+                        record_schema.cycles.c.purpose == "INITIAL",
+                        record_schema.cycles.c.selection_id == accepted.selection_id,
+                        record_schema.cycles.c.seed_artifact_id == ref.artifact_id,
+                        record_schema.cycles.c.seed_version == ref.version,
+                        record_schema.cycles.c.seed_hash == ref.content_hash,
+                        record_schema.candidate_selections.c.artifact_id
+                        == ref.artifact_id,
+                        record_schema.candidate_selections.c.artifact_version
+                        == ref.version,
+                        record_schema.candidate_selections.c.artifact_hash
+                        == ref.content_hash,
+                    )
+                )
+                if selected is None:
+                    raise PermissionError("candidate selection is not current")
+            entries.append(
+                {
+                    "ref": str(ref.artifact_id),
+                    "kind": ref.kind.value,
+                    "version": ref.version,
+                    "schema_version": accepted.schema_version,
+                    "hash": ref.content_hash,
+                    "role": ref.role,
+                    "selection_id": str(accepted.selection_id)
+                    if accepted.selection_id
+                    else None,
+                    "cycle_id": str(accepted.cycle_id) if accepted.cycle_id else None,
+                    "payload": row["payload"],
+                }
+            )
+    return canonical_json(
+        {"sources": source_entries, "artifacts": entries, "operator_profiles": profiles}
+    )
 
 
 def _priced_usage(
@@ -229,6 +448,9 @@ class _ConfiguredResponsesAdapter:
         facts: RoutingFacts,
         scope: UUID,
         sources: tuple[AcceptedSource, ...],
+        artifacts: tuple[AcceptedArtifact, ...],
+        operator_profiles: tuple[AcceptedOperatorProfile, ...],
+        engine: AsyncEngine,
     ):
         self.profile = profile
         self.input_json = input_json
@@ -242,6 +464,9 @@ class _ConfiguredResponsesAdapter:
         self.facts = facts
         self.scope = scope
         self.sources = sources
+        self.artifacts = artifacts
+        self.operator_profiles = operator_profiles
+        self.engine = engine
         self.parsed: ParsedResponse | None = None
 
     async def invoke(
@@ -280,9 +505,33 @@ class _ConfiguredResponsesAdapter:
                     and snapshot.revoked_at <= started
                 ):
                     raise PermissionError("premium approval is not current")
-                input_json = _source_input(
-                    self.sources, started, snapshot.grants, snapshot.events
+                input_json = await _accepted_input(
+                    self.engine,
+                    self.sources,
+                    self.artifacts,
+                    self.operator_profiles,
+                    self.scope,
+                    started,
+                    grants=snapshot.grants,
+                    events=snapshot.events,
                 )
+                # Artifact/profile reads can wait on the DB after the first
+                # authority check. Expiry is checked again at dispatch, with
+                # no intervening await before invoking the transport.
+                started = self.clock()
+                self.routes.select(self.facts, scope=self.scope, now=started)
+                if self.facts.premium_requested and (
+                    approval is None
+                    or snapshot.approval != approval
+                    or snapshot.approval_config_id != config.id
+                    or snapshot.revoked_at is not None
+                    and snapshot.revoked_at <= started
+                ):
+                    raise PermissionError("premium approval is not current")
+                if self.sources:
+                    _source_input(
+                        self.sources, started, snapshot.grants, snapshot.events
+                    )
                 if sha256(input_json) != sha256(self.input_json):
                     raise PermissionError("accepted source content changed")
             except PermissionError:
@@ -325,9 +574,9 @@ class _ConfiguredResponsesAdapter:
                 ResultStatus.FAILED,
                 ProviderErrorCode.MALFORMED_RESPONSE,
             ),
-            "INCOMPLETE": (ResultStatus.FAILED, ProviderErrorCode.UNAVAILABLE),
+            "INCOMPLETE": (ResultStatus.FAILED, ProviderErrorCode.INCOMPLETE_RESULT),
             "FAILED": (ResultStatus.FAILED, ProviderErrorCode.UNAVAILABLE),
-            "CANCELLED": (ResultStatus.FAILED, ProviderErrorCode.UNAVAILABLE),
+            "CANCELLED": (ResultStatus.FAILED, ProviderErrorCode.CANCELLED_RESULT),
             "UNCERTAIN": (ResultStatus.UNKNOWN, ProviderErrorCode.UNAVAILABLE),
         }[parsed.outcome]
         return ProviderCallResult(
@@ -378,7 +627,9 @@ class OpenAIRuntime:
         attribution: CallAttribution,
         *,
         facts: RoutingFacts,
-        sources: tuple[AcceptedSource, ...],
+        sources: tuple[AcceptedSource, ...] = (),
+        artifacts: tuple[AcceptedArtifact, ...] = (),
+        operator_profiles: tuple[AcceptedOperatorProfile, ...] = (),
         idempotency_key: UUID,
     ) -> OpenAIExecution:
         now = self.repository.clock()
@@ -393,6 +644,32 @@ class OpenAIRuntime:
                     if facts.premium_authorization
                     else None,
                     "source_refs": [str(source.evidence_ref) for source in sources],
+                    "artifacts": [
+                        {
+                            "ref": str(item.artifact.artifact_id),
+                            "kind": item.artifact.kind.value,
+                            "version": item.artifact.version,
+                            "hash": item.artifact.content_hash,
+                            "role": item.artifact.role,
+                            "schema_version": item.schema_version,
+                            "experiment": str(item.experiment_id),
+                            "selection": str(item.selection_id)
+                            if item.selection_id
+                            else None,
+                            "cycle": str(item.cycle_id) if item.cycle_id else None,
+                        }
+                        for item in artifacts
+                    ],
+                    "operator_profiles": [
+                        {
+                            "ref": str(item.profile_id),
+                            "version": item.version,
+                            "hash": item.content_hash,
+                            "experiment": str(item.experiment_id),
+                            "schema_version": item.profile_schema_version,
+                        }
+                        for item in operator_profiles
+                    ],
                 }
             )
         )
@@ -420,6 +697,8 @@ class OpenAIRuntime:
                 or previous.operation_id != attribution.operation_run_id
                 or previous.accepted_input_refs
                 != tuple(source.evidence_ref for source in sources)
+                + tuple(item.artifact.artifact_id for item in artifacts)
+                + tuple(item.profile_id for item in operator_profiles)
                 or previous.prompt_version != profile.prompt_version
                 or previous.schema_version != profile.schema_version
                 or previous.prompt_hash != sha256(profile.instructions)
@@ -450,7 +729,14 @@ class OpenAIRuntime:
             raise PermissionError(
                 "OpenAI run profile does not match immutable capability"
             )
-        input_json = _source_input(sources, self.repository.clock())
+        input_json = await _accepted_input(
+            self.repository.engine,
+            sources,
+            artifacts,
+            operator_profiles,
+            attribution.experiment_id,
+            self.repository.clock(),
+        )
         _verify_pricing_bounds(config, prices, profile, input_json)
         previous = await self.store.get(idempotency_key)
         intent = OpenAIRunIntent(
@@ -469,7 +755,9 @@ class OpenAIRuntime:
             output_schema_hash=sha256(profile.schema_json),
             model_identifier=profile.model_identifier,
             reasoning_effort=profile.reasoning_effort,
-            accepted_input_refs=tuple(source.evidence_ref for source in sources),
+            accepted_input_refs=tuple(source.evidence_ref for source in sources)
+            + tuple(item.artifact.artifact_id for item in artifacts)
+            + tuple(item.profile_id for item in operator_profiles),
             input_hash=sha256(input_json),
             client_request_id=uuid5(NAMESPACE_URL, str(idempotency_key)),
             created_at=previous.created_at if previous else now,
@@ -501,6 +789,9 @@ class OpenAIRuntime:
             facts=facts,
             scope=attribution.experiment_id,
             sources=sources,
+            artifacts=artifacts,
+            operator_profiles=operator_profiles,
+            engine=self.repository.engine,
         )
         executor = GovernedExecutor(
             self.repository,

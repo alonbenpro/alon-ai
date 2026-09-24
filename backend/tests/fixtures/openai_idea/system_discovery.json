@@ -1,0 +1,19 @@
+{
+  "mode": "SYSTEM_DISCOVERY",
+  "advice": {
+    "title": "Clinic appointment triage",
+    "hypothesis": "Small clinics may value an appointment triage service",
+    "grounding_refs": ["OPERATOR_PROFILE"],
+    "uncertainties": ["Buyer demand is unverified"]
+  },
+  "usage": {
+    "input_tokens": 15,
+    "output_tokens": 8,
+    "total_tokens": 23,
+    "input_tokens_details": {"cached_tokens": 3}
+  },
+  "recorded_latency_ms": 510,
+  "expected_grounding_refs": ["OPERATOR_PROFILE"],
+  "coverage_fields": ["title", "hypothesis"],
+  "forbidden_phrases": ["guaranteed demand", "send email", "book meeting"]
+}

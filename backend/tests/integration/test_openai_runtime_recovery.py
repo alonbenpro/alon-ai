@@ -11,8 +11,10 @@ from sqlalchemy import select
 from test_governance import add_event, register
 from test_openai_runtime import recorded, setup
 
+from alon_ai.accounting import schema as gov
 from alon_ai.accounting.models import ControlPolicy
 from alon_ai.accounting.repository import GovernanceProvisioner
+from alon_ai.openai_runtime import runtime as runtime_module
 from alon_ai.openai_runtime.contract import PremiumAuthorization, RoutingFacts
 from alon_ai.openai_runtime.runtime import AcceptedSource
 from alon_ai.openai_runtime.schema import premium_approvals, route_decisions
@@ -416,6 +418,77 @@ async def test_concurrent_recovery_after_ledger_finalization_does_not_break_owne
     assert len(transport.calls) == 1
 
 
+@pytest.mark.parametrize(
+    ("response_status", "expected_outcome"),
+    [("incomplete", "INCOMPLETE"), ("cancelled", "CANCELLED")],
+)
+async def test_replay_preserves_classified_result_while_owner_finishes(
+    governance_engine, response_status, expected_outcome
+):
+    runtime, store, attr, source, transport = await setup(
+        governance_engine, recorded(status=response_status)
+    )
+    key = uuid4()
+    entered, release = asyncio.Event(), asyncio.Event()
+    finish = store.finish
+
+    async def paused(*args, **kwargs):
+        entered.set()
+        await release.wait()
+        return await finish(*args, **kwargs)
+
+    store.finish = paused
+    owner = asyncio.create_task(
+        runtime.run(
+            attr,
+            facts=RoutingFacts(needs_ai=True),
+            sources=(source,),
+            idempotency_key=key,
+        )
+    )
+    await asyncio.wait_for(entered.wait(), 5)
+    try:
+        replay = await runtime.run(
+            attr,
+            facts=RoutingFacts(needs_ai=True),
+            sources=(source,),
+            idempotency_key=key,
+        )
+    finally:
+        release.set()
+    result = await owner
+    assert replay.outcome == expected_outcome
+    assert replay.output is None
+    assert replay.receipt is not None and replay.receipt.accrued > 0
+    assert result.outcome == expected_outcome and result.output is None
+    assert (
+        result.receipt is not None and result.receipt.accrued == replay.receipt.accrued
+    )
+    assert len(transport.calls) == 1
+    run = await store.get(key)
+    assert run is not None and run.outcome == expected_outcome
+    async with governance_engine.connect() as connection:
+        ledger = (
+            (
+                await connection.execute(
+                    select(gov.calls.c.state, gov.calls.c.result_metadata).where(
+                        gov.calls.c.id == run.call_id
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+    assert ledger["state"] == "FINAL"
+    assert (
+        ledger["result_metadata"]["error_code"]
+        == {
+            "INCOMPLETE": "INCOMPLETE_RESULT",
+            "CANCELLED": "CANCELLED_RESULT",
+        }[expected_outcome]
+    )
+
+
 async def test_expired_premium_approval_cannot_block_read_only_crash_recovery(
     governance_engine,
 ):
@@ -509,3 +582,73 @@ async def test_expiry_after_authority_lock_wait_is_checked_before_transport(
         release.set()
     result = await task
     assert result.output is None and transport.calls == []
+
+
+@pytest.mark.parametrize("expired", ["premium", "retention"])
+async def test_expiry_during_accepted_input_wait_blocks_transport(
+    governance_engine, monkeypatch, expired
+):
+    runtime, _, attr, source, transport = await setup(governance_engine, recorded())
+    now = runtime.repository.clock()
+    clock = [now]
+    runtime.repository.clock = lambda: clock[0]
+    facts = RoutingFacts(needs_ai=True)
+    if expired == "premium":
+        authorization = PremiumAuthorization(
+            uuid4(), attr.experiment_id, now + timedelta(seconds=1), uuid4(), now
+        )
+        runtime.routes = replace(
+            runtime.routes,
+            premium=runtime.routes.cheap,
+            approved_premium=(authorization,),
+        )
+        await runtime.authority.approve(authorization, runtime.routes.premium)
+        facts = RoutingFacts(
+            needs_ai=True, premium_requested=True, premium_authorization=authorization
+        )
+    else:
+        config, _ = await runtime.repository.generation_config_and_prices(
+            runtime.routes.cheap
+        )
+        source = replace(
+            source,
+            content=RuntimeContent(
+                {
+                    field: ("licensed evidence",)
+                    for field in config.intended_use.required_fields
+                },
+                grant=source.current_grant,
+                intended_use=config.intended_use,
+                observed_at=now - timedelta(seconds=59),
+            ),
+        )
+    entered, release = asyncio.Event(), asyncio.Event()
+    accepted_input = runtime_module._accepted_input
+    reads = 0
+
+    async def paused_input(*args, **kwargs):
+        nonlocal reads
+        result = await accepted_input(*args, **kwargs)
+        reads += 1
+        if reads == 2:
+            entered.set()
+            await release.wait()
+        return result
+
+    monkeypatch.setattr(runtime_module, "_accepted_input", paused_input)
+    task = asyncio.create_task(
+        runtime.run(
+            attr,
+            facts=facts,
+            sources=(source,),
+            idempotency_key=uuid4(),
+        )
+    )
+    try:
+        await asyncio.wait_for(entered.wait(), 5)
+        clock[0] = now + timedelta(seconds=2)
+    finally:
+        release.set()
+    result = await task
+    assert result.output is None and transport.calls == []
+    assert result.receipt is not None and result.receipt.accrued == 0

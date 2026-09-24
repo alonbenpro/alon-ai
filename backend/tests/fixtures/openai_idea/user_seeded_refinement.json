@@ -1,0 +1,22 @@
+{
+  "mode": "USER_SEEDED_REFINEMENT",
+  "advice": {
+    "title": "Clinic appointment triage",
+    "customer": "Small clinics",
+    "problem": "Manual appointment triage",
+    "core_intent": "Reduce administrative time",
+    "material_pivot": false,
+    "grounding_refs": ["SEED", "OPERATOR_PROFILE"],
+    "uncertainties": ["Buyer demand is unverified"]
+  },
+  "usage": {
+    "input_tokens": 24,
+    "output_tokens": 12,
+    "total_tokens": 36,
+    "input_tokens_details": {"cached_tokens": 4}
+  },
+  "recorded_latency_ms": 880,
+  "expected_grounding_refs": ["SEED", "OPERATOR_PROFILE"],
+  "coverage_fields": ["title", "customer", "problem", "core_intent"],
+  "forbidden_phrases": ["guaranteed demand", "send email", "book meeting"]
+}
