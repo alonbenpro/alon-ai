@@ -5,10 +5,10 @@ from __future__ import annotations
 from collections.abc import Mapping
 from enum import StrEnum
 from types import MappingProxyType
-from typing import Literal, Self
+from typing import Annotated, Literal, Self
 from uuid import UUID
 
-from pydantic import Field, model_validator
+from pydantic import Field, StringConstraints, model_validator
 from sqlalchemy import select
 
 from alon_ai.openai_runtime.contract import (
@@ -33,13 +33,18 @@ class IdeaStage(StrEnum):
     SYSTEM_CANDIDATE_REFINEMENT = "SYSTEM_CANDIDATE_REFINEMENT"
 
 
+AdviceText = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)
+]
+
+
 class IdeaCandidateAdvice(StrictDTO):
     """A hypothesis for an operator to review, not an IDEA_CANDIDATE command."""
 
-    title: str = Field(min_length=1)
-    hypothesis: str = Field(min_length=1)
+    title: AdviceText
+    hypothesis: AdviceText
     grounding_refs: tuple[str, ...]
-    uncertainties: tuple[str, ...] = Field(min_length=1)
+    uncertainties: tuple[AdviceText, ...] = Field(min_length=1)
 
     @model_validator(mode="after")
     def grounded_in_operator_profile(self) -> Self:
@@ -51,13 +56,13 @@ class IdeaCandidateAdvice(StrictDTO):
 class IdeaBriefAdvice(StrictDTO):
     """An advisory brief; existing record commands own all state changes."""
 
-    title: str = Field(min_length=1)
-    customer: str = Field(min_length=1)
-    problem: str = Field(min_length=1)
-    core_intent: str = Field(min_length=1)
+    title: AdviceText
+    customer: AdviceText
+    problem: AdviceText
+    core_intent: AdviceText
     material_pivot: bool
     grounding_refs: tuple[str, ...]
-    uncertainties: tuple[str, ...] = Field(min_length=1)
+    uncertainties: tuple[AdviceText, ...] = Field(min_length=1)
 
 
 def _brief_grounding(refs: tuple[str, ...], required: str) -> bool:
@@ -127,7 +132,7 @@ _CANDIDATE_SCHEMA = {
 _STAGE_SETTINGS = {
     IdeaStage.USER_SEEDED_REFINEMENT: (
         "idea-seeded-refinement-v1",
-        "idea-brief-advice-v1",
+        "idea-brief-advice-v2",
         (
             "Refine only the operator's exact IDEA_SEED. Preserve its core intent; "
             "flag a material pivot explicitly. Cite SEED in grounding_refs only for "
@@ -140,7 +145,7 @@ _STAGE_SETTINGS = {
     ),
     IdeaStage.SYSTEM_DISCOVERY: (
         "idea-system-discovery-v1",
-        "idea-candidate-advice-v1",
+        "idea-candidate-advice-v2",
         (
             "Suggest one business idea hypothesis grounded in the supplied exact "
             "operator capability profile. Cite OPERATOR_PROFILE only for capability "
@@ -154,7 +159,7 @@ _STAGE_SETTINGS = {
     ),
     IdeaStage.SYSTEM_CANDIDATE_REFINEMENT: (
         "idea-system-candidate-refinement-v1",
-        "idea-brief-advice-v1",
+        "idea-brief-advice-v2",
         (
             "Refine only the selected IDEA_CANDIDATE from the existing "
             "SYSTEM_DISCOVERY cycle. Cite SELECTED_CANDIDATE in grounding_refs "

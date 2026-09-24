@@ -237,6 +237,14 @@ async def _accepted_input(
             if row is None:
                 raise PermissionError("accepted artifact identity changed")
             if await connection.scalar(
+                select(record_schema.artifact_dispositions.c.id).where(
+                    record_schema.artifact_dispositions.c.artifact_id
+                    == ref.artifact_id,
+                    record_schema.artifact_dispositions.c.disposition == "SUPERSEDED",
+                )
+            ):
+                raise PermissionError("accepted artifact was superseded")
+            if await connection.scalar(
                 select(record_schema.source_refs.c.id).where(
                     record_schema.source_refs.c.artifact_id == ref.artifact_id
                 )

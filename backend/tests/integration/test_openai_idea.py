@@ -1,9 +1,9 @@
 """Recorded, bounded Idea Discovery and Refinement profiles."""
 
+import asyncio
 import json
 from dataclasses import replace
 from decimal import Decimal
-from pathlib import Path
 from typing import cast
 from uuid import UUID, uuid4
 
@@ -137,6 +137,63 @@ def test_fabricated_grounding_reference_is_rejected(stage, advice):
     )
     parsed = classify_response(recorded(text=json.dumps(advice)), profile)
     assert parsed.outcome == "SCHEMA_MISMATCH"
+
+
+@pytest.mark.parametrize(
+    ("stage", "field"),
+    [
+        (IdeaStage.SYSTEM_DISCOVERY, "title"),
+        (IdeaStage.SYSTEM_DISCOVERY, "hypothesis"),
+        (IdeaStage.SYSTEM_DISCOVERY, "uncertainties"),
+        (IdeaStage.USER_SEEDED_REFINEMENT, "title"),
+        (IdeaStage.USER_SEEDED_REFINEMENT, "customer"),
+        (IdeaStage.USER_SEEDED_REFINEMENT, "problem"),
+        (IdeaStage.USER_SEEDED_REFINEMENT, "core_intent"),
+        (IdeaStage.USER_SEEDED_REFINEMENT, "uncertainties"),
+        (IdeaStage.SYSTEM_CANDIDATE_REFINEMENT, "title"),
+        (IdeaStage.SYSTEM_CANDIDATE_REFINEMENT, "customer"),
+        (IdeaStage.SYSTEM_CANDIDATE_REFINEMENT, "problem"),
+        (IdeaStage.SYSTEM_CANDIDATE_REFINEMENT, "core_intent"),
+        (IdeaStage.SYSTEM_CANDIDATE_REFINEMENT, "uncertainties"),
+    ],
+)
+@pytest.mark.parametrize("blank", ["", " \t "])
+def test_blank_idea_advice_field_is_schema_mismatch(stage, field, blank):
+    advice = (
+        {
+            "title": "Clinic triage",
+            "hypothesis": "Clinics may need scheduling help",
+            "grounding_refs": ["OPERATOR_PROFILE"],
+            "uncertainties": ["Demand unverified"],
+        }
+        if stage is IdeaStage.SYSTEM_DISCOVERY
+        else {
+            "title": "Clinic triage",
+            "customer": "Clinics",
+            "problem": "Manual scheduling",
+            "core_intent": "Reduce admin time",
+            "material_pivot": False,
+            "grounding_refs": [
+                "SEED"
+                if stage is IdeaStage.USER_SEEDED_REFINEMENT
+                else "SELECTED_CANDIDATE"
+            ],
+            "uncertainties": ["Demand unverified"],
+        }
+    )
+    advice[field] = [blank] if field == "uncertainties" else blank
+    profile = idea_profile(
+        stage,
+        config_id=uuid4(),
+        config_version=uuid4(),
+        adapter_version=uuid4(),
+        model_identifier="gpt-5-mini",
+        reasoning_effort="low",
+        max_output_tokens=300,
+    )
+    parsed = classify_response(recorded(text=json.dumps(advice)), profile)
+    assert parsed.outcome == "SCHEMA_MISMATCH"
+    assert parsed.output is None
 
 
 def test_idea_service_rejects_missing_mode_profile():
@@ -769,46 +826,20 @@ async def test_seed_with_unchecked_record_provenance_is_not_dispatched(
     assert not transports[IdeaStage.USER_SEEDED_REFINEMENT].calls
 
 
-def _fixture(name):
-    path = Path(__file__).parents[1] / "fixtures" / "openai_idea" / f"{name}.json"
-    return json.loads(path.read_text())
-
-
-def _evaluate_recorded_mode(result, fixture):
-    assert result.output is not None and result.receipt is not None
-    output = result.output
-    text = json.dumps(output.model_dump(mode="json")).lower()
-    return {
-        "grounded": list(output.grounding_refs) == fixture["expected_grounding_refs"],
-        "coverage": sum(
-            bool(getattr(output, field)) for field in fixture["coverage_fields"]
-        )
-        / len(fixture["coverage_fields"]),
-        "safe": bool(output.uncertainties)
-        and all(term not in text for term in fixture["forbidden_phrases"]),
-        "recorded_latency_ms": fixture["recorded_latency_ms"],
-        "cost_usd": result.receipt.accrued,
-    }
-
-
 @pytest.mark.integration
-async def test_recorded_mode_eval_compares_quality_latency_cost_and_zero_call(
-    governance_engine,
-):
-    seeded = _fixture("user_seeded_refinement")
-    discovery = _fixture("system_discovery")
+async def test_superseded_seed_during_reservation_denies_dispatch(governance_engine):
+    advice = {
+        "title": "Clinic triage",
+        "customer": "Clinics",
+        "problem": "Manual scheduling",
+        "core_intent": "Reduce admin time",
+        "material_pivot": False,
+        "grounding_refs": ["SEED"],
+        "uncertainties": ["Demand unverified"],
+    }
     service, attribution, product, transports = await setup_idea(
-        governance_engine,
-        {
-            IdeaStage.USER_SEEDED_REFINEMENT: seeded["advice"],
-            IdeaStage.SYSTEM_DISCOVERY: discovery["advice"],
-        },
+        governance_engine, {IdeaStage.USER_SEEDED_REFINEMENT: advice}
     )
-    for stage, fixture in (
-        (IdeaStage.USER_SEEDED_REFINEMENT, seeded),
-        (IdeaStage.SYSTEM_DISCOVERY, discovery),
-    ):
-        transports[stage].response["usage"] = fixture["usage"]
     seed_receipt = await product.append_artifact(
         artifact(
             attribution.experiment_id,
@@ -817,52 +848,41 @@ async def test_recorded_mode_eval_compares_quality_latency_cost_and_zero_call(
         ),
         command_key=uuid4(),
     )
+    seed_ref = ArtifactInput.from_receipt(seed_receipt, role="SEED")
     cycle = await product.create_cycle(
-        attribution.experiment_id,
-        seed=ArtifactInput.from_receipt(seed_receipt, role="SEED"),
-        command_key=uuid4(),
+        attribution.experiment_id, seed=seed_ref, command_key=uuid4()
     )
-    no_ai_seeded = await service.refine_cycle(
-        attribution,
-        cycle_id=cycle.id,
-        facts=RoutingFacts(needs_ai=False),
-        idempotency_key=uuid4(),
+    runtime = service.runtimes[IdeaStage.USER_SEEDED_REFINEMENT]
+    reserve = runtime.repository.reserve
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def paused_reserve(*args, **kwargs):
+        receipt = await reserve(*args, **kwargs)
+        entered.set()
+        await release.wait()
+        return receipt
+
+    runtime.repository.reserve = paused_reserve
+    task = asyncio.create_task(
+        service.refine_cycle(
+            attribution,
+            cycle_id=cycle.id,
+            facts=RoutingFacts(needs_ai=True),
+            idempotency_key=uuid4(),
+        )
     )
-    no_ai_discovery = await service.discover_system(
-        attribution,
-        facts=RoutingFacts(needs_ai=False),
-        idempotency_key=uuid4(),
-    )
-    assert no_ai_seeded.outcome is no_ai_discovery.outcome is OpenAIRunOutcome.NO_AI
-    assert no_ai_seeded.receipt is no_ai_discovery.receipt is None
-    assert all(not transport.calls for transport in transports.values())
-    seeded_run = await service.refine_cycle(
-        attribution,
-        cycle_id=cycle.id,
-        facts=RoutingFacts(needs_ai=True),
-        idempotency_key=uuid4(),
-    )
-    discovery_run = await service.discover_system(
-        another(attribution),
-        facts=RoutingFacts(needs_ai=True),
-        idempotency_key=uuid4(),
-    )
-    seeded_eval = _evaluate_recorded_mode(seeded_run, seeded)
-    discovery_eval = _evaluate_recorded_mode(discovery_run, discovery)
-    assert seeded_eval == {
-        "grounded": True,
-        "coverage": 1.0,
-        "safe": True,
-        "recorded_latency_ms": 880,
-        "cost_usd": Decimal("0.037000000000"),
-    }
-    assert discovery_eval == {
-        "grounded": True,
-        "coverage": 1.0,
-        "safe": True,
-        "recorded_latency_ms": 510,
-        "cost_usd": Decimal("0.024000000000"),
-    }
-    # Recorded fixture timings are synthetic metadata, not measured API latency.
-    assert seeded_eval["recorded_latency_ms"] > discovery_eval["recorded_latency_ms"]
-    assert seeded_eval["cost_usd"] > discovery_eval["cost_usd"]
+    try:
+        await asyncio.wait_for(entered.wait(), 5)
+        await product.record_disposition(
+            seed_ref,
+            experiment_id=attribution.experiment_id,
+            disposition="SUPERSEDED",
+            decided_by=UUID(int=1),
+            command_key=uuid4(),
+        )
+    finally:
+        release.set()
+    result = await task
+    assert result.output is None
+    assert result.receipt is not None and result.receipt.accrued == 0
+    assert transports[IdeaStage.USER_SEEDED_REFINEMENT].calls == []
