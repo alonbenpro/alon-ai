@@ -87,7 +87,6 @@ python3 scripts/check_secrets.py
 - `make test` runs backend unit and frontend tests without provider credentials. `make test-integration` requires the explicit database URL above and a real running PostgreSQL server.
 - Run frontend typecheck/build sequentially; Next generates types in `.next` during its build.
 - `make containers` validates Compose and builds images. It does not start the stack or prove live readiness.
-- `make roadmap` checks only retained historical planning artifacts. It does not read or validate the current Notion roadmap.
 
 ## Diagnosing setup failures
 

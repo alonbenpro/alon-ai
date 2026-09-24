@@ -24,7 +24,7 @@ Final baseline verification used an independent clean `git archive` source snaps
 | Sending | Deterministic contracts with fake-provider/unit evidence | Gmail OAuth, live adapter, production recovery or real-send authority |
 | Operations | Local loopback Compose topology; locked installs/builds; CI definitions | Production ingress/authentication, backups/restoration, real campaign readiness |
 
-L01 deliberately does not implement L02–L34. A successful `alembic upgrade head` proves the harness connects; `worker_ready` proves process startup only. The historical M0 validator and retained roadmap tests do not validate the current Notion plan.
+L01 deliberately does not implement L02–L34. A successful `alembic upgrade head` proves the harness connects; `worker_ready` proves process startup only. The offline M0 brief validator checks a declaration only; it does not validate or replace the current Notion plan.
 
 ## Repairs
 
@@ -52,7 +52,7 @@ L01 deliberately does not implement L02–L34. A successful `alembic upgrade hea
 | Browser | PASS: in-app browser at `http://localhost:3000/`, title “Alon AI”, meaningful foundation screen, API/database online text, no framework overlay, no console errors/warnings on initial load; screenshot inspected. |
 | Outage/recovery | PASS: stopped only the isolated PostgreSQL container; API returned **503** and UI showed **Services unavailable**. Restart restored HTTP **200** and **Database online** after reload. No fixture substituted for the database. |
 | Dependency advisory | PASS after patch: `npm audit --audit-level=high` reports **0 vulnerabilities**. This is npm's advisory result, not a complete security review. |
-| Historical roadmap | PASS: existing artifact validator remains green; non-authoritative planning references only. |
+| Planning authority | Founder OS is authoritative. Historical generated roadmap snapshots and their validator were removed during repository cleanup; this baseline report does not validate current task status. |
 
 The local container VM is Colima profile `alon-ai` (2 CPUs, 4 GiB memory, 20 GiB disk). Host PostgreSQL 16 was left untouched. Compose project `alon-l01` uses its own volume. The running validation stack is built from the clean snapshot, not ignored local research code.
 

@@ -2,7 +2,7 @@
 
 Alon AI is a private client-acquisition application for one operator. The intended journey runs from idea refinement and market research through an accepted offer, qualified leads, evidence-backed outreach, and an operator-owned invoice, demo or confirmed meeting handoff.
 
-[Founder OS](https://www.notion.so/3d6caf700cba81a7a26bcb3b258f6ee1), its [Active Roadmap](https://app.notion.com/p/3d6caf700cba81dbb43fd57b1e534684) and Lean Build Tasks are the sole current planning authority. Follow the lowest-order eligible task and its acceptance checks. GitHub records implemented code and verification evidence. The retained `docs/development-roadmap/` tree and its validator describe historical planning; they do not override Notion or establish product completion.
+[Founder OS](https://www.notion.so/3d6caf700cba81a7a26bcb3b258f6ee1), its [Active Roadmap](https://app.notion.com/p/3d6caf700cba81dbb43fd57b1e534684) and Lean Build Tasks are the sole current planning authority. Follow the lowest-order eligible task and its acceptance checks. GitHub records implemented code and verification evidence.
 
 ## What is implemented
 
@@ -13,10 +13,10 @@ Alon AI is a private client-acquisition application for one operator. The intend
 - Encrypted consumer-scoped secrets, capability/usage-grant checks, offline provider adapters, and durable native-currency/ILS reservations, reconciliation, quotas and circuit state.
 - Fixed 50/100/3 supply rules, evidence-backed retry feedback, contactability-first admission and atomic stopping of untouched paid supply work.
 - Initial product records for immutable experiment/idea artifacts and seeded research lineage, with exact input references, guarded acceptance and conflicting-retry detection.
-- Deterministic outbound authorization/idempotency contracts tested with fake providers, plus an offline historical experiment-brief validator.
+- Deterministic outbound authorization/idempotency contracts tested with fake providers, plus an offline experiment-brief validator.
 - Locked dependencies, unit and PostgreSQL integration tests, container definitions and GitHub Actions checks.
 
-Private authentication, the remaining product records, durable workflows, shared AI execution, live research/offer generation, lead acquisition, Gmail/Calendar integrations, learning and deployment remain work for their owning Notion tasks. Installed DBOS and Pydantic AI packages are not proof that these capabilities exist. A local research prototype is separate from accepted product research and does not complete L07 or L08.
+Remaining product records, durable workflows, shared AI execution, live research/offer generation, lead acquisition, Gmail/Calendar integrations, learning and deployment remain work for their owning Notion tasks. Installed DBOS and Pydantic AI packages are not proof that these capabilities exist. A local research prototype is separate from accepted product research and does not complete L07 or L08.
 
 See the [L01 baseline evidence](docs/implementation/l01-baseline.md) for the audited source scope, exact results and remaining gaps.
 
@@ -48,13 +48,13 @@ make build
 make containers
 ```
 
-`make test` runs offline unit/frontend tests. For the real database test, supply `ALON_AI_DATABASE_URL` and run `make test-integration`; see the runbook. Generated OpenAPI files must stay consistent with the API. `make roadmap` only checks the retained historical planning snapshot.
+`make test` runs offline unit/frontend tests. For the real database test, supply `ALON_AI_DATABASE_URL` and run `make test-integration`; see the runbook. Generated OpenAPI files must stay consistent with the API.
 
 ## Architecture and execution boundaries
 
 The codebase is one modular application: a FastAPI backend and worker share Python services and PostgreSQL; Next.js consumes server-owned contracts. The selected future runtime is DBOS with Pydantic AI and OpenAI Responses. Logical product agents are roles within that application, not separately deployed services.
 
-Future integrations must preserve deterministic acceptance, commercial limits, source rights, contact-history exclusion, suppression, budgets, idempotency and recovery. SendGateway owns Gmail writes; BookingGateway owns Calendar writes. The current roadmap requires a final 50-qualified-contactable-lead cohort from at most three adaptive batches of up to 100 new businesses each. Do not revive the historical REVIEW_20/four-batch model or infer real-send authority from a passing test.
+Future integrations must preserve deterministic acceptance, commercial limits, source rights, contact-history exclusion, suppression, budgets, idempotency and recovery. SendGateway owns Gmail writes; BookingGateway owns Calendar writes. Current thresholds and release gates are defined by Founder OS. A passing test does not grant real-send authority.
 
 ## Layout
 
@@ -62,7 +62,7 @@ Future integrations must preserve deterministic acceptance, commercial limits, s
 backend/                  API, worker, provider/policy boundaries and tests
 frontend/                 Next.js UI and generated API contracts
 infra/compose.yaml        Loopback-only local stack
-scripts/                  Contract generation and retained validators
+scripts/                  Contract generation and maintenance commands
 .github/workflows/ci.yml  Application, security and container checks
 docs/implementation/      Retained verification evidence
 docs/runbooks/            Reproducible operating instructions

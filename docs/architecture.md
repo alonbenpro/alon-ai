@@ -2,9 +2,7 @@
 
 ## Scope and status
 
-Alon AI is a modular monolith foundation for a future durable workflow that discovers service ideas, validates them with evidence, finds prospects, sends Gmail outreach, synchronizes replies, and evaluates experiments. This repository currently proves a smaller vertical slice: a Next.js dashboard reads a FastAPI API's database-backed readiness state from PostgreSQL, and a separate worker process starts with guarded configuration.
-
-The foundation contains Gmail provider and deterministic sending-gateway contracts. Pydantic AI and DBOS are selected for future agent/workflow work, but this checkout does **not** implement a typed agent, DBOS workflow, Gmail adapter, OAuth flow, queue, schedule, outbound-attempt ledger, reconciliation worker, or production outreach. Nothing in this checkout sends email.
+Alon AI is a modular monolith for governed client-acquisition workflows. Current task ownership, acceptance criteria and status live in Founder OS; GitHub source, tests, migrations, ADRs, runbooks and implementation evidence show what this checkout contains.
 
 ## Current runtime
 
@@ -51,21 +49,19 @@ LangGraph and LangChain are excluded from the initial stack because the product 
 
 | Boundary | Responsibility | Current state |
 | --- | --- | --- |
-| `frontend/` | Dashboard and generated OpenAPI client types | Implemented for readiness |
-| `backend/src/alon_ai/api/` | HTTP API and OpenAPI source of truth | Implemented for health |
-| `backend/src/alon_ai/db/` | SQLAlchemy engine and migrations | Implemented for readiness/migration base |
-| `backend/src/alon_ai/worker/` | Separate worker process boundary | Startup boundary only |
-| `backend/src/alon_ai/domain/` | Send gateway and domain contracts | Guarded contracts only |
-| `backend/src/alon_ai/policies/` | Deterministic approval/denial interfaces | Contract only |
-| `backend/src/alon_ai/providers/` | Gmail provider interface | Contract only; no Gmail adapter |
-| `backend/src/alon_ai/agents/` | Pydantic AI typed-agent boundary | Reserved; selected but not implemented |
-| `backend/src/alon_ai/workflows/` | DBOS durable workflow/queue/schedule boundary | Reserved; selected but not implemented or production-accepted |
+| `frontend/` | Operator interface and generated OpenAPI client types | Presentation and same-origin API boundary |
+| `backend/src/alon_ai/api/` | HTTP API and OpenAPI source of truth | Authentication, projections and health routes |
+| `backend/src/alon_ai/db/` | SQLAlchemy engine and migrations | PostgreSQL persistence boundary |
+| `backend/src/alon_ai/worker/` | Durable workflow process boundary | DBOS startup and workflow registration |
+| `backend/src/alon_ai/domain/` | Domain contracts and guarded side-effect interfaces | Deterministic business boundary |
+| `backend/src/alon_ai/policies/` | Deterministic policy decisions | Authorization and safety checks |
+| `backend/src/alon_ai/providers/` | Provider contracts and governed execution | Provider boundary |
+| `backend/src/alon_ai/workflows/` | DBOS durable workflows | Durable coordination boundary |
 
 ## Operational constraints
 
 - `ALON_AI_OUTREACH_ENABLED` defaults to `false`; it is a guard, not evidence that sending is implemented.
 - The API has distinct liveness (`/health/live`) and database-backed readiness (`/health/ready`) endpoints.
-- The foundation is intentionally not a deployment, billing, authentication, multi-user, or webhook system.
-- DBOS is selected, but the next milestone must production-accept it for Gmail side effects. Any disqualifying failure requires Temporal before more workflow product work proceeds.
+- Product task boundaries, production release gates and runtime authority follow Founder OS and the applicable ADRs.
 
-The governing design is [the approved foundation specification](superpowers/specs/2026-08-28-alon-ai-foundation-design.md). The stack decision and fallback are recorded in [ADR 0002](decisions/0002-dbos-workflow-runtime.md), and the ordered implementation gates are in the [development roadmap](development-roadmap/README.md).
+The durable workflow stack and fallback are recorded in [ADR 0002](decisions/0002-dbos-workflow-runtime.md). Current implementation evidence is kept under `docs/implementation/`.

@@ -1,4 +1,4 @@
-.PHONY: setup roadmap generate format lint typecheck test test-integration build containers dev down database migrate api worker frontend
+.PHONY: setup generate format lint typecheck test test-integration build containers dev down database migrate api worker frontend
 
 COMPOSE ?= docker compose
 COMPOSE_ARGS ?= --env-file .env.example -f infra/compose.yaml
@@ -7,9 +7,6 @@ setup:
 	cd backend && uv sync --locked --all-extras --dev
 	npm --prefix frontend ci
 
-roadmap:
-	python3 scripts/validate_roadmap.py --check
-
 generate:
 	npm --prefix frontend run api:generate
 
@@ -17,7 +14,7 @@ format:
 	cd backend && uv run ruff format .
 	npm --prefix frontend run lint -- --fix
 
-lint: roadmap
+lint:
 	cd backend && uv run ruff format --check .
 	cd backend && uv run ruff check .
 	npm --prefix frontend run lint
@@ -26,7 +23,7 @@ typecheck:
 	cd backend && uv run pyright
 	npm --prefix frontend run typecheck
 
-test: roadmap
+test:
 	cd backend && uv run pytest tests/unit -q
 	npm --prefix frontend test -- --run
 
