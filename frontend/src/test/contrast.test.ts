@@ -24,6 +24,17 @@ function contrast(foreground: string, background: string) {
   return (lighter + 0.05) / (darker + 0.05);
 }
 
+function skipLinkColor(property: "color" | "background") {
+  const rule = css.match(/\.skip-link\s*\{([^}]*)\}/)?.[1];
+  const value = rule?.match(new RegExp(`(?:^|;)\\s*${property}\\s*:\\s*([^;]+)`))?.[1].trim();
+  if (!value) throw new Error(`Missing skip-link ${property}`);
+  const variable = value.match(/^var\(--([\w-]+)\)$/)?.[1];
+  const hex = variable ? token(variable) : value;
+  if (/^#[0-9a-fA-F]{3}$/.test(hex)) return `#${[...hex.slice(1)].map((digit) => digit + digit).join("")}`;
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) throw new Error(`Unsupported skip-link ${property}: ${value}`);
+  return hex;
+}
+
 describe("core text contrast", () => {
   it.each([
     ["primary text", "ink", "canvas"],
@@ -37,5 +48,9 @@ describe("core text contrast", () => {
 
   it("keeps the primary action text readable", () => {
     expect(contrast("#061126", token("blue-soft"))).toBeGreaterThanOrEqual(4.5);
+  });
+
+  it("keeps the actual skip-link text and background above 4.5:1", () => {
+    expect(contrast(skipLinkColor("color"), skipLinkColor("background"))).toBeGreaterThanOrEqual(4.5);
   });
 });
