@@ -17,7 +17,7 @@ class TestEventSource {
 }
 
 beforeEach(() => { vi.stubGlobal("EventSource", TestEventSource); });
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"); Reflect.deleteProperty(HTMLDialogElement.prototype, "close"); });
 
 describe("ActivityFeed", () => {
   it("keeps the unknown state explicit when the projection is absent", () => {
@@ -59,7 +59,9 @@ describe("ActivityFeed", () => {
   it("opens a keyboard-accessible read-only drawer with sanitized activity fields", () => {
     const trigger = "Research completed";
     const showModal = vi.fn(function (this: HTMLDialogElement) { this.open = true; });
+    const close = vi.fn(function (this: HTMLDialogElement) { this.open = false; this.dispatchEvent(new Event("close")); });
     Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: showModal });
+    Object.defineProperty(HTMLDialogElement.prototype, "close", { configurable: true, value: close });
     render(<ActivityFeed initial={{ cursor: null, items: [{ id: "item-1", kind: "research", state: "completed", label: trigger, occurred_at: "2026-09-23T10:00:00Z", evidence_text: "private evidence" }] } as unknown as ActivityProjection} />);
     const button = screen.getByRole("button", { name: /view details for research completed/i });
     button.focus();
@@ -75,7 +77,8 @@ describe("ActivityFeed", () => {
     expect(within(drawer).queryByText("private evidence")).not.toBeInTheDocument();
     expect(within(drawer).getByRole("button", { name: "Close details" })).toHaveFocus();
 
-    fireEvent.keyDown(drawer, { key: "Escape" });
+    fireEvent.click(within(drawer).getByRole("button", { name: "Close details" }));
+    expect(close).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(button).toHaveFocus();
   });

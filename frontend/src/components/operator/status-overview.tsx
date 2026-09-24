@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { StatusPill } from "@/components/operator/status-pill";
 import { parseStatus, type ActivityState, type StatusProjection } from "@/lib/operator/types";
@@ -16,18 +16,22 @@ const sequence: ActivityState[] = ["queued", "running", "completed", "blocked"];
 export function StatusOverview({ initial }: { initial: StatusProjection | null }) {
   const [projection, setProjection] = useState(initial);
   const [stale, setStale] = useState(false);
+  const latestRequest = useRef(0);
 
   const refresh = useCallback(async () => {
+    const requestId = ++latestRequest.current;
     try {
       const response = await fetch("/api/operator/status", { cache: "no-store" });
+      if (requestId !== latestRequest.current) return;
       if (response.status === 401 || response.status === 403) { window.location.replace("/login"); return; }
       if (!response.ok) throw new Error("Status request failed");
       const next = parseStatus(await response.json());
+      if (requestId !== latestRequest.current) return;
       if (!next) throw new Error("Invalid status projection");
       setProjection(next);
       setStale(false);
     } catch {
-      setStale(true);
+      if (requestId === latestRequest.current) setStale(true);
     }
   }, []);
 

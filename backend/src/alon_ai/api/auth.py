@@ -6,6 +6,7 @@ import hmac
 import re
 import secrets
 from datetime import UTC, datetime, timedelta
+from threading import BoundedSemaphore
 from uuid import UUID, uuid4
 
 from fastapi import APIRouter, HTTPException, Request, Response
@@ -20,13 +21,14 @@ SESSION_AGE = timedelta(hours=8)
 _SCRYPT_N = 16384
 _SCRYPT_R = 8
 _SCRYPT_P = 1
+_LOGIN_CAPACITY = 2
 _LOGIN_DELAY_THRESHOLD = 5
 _LOGIN_DELAY_SECONDS = 2
 _LOGIN_WINDOW = timedelta(minutes=15)
 
 
 class LoginRateLimited(Exception):
-    """Another password check is already in progress."""
+    """Both bounded login admission slots are occupied."""
 
 
 def hash_password(password: str, *, salt: bytes | None = None) -> str:
@@ -89,6 +91,7 @@ class LoginRequest(BaseModel):
 class AuthService:
     def __init__(self, engine: AsyncEngine, settings: Settings) -> None:
         self.engine = engine
+        self._login_admissions = BoundedSemaphore(_LOGIN_CAPACITY)
         self.subject = settings.operator_auth_subject
         self.verifier = (
             settings.operator_password_hash.get_secret_value()
@@ -131,15 +134,34 @@ class AuthService:
     async def login(self, password: str) -> tuple[str, OperatorSession] | None:
         if not self.configured or self.verifier is None or self.subject is None:
             return None
+        # Bound local connection demand before entering SQLAlchemy's pool.
+        if not self._login_admissions.acquire(blocking=False):
+            raise LoginRateLimited
+        try:
+            return await self._login_admitted(password, self.verifier)
+        finally:
+            self._login_admissions.release()
+
+    async def _login_admitted(
+        self, password: str, verifier: str
+    ) -> tuple[str, OperatorSession] | None:
         async with self.engine.begin() as connection:
-            # Fail fast across API workers instead of queueing password work.
-            acquired = (
-                await connection.execute(
-                    text("SELECT pg_try_advisory_xact_lock(590006)")
-                )
-            ).scalar_one()
-            if not acquired:
+            # Two-int advisory keys are separate from the single-key verifier
+            # lock. Together they allow one check and one waiter across workers.
+            for slot in range(_LOGIN_CAPACITY):
+                acquired = (
+                    await connection.execute(
+                        text("SELECT pg_try_advisory_xact_lock(590006, :slot)"),
+                        {"slot": slot},
+                    )
+                ).scalar_one()
+                if acquired:
+                    break
+            else:
                 raise LoginRateLimited
+            # An admitted request waits instead of losing a repeated try-lock
+            # race to continuing wrong-password traffic. Excess work is rejected.
+            await connection.execute(text("SELECT pg_advisory_xact_lock(590006)"))
             now = datetime.now(UTC)
             failures = (
                 await connection.execute(
@@ -153,9 +175,20 @@ class AuthService:
                 # credentials: outsiders must not create a persistent lockout.
                 await asyncio.sleep(_LOGIN_DELAY_SECONDS)
                 now = datetime.now(UTC)
-            valid_password = await asyncio.to_thread(
-                _password_matches, password, self.verifier
+            verification = asyncio.create_task(
+                asyncio.to_thread(_password_matches, password, verifier)
             )
+            try:
+                valid_password = await asyncio.shield(verification)
+            except asyncio.CancelledError:
+                # Cancelling an await cannot stop the scrypt thread. Retain both
+                # admission and verifier locks until it exits, even on recancel.
+                while not verification.done():
+                    try:
+                        await asyncio.shield(verification)
+                    except asyncio.CancelledError:
+                        continue
+                raise
             if not valid_password:
                 await connection.execute(
                     text("""INSERT INTO operator_login_failures(id,auth_subject,attempted_at)

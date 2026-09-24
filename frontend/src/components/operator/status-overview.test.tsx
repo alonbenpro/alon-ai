@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { StatusOverview } from "@/components/operator/status-overview";
@@ -33,5 +33,26 @@ describe("StatusOverview", () => {
     expect(screen.getAllByText("Unknown")).toHaveLength(2);
     expect(screen.getAllByText("—")).toHaveLength(4);
     expect(screen.queryByTestId("activity-signal")).not.toBeInTheDocument();
+  });
+
+  it("ignores an older successful response after a newer refresh fails", async () => {
+    const initial = {
+      health: { status: "ok" }, readiness: { status: "ready" },
+      counts: { queued: 1, running: 2, completed: 3, blocked: 4 },
+    } as StatusProjection;
+    let resolveOlder: ((response: { ok: boolean; json: () => Promise<StatusProjection> }) => void) | undefined;
+    const older = new Promise<{ ok: boolean; json: () => Promise<StatusProjection> }>((resolve) => { resolveOlder = resolve; });
+    vi.stubGlobal("fetch", vi.fn().mockReturnValueOnce(older).mockRejectedValueOnce(new Error("offline")));
+
+    render(<StatusOverview initial={initial} />);
+    const refresh = screen.getByRole("button", { name: /refresh/i });
+    fireEvent.click(refresh);
+    fireEvent.click(refresh);
+    await waitFor(() => expect(screen.getByText("Status could not be refreshed.")).toBeInTheDocument());
+
+    await act(async () => { resolveOlder?.({ ok: true, json: async () => initial }); });
+    expect(screen.queryByText("Online")).not.toBeInTheDocument();
+    expect(screen.queryByText("Ready")).not.toBeInTheDocument();
+    expect(screen.queryByText("Current projection")).not.toBeInTheDocument();
   });
 });

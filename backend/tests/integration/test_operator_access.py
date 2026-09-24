@@ -14,8 +14,9 @@ import pytest
 from fastapi.testclient import TestClient
 from pydantic import SecretStr
 from sqlalchemy import text
+from sqlalchemy.ext.asyncio import create_async_engine
 from starlette.requests import Request
-from test_governance import reserve, seed
+from test_governance import reserve, seed, wait_for_pg_lock
 
 from alon_ai.api.app import create_app
 from alon_ai.api.auth import COOKIE_NAME, AuthService, LoginRateLimited, hash_password
@@ -227,7 +228,56 @@ async def test_login_failures_delay_but_do_not_lock_out_correct_credentials(
         ).scalar_one() == 6
 
 
-async def test_concurrent_login_burst_is_rejected_without_queuing_password_work(
+async def test_correct_login_completes_during_continuing_wrong_password_traffic(
+    governance_engine, monkeypatch
+):
+    app, _ = await _app(governance_engine)
+    attacker = AuthService(governance_engine, app.state.settings)
+    operator = AuthService(governance_engine, app.state.settings)
+    for _ in range(5):
+        assert await attacker.login("wrong") is None
+
+    from alon_ai.api import auth as auth_module
+
+    original = auth_module._password_matches
+    started = threading.Event()
+    release = threading.Event()
+    stop = asyncio.Event()
+    traffic_attempts = 0
+
+    def held_wrong_password_check(password: str, verifier: str) -> bool:
+        if password == "wrong":
+            started.set()
+            assert release.wait(timeout=5)
+        return original(password, verifier)
+
+    async def continuing_wrong_requests():
+        nonlocal traffic_attempts
+        while not stop.is_set():
+            traffic_attempts += 1
+            assert await attacker.login("wrong") is None
+
+    monkeypatch.setattr(auth_module, "_password_matches", held_wrong_password_check)
+    traffic = asyncio.create_task(continuing_wrong_requests())
+    correct = None
+    try:
+        assert await asyncio.to_thread(started.wait, 4)
+        correct = asyncio.create_task(operator.login("test-password"))
+        await wait_for_pg_lock(governance_engine, correct)
+        release.set()
+        result = await asyncio.wait_for(correct, timeout=5)
+        assert result is not None
+        assert await operator.resolve(result[0]) is not None
+        assert traffic_attempts >= 2
+    finally:
+        release.set()
+        stop.set()
+        if correct is not None:
+            await asyncio.gather(correct, return_exceptions=True)
+        await traffic
+
+
+async def test_login_admission_bounds_waiters_and_releases_cancelled_capacity(
     governance_engine, monkeypatch
 ):
     app, _ = await _app(governance_engine)
@@ -246,27 +296,138 @@ async def test_concurrent_login_burst_is_rejected_without_queuing_password_work(
 
     monkeypatch.setattr(auth_module, "_password_matches", held_password_check)
     pending = asyncio.create_task(service.login("test-password"))
+    queued = None
     try:
         assert await asyncio.to_thread(started.wait, 2)
+        queued = asyncio.create_task(other_service.login("wrong"))
+        await wait_for_pg_lock(governance_engine, queued)
+        burst_service = AuthService(governance_engine, app.state.settings)
         results = await asyncio.wait_for(
             asyncio.gather(
-                *(other_service.login("wrong") for _ in range(8)),
+                *(burst_service.login("wrong") for _ in range(8)),
                 return_exceptions=True,
             ),
             timeout=1,
         )
         assert all(isinstance(result, LoginRateLimited) for result in results)
+        async with governance_engine.connect() as connection:
+            assert (
+                await connection.scalar(text("SELECT count(*) FROM operator_sessions"))
+                == 0
+            )
+            assert (
+                await connection.scalar(
+                    text("SELECT count(*) FROM operator_login_failures")
+                )
+                == 0
+            )
+        queued.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await queued
+        queued = asyncio.create_task(other_service.login("wrong"))
+        await wait_for_pg_lock(governance_engine, queued)
     finally:
         release.set()
         result = await pending
+        if queued is not None:
+            await asyncio.gather(queued, return_exceptions=True)
+    assert queued is not None and queued.result() is None
     assert result is not None
     assert await service.resolve(result[0]) is not None
     async with governance_engine.connect() as connection:
         assert (
-            await connection.execute(
+            await connection.scalar(text("SELECT count(*) FROM operator_sessions")) == 1
+        )
+        assert (
+            await connection.scalar(
                 text("SELECT count(*) FROM operator_login_failures")
             )
-        ).scalar_one() == 0
+            == 1
+        )
+
+
+async def test_login_admission_rejects_excess_before_waiting_for_a_connection(
+    governance_engine, monkeypatch
+):
+    app, _ = await _app(governance_engine)
+    bounded_engine = create_async_engine(
+        governance_engine.url, pool_size=1, max_overflow=0
+    )
+    service = AuthService(bounded_engine, app.state.settings)
+    from alon_ai.api import auth as auth_module
+
+    original = auth_module._password_matches
+    started = threading.Event()
+    release = threading.Event()
+
+    def held_password_check(password: str, verifier: str) -> bool:
+        started.set()
+        assert release.wait(timeout=5)
+        return original(password, verifier)
+
+    monkeypatch.setattr(auth_module, "_password_matches", held_password_check)
+    pending = asyncio.create_task(service.login("test-password"))
+    queued = None
+    try:
+        assert await asyncio.to_thread(started.wait, 2)
+        queued = asyncio.create_task(service.login("wrong"))
+        await asyncio.sleep(0)
+        assert not queued.done()
+        with pytest.raises(LoginRateLimited):
+            await asyncio.wait_for(service.login("excess"), timeout=1)
+    finally:
+        release.set()
+        result = await pending
+        if queued is not None:
+            await asyncio.gather(queued, return_exceptions=True)
+        await bounded_engine.dispose()
+    assert result is not None
+    assert queued is not None and queued.result() is None
+
+
+async def test_cancelling_a_login_retains_capacity_until_scrypt_finishes(
+    governance_engine, monkeypatch
+):
+    app, _ = await _app(governance_engine)
+    service = AuthService(governance_engine, app.state.settings)
+    other_service = AuthService(governance_engine, app.state.settings)
+    from alon_ai.api import auth as auth_module
+
+    original = auth_module._password_matches
+    started = threading.Event()
+    release = threading.Event()
+
+    def held_password_check(password: str, verifier: str) -> bool:
+        started.set()
+        assert release.wait(timeout=5)
+        return original(password, verifier)
+
+    monkeypatch.setattr(auth_module, "_password_matches", held_password_check)
+    cancelled = asyncio.create_task(service.login("test-password"))
+    queued = None
+    try:
+        assert await asyncio.to_thread(started.wait, 2)
+        for _ in range(2):
+            cancelled.cancel()
+            with pytest.raises(TimeoutError):
+                await asyncio.wait_for(asyncio.shield(cancelled), timeout=0.05)
+        queued = asyncio.create_task(other_service.login("test-password"))
+        await wait_for_pg_lock(governance_engine, queued)
+        release.set()
+        with pytest.raises(asyncio.CancelledError):
+            await cancelled
+        result = await queued
+        assert result is not None
+        assert await other_service.resolve(result[0]) is not None
+    finally:
+        release.set()
+        await asyncio.gather(cancelled, return_exceptions=True)
+        if queued is not None:
+            await asyncio.gather(queued, return_exceptions=True)
+    async with governance_engine.connect() as connection:
+        assert (
+            await connection.scalar(text("SELECT count(*) FROM operator_sessions")) == 1
+        )
 
 
 async def test_expired_session_and_immutable_session_history(governance_engine):

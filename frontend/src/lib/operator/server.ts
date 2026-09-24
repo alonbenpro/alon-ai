@@ -53,9 +53,14 @@ export async function getSession(): Promise<SessionResult> {
   return { kind: "unavailable" };
 }
 
+function operatorOrigin(request: Request) {
+  const configured = process.env.ALON_AI_FRONTEND_ORIGIN;
+  return configured ? new URL(configured).origin : new URL(request.url).origin;
+}
+
 export function isSameOrigin(request: Request) {
   const origin = request.headers.get("origin");
-  return origin === new URL(request.url).origin;
+  return origin === operatorOrigin(request);
 }
 
 export async function privateProxy(path: string, request?: Request) {
@@ -80,7 +85,7 @@ export async function authProxy(path: string, request: Request) {
   try {
     const response = await backendFetch(path, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: new URL(request.url).origin },
+      headers: { "Content-Type": "application/json", Origin: operatorOrigin(request) },
       body: path.endsWith("/login") ? await request.text() : undefined,
       signal: request.signal,
     });

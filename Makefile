@@ -1,4 +1,4 @@
-.PHONY: setup generate format lint typecheck test test-integration build containers dev down database migrate api worker frontend
+.PHONY: setup generate format lint typecheck test test-integration build containers dev down database migrate api worker frontend local-up local-down local-status local-help
 
 COMPOSE ?= docker compose
 COMPOSE_ARGS ?= --env-file .env.example -f infra/compose.yaml
@@ -63,3 +63,15 @@ dev: database
 
 down:
 	$(COMPOSE) $(COMPOSE_ARGS) down
+
+local-up:
+	sh scripts/local-dev.sh up
+
+local-down:
+	sh scripts/local-dev.sh down
+
+local-status:
+	sh scripts/local-dev.sh status
+
+local-help:
+	sh scripts/local-dev.sh help

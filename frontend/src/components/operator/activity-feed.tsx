@@ -20,8 +20,7 @@ export function ActivityFeed({ initial }: { initial: ActivityProjection | null }
   }, [selected]);
 
   const closeDetails = () => {
-    setSelected(null);
-    triggerRef.current?.focus();
+    dialogRef.current?.close();
   };
 
   const refresh = useCallback(async () => {
@@ -114,7 +113,7 @@ export function ActivityFeed({ initial }: { initial: ActivityProjection | null }
         </ol>
       )}
       {selected && (
-        <dialog ref={dialogRef} className="activity-drawer" aria-modal="true" aria-labelledby="activity-details-title" onCancel={(event) => { event.preventDefault(); closeDetails(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); closeDetails(); } }}>
+        <dialog ref={dialogRef} className="activity-drawer" aria-modal="true" aria-labelledby="activity-details-title" onClose={() => { setSelected(null); triggerRef.current?.focus(); }}>
           <div className="activity-drawer__heading"><div><p className="eyebrow">Server activity</p><h3 id="activity-details-title">Activity details</h3></div><button type="button" onClick={closeDetails} aria-label="Close details">Close <span aria-hidden="true">×</span></button></div>
           <p className="activity-drawer__label">{selected.label}</p>
           <dl className="activity-drawer__fields">

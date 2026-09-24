@@ -1,97 +1,71 @@
-# Local development
+# Local operator development
 
-Run commands from the repository root. The current acceptance scope is [L01](https://app.notion.com/p/3d6caf700cba81b1b657eb90c9a930de): a working foundation, not a completed private production application.
+This is the private L05 login and operator shell. Run from the repository root. The launcher reuses `infra/compose.yaml`, keeps all published ports on loopback, and leaves outreach and provider calls disabled.
 
 ## Prerequisites
 
-- Python 3.13 and uv **0.11.26** (`uv --version`). `uv sync` selects a compatible Python interpreter; application packages come from the committed lockfile.
-- Node **24** and npm (`node --version`, `npm --version`). The audit used Node 24.18.0 and npm 11.16.0.
-- A running Docker engine and Compose (`docker info`, `docker compose version`). Installing a Docker CLI alone does not start an engine.
-- Free loopback ports 3000 and 8000. PostgreSQL uses host port 5432 by default and can use a different port below.
+- A running Docker engine and either the `docker compose` plugin or standalone `docker-compose` CLI.
+- Python 3 with `hashlib.scrypt` and `curl` on the host. The application itself runs in containers; host `uv` and Node are needed only for host development and tests.
+- Free loopback ports 3000, 8000, and 5432, or set `ALON_AI_FRONTEND_PORT`, `ALON_AI_API_PORT`, and `ALON_AI_POSTGRES_PORT` to three distinct free ports before `up`.
 
-On macOS, Docker Desktop or Colima can supply the engine. This audit installed Homebrew `colima`, `docker` and `docker-compose` and started a dedicated profile:
+On macOS, Docker Desktop or Colima can provide the engine. With Colima and the Homebrew standalone Compose CLI:
 
 ```sh
-colima start --profile alon-ai --cpu 2 --memory 4 --disk 20 --activate=false
-export DOCKER_HOST="unix://$HOME/.colima/alon-ai/docker.sock"
+colima start
 export COMPOSE=docker-compose
 ```
 
-The standalone `docker-compose` override avoids changing an existing Docker CLI configuration to discover Homebrew's Compose plugin. Use the same environment for all subsequent Make/Compose commands. A Docker Desktop installation with a working plugin uses the default `docker compose` command instead. No automatic start-at-login service is required.
+Keep these variables in the same terminal for all launcher commands. If using Docker Desktop with its Compose plugin, no override is needed.
 
-## Container stack
-
-```sh
-make setup
-make dev
-```
-
-`make setup` installs locked host dependencies for tests and API generation. `make dev` starts the PostgreSQL 18 container, waits for its health check, runs `alembic upgrade head`, then builds/starts the API, idle worker and frontend. Alembic currently has no product revisions; successful execution is migration-tool connectivity evidence only.
-
-The safe `.env.example` is Compose's interpolation file. Containers have explicit database/local configuration and hard-code outreach off; they do not load `backend/.env` or provider credentials. API/frontend/DB ports bind only to `127.0.0.1`. The local stack has no application authentication yet and must not be exposed publicly.
-
-If port 5432 is occupied:
+## Start and stop
 
 ```sh
-export ALON_AI_POSTGRES_PORT=55432
-make dev
+make local-help
+make local-up
+make local-status
+make local-down
 ```
 
-Only the host port changes; API/worker still use `postgres:5432` inside Compose. This does not modify the existing host PostgreSQL server.
+`make local-up` checks Docker and local ports, then prompts for a password twice on the first run without echoing it. Choose a unique password of 12 to 1024 characters. The launcher stores **only** its scrypt verifier and a random session signing key in `.local/operator.env`; the file has mode `0600`, its directory has mode `0700`, and both are ignored by Git. It reuses this file on later runs. If the Compose project's PostgreSQL volume already exists but the verifier file is missing, startup refuses to create replacement credentials. Do not put the plaintext password or provider credentials in the file.
 
-Open <http://localhost:3000>. Expected API results:
+The launcher starts PostgreSQL, applies Alembic migrations, runs the existing idempotent single-operator provisioner, applies the DBOS schema, then starts the API, worker, and frontend. It waits for container health and checks the API and frontend over loopback. Open the printed sign-in URL (default <http://localhost:3000/login>) and use the password you created. The local subject is `local-operator@alon.ai`, and the provisioner displays the operator as `Alon`.
+
+The provisioner refuses a disabled operator or an already active operator with a different subject. It does not replace that row. Resolve that state deliberately; do not delete the PostgreSQL volume to bypass it. If the local verifier file is lost while the database remains, `up` refuses to generate a replacement. Restore it from a secure backup or use an explicit, separately reviewed credential rotation procedure.
+
+`make local-down` stops containers and retains the PostgreSQL volume and `.local/operator.env`. It does not use `--volumes`. The commands are also available directly as `./scripts/local-dev.sh up|down|status|help`.
+
+For an isolated, disposable verification run, set `COMPOSE_PROJECT_NAME=l05_disposable` and `ALON_AI_LOCAL_AUTH_FILE=/path/to/private/directory/operator.env` for **every** lifecycle command. The private directory must be owned by you and mode `0700`; the file is created with mode `0600`. Set `ALON_AI_POSTGRES_PORT`, `ALON_AI_API_PORT`, and `ALON_AI_FRONTEND_PORT` if their defaults are occupied. Keep these port values set for `up`, `status`, and `down` so Compose targets the same test stack. The project name gives the test stack its own PostgreSQL volume, while the auth-file override keeps the normal local verifier untouched. Ordinary `down` still retains this isolated volume; remove it only through a separately reviewed test cleanup after confirming the exact project and volume name.
+
+## Manual L05 checks
+
+1. Visit <http://localhost:3000> in a fresh private browser window. The login page should appear, and the shell should not display protected status before login.
+2. Check `curl -i http://127.0.0.1:8000/operator/status`: it should return `401`. `curl --fail http://127.0.0.1:8000/health/live`, `/health/ready`, and `http://127.0.0.1:3000/login` should succeed.
+3. Try a wrong password, then sign in with the local password. Confirm the shell shows real system status and activity (including empty or unknown states), not invented progress.
+4. Refresh the page and open the status and activity surfaces. Confirm keyboard navigation, command search, focus, labels, and reduced-motion behavior at a desktop width of at least 1280px. A fresh stack may show an empty activity state; when a real server activity entry exists, open its read-only drawer and check keyboard focus and sanitized fields.
+5. Log out. Browser back/refresh and the API's private endpoints should no longer expose prior operator data. Sign in again, then `make local-down`, `make local-up`, and confirm the original password still works.
+6. For a failure drill, stop PostgreSQL via Compose and refresh status. The UI should show an unavailable state rather than retaining a healthy claim; restore with `make local-up`.
+
+Do not paste login cookies, verifier, signing key, or passwords into bug reports or logs. This local stack uses example database credentials and HTTP on loopback. It is not a public deployment.
+
+## Development and verification
+
+The repository's existing `make setup`, `make generate`, `make lint`, `make typecheck`, `make test`, `make build`, and `make test-integration` targets remain available. `make dev` is the earlier general Compose path; use `make local-up` for a provisioned L05 login. Direct host API/worker development needs `ALON_AI_DATABASE_URL`, `ALON_AI_DBOS_SYSTEM_DATABASE_URL`, `ALON_AI_OPERATOR_AUTH_SUBJECT`, `ALON_AI_OPERATOR_PASSWORD_HASH`, and `ALON_AI_SESSION_SIGNING_KEY` set privately, plus the configured host port. Do not source `.local/operator.env` into a shared shell or print it while debugging.
+
+Focused launcher check (no Docker engine needed):
 
 ```sh
-curl --fail http://127.0.0.1:8000/health/live
-# {"status":"ok","service":"api"}
-curl --fail http://127.0.0.1:8000/health/ready
-# {"status":"ready","database":"up"}
+python3 -m unittest scripts.tests.test_local_dev -v
+sh -n scripts/local-dev.sh
+docker-compose --env-file .env.example -f infra/compose.yaml config --quiet
 ```
 
-Readiness executes a real database query. If the DB is unavailable, it returns HTTP 503 with `{"status":"not_ready","database":"down"}`. The worker logs `worker_ready` and waits for SIGINT/SIGTERM; that does not prove durable workflow execution.
+Use `docker compose` in the last command when the plugin is installed. `make test-integration` requires a real PostgreSQL URL on the host and does not run as part of the launcher.
 
-```sh
-make down
-```
+## Diagnosing failures
 
-Shutdown retains the PostgreSQL volume. Do not add `--volumes` to ordinary shutdown; it deletes local database data.
-
-## Host development with a container database
-
-```sh
-make setup
-make database
-export ALON_AI_DATABASE_URL=postgresql+psycopg://alon_ai:alon_ai@127.0.0.1:5432/alon_ai
-export ALON_AI_OUTREACH_ENABLED=false
-make migrate
-```
-
-Use `55432` in this URL if `ALON_AI_POSTGRES_PORT=55432`. In three terminals, retaining those variables, run `make api`, `make worker`, and `make frontend`. Do not run host API/frontend on ports already occupied by the full Compose stack.
-
-Python settings read `backend/.env` when launched by these Make targets, because they run from `backend/`. Root `.env.example` is not automatically a host-process environment file. Keep secrets only in ignored local files; do not paste credentials into commands, committed templates or logs. L01 needs no provider keys.
-
-## Verification
-
-```sh
-make generate
-make lint
-make typecheck
-make test
-make build
-make test-integration
-make containers
-python3 scripts/check_secrets.py
-```
-
-- `make generate` requires backend setup first and regenerates `frontend/openapi.json` and `frontend/src/lib/api/schema.d.ts`. Inspect `git diff --exit-code -- frontend/openapi.json frontend/src/lib/api/schema.d.ts` for drift.
-- `make test` runs backend unit and frontend tests without provider credentials. `make test-integration` requires the explicit database URL above and a real running PostgreSQL server.
-- Run frontend typecheck/build sequentially; Next generates types in `.next` during its build.
-- `make containers` validates Compose and builds images. It does not start the stack or prove live readiness.
-
-## Diagnosing setup failures
-
-- **Docker command/daemon missing:** check both Compose and `docker info`; start the selected engine/profile. Do not substitute the host's unrelated PostgreSQL installation for the configured PostgreSQL 18 container.
-- **Database connection refused:** confirm the container is healthy, check the host port override, and set `ALON_AI_DATABASE_URL` for host tests. Do not use container hostname `postgres` in host commands.
-- **npm EACCES in a shared cache:** use an isolated writable cache, e.g. `npm_config_cache="$(mktemp -d)" make setup`. Do not use sudo npm or recursively change ownership of unrelated user data.
-- **Frontend API error:** confirm the API responds on port 8000 and that the browser uses the matching `NEXT_PUBLIC_API_BASE_URL`. Container frontend configuration is built into the image; rebuild after changing it.
-- **Network-sandbox failures:** DNS or package-registry failures under an agent sandbox are not proof of invalid credentials or a broken lockfile. Repeat only the necessary authorized network operation with the appropriate permission.
+- **Docker unavailable:** run `docker info`; start Docker Desktop or the selected Colima profile, and set `COMPOSE=docker-compose` if only the standalone CLI is installed.
+- **Port occupied:** set the matching `ALON_AI_FRONTEND_PORT`, `ALON_AI_API_PORT`, or `ALON_AI_POSTGRES_PORT` to a distinct free loopback port. Container-internal ports remain 3000, 8000, and 5432.
+- **Local configuration permissions:** `.local` must be owned by you and mode `0700`; `.local/operator.env` must be owned by you and mode `0600`. A malformed or symlinked file is rejected.
+- **Provisioning refused:** an existing operator was disabled or has a different subject. Review the operator row and the intended identity; startup will not overwrite it.
+- **Migration/readiness failure:** inspect `docker compose -f infra/compose.yaml logs postgres api worker frontend` (or `docker-compose`). The launcher stops before app startup if migration or provisioning fails. PostgreSQL data is retained.
+- **npm cache permission error during host `make setup`:** use `npm_config_cache="$(mktemp -d)" make setup`; do not use `sudo npm` or change ownership of unrelated data.

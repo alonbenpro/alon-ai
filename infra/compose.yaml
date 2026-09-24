@@ -22,10 +22,14 @@ services:
       ALON_AI_DATABASE_URL: postgresql+psycopg://alon_ai:alon_ai@postgres:5432/alon_ai
       ALON_AI_ENVIRONMENT: ${ALON_AI_ENVIRONMENT:-development}
       ALON_AI_OUTREACH_ENABLED: "false"
-      ALON_AI_FRONTEND_ORIGIN: http://localhost:3000
+      ALON_AI_PROVIDER_MODE: disabled
+      ALON_AI_OPERATOR_AUTH_SUBJECT: local-operator@alon.ai
+      ALON_AI_OPERATOR_PASSWORD_HASH: ${ALON_AI_OPERATOR_PASSWORD_HASH:-}
+      ALON_AI_SESSION_SIGNING_KEY: ${ALON_AI_SESSION_SIGNING_KEY:-}
+      ALON_AI_FRONTEND_ORIGIN: http://localhost:${ALON_AI_FRONTEND_PORT:-3000}
     command: ["uvicorn", "alon_ai.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
     ports:
-      - "127.0.0.1:8000:8000"
+      - "127.0.0.1:${ALON_AI_API_PORT:-8000}:8000"
     depends_on:
       postgres:
         condition: service_healthy
@@ -43,6 +47,7 @@ services:
       ALON_AI_DBOS_SYSTEM_DATABASE_URL: postgresql://alon_ai:alon_ai@postgres:5432/alon_ai
       ALON_AI_ENVIRONMENT: ${ALON_AI_ENVIRONMENT:-development}
       ALON_AI_OUTREACH_ENABLED: "false"
+      ALON_AI_PROVIDER_MODE: disabled
     command: ["python", "-m", "alon_ai.worker.main"]
     depends_on:
       postgres:
@@ -52,9 +57,12 @@ services:
     build:
       context: ../frontend
       args:
-        NEXT_PUBLIC_API_BASE_URL: http://localhost:8000
+        NEXT_PUBLIC_API_BASE_URL: http://localhost:${ALON_AI_API_PORT:-8000}
+    environment:
+      API_BASE_URL: http://api:8000
+      ALON_AI_FRONTEND_ORIGIN: http://localhost:${ALON_AI_FRONTEND_PORT:-3000}
     ports:
-      - "127.0.0.1:3000:3000"
+      - "127.0.0.1:${ALON_AI_FRONTEND_PORT:-3000}:3000"
     depends_on:
       api:
         condition: service_healthy
