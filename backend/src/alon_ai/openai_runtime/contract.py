@@ -110,6 +110,8 @@ class PremiumAuthorization:
     authorization_id: UUID
     scope: UUID
     expires_at: datetime
+    approved_by: UUID
+    approved_at: datetime
 
 
 @dataclass(frozen=True)
@@ -136,6 +138,21 @@ class RoutingPolicy:
     def select(
         self, facts: RoutingFacts, *, scope: UUID, now: datetime
     ) -> RouteSelection:
+        selection = self.resolve(facts, scope=scope)
+        authorization = facts.premium_authorization
+        if selection.route is Route.PREMIUM and (
+            authorization is None
+            or now.tzinfo is None
+            or authorization.expires_at.tzinfo is None
+            or authorization.approved_at.tzinfo is None
+            or authorization.approved_at > now
+            or now >= authorization.expires_at
+        ):
+            raise PermissionError("premium route requires current scoped authorization")
+        return selection
+
+    def resolve(self, facts: RoutingFacts, *, scope: UUID) -> RouteSelection:
+        """Resolve immutable identity; current authority is required only for dispatch."""
         if not facts.needs_ai:
             return RouteSelection(Route.NO_AI, None)
         if facts.premium_requested:
@@ -144,9 +161,6 @@ class RoutingPolicy:
                 authorization is None
                 or authorization not in self.approved_premium
                 or authorization.scope != scope
-                or now.tzinfo is None
-                or authorization.expires_at.tzinfo is None
-                or now >= authorization.expires_at
             ):
                 raise PermissionError(
                     "premium route requires current scoped authorization"

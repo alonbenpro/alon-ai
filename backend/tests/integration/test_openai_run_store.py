@@ -91,21 +91,29 @@ async def test_finish_binds_ledger_call_once_and_rejects_changed_result(
     await store.begin(intent)
     receipt = await reserve(repo, attr, config, key=intent.idempotency_key)
 
-    done = await store.finish(
-        intent.idempotency_key,
-        receipt.call_id,
-        OpenAIRunOutcome.SUCCEEDED,
-        "c" * 64,
-    )
-    assert done.call_id == receipt.call_id
-    assert done.outcome == OpenAIRunOutcome.SUCCEEDED
-    assert done.output_hash == "c" * 64
-    assert (
+    with pytest.raises(OpenAIRunConflict):
         await store.finish(
             intent.idempotency_key,
             receipt.call_id,
             OpenAIRunOutcome.SUCCEEDED,
             "c" * 64,
+        )
+    await repo.cancel_before_dispatch(receipt.call_id, command_key=uuid4())
+    done = await store.finish(
+        intent.idempotency_key,
+        receipt.call_id,
+        OpenAIRunOutcome.FAILED,
+        None,
+    )
+    assert done.call_id == receipt.call_id
+    assert done.outcome == OpenAIRunOutcome.FAILED
+    assert done.output_hash is None
+    assert (
+        await store.finish(
+            intent.idempotency_key,
+            receipt.call_id,
+            OpenAIRunOutcome.FAILED,
+            None,
         )
         == done
     )

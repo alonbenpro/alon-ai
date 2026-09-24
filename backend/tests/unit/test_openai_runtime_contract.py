@@ -47,7 +47,11 @@ def test_route_never_accepts_agent_selected_model_or_tools():
     scope = uuid4()
     now = datetime.now(UTC)
     authorization = PremiumAuthorization(
-        scope=scope, expires_at=now + timedelta(minutes=1), authorization_id=uuid4()
+        scope=scope,
+        expires_at=now + timedelta(minutes=1),
+        authorization_id=uuid4(),
+        approved_by=uuid4(),
+        approved_at=now,
     )
     policy = RoutingPolicy(
         cheap=cheap, stronger=strong, premium=premium, approved_premium=(authorization,)

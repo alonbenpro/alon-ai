@@ -24,6 +24,8 @@ ModelIdentifier = Annotated[str, Field(min_length=1, max_length=100)]
 class OpenAIRunOutcome(StrEnum):
     NO_AI = "NO_AI"
     READY = "READY"
+    RECOVERING = "RECOVERING"
+    RESULT_UNAVAILABLE = "RESULT_UNAVAILABLE"
     SUCCEEDED = "SUCCEEDED"
     REFUSED = "REFUSED"
     SCHEMA_MISMATCH = "SCHEMA_MISMATCH"
@@ -143,7 +145,9 @@ class OpenAIRunStore:
             raise OpenAIRunConflict()
         if outcome == OpenAIRunOutcome.NO_AI and call_id is not None:
             raise OpenAIRunConflict()
-        if outcome == OpenAIRunOutcome.SUCCEEDED and call_id is None:
+        if outcome == OpenAIRunOutcome.SUCCEEDED and (
+            call_id is None or output_hash is None
+        ):
             raise OpenAIRunConflict()
         if output_hash is not None and (
             len(output_hash) != 64
@@ -173,6 +177,15 @@ class OpenAIRunStore:
                                 == run_intents.c.experiment_id,
                                 gov.calls.c.workflow_id == run_intents.c.workflow_id,
                                 gov.calls.c.operation_id == run_intents.c.operation_id,
+                                *(
+                                    [
+                                        gov.calls.c.state == "FINAL",
+                                        gov.calls.c.result_metadata["status"].astext
+                                        == "SUCCEEDED",
+                                    ]
+                                    if outcome == OpenAIRunOutcome.SUCCEEDED
+                                    else []
+                                ),
                             )
                         )
                     ).scalar_one_or_none()
@@ -182,13 +195,17 @@ class OpenAIRunStore:
                     update(run_intents)
                     .where(
                         run_intents.c.idempotency_key == key,
-                        run_intents.c.outcome == OpenAIRunOutcome.READY,
+                        run_intents.c.outcome.in_(
+                            [OpenAIRunOutcome.READY, OpenAIRunOutcome.RECOVERING]
+                        ),
                     )
                     .values(
                         call_id=call_id,
                         outcome=outcome,
                         output_hash=output_hash,
-                        finished_at=datetime.now(UTC),
+                        finished_at=None
+                        if outcome == OpenAIRunOutcome.RECOVERING
+                        else datetime.now(UTC),
                     )
                 )
                 row = (
@@ -212,6 +229,87 @@ class OpenAIRunStore:
                 ):
                     raise OpenAIRunConflict()
                 return record
+        except SQLAlchemyError:
+            raise OpenAIRunStoreError() from None
+
+    async def recover(self, key: UUID) -> OpenAIRunRecord:
+        """Recover only safe ledger facts. Lost licensed output is never regenerated."""
+        try:
+            async with self.engine.begin() as connection:
+                row = (
+                    (
+                        await connection.execute(
+                            select(run_intents)
+                            .where(run_intents.c.idempotency_key == key)
+                            .with_for_update()
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if row is None:
+                    raise OpenAIRunNotFound()
+                record = _record(row)
+                if record.outcome not in {
+                    OpenAIRunOutcome.READY,
+                    OpenAIRunOutcome.RECOVERING,
+                }:
+                    return record
+                ledger = (
+                    (
+                        await connection.execute(
+                            select(gov.calls).where(
+                                gov.calls.c.idempotency_key == key,
+                                gov.calls.c.config_id == record.config_id,
+                                gov.calls.c.config_version == record.config_version,
+                                gov.calls.c.experiment_id == record.experiment_id,
+                                gov.calls.c.workflow_id == record.workflow_id,
+                                gov.calls.c.operation_id == record.operation_id,
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if ledger is None:
+                    return record
+                metadata = ledger["result_metadata"] or {}
+                status = metadata.get("status")
+                if status == "SUCCEEDED" or ledger["state"] == "FINAL" and not metadata:
+                    outcome = OpenAIRunOutcome.RESULT_UNAVAILABLE
+                elif status == "REFUSED":
+                    outcome = OpenAIRunOutcome.REFUSED
+                elif status == "FAILED":
+                    outcome = (
+                        OpenAIRunOutcome.SCHEMA_MISMATCH
+                        if metadata.get("error_code") == "MALFORMED_RESPONSE"
+                        else OpenAIRunOutcome.FAILED
+                    )
+                elif ledger["state"] == "RELEASED":
+                    outcome = OpenAIRunOutcome.FAILED
+                else:
+                    outcome = OpenAIRunOutcome.RECOVERING
+                if record.outcome == outcome and record.call_id == ledger["id"]:
+                    return record
+                updated = (
+                    (
+                        await connection.execute(
+                            update(run_intents)
+                            .where(run_intents.c.idempotency_key == key)
+                            .values(
+                                call_id=ledger["id"],
+                                outcome=outcome,
+                                finished_at=None
+                                if outcome == OpenAIRunOutcome.RECOVERING
+                                else datetime.now(UTC),
+                            )
+                            .returning(run_intents)
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                return _record(updated)
         except SQLAlchemyError:
             raise OpenAIRunStoreError() from None
 

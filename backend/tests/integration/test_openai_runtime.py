@@ -168,7 +168,7 @@ async def test_recorded_success_is_attributed_and_reconciled_once(governance_eng
     replay = await runtime.run(
         attr, facts=RoutingFacts(needs_ai=True), sources=(source,), idempotency_key=key
     )
-    assert replay.outcome is OpenAIRunOutcome.SUCCEEDED
+    assert replay.outcome is OpenAIRunOutcome.RESULT_UNAVAILABLE
     assert replay.output is None
     assert len(transport.calls) == 1
 
@@ -196,8 +196,16 @@ async def test_recorded_success_is_attributed_and_reconciled_once(governance_eng
         ),
         (recorded(status="incomplete"), OpenAIRunOutcome.INCOMPLETE, CallState.FINAL),
         (recorded(status="cancelled"), OpenAIRunOutcome.CANCELLED, CallState.FINAL),
-        (recorded(usage=False), OpenAIRunOutcome.SUCCEEDED, CallState.RECONCILING),
-        (recorded(cached=False), OpenAIRunOutcome.SUCCEEDED, CallState.RECONCILING),
+        (
+            recorded(usage=False),
+            OpenAIRunOutcome.RESULT_UNAVAILABLE,
+            CallState.RECONCILING,
+        ),
+        (
+            recorded(cached=False),
+            OpenAIRunOutcome.RESULT_UNAVAILABLE,
+            CallState.RECONCILING,
+        ),
     ],
 )
 async def test_classified_response_retains_usage_or_uncertainty(
@@ -299,6 +307,10 @@ async def test_no_ai_never_creates_a_paid_attempt(governance_engine):
     assert result.outcome is OpenAIRunOutcome.NO_AI
     assert result.receipt is None
     assert await store.get(key) is None
+    replay = await runtime.run(
+        attr, facts=RoutingFacts(needs_ai=False), sources=(), idempotency_key=key
+    )
+    assert replay.outcome is OpenAIRunOutcome.NO_AI
     assert transport.calls == []
 
 
@@ -374,10 +386,10 @@ async def test_same_key_concurrent_reader_cannot_finalize_owners_run(
     concurrent = await runtime.run(
         attr, facts=RoutingFacts(needs_ai=True), sources=(source,), idempotency_key=key
     )
-    assert concurrent.outcome is OpenAIRunOutcome.UNCERTAIN
+    assert concurrent.outcome is OpenAIRunOutcome.RECOVERING
     pending = await store.get(key)
     assert pending is not None
-    assert pending.outcome is OpenAIRunOutcome.READY
+    assert pending.outcome is OpenAIRunOutcome.RECOVERING
     release.set()
     completed = await owner
     assert completed.outcome is OpenAIRunOutcome.SUCCEEDED
