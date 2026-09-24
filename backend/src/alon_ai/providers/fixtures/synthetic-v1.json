@@ -1,0 +1,24 @@
+{
+  "schema_version": 1,
+  "fixture_id": "synthetic-provider-v1",
+  "source_kind": "SYNTHETIC",
+  "license": "TEST_ONLY_SYNTHETIC",
+  "description": "Invented offline contract examples. No provider responses, real organizations, source content, credentials or account entitlement.",
+  "content": {
+    "OPENAI_GENERATE": {"TEXT": ["Synthetic generated answer"]},
+    "BRAVE_WEB_COVERAGE": {"URL": ["https://example.test"], "TEXT": ["Synthetic search coverage"], "TITLE": ["Synthetic organization"]},
+    "BRAVE_LOCAL_DISCOVERY": {"URL": ["https://example.test"], "EMAIL": ["synthetic@example.test"], "TEXT": ["Synthetic local business"]},
+    "BRAVE_COMPANY_DISCOVERY": {"URL": ["https://example.test"], "EMAIL": ["synthetic@example.test"], "TEXT": ["Synthetic online company"]},
+    "FIRECRAWL_MAP": {"URL": ["https://example.test/about"], "TEXT": ["Synthetic site map"]},
+    "FIRECRAWL_PAGE_CAPTURE": {"TEXT": ["Synthetic deterministic page capture"]},
+    "FIRECRAWL_PDF_CAPTURE": {"TEXT": ["Synthetic deterministic PDF capture"]},
+    "FIRECRAWL_JS_RETRIEVAL": {"TEXT": ["Synthetic deterministic JavaScript page capture"]},
+    "HUNTER_DOMAIN_SEARCH": {"EMAIL": ["synthetic@example.test"], "TEXT": ["Synthetic domain search"]},
+    "HUNTER_EMAIL_FINDER": {"EMAIL": ["synthetic@example.test"], "TEXT": ["Synthetic email finder"]},
+    "HUNTER_COMPANY_ENRICHMENT": {"COMPANY": ["Synthetic company"], "TEXT": ["Synthetic company enrichment"]},
+    "HUNTER_PERSON_ENRICHMENT": {"EMAIL": ["synthetic@example.test"], "TEXT": ["Synthetic person enrichment"]},
+    "HUNTER_EMAIL_VERIFICATION": {"TEXT": ["VALID"]},
+    "GMAIL_READ": {"MESSAGE": ["Synthetic read-only mailbox message"], "TEXT": ["Synthetic mailbox read"]},
+    "GOOGLE_CALENDAR_READ": {"EVENT": ["Synthetic existing event"], "TEXT": ["Synthetic calendar read"]}
+  }
+}

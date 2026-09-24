@@ -27,6 +27,7 @@ test-results/
 blob-report/
 
 # Local authentication material
+.local/
 *.key
 *.jks
 *.keystore

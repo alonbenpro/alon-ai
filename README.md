@@ -1,100 +1,69 @@
 # Alon AI
 
-Alon AI is planned as a bounded autonomous sales-validation system for one operator: discover or accept an idea, research its market, design an authoritative offer, discover and qualify businesses, conduct evidence-backed email conversations and negotiation, book explicitly confirmed calls, evaluate checkpoints, and improve versioned global agent strategies.
+Alon AI is a private client-acquisition application for one operator. The intended journey runs from idea refinement and market research through an accepted offer, qualified leads, evidence-backed outreach, and an operator-owned invoice, demo or confirmed meeting handoff.
 
-## Foundation status
+[Founder OS](https://www.notion.so/3d6caf700cba81a7a26bcb3b258f6ee1), its [Active Roadmap](https://app.notion.com/p/3d6caf700cba81dbb43fd57b1e534684) and Lean Build Tasks are the sole current planning authority. Follow the lowest-order eligible task and its acceptance checks. GitHub records implemented code and verification evidence.
 
-This repository is a foundation, not the finished product. It currently proves a Next.js dashboard, FastAPI API, PostgreSQL-backed readiness, a separately runnable worker boundary, generated API types, migrations, and guarded Gmail-sending contracts.
+## What is implemented
 
-It **does not** send production outreach, implement Gmail OAuth/adapter/history sync, run the planned durable product workflows, call production model/discovery/enrichment providers, deploy the planned VPS, or prove real demand. Roadmap documents are implementation plans, not implementation evidence.
+- FastAPI liveness and PostgreSQL-backed readiness endpoints, typed configuration and structured request logging.
+- A Next.js foundation page with API/database status, generated OpenAPI types and TanStack Query.
+- A separately runnable worker process that logs startup and waits for termination. It does **not** execute DBOS workflows yet.
+- Reviewed PostgreSQL migrations for provider governance and bounded campaign supply, with real database concurrency and replay tests.
+- Encrypted consumer-scoped secrets, capability/usage-grant checks, offline provider adapters, and durable native-currency/ILS reservations, reconciliation, quotas and circuit state.
+- Fixed 50/100/3 supply rules, evidence-backed retry feedback, contactability-first admission and atomic stopping of untouched paid supply work.
+- Initial product records for immutable experiment/idea artifacts and seeded research lineage, with exact input references, guarded acceptance and conflicting-retry detection.
+- Deterministic outbound authorization/idempotency contracts tested with fake providers, plus an offline experiment-brief validator.
+- Locked dependencies, unit and PostgreSQL integration tests, container definitions and GitHub Actions checks.
 
-[Founder OS](https://www.notion.so/3d6caf700cba81a7a26bcb3b258f6ee1) is the sole authority for current roadmap tasks, specifications, dependencies, milestones, and acceptance gates. The repository [development roadmap](docs/development-roadmap/README.md), generated artifacts, validator, tests, and planning history are retained as a non-authoritative reference snapshot; GitHub remains authoritative for implemented code and retained implementation evidence.
+Remaining product records, durable workflows, shared AI execution, live research/offer generation, lead acquisition, Gmail/Calendar integrations, learning and deployment remain work for their owning Notion tasks. Installed DBOS and Pydantic AI packages are not proof that these capabilities exist. A local research prototype is separate from accepted product research and does not complete L07 or L08.
 
-Terms such as “canonical,” “authoritative,” and “governing” inside the retained roadmap snapshot describe its historical source semantics and do not override Founder OS.
+See the [L01 baseline evidence](docs/implementation/l01-baseline.md) for the audited source scope, exact results and remaining gaps.
 
-## Cost-first pre-revenue strategy
+## Local development
 
-The roadmap intentionally minimizes spend before meetings and revenue justify scale:
+Use Python 3.13, uv 0.11.26, Node 24 with npm, and a working Docker engine with Compose. PostgreSQL 18 runs in the local container. Exact application package versions are retained in `backend/uv.lock` and `frontend/package-lock.json`.
 
-- **Automated discovery:** Brave Place Search is the only planned v1 automated place/business discovery source. Instagram, TikTok, Google Maps and other social/directory sources are not automated scraping targets. Social/public profiles may be attached only as manually reviewed evidence.
-- **Model routing:** deterministic code first; Nano for structured extraction/initial scoring; Mini only after shortlist/preliminary qualification; Premium default-denied unless an exact operator approval authorizes the run/config/spend; non-urgent eligible research uses Batch processing.
-- **Infrastructure:** one provider-neutral **2-vCPU / 4-GB Linux VPS**, Cloudflare Tunnel + Access for private operator ingress, encrypted local state, and application-encrypted Cloudflare R2 backups with clean-host restore evidence. Managed KMS, multi-cloud backup witnesses, 160-GB dedicated disks and enterprise hardening are post-revenue upgrade paths, not M8 prerequisites.
-- **Launch:** `SHADOW -> REVIEW_20 -> QUALIFIED_50 -> SCALE_100_TO_300`. The 20-business stage is manually reviewed; the 50-business stage contains final-qualified businesses; scale is one explicit operator-signed 100–300 tranche only when meetings plus revenue/paid-commitment or strong contribution economics justify it. The pre-revenue program has no larger automatic population stage.
-
-Every real stage/tranche closes with exactly `CONTINUE`, `REVISE`, `KILL`, `INCONCLUSIVE`, or `SAFETY_STOP`. `CONTINUE` does not itself authorize a larger population. Strategy learning is checkpoint-only; weak evidence yields no mutation; a running stage/tranche never changes strategy halfway through its membership set.
-
-## Preserved authority and safety boundaries
-
-`OfferPackage` is the sole downstream commercial authority. `CommercialPolicyEngine` deterministically enforces pricing, margin, scope, payment and claim boundaries. `ActionAuthorizationService` binds exact action/content/recipient/thread/stage/offer/strategy/policy/commercial facts before a side effect.
-
-`SendGateway` alone invokes Gmail writes. Ambiguous provider outcomes remain quarantined/reconciled and are never blindly retried. Gmail history/Sent reconciliation uses a separate read boundary.
-
-`BookingGateway` alone creates/reschedules/cancels calendar events after qualified intent and explicit timezone-aware slot confirmation. Provider ambiguity is reconciled before retry.
-
-Inbound replies stop the cold sequence. Eligible positive/questions/objections may continue inside bounded conversation policy; a rejection closes persuasion; durable suppression requires independently evidenced opt-out/complaint/bounce/legal triggers.
-
-Global learning consumes immutable closed-checkpoint evidence. `SHADOW` may support offline evaluation but is not real-demand evidence. Promotion/rollback remains versioned, measurable, reversible and boundary-only.
-
-## Architecture
-
-```mermaid
-flowchart LR
-    Dashboard["Next.js dashboard"] --> API["FastAPI API"]
-    API --> DB[("PostgreSQL")]
-    Worker["Separate worker"] --> DB
-    API --> Policy["Deterministic policy/services"]
-    Worker --> Providers["Provider abstractions"]
-```
-
-FastAPI owns business/API contracts; Next.js is the private operator dashboard; PostgreSQL is the system of record; API and worker are separate processes from one Python package. The detailed boundaries live in [docs/architecture.md](docs/architecture.md) and the vertical roadmap.
-
-## Stack
-
-- Python 3.13, uv, FastAPI, Pydantic v2, SQLAlchemy async, Psycopg 3, Alembic, Ruff, Pyright, pytest
-- PostgreSQL 18
-- DBOS as the selected initial durable-workflow runtime, subject to mandatory M1 acceptance; Temporal is the mandatory fallback after a disqualifying result
-- Pydantic AI/Evals for planned typed agent execution/evaluation
-- Next.js App Router, TypeScript, TanStack Query, `openapi-fetch`, Tailwind, ESLint, Vitest
-- Docker Compose locally and GitHub Actions for CI
-
-Exact dependency versions live in lockfiles.
-
-## Repository layout
-
-```text
-backend/                  FastAPI, worker, database, provider, policy, and workflow boundaries
-frontend/                 Next.js dashboard and generated OpenAPI declarations
-infra/compose.yaml        Local PostgreSQL/API/worker/frontend topology
-docs/architecture.md      Current architecture and intended guarded side-effect design
-docs/development-roadmap/ Authoritative vertical M0-M9 implementation roadmap
-docs/superpowers/specs/   Approved design records
-docs/engineering/         Engineering workflows and Graphify guidance
-docs/runbooks/            Local operating guidance
-.github/workflows/ci.yml  Backend, frontend, container and security checks
-```
-
-## Development and checks
+From the repository root:
 
 ```sh
 make setup
-make roadmap
+make dev
+```
+
+`make dev` starts PostgreSQL, runs Alembic, then builds and starts API, worker and frontend. Open [the local dashboard](http://localhost:3000). API liveness is at [health/live](http://localhost:8000/health/live) and database readiness at [health/ready](http://localhost:8000/health/ready). All published ports bind to loopback. Outreach is disabled and the Compose stack receives no provider credentials. This local topology is not production authentication.
+
+If an existing PostgreSQL server owns port 5432, use `ALON_AI_POSTGRES_PORT=55432 make dev`. Do not stop or replace the existing database. `make down` stops this Compose stack without deleting its volume.
+
+The [local development runbook](docs/runbooks/local-development.md) covers Docker/Colima, host processes, environment variables, migrations, integration tests and troubleshooting.
+
+## Checks
+
+```sh
 make generate
 make lint
 make typecheck
 make test
 make build
+make containers
 ```
 
-`make roadmap` validates inline roadmap metadata and generated execution artifacts. Generated roadmap files do **not** prove implementation status.
+`make test` runs offline unit/frontend tests. For the real database test, supply `ALON_AI_DATABASE_URL` and run `make test-integration`; see the runbook. Generated OpenAPI files must stay consistent with the API.
 
-## Mandatory DBOS production-acceptance spike
+## Architecture and execution boundaries
 
-DBOS selection does not authorize outreach. The isolated M1 harness must prove stable send idempotency/attempt ledgers, zero uncontrolled duplicate sends through crash points, quarantined ambiguous outcomes, cancellation/pause/resume behavior, workflow versioning, correlated observability and rate-limit enforcement using only operator-owned test inboxes.
+The codebase is one modular application: a FastAPI backend and worker share Python services and PostgreSQL; Next.js consumes server-owned contracts. The selected future runtime is DBOS with Pydantic AI and OpenAI Responses. Logical product agents are roles within that application, not separately deployed services.
 
-Any disqualifying restart/cancellation/ambiguity/duplicate/versioning/observability/operator-control/rate-limit failure forces migration to Temporal before product workflow work continues.
+Future integrations must preserve deterministic acceptance, commercial limits, source rights, contact-history exclusion, suppression, budgets, idempotency and recovery. SendGateway owns Gmail writes; BookingGateway owns Calendar writes. Current thresholds and release gates are defined by Founder OS. A passing test does not grant real-send authority.
 
-## Roadmap
+## Layout
 
-The [development roadmap](docs/development-roadmap/README.md) is retained for reference. Follow the current task, dependency order, and executable frontier in [Founder OS](https://www.notion.so/3d6caf700cba81a7a26bcb3b258f6ee1); planning documents do not establish implementation completion or provider/legal/live-send authority.
-
-The reference execution graph is preserved in [execution-manifest.json](docs/development-roadmap/execution-manifest.json), [EXECUTION_ORDER.md](docs/development-roadmap/EXECUTION_ORDER.md), and [AGENT_EXECUTION_PLAN.md](docs/development-roadmap/AGENT_EXECUTION_PLAN.md). Current execution order and parallel dispatch requirements belong to Founder OS.
+```text
+backend/                  API, worker, provider/policy boundaries and tests
+frontend/                 Next.js UI and generated API contracts
+infra/compose.yaml        Loopback-only local stack
+scripts/                  Contract generation and maintenance commands
+.github/workflows/ci.yml  Application, security and container checks
+docs/implementation/      Retained verification evidence
+docs/runbooks/            Reproducible operating instructions
+```

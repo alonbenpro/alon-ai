@@ -11,4 +11,7 @@ def test_worker_startup_event_reports_worker_and_disabled_outreach() -> None:
         "event": "worker_ready",
         "service": "worker",
         "outreach_enabled": False,
+        "dbos_application": "alon-ai-worker",
+        "dbos_application_version": "l04-market-research-v1",
+        "dbos_executor_id": "alon-ai-worker",
     }

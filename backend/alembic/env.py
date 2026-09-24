@@ -1,7 +1,7 @@
 import asyncio
 from logging.config import fileConfig
 
-from sqlalchemy import MetaData, pool
+from sqlalchemy import pool
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
@@ -11,13 +11,24 @@ from alon_ai.config import get_settings
 config = context.config
 config.set_main_option(
     "sqlalchemy.url",
-    get_settings().database_url.replace("%", "%%"),
+    get_settings().database_url.get_secret_value().replace("%", "%%"),
 )
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
-target_metadata = MetaData()
+import alon_ai.contact as contact_schema  # noqa: F401
+import alon_ai.records.schema as records_schema  # noqa: F401
+from alon_ai.accounting.schema import metadata as target_metadata
+from alon_ai.records import (
+    calibration_schema,  # noqa: F401
+    offer_schema,  # noqa: F401
+    organization_schema,  # noqa: F401
+    outreach_schema,  # noqa: F401
+    qualification_schema,  # noqa: F401
+    readiness_schema,  # noqa: F401
+)
+from alon_ai.supply import schema as supply_schema  # noqa: F401
 
 
 def run_migrations_offline() -> None:

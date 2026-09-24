@@ -49,11 +49,16 @@ class RequestLoggingMiddleware:
             await self.app(scope, receive, send_with_request_id)
         finally:
             duration_ms = max(0, round((perf_counter() - started_at) * 1000))
+            # Pinned FastAPI includes preserve original routes; effective context
+            # supplies the trusted template including router prefixes.
+            route = scope.get("fastapi", {}).get("effective_route_context")
+            if route is None:
+                route = scope.get("route")
             self.logger.info(
                 "http_request_completed",
                 service="api",
                 method=scope["method"],
-                path=scope["path"],
+                path=getattr(route, "path", "<unmatched>"),
                 status=status,
                 duration_ms=duration_ms,
             )

@@ -7,7 +7,11 @@ from alon_ai.config import Settings
 
 
 def create_engine(settings: Settings) -> AsyncEngine:
-    return create_async_engine(settings.database_url, pool_pre_ping=True)
+    return create_async_engine(
+        settings.database_url.get_secret_value(),
+        pool_pre_ping=True,
+        hide_parameters=True,
+    )
 
 
 class DatabaseHealthChecker:

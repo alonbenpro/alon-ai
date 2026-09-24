@@ -21,7 +21,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:18
+        image: postgres:18@sha256:4ef4dbc939d61acea57712655ddb4b4ab27419c913f94cca0cd57cb3ea3c2280
         env:
           POSTGRES_DB: alon_ai
           POSTGRES_USER: alon_ai
@@ -39,8 +39,6 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Validate executable roadmap
-        run: python3 scripts/validate_roadmap.py --check
       - uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1
         with:
           python-version: "3.13"
@@ -103,7 +101,7 @@ jobs:
         run: docker compose --env-file .env.example -f infra/compose.yaml build api worker frontend
       - name: Migrate and smoke-test the running stack
         env:
-          ALON_AI_ENVIRONMENT: production
+          ALON_AI_ENVIRONMENT: test
         run: |
           set -Eeuo pipefail
 
@@ -122,6 +120,7 @@ jobs:
           trap cleanup EXIT
 
           "${compose[@]}" run --rm api alembic upgrade head
+          "${compose[@]}" run --rm worker dbos migrate --sys-db-url postgresql://alon_ai:alon_ai@postgres:5432/alon_ai --schema dbos
           "${compose[@]}" up --detach --no-build --wait --wait-timeout 180
 
           curl --fail --silent --show-error http://127.0.0.1:8000/health/live |
