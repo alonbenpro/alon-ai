@@ -36,6 +36,8 @@ export function StatusOverview({ initial }: { initial: StatusProjection | null }
     return () => window.clearInterval(timer);
   }, [refresh]);
 
+  const current = stale ? null : projection;
+
   return (
     <section className="panel system-panel" id="system" aria-labelledby="system-heading">
       <div className="panel-heading">
@@ -44,17 +46,17 @@ export function StatusOverview({ initial }: { initial: StatusProjection | null }
       </div>
       {stale && <div className="inline-notice" role="status"><StatusPill state="stale" /> Status could not be refreshed.</div>}
       <div className="system-state-grid">
-        <div className="system-state"><span>API health</span><StatusPill state={projection?.health.status === "ok" ? "ready" : "unknown"} label={projection?.health.status === "ok" ? "Online" : "Unknown"} /></div>
-        <div className="system-state"><span>Readiness</span><StatusPill state={projection?.readiness.status ?? "unknown"} /></div>
+        <div className="system-state"><span>API health</span><StatusPill state={current?.health.status === "ok" ? "ready" : "unknown"} label={current?.health.status === "ok" ? "Online" : "Unknown"} /></div>
+        <div className="system-state"><span>Readiness</span><StatusPill state={current?.readiness.status ?? "unknown"} /></div>
       </div>
-      <div className="workload-heading"><span>Recorded work</span><span>Current projection</span></div>
+      <div className="workload-heading"><span>Recorded work</span><span>{current ? "Current projection" : "Projection unavailable"}</span></div>
       <div className="workload-content">
         <div className="workload-grid" aria-label="Activity counts">
-          {sequence.map((state) => <div className="workload-cell" key={state}><span>{state}</span><strong>{projection ? projection.counts[state] : "—"}</strong></div>)}
+          {sequence.map((state) => <div className="workload-cell" key={state}><span>{state}</span><strong>{current ? current.counts[state] : "—"}</strong></div>)}
         </div>
-        {projection && <ActivitySignal counts={projection.counts} />}
+        {current && <ActivitySignal counts={current.counts} />}
       </div>
-      {!projection && <p className="status-explanation">No status projection is available. Counts remain unknown until the server responds.</p>}
+      {!current && <p className="status-explanation">No current status projection is available. Counts remain unknown until the server responds.</p>}
     </section>
   );
 }

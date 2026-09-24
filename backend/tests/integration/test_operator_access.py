@@ -4,6 +4,7 @@ import asyncio
 import os
 import subprocess
 import sys
+import threading
 import time
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
@@ -17,7 +18,7 @@ from starlette.requests import Request
 from test_governance import reserve, seed
 
 from alon_ai.api.app import create_app
-from alon_ai.api.auth import COOKIE_NAME, AuthService, hash_password
+from alon_ai.api.auth import COOKIE_NAME, AuthService, LoginRateLimited, hash_password
 from alon_ai.api.routes import operator as operator_routes
 from alon_ai.config import Settings
 
@@ -177,7 +178,7 @@ async def test_tampered_cookie_is_denied(governance_engine):
         assert client.get("/operator/status").status_code == 401
 
 
-async def test_login_throttle_bounds_scrypt_and_does_not_block_event_loop(
+async def test_login_failures_delay_but_do_not_lock_out_correct_credentials(
     governance_engine, monkeypatch
 ):
     app, _ = await _app(governance_engine)
@@ -205,19 +206,67 @@ async def test_login_throttle_bounds_scrypt_and_does_not_block_event_loop(
                 ).status_code
                 == 401
             )
-        assert (
-            client.post(
-                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
-            ).status_code
-            == 429
+        before = time.monotonic()
+        pending = asyncio.create_task(service.login("still-wrong"))
+        await asyncio.sleep(0.02)
+        assert time.monotonic() - before < 0.15
+        assert await pending is None
+        assert time.monotonic() - before >= 2
+        before = time.monotonic()
+        response = client.post(
+            "/auth/login", json={"password": "test-password"}, headers=ORIGIN
         )
-        assert client.get("/auth/session").status_code == 401
+        assert response.status_code == 200
+        assert time.monotonic() - before >= 2
+        assert client.get("/auth/session").status_code == 200
     async with governance_engine.connect() as connection:
         assert (
             await connection.execute(
                 text("SELECT count(*) FROM operator_login_failures")
             )
-        ).scalar_one() == 5
+        ).scalar_one() == 6
+
+
+async def test_concurrent_login_burst_is_rejected_without_queuing_password_work(
+    governance_engine, monkeypatch
+):
+    app, _ = await _app(governance_engine)
+    service = AuthService(governance_engine, app.state.settings)
+    other_service = AuthService(governance_engine, app.state.settings)
+    from alon_ai.api import auth as auth_module
+
+    original = auth_module._password_matches
+    started = threading.Event()
+    release = threading.Event()
+
+    def held_password_check(password: str, verifier: str) -> bool:
+        started.set()
+        assert release.wait(timeout=5)
+        return original(password, verifier)
+
+    monkeypatch.setattr(auth_module, "_password_matches", held_password_check)
+    pending = asyncio.create_task(service.login("test-password"))
+    try:
+        assert await asyncio.to_thread(started.wait, 2)
+        results = await asyncio.wait_for(
+            asyncio.gather(
+                *(other_service.login("wrong") for _ in range(8)),
+                return_exceptions=True,
+            ),
+            timeout=1,
+        )
+        assert all(isinstance(result, LoginRateLimited) for result in results)
+    finally:
+        release.set()
+        result = await pending
+    assert result is not None
+    assert await service.resolve(result[0]) is not None
+    async with governance_engine.connect() as connection:
+        assert (
+            await connection.execute(
+                text("SELECT count(*) FROM operator_login_failures")
+            )
+        ).scalar_one() == 0
 
 
 async def test_expired_session_and_immutable_session_history(governance_engine):

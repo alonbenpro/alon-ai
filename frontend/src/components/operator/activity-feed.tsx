@@ -1,13 +1,28 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { StatusPill } from "@/components/operator/status-pill";
-import { parseActivity, type ActivityProjection } from "@/lib/operator/types";
+import { parseActivity, type ActivityItem, type ActivityProjection } from "@/lib/operator/types";
 
 export function ActivityFeed({ initial }: { initial: ActivityProjection | null }) {
   const [projection, setProjection] = useState(initial);
   const [connection, setConnection] = useState<"connecting" | "live" | "polling" | "stale">("connecting");
+  const [selected, setSelected] = useState<ActivityItem | null>(null);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (selected && dialogRef.current && !dialogRef.current.open) {
+      dialogRef.current.showModal();
+      dialogRef.current.querySelector<HTMLButtonElement>("button")?.focus();
+    }
+  }, [selected]);
+
+  const closeDetails = () => {
+    setSelected(null);
+    triggerRef.current?.focus();
+  };
 
   const refresh = useCallback(async () => {
     try {
@@ -92,10 +107,23 @@ export function ActivityFeed({ initial }: { initial: ActivityProjection | null }
                 <div className="activity-item__top"><span className="activity-kind">{item.kind}</span><StatusPill state={item.state} /></div>
                 <p>{item.label}</p>
                 <time dateTime={item.occurred_at}>{formatUtc(item.occurred_at)}</time>
+                <button className="activity-detail-trigger" type="button" aria-label={`View details for ${item.label}`} onClick={(event) => { triggerRef.current = event.currentTarget; setSelected(item); }}>View details <span aria-hidden="true">↗</span></button>
               </div>
             </li>
           ))}
         </ol>
+      )}
+      {selected && (
+        <dialog ref={dialogRef} className="activity-drawer" aria-modal="true" aria-labelledby="activity-details-title" onCancel={(event) => { event.preventDefault(); closeDetails(); }} onKeyDown={(event) => { if (event.key === "Escape") { event.preventDefault(); closeDetails(); } }}>
+          <div className="activity-drawer__heading"><div><p className="eyebrow">Server activity</p><h3 id="activity-details-title">Activity details</h3></div><button type="button" onClick={closeDetails} aria-label="Close details">Close <span aria-hidden="true">×</span></button></div>
+          <p className="activity-drawer__label">{selected.label}</p>
+          <dl className="activity-drawer__fields">
+            <div><dt>State</dt><dd><StatusPill state={selected.state} /></dd></div>
+            <div><dt>Kind</dt><dd>{selected.kind}</dd></div>
+            <div><dt>Recorded at</dt><dd><time dateTime={selected.occurred_at}>{formatUtc(selected.occurred_at)}</time></dd></div>
+            <div><dt>Activity ID</dt><dd>{selected.id}</dd></div>
+          </dl>
+        </dialog>
       )}
     </section>
   );

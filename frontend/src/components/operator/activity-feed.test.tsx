@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { ActivityFeed } from "@/components/operator/activity-feed";
@@ -17,7 +17,7 @@ class TestEventSource {
 }
 
 beforeEach(() => { vi.stubGlobal("EventSource", TestEventSource); });
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); });
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); Reflect.deleteProperty(HTMLDialogElement.prototype, "showModal"); });
 
 describe("ActivityFeed", () => {
   it("keeps the unknown state explicit when the projection is absent", () => {
@@ -54,5 +54,29 @@ describe("ActivityFeed", () => {
     TestEventSource.current.emit("activity");
     await waitFor(() => expect(screen.getByText("Research completed")).toBeInTheDocument());
     expect(fetch).toHaveBeenCalledWith("/api/operator/activity", { cache: "no-store" });
+  });
+
+  it("opens a keyboard-accessible read-only drawer with sanitized activity fields", () => {
+    const trigger = "Research completed";
+    const showModal = vi.fn(function (this: HTMLDialogElement) { this.open = true; });
+    Object.defineProperty(HTMLDialogElement.prototype, "showModal", { configurable: true, value: showModal });
+    render(<ActivityFeed initial={{ cursor: null, items: [{ id: "item-1", kind: "research", state: "completed", label: trigger, occurred_at: "2026-09-23T10:00:00Z", evidence_text: "private evidence" }] } as unknown as ActivityProjection} />);
+    const button = screen.getByRole("button", { name: /view details for research completed/i });
+    button.focus();
+    fireEvent.click(button);
+
+    const drawer = screen.getByRole("dialog", { name: "Activity details" });
+    expect(showModal).toHaveBeenCalledOnce();
+    expect(drawer).toHaveAttribute("aria-modal", "true");
+    expect(within(drawer).getByText(trigger)).toBeInTheDocument();
+    expect(within(drawer).getByText("item-1")).toBeInTheDocument();
+    expect(within(drawer).getByText("2026-09-23 10:00 UTC")).toBeInTheDocument();
+    expect(within(drawer).queryByRole("textbox")).not.toBeInTheDocument();
+    expect(within(drawer).queryByText("private evidence")).not.toBeInTheDocument();
+    expect(within(drawer).getByRole("button", { name: "Close details" })).toHaveFocus();
+
+    fireEvent.keyDown(drawer, { key: "Escape" });
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(button).toHaveFocus();
   });
 });

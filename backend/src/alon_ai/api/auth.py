@@ -20,12 +20,13 @@ SESSION_AGE = timedelta(hours=8)
 _SCRYPT_N = 16384
 _SCRYPT_R = 8
 _SCRYPT_P = 1
-_LOGIN_FAILURE_LIMIT = 5
+_LOGIN_DELAY_THRESHOLD = 5
+_LOGIN_DELAY_SECONDS = 2
 _LOGIN_WINDOW = timedelta(minutes=15)
 
 
 class LoginRateLimited(Exception):
-    """The configured operator's bounded login window is exhausted."""
+    """Another password check is already in progress."""
 
 
 def hash_password(password: str, *, salt: bytes | None = None) -> str:
@@ -131,7 +132,14 @@ class AuthService:
         if not self.configured or self.verifier is None or self.subject is None:
             return None
         async with self.engine.begin() as connection:
-            await connection.execute(text("SELECT pg_advisory_xact_lock(590006)"))
+            # Fail fast across API workers instead of queueing password work.
+            acquired = (
+                await connection.execute(
+                    text("SELECT pg_try_advisory_xact_lock(590006)")
+                )
+            ).scalar_one()
+            if not acquired:
+                raise LoginRateLimited
             now = datetime.now(UTC)
             failures = (
                 await connection.execute(
@@ -140,8 +148,11 @@ class AuthService:
                     {"subject": self.subject, "since": now - _LOGIN_WINDOW},
                 )
             ).scalar_one()
-            if failures >= _LOGIN_FAILURE_LIMIT:
-                raise LoginRateLimited
+            if failures >= _LOGIN_DELAY_THRESHOLD:
+                # Pace checks under the shared lock, but still evaluate correct
+                # credentials: outsiders must not create a persistent lockout.
+                await asyncio.sleep(_LOGIN_DELAY_SECONDS)
+                now = datetime.now(UTC)
             valid_password = await asyncio.to_thread(
                 _password_matches, password, self.verifier
             )
