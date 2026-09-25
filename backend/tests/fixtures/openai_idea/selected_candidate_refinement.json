@@ -52,8 +52,10 @@
     },
     {
       "id": "CANDIDATE.DEMAND_UNVERIFIED",
-      "kind": "uncertainty_contains",
-      "expected": "Small-clinic demand and workflow pain are unverified",
+      "kind": "uncertainties_equal",
+      "expected": [
+        "Small-clinic demand and workflow pain are unverified"
+      ],
       "basis": "The first-party idea record and operator profile do not establish customer demand or workflow pain."
     },
     {
@@ -91,6 +93,50 @@
     }
   ],
   "adversarial": [
+    {
+      "id": "appended_unsupported_title_assertion",
+      "changes": {
+        "title": "Synthetic clinic scheduling backend. We have 100 paying clinic customers"
+      },
+      "violates": [
+        "CANDIDATE.TITLE"
+      ]
+    },
+    {
+      "id": "appended_unsupported_uncertainty_assertion",
+      "changes": {
+        "uncertainties": [
+          "Small-clinic demand and workflow pain are unverified. We have 100 paying clinic customers"
+        ]
+      },
+      "violates": [
+        "CANDIDATE.DEMAND_UNVERIFIED"
+      ]
+    },
+    {
+      "id": "appended_unsupported_assertion",
+      "changes": {
+        "uncertainties": [
+          "Small-clinic demand and workflow pain are unverified",
+          "We have 100 paying clinic customers"
+        ]
+      },
+      "violates": [
+        "CANDIDATE.DEMAND_UNVERIFIED"
+      ]
+    },
+    {
+      "id": "appended_contradiction",
+      "changes": {
+        "uncertainties": [
+          "Small-clinic demand and workflow pain are unverified",
+          "Buyer demand is proven"
+        ]
+      },
+      "violates": [
+        "CANDIDATE.DEMAND_UNVERIFIED"
+      ]
+    },
     {
       "id": "unsupported_customer",
       "changes": {

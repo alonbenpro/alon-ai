@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import StrEnum
@@ -74,6 +74,9 @@ class OpenAIProfile:
     reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"]
     max_output_tokens: int
     timeout_seconds: int = 60
+    output_validator: Callable[[StrictDTO, str], None] | None = field(
+        default=None, repr=False, compare=False
+    )
     _schema_json: str = field(init=False, repr=False)
 
     def __post_init__(self) -> None:
@@ -86,6 +89,8 @@ class OpenAIProfile:
             or not 1 <= self.timeout_seconds <= 3600
             or not _strict_schema(dict(self.json_schema))
             or not issubclass(self.output_model, StrictDTO)
+            or self.output_validator is not None
+            and not callable(self.output_validator)
         ):
             raise ValueError("invalid immutable OpenAI profile")
         # An owned copy prevents a caller mutating a provisioned schema after review.

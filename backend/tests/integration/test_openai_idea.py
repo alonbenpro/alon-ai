@@ -886,3 +886,58 @@ async def test_superseded_seed_during_reservation_denies_dispatch(governance_eng
     assert result.output is None
     assert result.receipt is not None and result.receipt.accrued == 0
     assert transports[IdeaStage.USER_SEEDED_REFINEMENT].calls == []
+
+
+@pytest.mark.integration
+async def test_newer_seed_version_during_reservation_denies_dispatch(
+    governance_engine,
+):
+    service, attribution, product, transports = await setup_idea(governance_engine, {})
+    draft = artifact(
+        attribution.experiment_id,
+        ArtifactKind.IDEA_SEED,
+        {"origin": "USER_SUPPLIED", "statement": "Reduce clinic admin time"},
+    )
+    seed_receipt = await product.append_artifact(draft, command_key=uuid4())
+    seed_ref = ArtifactInput.from_receipt(seed_receipt, role="SEED")
+    cycle = await product.create_cycle(
+        attribution.experiment_id, seed=seed_ref, command_key=uuid4()
+    )
+    runtime = service.runtimes[IdeaStage.USER_SEEDED_REFINEMENT]
+    reserve = runtime.repository.reserve
+    entered, release = asyncio.Event(), asyncio.Event()
+
+    async def paused_reserve(*args, **kwargs):
+        receipt = await reserve(*args, **kwargs)
+        entered.set()
+        await release.wait()
+        return receipt
+
+    runtime.repository.reserve = paused_reserve
+    task = asyncio.create_task(
+        service.refine_cycle(
+            attribution,
+            cycle_id=cycle.id,
+            facts=RoutingFacts(needs_ai=True),
+            idempotency_key=uuid4(),
+        )
+    )
+    try:
+        await asyncio.wait_for(entered.wait(), 5)
+        await product.append_artifact(
+            artifact(
+                attribution.experiment_id,
+                ArtifactKind.IDEA_SEED,
+                {"origin": "USER_SUPPLIED", "statement": "Newer clinic brief"},
+                logical_id=draft.logical_id,
+                version=2,
+            ),
+            inputs=(seed_ref.model_copy(update={"role": "SUPERSEDES"}),),
+            command_key=uuid4(),
+        )
+    finally:
+        release.set()
+    result = await task
+    assert result.output is None
+    assert result.receipt is not None and result.receipt.accrued == 0
+    assert transports[IdeaStage.USER_SEEDED_REFINEMENT].calls == []

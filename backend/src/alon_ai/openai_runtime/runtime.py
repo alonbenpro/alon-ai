@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import json
 from collections.abc import Mapping
+from contextlib import AsyncExitStack
 from dataclasses import dataclass, field
 from datetime import datetime
 from decimal import ROUND_CEILING, Decimal, localcontext
@@ -15,6 +16,7 @@ from pydantic import SecretStr
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from alon_ai.accounting import schema as gov_schema
 from alon_ai.accounting.models import (
     CallReceipt,
     CallState,
@@ -34,6 +36,7 @@ from alon_ai.openai_runtime.contract import (
     classify_response,
     sha256,
 )
+from alon_ai.openai_runtime.market import MarketResearchAdvice
 from alon_ai.openai_runtime.store import (
     OpenAIRunConflict,
     OpenAIRunIntent,
@@ -46,6 +49,7 @@ from alon_ai.providers.contracts import (
     AgentActor,
     CallAttribution,
     Capability,
+    ContentField,
     CostKnowledge,
     ProviderCallResult,
     ProviderErrorCode,
@@ -57,9 +61,16 @@ from alon_ai.providers.contracts import (
     UsageObservation,
 )
 from alon_ai.providers.execution import GovernedExecutor
-from alon_ai.providers.rights import GrantEvent, ProviderUsageGrant, RuntimeContent
+from alon_ai.providers.rights import (
+    GrantEvent,
+    IntendedUse,
+    ProviderUsageGrant,
+    RightsMode,
+    RuntimeContent,
+    evaluate_rights,
+)
 from alon_ai.records import schema as record_schema
-from alon_ai.records.models import ArtifactInput, ArtifactKind
+from alon_ai.records.models import ArtifactInput, ArtifactKind, SourceReference
 from alon_ai.security.secrets import SecretStore
 
 
@@ -93,6 +104,29 @@ class AcceptedOperatorProfile:
     content_hash: str
     experiment_id: UUID
     profile_schema_version: int = 2
+
+
+@dataclass(frozen=True)
+class AcceptedRetainedEvidence:
+    """An exact persisted source row, not caller-provided evidence text."""
+
+    reference: SourceReference
+
+
+def _require_market_inputs(
+    profile: OpenAIProfile,
+    sources: tuple[AcceptedSource, ...],
+    artifacts: tuple[AcceptedArtifact, ...],
+    operator_profiles: tuple[AcceptedOperatorProfile, ...],
+) -> None:
+    if profile.output_model is MarketResearchAdvice and (
+        sources
+        or operator_profiles
+        or len(artifacts) != 1
+        or artifacts[0].artifact.kind is not ArtifactKind.IDEA_BRIEF
+        or artifacts[0].artifact.role != "ACCEPTED_IDEA"
+    ):
+        raise PermissionError("Market synthesis requires one current accepted brief")
 
 
 @dataclass(frozen=True)
@@ -141,28 +175,67 @@ def _source_input(
     return canonical_json({"sources": scoped})
 
 
+def _current_retained_rights(
+    grant: ProviderUsageGrant,
+    candidates: tuple[ProviderUsageGrant, ...],
+    events: tuple[GrantEvent, ...],
+    field_name: str,
+    now: datetime,
+) -> bool:
+    try:
+        field = ContentField(field_name)
+    except ValueError:
+        return False
+    active = tuple(g for g in candidates if g.effective_at <= now < g.expires_at)
+    superseded = {g.supersedes_id for g in active if g.supersedes_id}
+    current = tuple(g for g in active if g.grant_id not in superseded)
+    use = IntendedUse(
+        provider=grant.provider,
+        account_handle=grant.account_handle,
+        capability=grant.capability,
+        plan_identifier=grant.plan_identifier,
+        order_form_ref=grant.order_form_ref,
+        terms_version=grant.terms_version,
+        purpose=grant.purpose,
+        required_fields=frozenset({field}),
+    )
+    return (
+        len(current) == 1
+        and current[0] == grant
+        and evaluate_rights(grant, events, use, now=now).mode
+        is RightsMode.RETAIN_SCOPED_CONTENT
+    )
+
+
 async def _accepted_input(
     engine: AsyncEngine,
     sources: tuple[AcceptedSource, ...],
     artifacts: tuple[AcceptedArtifact, ...],
     operator_profiles: tuple[AcceptedOperatorProfile, ...],
+    retained_evidence: tuple[AcceptedRetainedEvidence, ...],
     experiment_id: UUID,
     now: datetime,
     *,
     grants: Mapping[tuple[UUID, int], ProviderUsageGrant] | None = None,
     events: tuple[GrantEvent, ...] = (),
 ) -> str:
-    if not sources and not artifacts and not operator_profiles:
+    if (
+        not sources
+        and not artifacts
+        and not operator_profiles
+        and not retained_evidence
+    ):
         raise PermissionError("accepted input required")
     source_entries = (
         json.loads(_source_input(sources, now, grants, events))["sources"]
         if sources
         else []
     )
-    if not artifacts and not operator_profiles:
+    if not artifacts and not operator_profiles and not retained_evidence:
         return canonical_json({"sources": source_entries})
     entries = []
     profiles = []
+    retained_entries = []
     async with engine.connect() as connection:
         if len(operator_profiles) > 1:
             raise PermissionError("only one experiment profile is accepted")
@@ -215,8 +288,9 @@ async def _accepted_input(
             if accepted.experiment_id != experiment_id or ref.kind not in {
                 ArtifactKind.IDEA_SEED,
                 ArtifactKind.IDEA_CANDIDATE,
+                ArtifactKind.IDEA_BRIEF,
             }:
-                raise PermissionError("artifact is outside accepted idea inputs")
+                raise PermissionError("artifact is outside accepted first-party inputs")
             row = (
                 (
                     await connection.execute(
@@ -237,6 +311,13 @@ async def _accepted_input(
             if row is None:
                 raise PermissionError("accepted artifact identity changed")
             if await connection.scalar(
+                select(record_schema.artifacts.c.id).where(
+                    record_schema.artifacts.c.logical_id == row["logical_id"],
+                    record_schema.artifacts.c.version > row["version"],
+                )
+            ):
+                raise PermissionError("accepted artifact has a newer version")
+            if await connection.scalar(
                 select(record_schema.artifact_dispositions.c.id).where(
                     record_schema.artifact_dispositions.c.artifact_id
                     == ref.artifact_id,
@@ -244,17 +325,61 @@ async def _accepted_input(
                 )
             ):
                 raise PermissionError("accepted artifact was superseded")
-            if await connection.scalar(
-                select(record_schema.source_refs.c.id).where(
-                    record_schema.source_refs.c.artifact_id == ref.artifact_id
+            if ref.kind is not ArtifactKind.IDEA_BRIEF and (
+                await connection.scalar(
+                    select(record_schema.source_refs.c.id).where(
+                        record_schema.source_refs.c.artifact_id == ref.artifact_id
+                    )
                 )
-            ) or await connection.scalar(
-                select(record_schema.artifact_links.c.consumer_id).where(
-                    record_schema.artifact_links.c.consumer_id == ref.artifact_id
+                or await connection.scalar(
+                    select(record_schema.artifact_links.c.consumer_id).where(
+                        record_schema.artifact_links.c.consumer_id == ref.artifact_id
+                    )
                 )
             ):
                 raise PermissionError("artifact has external or linked inputs")
-            if ref.kind is ArtifactKind.IDEA_SEED:
+            if ref.kind is ArtifactKind.IDEA_BRIEF:
+                if accepted.cycle_id is None or accepted.selection_id is not None:
+                    raise PermissionError("research requires an accepted idea cycle")
+                accepted_cycle = await connection.scalar(
+                    select(record_schema.cycles.c.id)
+                    .select_from(
+                        record_schema.cycles.join(
+                            record_schema.idea_acceptances,
+                            record_schema.cycles.c.id
+                            == record_schema.idea_acceptances.c.cycle_id,
+                        )
+                    )
+                    .where(
+                        record_schema.cycles.c.id == accepted.cycle_id,
+                        record_schema.cycles.c.experiment_id == experiment_id,
+                        record_schema.idea_acceptances.c.artifact_id == ref.artifact_id,
+                        record_schema.idea_acceptances.c.artifact_kind == ref.kind,
+                        record_schema.idea_acceptances.c.artifact_version
+                        == ref.version,
+                        record_schema.idea_acceptances.c.artifact_hash
+                        == ref.content_hash,
+                        record_schema.cycles.c.id
+                        == select(record_schema.cycles.c.id)
+                        .where(record_schema.cycles.c.experiment_id == experiment_id)
+                        .order_by(record_schema.cycles.c.ordinal.desc())
+                        .limit(1)
+                        .scalar_subquery(),
+                    )
+                )
+                if accepted_cycle is None:
+                    raise PermissionError(
+                        "research idea is not the current accepted brief"
+                    )
+                state = await connection.scalar(
+                    select(record_schema.cycle_states.c.state).where(
+                        record_schema.cycle_states.c.cycle_id == accepted.cycle_id,
+                        record_schema.cycle_states.c.experiment_id == experiment_id,
+                    )
+                )
+                if state != "MARKET_RESEARCH":
+                    raise PermissionError("research cycle is not active")
+            elif ref.kind is ArtifactKind.IDEA_SEED:
                 operator_id = await connection.scalar(
                     select(record_schema.operator_profiles.c.operator_id)
                     .select_from(
@@ -336,8 +461,101 @@ async def _accepted_input(
                     "payload": row["payload"],
                 }
             )
+        if retained_evidence and not any(
+            item.artifact.kind is ArtifactKind.IDEA_BRIEF for item in artifacts
+        ):
+            raise PermissionError("retained research evidence requires accepted brief")
+        seen_retained: set[UUID] = set()
+        for item in retained_evidence:
+            ref = item.reference
+            if (
+                ref.kind != "RETAINED_CONTENT"
+                or ref.retained_id is None
+                or ref.call_id is None
+                or ref.grant_id is None
+                or ref.grant_version is None
+                or ref.field is None
+                or ref.expires_at is None
+                or ref.retained_id in seen_retained
+            ):
+                raise PermissionError("invalid retained evidence reference")
+            seen_retained.add(ref.retained_id)
+            row = (
+                (
+                    await connection.execute(
+                        select(
+                            gov_schema.retained,
+                            gov_schema.calls.c.experiment_id,
+                            gov_schema.calls.c.state,
+                        )
+                        .select_from(
+                            gov_schema.retained.join(
+                                gov_schema.calls,
+                                gov_schema.retained.c.call_id == gov_schema.calls.c.id,
+                            )
+                        )
+                        .where(
+                            gov_schema.retained.c.id == ref.retained_id,
+                            gov_schema.retained.c.call_id == ref.call_id,
+                            gov_schema.retained.c.grant_id == ref.grant_id,
+                            gov_schema.retained.c.grant_version == ref.grant_version,
+                            gov_schema.retained.c.field == ref.field,
+                            gov_schema.retained.c.expires_at == ref.expires_at,
+                            gov_schema.retained.c.expires_at > now,
+                            gov_schema.calls.c.experiment_id == experiment_id,
+                            gov_schema.calls.c.state == "FINAL",
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            grant = grants.get((ref.grant_id, ref.grant_version)) if grants else None
+            if row is None or grant is None:
+                raise PermissionError("retained evidence is missing or stale")
+            candidate_grants = tuple(
+                ProviderUsageGrant.model_validate_json(json.dumps(data, default=str))
+                for data in (
+                    await connection.execute(
+                        select(gov_schema.grants.c.data).where(
+                            gov_schema.grants.c.account == grant.account_handle,
+                            gov_schema.grants.c.capability == grant.capability,
+                        )
+                    )
+                ).scalars()
+            )
+            authority_enabled = await connection.scalar(
+                select(gov_schema.authorities.c.enabled).where(
+                    gov_schema.authorities.c.account == grant.account_handle,
+                    gov_schema.authorities.c.capability == grant.capability,
+                )
+            )
+            if authority_enabled is not True:
+                raise PermissionError("retained source authority is disabled")
+            if (
+                not _current_retained_rights(
+                    grant, candidate_grants, events, ref.field, now
+                )
+                or not isinstance(row["values"], list)
+                or not row["values"]
+                or any(not isinstance(value, str) for value in row["values"])
+            ):
+                raise PermissionError("retained evidence rights are not current")
+            retained_entries.append(
+                {
+                    "ref": str(ref.retained_id),
+                    "field": ref.field,
+                    "values": row["values"],
+                    "expires_at": ref.expires_at.isoformat(),
+                }
+            )
     return canonical_json(
-        {"sources": source_entries, "artifacts": entries, "operator_profiles": profiles}
+        {
+            "sources": source_entries,
+            "artifacts": entries,
+            "operator_profiles": profiles,
+            "retained_evidence": retained_entries,
+        }
     )
 
 
@@ -458,6 +676,7 @@ class _ConfiguredResponsesAdapter:
         sources: tuple[AcceptedSource, ...],
         artifacts: tuple[AcceptedArtifact, ...],
         operator_profiles: tuple[AcceptedOperatorProfile, ...],
+        retained_evidence: tuple[AcceptedRetainedEvidence, ...],
         engine: AsyncEngine,
     ):
         self.profile = profile
@@ -474,6 +693,7 @@ class _ConfiguredResponsesAdapter:
         self.sources = sources
         self.artifacts = artifacts
         self.operator_profiles = operator_profiles
+        self.retained_evidence = retained_evidence
         self.engine = engine
         self.parsed: ParsedResponse | None = None
 
@@ -493,17 +713,45 @@ class _ConfiguredResponsesAdapter:
         approval = (
             self.facts.premium_authorization if self.facts.premium_requested else None
         )
-        async with self.authority.dispatch_guard(
-            tuple(
-                (source.current_grant.grant_id, source.current_grant.version)
-                for source in self.sources
-            ),
-            approval.authorization_id if approval else None,
-        ) as snapshot:
+        async with AsyncExitStack() as stack:
+            root_enabled = True
+            if self.artifacts:
+                # Product commands take this experiment lock before changing
+                # versions, acceptances or cycle state. Keep the same order as
+                # governance: experiment first, then provider authority.
+                product_lock = await stack.enter_async_context(self.engine.begin())
+                root_enabled = await product_lock.scalar(
+                    select(gov_schema.experiments.c.enabled)
+                    .where(gov_schema.experiments.c.id == self.scope)
+                    .with_for_update(read=True)
+                )
+            snapshot = await stack.enter_async_context(
+                self.authority.dispatch_guard(
+                    tuple(
+                        (source.current_grant.grant_id, source.current_grant.version)
+                        for source in self.sources
+                    )
+                    + tuple(
+                        (item.reference.grant_id, item.reference.grant_version)
+                        for item in self.retained_evidence
+                        if item.reference.grant_id is not None
+                        and item.reference.grant_version is not None
+                    ),
+                    approval.authorization_id if approval else None,
+                )
+            )
             # Locks serialize revocation with this bounded transport operation.
             # Time validity is checked after every lock/snapshot wait.
             started = self.clock()
             try:
+                if root_enabled is not True:
+                    raise PermissionError("experiment was disabled before dispatch")
+                _require_market_inputs(
+                    self.profile,
+                    self.sources,
+                    self.artifacts,
+                    self.operator_profiles,
+                )
                 self.routes.select(self.facts, scope=self.scope, now=started)
                 if self.facts.premium_requested and (
                     approval is None
@@ -518,14 +766,55 @@ class _ConfiguredResponsesAdapter:
                     self.sources,
                     self.artifacts,
                     self.operator_profiles,
+                    self.retained_evidence,
                     self.scope,
                     started,
                     grants=snapshot.grants,
                     events=snapshot.events,
                 )
+                retained_rights = []
+                if self.retained_evidence:
+                    async with self.engine.connect() as connection:
+                        for item in self.retained_evidence:
+                            ref = item.reference
+                            if ref.grant_id is None or ref.grant_version is None:
+                                raise PermissionError(
+                                    "retained evidence grant is missing"
+                                )
+                            grant = snapshot.grants.get(
+                                (ref.grant_id, ref.grant_version)
+                            )
+                            if grant is None:
+                                raise PermissionError(
+                                    "retained evidence grant is missing"
+                                )
+                            candidates = tuple(
+                                ProviderUsageGrant.model_validate_json(
+                                    json.dumps(data, default=str)
+                                )
+                                for data in (
+                                    await connection.execute(
+                                        select(gov_schema.grants.c.data).where(
+                                            gov_schema.grants.c.account
+                                            == grant.account_handle,
+                                            gov_schema.grants.c.capability
+                                            == grant.capability,
+                                        )
+                                    )
+                                ).scalars()
+                            )
+                            enabled = await connection.scalar(
+                                select(gov_schema.authorities.c.enabled).where(
+                                    gov_schema.authorities.c.account
+                                    == grant.account_handle,
+                                    gov_schema.authorities.c.capability
+                                    == grant.capability,
+                                )
+                            )
+                            retained_rights.append((ref, grant, candidates, enabled))
                 # Artifact/profile reads can wait on the DB after the first
-                # authority check. Expiry is checked again at dispatch, with
-                # no intervening await before invoking the transport.
+                # authority check. Re-evaluate rights at the final dispatch
+                # time; no further DB await occurs before transport.
                 started = self.clock()
                 self.routes.select(self.facts, scope=self.scope, now=started)
                 if self.facts.premium_requested and (
@@ -540,6 +829,19 @@ class _ConfiguredResponsesAdapter:
                     _source_input(
                         self.sources, started, snapshot.grants, snapshot.events
                     )
+                for ref, grant, candidates, enabled in retained_rights:
+                    if (
+                        ref.expires_at is None
+                        or ref.field is None
+                        or started >= ref.expires_at
+                        or enabled is not True
+                        or not _current_retained_rights(
+                            grant, candidates, snapshot.events, ref.field, started
+                        )
+                    ):
+                        raise PermissionError(
+                            "retained evidence rights changed before dispatch"
+                        )
                 if sha256(input_json) != sha256(self.input_json):
                     raise PermissionError("accepted source content changed")
             except PermissionError:
@@ -574,6 +876,21 @@ class _ConfiguredResponsesAdapter:
             )
         finished = self.clock()
         parsed = classify_response(response, self.profile)
+        if (
+            parsed.outcome == "SUCCEEDED"
+            and parsed.output is not None
+            and self.profile.output_validator is not None
+        ):
+            try:
+                self.profile.output_validator(parsed.output, input_json)
+            except (PermissionError, ValueError):
+                parsed = ParsedResponse(
+                    "SCHEMA_MISMATCH",
+                    None,
+                    None,
+                    parsed.usage,
+                    parsed.external_request_id,
+                )
         self.parsed = parsed
         status, error = {
             "SUCCEEDED": (ResultStatus.SUCCEEDED, None),
@@ -638,6 +955,7 @@ class OpenAIRuntime:
         sources: tuple[AcceptedSource, ...] = (),
         artifacts: tuple[AcceptedArtifact, ...] = (),
         operator_profiles: tuple[AcceptedOperatorProfile, ...] = (),
+        retained_evidence: tuple[AcceptedRetainedEvidence, ...] = (),
         idempotency_key: UUID,
     ) -> OpenAIExecution:
         now = self.repository.clock()
@@ -678,6 +996,10 @@ class OpenAIRuntime:
                         }
                         for item in operator_profiles
                     ],
+                    "retained_evidence": [
+                        item.reference.model_dump(mode="json")
+                        for item in retained_evidence
+                    ],
                 }
             )
         )
@@ -695,6 +1017,7 @@ class OpenAIRuntime:
             return OpenAIExecution(Route.NO_AI, OpenAIRunOutcome.NO_AI, None, None)
         assert selection.config_id is not None
         profile = self.profiles[selection.config_id]
+        _require_market_inputs(profile, sources, artifacts, operator_profiles)
         previous = await self.store.get(idempotency_key)
         if previous is not None:
             if (
@@ -707,6 +1030,11 @@ class OpenAIRuntime:
                 != tuple(source.evidence_ref for source in sources)
                 + tuple(item.artifact.artifact_id for item in artifacts)
                 + tuple(item.profile_id for item in operator_profiles)
+                + tuple(
+                    item.reference.retained_id
+                    for item in retained_evidence
+                    if item.reference.retained_id is not None
+                )
                 or previous.prompt_version != profile.prompt_version
                 or previous.schema_version != profile.schema_version
                 or previous.prompt_hash != sha256(profile.instructions)
@@ -737,13 +1065,33 @@ class OpenAIRuntime:
             raise PermissionError(
                 "OpenAI run profile does not match immutable capability"
             )
+        preflight = (
+            await self.authority.snapshot(
+                tuple(
+                    (source.current_grant.grant_id, source.current_grant.version)
+                    for source in sources
+                )
+                + tuple(
+                    (item.reference.grant_id, item.reference.grant_version)
+                    for item in retained_evidence
+                    if item.reference.grant_id is not None
+                    and item.reference.grant_version is not None
+                ),
+                None,
+            )
+            if retained_evidence
+            else None
+        )
         input_json = await _accepted_input(
             self.repository.engine,
             sources,
             artifacts,
             operator_profiles,
+            retained_evidence,
             attribution.experiment_id,
             self.repository.clock(),
+            grants=preflight.grants if preflight else None,
+            events=preflight.events if preflight else (),
         )
         _verify_pricing_bounds(config, prices, profile, input_json)
         previous = await self.store.get(idempotency_key)
@@ -765,7 +1113,12 @@ class OpenAIRuntime:
             reasoning_effort=profile.reasoning_effort,
             accepted_input_refs=tuple(source.evidence_ref for source in sources)
             + tuple(item.artifact.artifact_id for item in artifacts)
-            + tuple(item.profile_id for item in operator_profiles),
+            + tuple(item.profile_id for item in operator_profiles)
+            + tuple(
+                item.reference.retained_id
+                for item in retained_evidence
+                if item.reference.retained_id is not None
+            ),
             input_hash=sha256(input_json),
             client_request_id=uuid5(NAMESPACE_URL, str(idempotency_key)),
             created_at=previous.created_at if previous else now,
@@ -799,6 +1152,7 @@ class OpenAIRuntime:
             sources=sources,
             artifacts=artifacts,
             operator_profiles=operator_profiles,
+            retained_evidence=retained_evidence,
             engine=self.repository.engine,
         )
         executor = GovernedExecutor(

@@ -88,9 +88,9 @@ def _constraint(
     if kind == "field_equals":
         actual = getattr(advice, constraint["field"])
         satisfied = actual == expected
-    elif kind == "uncertainty_contains":
+    elif kind == "uncertainties_equal":
         actual = advice.uncertainties
-        satisfied = any(_text(expected) in _text(item) for item in actual)
+        satisfied = tuple(actual) == tuple(expected)
     elif kind == "forbid_text":
         actual = json.dumps(
             advice.model_dump(mode="json", exclude={"schema_version"}),
@@ -122,8 +122,9 @@ def score_recorded_idea(
 ) -> IdeaEvalReport:
     """Score exact fixture expectations and measured local fake-transport metrics.
 
-    This intentionally bounded evaluator tests recorded answers. Exact matches
-    do not claim general semantic accuracy or live OpenAI API latency.
+    This intentionally bounded evaluator tests recorded answers. Perfect scores
+    mean agreement with curated fixture text, not general semantic support or
+    live OpenAI API latency.
     """
 
     mode = IdeaStage(fixture["mode"])

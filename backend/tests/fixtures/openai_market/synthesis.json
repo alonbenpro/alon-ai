@@ -1,0 +1,62 @@
+{
+  "retained_evidence": {
+    "evidence-price-a": {
+      "claim": "A retained first-party capture of the competitor page lists a $49 monthly entry price.",
+      "current": true
+    },
+    "evidence-price-b": {
+      "claim": "A separate retained capture of the same competitor page lists a $79 monthly entry price for the same tier.",
+      "current": true
+    }
+  },
+  "advice": {
+    "findings": [
+      {
+        "dimension": "PRICING",
+        "status": "MIXED",
+        "basis": "RETAINED_EVIDENCE",
+        "claim": "Two retained captures disagree on the same monthly entry price: $49 versus $79; the current price is unresolved.",
+        "source_refs": ["evidence-price-a", "evidence-price-b"],
+        "limitations": ["Conflicting list prices are not transactions or customer demand signals."]
+      },
+      {
+        "dimension": "CUSTOMER_DEMAND",
+        "status": "INSUFFICIENT_EVIDENCE",
+        "basis": "UNKNOWN",
+        "claim": "Buyer willingness to pay for the accepted idea remains unknown.",
+        "source_refs": [],
+        "limitations": ["No retained buyer interview or transaction is supplied."]
+      }
+    ],
+    "limitations": ["Recorded retained evidence has conflicting list prices only; market viability is unproven."],
+    "proposed_recommendation": "INCONCLUSIVE"
+  },
+  "expected_findings": [
+    {
+      "id": "PRICE.LISTED_NOT_PAID",
+      "dimension": "PRICING",
+      "status": "MIXED",
+      "basis": "RETAINED_EVIDENCE",
+      "claim": "Two retained captures disagree on the same monthly entry price: $49 versus $79; the current price is unresolved.",
+      "source_refs": ["evidence-price-a", "evidence-price-b"],
+      "source_facts": {
+        "evidence-price-a": "A retained first-party capture of the competitor page lists a $49 monthly entry price.",
+        "evidence-price-b": "A separate retained capture of the same competitor page lists a $79 monthly entry price for the same tier."
+      },
+      "limitations": ["Conflicting list prices are not transactions or customer demand signals."]
+    },
+    {
+      "id": "DEMAND.UNKNOWN",
+      "dimension": "CUSTOMER_DEMAND",
+      "status": "INSUFFICIENT_EVIDENCE",
+      "basis": "UNKNOWN",
+      "claim": "Buyer willingness to pay for the accepted idea remains unknown.",
+      "source_refs": [],
+      "source_facts": {},
+      "limitations": ["No retained buyer interview or transaction is supplied."]
+    }
+  ],
+  "expected_limitations": ["Recorded retained evidence has conflicting list prices only; market viability is unproven."],
+  "expected_recommendation": "INCONCLUSIVE",
+  "forbidden_authority_phrases": ["committed the research verdict", "sent buyer email", "booked a meeting"]
+}
