@@ -10,7 +10,37 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
 from alon_ai.openai_runtime.contract import OpenAIProfile
-from alon_ai.providers.contracts import StrictDTO
+from alon_ai.providers.contracts import Capability, ContentField, Purpose, StrictDTO
+from alon_ai.providers.rights import ProviderUsageGrant
+
+MARKET_EVIDENCE_POLICY_VERSION = "market-retained-research-v1"
+_MARKET_EVIDENCE_FIELDS = {
+    Capability.BRAVE_WEB_COVERAGE: frozenset(
+        {ContentField.URL, ContentField.TITLE, ContentField.TEXT}
+    ),
+    Capability.FIRECRAWL_MAP: frozenset({ContentField.URL}),
+    Capability.FIRECRAWL_PAGE_CAPTURE: frozenset(
+        {ContentField.URL, ContentField.TITLE, ContentField.TEXT}
+    ),
+    Capability.FIRECRAWL_PDF_CAPTURE: frozenset(
+        {ContentField.URL, ContentField.TITLE, ContentField.TEXT}
+    ),
+    Capability.FIRECRAWL_JS_RETRIEVAL: frozenset(
+        {ContentField.URL, ContentField.TITLE, ContentField.TEXT}
+    ),
+}
+
+
+def market_evidence_permitted(grant: ProviderUsageGrant, field: ContentField) -> bool:
+    """Application policy for content admitted to Market synthesis.
+
+    Provider retention rights are necessary but do not grant model-input purpose.
+    """
+
+    return grant.purpose is Purpose.RESEARCH and field in _MARKET_EVIDENCE_FIELDS.get(
+        grant.capability, frozenset()
+    )
+
 
 AdviceText = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)

@@ -11,6 +11,7 @@ import pytest
 from sqlalchemy import select, update
 from test_governance import add_event, register
 from test_openai_idea import setup_idea
+from test_openai_market_evidence_policy import governed_market_inputs
 from test_openai_runtime import FakeSecrets, RecordedResponses, recorded
 from test_product_records import NOW, artifact
 
@@ -58,7 +59,7 @@ class TimedRecordedResponses(RecordedResponses):
             self.offline_transport_ms += (perf_counter_ns() - started) / 1_000_000
 
 
-async def research_inputs(engine):
+async def research_inputs_openai(engine):
     idea, attribution, product, _ = await setup_idea(engine, {})
     seed = await product.append_artifact(
         artifact(
@@ -113,7 +114,7 @@ async def research_inputs(engine):
         inputs=(ArtifactInput.from_receipt(brief, role="ACCEPTED_IDEA"),),
         command_key=uuid4(),
     )
-    await product.start_market_research(
+    attempt = await product.start_market_research(
         attribution.experiment_id,
         cycle.id,
         accepted_idea=ArtifactInput.from_receipt(brief, role="ACCEPTED_IDEA"),
@@ -169,6 +170,16 @@ async def research_inputs(engine):
         field=retained["field"],
         expires_at=retained["expires_at"],
     )
+    await product.append_artifact(
+        artifact(
+            attribution.experiment_id,
+            ArtifactKind.RESEARCH_EVIDENCE,
+            {"claim": "Recorded synthetic claim", "finding": "Recorded evidence"},
+        ),
+        inputs=(ArtifactInput.from_receipt(plan, role="PLAN"),),
+        sources=(reference,),
+        command_key=uuid4(),
+    )
     accepted = AcceptedArtifact(
         artifact=ArtifactInput.from_receipt(brief, role="ACCEPTED_IDEA"),
         experiment_id=attribution.experiment_id,
@@ -178,7 +189,19 @@ async def research_inputs(engine):
     market_attribution = attribution.model_copy(
         update={"logical_operation_id": uuid4(), "correlation_id": uuid4()}
     )
-    return prior_runtime, market_attribution, accepted, reference
+    accepted_plan = AcceptedArtifact(
+        artifact=ArtifactInput.from_receipt(plan, role="PLAN"),
+        experiment_id=attribution.experiment_id,
+        schema_version=1,
+        cycle_id=cycle.id,
+        attempt_id=attempt.id,
+    )
+    return prior_runtime, market_attribution, (accepted, accepted_plan), reference
+
+
+async def research_inputs(engine):
+    runtime, attribution, artifacts, reference, _ = await governed_market_inputs(engine)
+    return runtime, attribution, artifacts, reference
 
 
 def market_advice(retained_id):
@@ -188,9 +211,9 @@ def market_advice(retained_id):
                 "dimension": "CUSTOMER_DEMAND",
                 "status": "SUPPORTED",
                 "basis": "RETAINED_EVIDENCE",
-                "claim": "A recorded clinic workflow complaint mentions scheduling friction.",
+                "claim": "A recorded Brave search returned synthetic search coverage.",
                 "source_refs": [str(retained_id)],
-                "limitations": ["One complaint does not establish market size."],
+                "limitations": ["Search coverage does not establish market demand."],
             },
             {
                 "dimension": "PRICING",
@@ -245,7 +268,7 @@ async def test_market_synthesis_reads_current_accepted_brief_and_retained_eviden
     result = await runtime.run(
         attribution,
         facts=RoutingFacts(needs_ai=True),
-        artifacts=(accepted,),
+        artifacts=accepted,
         retained_evidence=(AcceptedRetainedEvidence(reference),),
         idempotency_key=uuid4(),
     )
@@ -255,9 +278,9 @@ async def test_market_synthesis_reads_current_accepted_brief_and_retained_eviden
     assert result.receipt is not None and result.receipt.accrued > Decimal(0)
     sent = transport.calls[0]["input_json"]
     assert "Clinic scheduling" in sent
-    assert "manual scheduling creates friction" in sent
+    assert "Synthetic search coverage" in sent
     assert str(reference.retained_id) in sent
-    source_fact = "Recorded clinic complaint: manual scheduling creates friction."
+    source_fact = "Synthetic search coverage"
     case = {
         "retained_evidence": {
             str(reference.retained_id): {"claim": source_fact, "current": True}
@@ -268,10 +291,10 @@ async def test_market_synthesis_reads_current_accepted_brief_and_retained_eviden
                 "dimension": "CUSTOMER_DEMAND",
                 "status": "SUPPORTED",
                 "basis": "RETAINED_EVIDENCE",
-                "claim": "A recorded clinic workflow complaint mentions scheduling friction.",
+                "claim": "A recorded Brave search returned synthetic search coverage.",
                 "source_refs": [str(reference.retained_id)],
                 "source_facts": {str(reference.retained_id): source_fact},
-                "limitations": ["One complaint does not establish market size."],
+                "limitations": ["Search coverage does not establish market demand."],
             },
             {
                 "id": "PRICE.UNKNOWN",
@@ -309,7 +332,7 @@ async def test_market_synthesis_reads_current_accepted_brief_and_retained_eviden
         assert (
             await connection.scalar(
                 select(records.cycle_states.c.state).where(
-                    records.cycle_states.c.cycle_id == accepted.cycle_id
+                    records.cycle_states.c.cycle_id == accepted[0].cycle_id
                 )
             )
             == "MARKET_RESEARCH"
@@ -341,7 +364,7 @@ async def test_market_missing_retained_record_denies_transport(governance_engine
         await runtime.run(
             attribution,
             facts=RoutingFacts(needs_ai=True),
-            artifacts=(accepted,),
+            artifacts=accepted,
             retained_evidence=(AcceptedRetainedEvidence(missing),),
             idempotency_key=uuid4(),
         )
@@ -360,7 +383,7 @@ async def test_market_unknown_citation_withholds_paid_output(governance_engine):
     result = await runtime.run(
         attribution,
         facts=RoutingFacts(needs_ai=True),
-        artifacts=(accepted,),
+        artifacts=accepted,
         retained_evidence=(AcceptedRetainedEvidence(reference),),
         idempotency_key=uuid4(),
     )
@@ -403,7 +426,7 @@ async def test_retained_evidence_expiring_during_dispatch_read_denies_transport(
         runtime.run(
             attribution,
             facts=RoutingFacts(needs_ai=True),
-            artifacts=(accepted,),
+            artifacts=accepted,
             retained_evidence=(AcceptedRetainedEvidence(reference),),
             idempotency_key=uuid4(),
         )
@@ -434,7 +457,7 @@ async def test_newer_accepted_brief_during_reservation_denies_market_transport(
     async with governance_engine.connect() as connection:
         logical_id = await connection.scalar(
             select(records.artifacts.c.logical_id).where(
-                records.artifacts.c.id == accepted.artifact.artifact_id
+                records.artifacts.c.id == accepted[0].artifact.artifact_id
             )
         )
     reserve = runtime.repository.reserve
@@ -451,7 +474,7 @@ async def test_newer_accepted_brief_during_reservation_denies_market_transport(
         runtime.run(
             attribution,
             facts=RoutingFacts(needs_ai=True),
-            artifacts=(accepted,),
+            artifacts=accepted,
             retained_evidence=(AcceptedRetainedEvidence(reference),),
             idempotency_key=uuid4(),
         )
@@ -473,7 +496,7 @@ async def test_newer_accepted_brief_during_reservation_denies_market_transport(
                 logical_id=logical_id,
                 version=2,
             ),
-            inputs=(accepted.artifact.model_copy(update={"role": "SUPERSEDES"}),),
+            inputs=(accepted[0].artifact.model_copy(update={"role": "SUPERSEDES"}),),
             command_key=uuid4(),
         )
     finally:
@@ -497,7 +520,7 @@ async def test_market_no_ai_path_makes_no_transport_call(governance_engine):
     result = await runtime.run(
         attribution,
         facts=RoutingFacts(needs_ai=False),
-        artifacts=(accepted,),
+        artifacts=accepted,
         retained_evidence=(AcceptedRetainedEvidence(reference),),
         idempotency_key=uuid4(),
     )
@@ -521,7 +544,7 @@ async def test_market_paid_profile_requires_current_accepted_brief(governance_en
             (
                 await connection.execute(
                     select(records.cycles).where(
-                        records.cycles.c.id == accepted.cycle_id
+                        records.cycles.c.id == accepted[0].cycle_id
                     )
                 )
             )
@@ -538,7 +561,7 @@ async def test_market_paid_profile_requires_current_accepted_brief(governance_en
         ),
         experiment_id=attribution.experiment_id,
         schema_version=1,
-        cycle_id=accepted.cycle_id,
+        cycle_id=accepted[0].cycle_id,
     )
     with pytest.raises(PermissionError, match="accepted brief"):
         await runtime.run(
@@ -565,7 +588,7 @@ async def test_newer_brief_cannot_commit_during_final_market_validation(
     async with governance_engine.connect() as connection:
         logical_id = await connection.scalar(
             select(records.artifacts.c.logical_id).where(
-                records.artifacts.c.id == accepted.artifact.artifact_id
+                records.artifacts.c.id == accepted[0].artifact.artifact_id
             )
         )
     original = runtime_module._accepted_input
@@ -586,7 +609,7 @@ async def test_newer_brief_cannot_commit_during_final_market_validation(
         runtime.run(
             attribution,
             facts=RoutingFacts(needs_ai=True),
-            artifacts=(accepted,),
+            artifacts=accepted,
             retained_evidence=(AcceptedRetainedEvidence(reference),),
             idempotency_key=uuid4(),
         )
@@ -610,7 +633,9 @@ async def test_newer_brief_cannot_commit_during_final_market_validation(
                     logical_id=logical_id,
                     version=2,
                 ),
-                inputs=(accepted.artifact.model_copy(update={"role": "SUPERSEDES"}),),
+                inputs=(
+                    accepted[0].artifact.model_copy(update={"role": "SUPERSEDES"}),
+                ),
                 command_key=uuid4(),
             )
         )
@@ -671,7 +696,7 @@ async def test_future_revocation_effective_during_input_wait_denies_transport(
         runtime.run(
             attribution,
             facts=RoutingFacts(needs_ai=True),
-            artifacts=(accepted,),
+            artifacts=accepted,
             retained_evidence=(AcceptedRetainedEvidence(reference),),
             idempotency_key=uuid4(),
         )
@@ -740,7 +765,7 @@ async def test_future_superseding_grant_during_input_wait_denies_transport(
         runtime.run(
             attribution,
             facts=RoutingFacts(needs_ai=True),
-            artifacts=(accepted,),
+            artifacts=accepted,
             retained_evidence=(AcceptedRetainedEvidence(reference),),
             idempotency_key=uuid4(),
         )
@@ -780,7 +805,7 @@ async def test_disabled_retained_source_authority_is_not_accepted(governance_eng
         await runtime_module._accepted_input(
             governance_engine,
             (),
-            (accepted,),
+            accepted,
             (),
             (AcceptedRetainedEvidence(reference),),
             attribution.experiment_id,
@@ -817,7 +842,7 @@ async def test_disabled_experiment_after_governance_dispatch_denies_transport(
         runtime.run(
             attribution,
             facts=RoutingFacts(needs_ai=True),
-            artifacts=(accepted,),
+            artifacts=accepted,
             retained_evidence=(AcceptedRetainedEvidence(reference),),
             idempotency_key=uuid4(),
         )
@@ -835,4 +860,55 @@ async def test_disabled_experiment_after_governance_dispatch_denies_transport(
     result = await task
     assert result.output is None
     assert result.receipt is not None and result.receipt.accrued == 0
+    assert transport.calls == []
+
+
+@pytest.mark.integration
+async def test_market_rejects_retained_openai_generation_content_before_reservation(
+    governance_engine,
+):
+    prior_runtime, attribution, accepted, reference = await research_inputs_openai(
+        governance_engine
+    )
+    runtime, transport = market_runtime(
+        governance_engine,
+        prior_runtime,
+        recorded(text=json.dumps(market_advice(reference.retained_id))),
+    )
+    async with governance_engine.connect() as connection:
+        existing_calls = (
+            (await connection.execute(select(gov.calls.c.id))).scalars().all()
+        )
+    with pytest.raises(PermissionError):
+        await runtime.run(
+            attribution,
+            facts=RoutingFacts(needs_ai=True),
+            artifacts=accepted,
+            retained_evidence=(AcceptedRetainedEvidence(reference),),
+            idempotency_key=uuid4(),
+        )
+    async with governance_engine.connect() as connection:
+        calls = (await connection.execute(select(gov.calls.c.id))).scalars().all()
+    assert calls == existing_calls
+    assert transport.calls == []
+
+
+@pytest.mark.integration
+async def test_market_requires_exact_active_research_plan(governance_engine):
+    prior_runtime, attribution, accepted, reference = await research_inputs(
+        governance_engine
+    )
+    runtime, transport = market_runtime(
+        governance_engine,
+        prior_runtime,
+        recorded(text=json.dumps(market_advice(reference.retained_id))),
+    )
+    with pytest.raises(PermissionError, match="plan"):
+        await runtime.run(
+            attribution,
+            facts=RoutingFacts(needs_ai=True),
+            artifacts=(accepted[0],),
+            retained_evidence=(AcceptedRetainedEvidence(reference),),
+            idempotency_key=uuid4(),
+        )
     assert transport.calls == []

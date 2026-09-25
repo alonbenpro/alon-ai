@@ -36,7 +36,11 @@ from alon_ai.openai_runtime.contract import (
     classify_response,
     sha256,
 )
-from alon_ai.openai_runtime.market import MarketResearchAdvice
+from alon_ai.openai_runtime.market import (
+    MARKET_EVIDENCE_POLICY_VERSION,
+    MarketResearchAdvice,
+    market_evidence_permitted,
+)
 from alon_ai.openai_runtime.store import (
     OpenAIRunConflict,
     OpenAIRunIntent,
@@ -93,6 +97,7 @@ class AcceptedArtifact:
     schema_version: int
     selection_id: UUID | None = None
     cycle_id: UUID | None = None
+    attempt_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -119,14 +124,23 @@ def _require_market_inputs(
     artifacts: tuple[AcceptedArtifact, ...],
     operator_profiles: tuple[AcceptedOperatorProfile, ...],
 ) -> None:
-    if profile.output_model is MarketResearchAdvice and (
-        sources
-        or operator_profiles
-        or len(artifacts) != 1
-        or artifacts[0].artifact.kind is not ArtifactKind.IDEA_BRIEF
-        or artifacts[0].artifact.role != "ACCEPTED_IDEA"
+    if profile.output_model is not MarketResearchAdvice:
+        return
+    if sources or operator_profiles or len(artifacts) != 2:
+        raise PermissionError("Market synthesis requires accepted brief and plan")
+    brief, plan = artifacts
+    if (
+        brief.artifact.kind is not ArtifactKind.IDEA_BRIEF
+        or brief.artifact.role != "ACCEPTED_IDEA"
+        or brief.cycle_id is None
+        or brief.attempt_id is not None
+        or plan.artifact.kind is not ArtifactKind.RESEARCH_PLAN
+        or plan.artifact.role != "PLAN"
+        or plan.cycle_id != brief.cycle_id
+        or plan.attempt_id is None
+        or plan.selection_id is not None
     ):
-        raise PermissionError("Market synthesis requires one current accepted brief")
+        raise PermissionError("Market synthesis requires accepted brief and plan")
 
 
 @dataclass(frozen=True)
@@ -186,6 +200,8 @@ def _current_retained_rights(
         field = ContentField(field_name)
     except ValueError:
         return False
+    if not market_evidence_permitted(grant, field):
+        return False
     active = tuple(g for g in candidates if g.effective_at <= now < g.expires_at)
     superseded = {g.supersedes_id for g in active if g.supersedes_id}
     current = tuple(g for g in active if g.grant_id not in superseded)
@@ -196,7 +212,7 @@ def _current_retained_rights(
         plan_identifier=grant.plan_identifier,
         order_form_ref=grant.order_form_ref,
         terms_version=grant.terms_version,
-        purpose=grant.purpose,
+        purpose=Purpose.RESEARCH,
         required_fields=frozenset({field}),
     )
     return (
@@ -289,6 +305,7 @@ async def _accepted_input(
                 ArtifactKind.IDEA_SEED,
                 ArtifactKind.IDEA_CANDIDATE,
                 ArtifactKind.IDEA_BRIEF,
+                ArtifactKind.RESEARCH_PLAN,
             }:
                 raise PermissionError("artifact is outside accepted first-party inputs")
             row = (
@@ -325,7 +342,10 @@ async def _accepted_input(
                 )
             ):
                 raise PermissionError("accepted artifact was superseded")
-            if ref.kind is not ArtifactKind.IDEA_BRIEF and (
+            if ref.kind not in {
+                ArtifactKind.IDEA_BRIEF,
+                ArtifactKind.RESEARCH_PLAN,
+            } and (
                 await connection.scalar(
                     select(record_schema.source_refs.c.id).where(
                         record_schema.source_refs.c.artifact_id == ref.artifact_id
@@ -339,7 +359,11 @@ async def _accepted_input(
             ):
                 raise PermissionError("artifact has external or linked inputs")
             if ref.kind is ArtifactKind.IDEA_BRIEF:
-                if accepted.cycle_id is None or accepted.selection_id is not None:
+                if (
+                    accepted.cycle_id is None
+                    or accepted.selection_id is not None
+                    or accepted.attempt_id is not None
+                ):
                     raise PermissionError("research requires an accepted idea cycle")
                 accepted_cycle = await connection.scalar(
                     select(record_schema.cycles.c.id)
@@ -379,6 +403,100 @@ async def _accepted_input(
                 )
                 if state != "MARKET_RESEARCH":
                     raise PermissionError("research cycle is not active")
+            elif ref.kind is ArtifactKind.RESEARCH_PLAN:
+                if (
+                    accepted.cycle_id is None
+                    or accepted.attempt_id is None
+                    or accepted.selection_id is not None
+                ):
+                    raise PermissionError("research plan lacks an exact attempt")
+                if await connection.scalar(
+                    select(record_schema.source_refs.c.id).where(
+                        record_schema.source_refs.c.artifact_id == ref.artifact_id
+                    )
+                ):
+                    raise PermissionError("research plan has external sources")
+                attempt = await connection.scalar(
+                    select(record_schema.research_attempts.c.id)
+                    .select_from(
+                        record_schema.research_attempts.join(
+                            record_schema.cycles,
+                            record_schema.research_attempts.c.cycle_id
+                            == record_schema.cycles.c.id,
+                        )
+                    )
+                    .where(
+                        record_schema.research_attempts.c.id == accepted.attempt_id,
+                        record_schema.research_attempts.c.experiment_id
+                        == experiment_id,
+                        record_schema.research_attempts.c.cycle_id == accepted.cycle_id,
+                        record_schema.research_attempts.c.plan_artifact_id
+                        == ref.artifact_id,
+                        record_schema.research_attempts.c.plan_kind == ref.kind,
+                        record_schema.research_attempts.c.plan_version == ref.version,
+                        record_schema.research_attempts.c.plan_hash == ref.content_hash,
+                        record_schema.research_attempts.c.ordinal
+                        == select(record_schema.research_attempts.c.ordinal)
+                        .where(
+                            record_schema.research_attempts.c.cycle_id
+                            == accepted.cycle_id
+                        )
+                        .order_by(record_schema.research_attempts.c.ordinal.desc())
+                        .limit(1)
+                        .scalar_subquery(),
+                        record_schema.cycles.c.id
+                        == select(record_schema.cycles.c.id)
+                        .where(record_schema.cycles.c.experiment_id == experiment_id)
+                        .order_by(record_schema.cycles.c.ordinal.desc())
+                        .limit(1)
+                        .scalar_subquery(),
+                    )
+                )
+                linked_brief = artifacts[0].artifact if artifacts else None
+                plan_links = (
+                    (
+                        await connection.execute(
+                            select(record_schema.artifact_links.c.role).where(
+                                record_schema.artifact_links.c.consumer_id
+                                == ref.artifact_id
+                            )
+                        )
+                    )
+                    .scalars()
+                    .all()
+                )
+                plan_link = (
+                    await connection.scalar(
+                        select(record_schema.artifact_links.c.producer_id).where(
+                            record_schema.artifact_links.c.consumer_id
+                            == ref.artifact_id,
+                            record_schema.artifact_links.c.role == "ACCEPTED_IDEA",
+                            record_schema.artifact_links.c.producer_id
+                            == linked_brief.artifact_id,
+                            record_schema.artifact_links.c.producer_kind
+                            == linked_brief.kind,
+                            record_schema.artifact_links.c.producer_version
+                            == linked_brief.version,
+                            record_schema.artifact_links.c.producer_hash
+                            == linked_brief.content_hash,
+                        )
+                    )
+                    if linked_brief is not None
+                    else None
+                )
+                state = await connection.scalar(
+                    select(record_schema.cycle_states.c.state).where(
+                        record_schema.cycle_states.c.cycle_id == accepted.cycle_id,
+                        record_schema.cycle_states.c.experiment_id == experiment_id,
+                    )
+                )
+                if (
+                    attempt is None
+                    or plan_link is None
+                    or plan_links != ["ACCEPTED_IDEA"]
+                    or state != "MARKET_RESEARCH"
+                ):
+                    raise PermissionError("research plan is not the active attempt")
             elif ref.kind is ArtifactKind.IDEA_SEED:
                 operator_id = await connection.scalar(
                     select(record_schema.operator_profiles.c.operator_id)
@@ -458,13 +576,18 @@ async def _accepted_input(
                     if accepted.selection_id
                     else None,
                     "cycle_id": str(accepted.cycle_id) if accepted.cycle_id else None,
+                    "attempt_id": str(accepted.attempt_id)
+                    if accepted.attempt_id
+                    else None,
                     "payload": row["payload"],
                 }
             )
-        if retained_evidence and not any(
-            item.artifact.kind is ArtifactKind.IDEA_BRIEF for item in artifacts
+        if retained_evidence and (
+            len(artifacts) != 2
+            or artifacts[0].artifact.kind is not ArtifactKind.IDEA_BRIEF
+            or artifacts[1].artifact.kind is not ArtifactKind.RESEARCH_PLAN
         ):
-            raise PermissionError("retained research evidence requires accepted brief")
+            raise PermissionError("retained research evidence requires accepted plan")
         seen_retained: set[UUID] = set()
         for item in retained_evidence:
             ref = item.reference
@@ -513,6 +636,75 @@ async def _accepted_input(
             grant = grants.get((ref.grant_id, ref.grant_version)) if grants else None
             if row is None or grant is None:
                 raise PermissionError("retained evidence is missing or stale")
+            plan = artifacts[1].artifact
+            candidates = (
+                (
+                    await connection.execute(
+                        select(
+                            record_schema.artifacts.c.id,
+                            record_schema.artifacts.c.logical_id,
+                            record_schema.artifacts.c.version,
+                        )
+                        .select_from(
+                            record_schema.source_refs.join(
+                                record_schema.artifacts,
+                                record_schema.source_refs.c.artifact_id
+                                == record_schema.artifacts.c.id,
+                            ).join(
+                                record_schema.artifact_links,
+                                record_schema.artifact_links.c.consumer_id
+                                == record_schema.artifacts.c.id,
+                            )
+                        )
+                        .where(
+                            record_schema.source_refs.c.experiment_id == experiment_id,
+                            record_schema.source_refs.c.kind == "RETAINED_CONTENT",
+                            record_schema.source_refs.c.retained_id == ref.retained_id,
+                            record_schema.source_refs.c.call_id == ref.call_id,
+                            record_schema.source_refs.c.grant_id == ref.grant_id,
+                            record_schema.source_refs.c.grant_version
+                            == ref.grant_version,
+                            record_schema.source_refs.c.field == ref.field,
+                            record_schema.source_refs.c.expires_at == ref.expires_at,
+                            record_schema.artifacts.c.experiment_id == experiment_id,
+                            record_schema.artifacts.c.kind
+                            == ArtifactKind.RESEARCH_EVIDENCE,
+                            record_schema.artifact_links.c.role == "PLAN",
+                            record_schema.artifact_links.c.producer_id
+                            == plan.artifact_id,
+                            record_schema.artifact_links.c.producer_kind == plan.kind,
+                            record_schema.artifact_links.c.producer_version
+                            == plan.version,
+                            record_schema.artifact_links.c.producer_hash
+                            == plan.content_hash,
+                        )
+                    )
+                )
+                .mappings()
+                .all()
+            )
+            current_selection = False
+            for candidate in candidates:
+                newer = await connection.scalar(
+                    select(record_schema.artifacts.c.id).where(
+                        record_schema.artifacts.c.logical_id == candidate["logical_id"],
+                        record_schema.artifacts.c.version > candidate["version"],
+                    )
+                )
+                withdrawn = await connection.scalar(
+                    select(record_schema.artifact_dispositions.c.id).where(
+                        record_schema.artifact_dispositions.c.artifact_id
+                        == candidate["id"],
+                        record_schema.artifact_dispositions.c.disposition.in_(
+                            ("SUPERSEDED", "REJECTED")
+                        ),
+                    )
+                )
+                if newer is None and withdrawn is None:
+                    current_selection = True
+                    break
+            if not current_selection:
+                raise PermissionError("retained source is outside the accepted plan")
             candidate_grants = tuple(
                 ProviderUsageGrant.model_validate_json(json.dumps(data, default=str))
                 for data in (
@@ -555,6 +747,9 @@ async def _accepted_input(
             "artifacts": entries,
             "operator_profiles": profiles,
             "retained_evidence": retained_entries,
+            "evidence_policy_version": MARKET_EVIDENCE_POLICY_VERSION
+            if retained_evidence
+            else None,
         }
     )
 
@@ -983,6 +1178,9 @@ class OpenAIRuntime:
                             if item.selection_id
                             else None,
                             "cycle": str(item.cycle_id) if item.cycle_id else None,
+                            "attempt": str(item.attempt_id)
+                            if item.attempt_id
+                            else None,
                         }
                         for item in artifacts
                     ],
