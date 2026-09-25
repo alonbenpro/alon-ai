@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260923_21"
+    "20260924_24"
   ],
   "columns": [
     {
@@ -1783,6 +1783,375 @@
       "name": "id",
       "not_null": true,
       "table_name": "gov_workflows",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "approved_at",
+      "not_null": true,
+      "table_name": "openai_premium_approvals",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "approved_by",
+      "not_null": true,
+      "table_name": "openai_premium_approvals",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "authorization_id",
+      "not_null": true,
+      "table_name": "openai_premium_approvals",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "config_id",
+      "not_null": true,
+      "table_name": "openai_premium_approvals",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "expires_at",
+      "not_null": true,
+      "table_name": "openai_premium_approvals",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "revoked_at",
+      "not_null": false,
+      "table_name": "openai_premium_approvals",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "scope",
+      "not_null": true,
+      "table_name": "openai_premium_approvals",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "approval_id",
+      "not_null": false,
+      "table_name": "openai_route_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "attribution_hash",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "config_id",
+      "not_null": false,
+      "table_name": "openai_route_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "config_version",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "correlation_id",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "facts_hash",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "idempotency_key",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "logical_operation_id",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operation_id",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "route",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "workflow_id",
+      "not_null": true,
+      "table_name": "openai_route_decisions",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "accepted_input_refs",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "uuid[]"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "agent_run_id",
+      "not_null": false,
+      "table_name": "openai_run_intents",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "call_id",
+      "not_null": false,
+      "table_name": "openai_run_intents",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "client_request_id",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "config_id",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "config_version",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "finished_at",
+      "not_null": false,
+      "table_name": "openai_run_intents",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "idempotency_key",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "input_hash",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "model_identifier",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "character varying(100)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operation_id",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "outcome",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "output_hash",
+      "not_null": false,
+      "table_name": "openai_run_intents",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "output_schema_hash",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "prompt_hash",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "prompt_version",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "reasoning_effort",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "schema_version",
+      "not_null": true,
+      "table_name": "openai_run_intents",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "workflow_id",
+      "not_null": true,
+      "table_name": "openai_run_intents",
       "type": "uuid"
     },
     {
@@ -15816,6 +16185,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (approved_at < expires_at)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_premium_approvals_check",
+      "table_name": "openai_premium_approvals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (artifact_kind::text = 'COMMERCIAL_DESIGN_ENVELOPE'::text)",
       "enforced": true,
       "initially_deferred": false,
@@ -15932,6 +16311,16 @@
       "kind": "c",
       "name": "record_outreach_contexts_check",
       "table_name": "record_outreach_contexts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (attribution_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_route_decisions_attribution_hash_check",
+      "table_name": "openai_route_decisions",
       "validated": true
     },
     {
@@ -16486,6 +16875,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (facts_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_route_decisions_facts_hash_check",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (few_shot_artifact_id IS NULL AND few_shot_experiment_id IS NULL AND few_shot_kind IS NULL AND few_shot_version IS NULL AND few_shot_hash IS NULL OR few_shot_artifact_id IS NOT NULL AND few_shot_experiment_id IS NOT NULL AND few_shot_kind IS NOT NULL AND few_shot_version IS NOT NULL AND few_shot_hash IS NOT NULL)",
       "enforced": true,
       "initially_deferred": false,
@@ -16602,6 +17001,16 @@
       "kind": "c",
       "name": "ck_record_cycle_origin",
       "table_name": "record_cycles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (input_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_input_hash_check",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -16892,6 +17301,36 @@
       "kind": "c",
       "name": "record_experiments_name_check",
       "table_name": "record_experiments",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (length(model_identifier::text) >= 1 AND length(model_identifier::text) <= 100)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_model_identifier_check",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (length(prompt_version::text) >= 1 AND length(prompt_version::text) <= 64)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_prompt_version_check",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (length(schema_version::text) >= 1 AND length(schema_version::text) <= 64)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_schema_version_check",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -17256,12 +17695,32 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (outcome::text <> 'NO_AI'::text OR call_id IS NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_no_ai_call_check",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (outcome::text = 'CONFIRMED'::text AND result_evidence_id IS NOT NULL AND provider_request_id IS NOT NULL AND provider_message_id IS NOT NULL OR outcome::text = 'AMBIGUOUS'::text AND result_evidence_id IS NULL AND provider_request_id IS NULL AND provider_message_id IS NULL OR outcome::text = 'NO_EFFECT'::text AND result_evidence_id IS NOT NULL AND provider_request_id IS NULL AND provider_message_id IS NULL)",
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
       "name": "record_org_observations_check",
       "table_name": "record_org_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (outcome::text = 'READY'::text AND call_id IS NULL AND output_hash IS NULL AND finished_at IS NULL OR outcome::text = 'RECOVERING'::text AND output_hash IS NULL AND finished_at IS NULL OR (outcome::text <> ALL (ARRAY['READY'::character varying, 'RECOVERING'::character varying]::text[])) AND finished_at IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_lifecycle_check",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -17306,6 +17765,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (outcome::text = ANY (ARRAY['NO_AI'::character varying, 'READY'::character varying, 'SUCCEEDED'::character varying, 'REFUSED'::character varying, 'SCHEMA_MISMATCH'::character varying, 'INCOMPLETE'::character varying, 'TIMEOUT'::character varying, 'FAILED'::character varying, 'UNCERTAIN'::character varying, 'CANCELLED'::character varying, 'RECOVERING'::character varying, 'RESULT_UNAVAILABLE'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_outcome_check",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (outcome::text = ANY (ARRAY['QUALIFIED'::character varying, 'REJECTED_FIT'::character varying, 'REJECTED_EVIDENCE'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -17342,6 +17811,26 @@
       "kind": "c",
       "name": "record_readiness_contactability_decisions_outcome_check",
       "table_name": "record_readiness_contactability_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (output_hash IS NULL OR output_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_output_hash_check",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (output_schema_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_schema_hash_check",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -17412,6 +17901,16 @@
       "kind": "c",
       "name": "ck_record_profile_shape",
       "table_name": "record_operator_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (prompt_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_prompt_hash_check",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -17586,6 +18085,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (reasoning_effort::text = ANY (ARRAY['none'::character varying, 'minimal'::character varying, 'low'::character varying, 'medium'::character varying, 'high'::character varying, 'xhigh'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_run_intents_reasoning_effort_check",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (recipient_mode::text = 'GENERAL_BUSINESS_INBOX'::text AND recipient_label IS NULL AND recipient_label_evidence_id IS NULL AND greeting::text = 'Hello team'::text OR recipient_mode::text = 'NAMED_PERSON'::text AND recipient_label IS NOT NULL AND recipient_label_evidence_id IS NOT NULL AND greeting::text = ('Hi '::text || recipient_label::text) OR recipient_mode::text = 'ROLE_INBOX'::text AND recipient_label IS NOT NULL AND recipient_label_evidence_id IS NOT NULL AND greeting::text = (('Hello '::text || recipient_label::text) || ' team'::text))",
       "enforced": true,
       "initially_deferred": false,
@@ -17712,6 +18221,16 @@
       "kind": "c",
       "name": "record_research_return_blocks_return_kind_check",
       "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (revoked_at IS NULL OR revoked_at >= approved_at)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_premium_approvals_check1",
+      "table_name": "openai_premium_approvals",
       "validated": true
     },
     {
@@ -17852,6 +18371,26 @@
       "kind": "c",
       "name": "record_workflows_role_check",
       "table_name": "record_workflows",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (route::text = 'NO_AI'::text AND config_id IS NULL AND approval_id IS NULL OR (route::text = ANY (ARRAY['CHEAP'::character varying, 'STRONGER'::character varying]::text[])) AND config_id IS NOT NULL AND approval_id IS NULL OR route::text = 'PREMIUM'::text AND config_id IS NOT NULL AND approval_id IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_route_decisions_check",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (route::text = ANY (ARRAY['NO_AI'::character varying, 'CHEAP'::character varying, 'STRONGER'::character varying, 'PREMIUM'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "openai_route_decisions_route_check",
+      "table_name": "openai_route_decisions",
       "validated": true
     },
     {
@@ -18356,6 +18895,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (agent_run_id) REFERENCES gov_agents(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "openai_run_intents_agent_run_id_fkey",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (agent_version_id) REFERENCES record_strategy_agent_versions(id)",
       "enforced": true,
       "initially_deferred": false,
@@ -18402,6 +18951,16 @@
       "kind": "f",
       "name": "record_outreach_draft_angles_angle_id_context_id_fkey",
       "table_name": "record_outreach_draft_angles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (approval_id, config_id) REFERENCES openai_premium_approvals(authorization_id, config_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "openai_route_decisions_approval_id_config_id_fkey",
+      "table_name": "openai_route_decisions",
       "validated": true
     },
     {
@@ -19180,6 +19739,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "openai_run_intents_call_id_fkey",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (call_id) REFERENCES gov_calls(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_learning_input_call_snapshots_call_id_fkey",
       "table_name": "record_learning_input_call_snapshots",
       "validated": true
@@ -19600,6 +20169,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "openai_premium_approvals_config_id_fkey",
+      "table_name": "openai_premium_approvals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (config_id) REFERENCES gov_configs(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_readiness_provider_results_config_id_fkey",
       "table_name": "record_readiness_provider_results",
       "validated": true
@@ -19612,6 +20191,26 @@
       "kind": "f",
       "name": "gov_calls_config_id_workflow_id_config_version_fkey",
       "table_name": "gov_calls",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (config_id, workflow_id, config_version) REFERENCES gov_configs(id, workflow_id, version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "openai_route_decisions_config_id_workflow_id_config_versio_fkey",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (config_id, workflow_id, config_version) REFERENCES gov_configs(id, workflow_id, version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "openai_run_intents_config_id_workflow_id_config_version_fkey",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -21580,6 +22179,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "openai_route_decisions_operation_id_workflow_id_experiment_fkey",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (operation_id, workflow_id, experiment_id, config_version) REFERENCES gov_operations(id, workflow_id, experiment_id, config_version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "openai_run_intents_operation_id_workflow_id_experiment_id__fkey",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (operation_id, workflow_id, experiment_id, config_version) REFERENCES gov_operations(id, workflow_id, experiment_id, config_version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "supply_operations_operation_id_workflow_id_experiment_id_c_fkey",
       "table_name": "supply_operations",
       "validated": true
@@ -23366,6 +23985,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL accepted_input_refs",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_accepted_input_refs_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL account",
       "enforced": true,
       "initially_deferred": false,
@@ -23750,8 +24379,28 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "openai_premium_approvals_approved_at_not_null",
+      "table_name": "openai_premium_approvals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL approved_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_pivot_decisions_approved_at_not_null",
       "table_name": "record_pivot_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL approved_by",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_premium_approvals_approved_by_not_null",
+      "table_name": "openai_premium_approvals",
       "validated": true
     },
     {
@@ -24526,12 +25175,32 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL attribution_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_route_decisions_attribution_hash_not_null",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL auth_subject",
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
       "name": "operator_login_failures_auth_subject_not_null",
       "table_name": "operator_login_failures",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL authorization_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_premium_approvals_authorization_id_not_null",
+      "table_name": "openai_premium_approvals",
       "validated": true
     },
     {
@@ -25616,6 +26285,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL client_request_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_client_request_id_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL code",
       "enforced": true,
       "initially_deferred": false,
@@ -26000,6 +26679,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "openai_premium_approvals_config_id_not_null",
+      "table_name": "openai_premium_approvals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL config_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_config_id_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL config_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_readiness_provider_results_config_id_not_null",
       "table_name": "record_readiness_provider_results",
       "validated": true
@@ -26062,6 +26761,26 @@
       "kind": "n",
       "name": "gov_operations_config_version_not_null",
       "table_name": "gov_operations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL config_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_route_decisions_config_version_not_null",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL config_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_config_version_not_null",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -26986,6 +27705,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL correlation_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_route_decisions_correlation_id_not_null",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL cost",
       "enforced": true,
       "initially_deferred": false,
@@ -27052,6 +27781,26 @@
       "kind": "n",
       "name": "gov_settlements_created_at_not_null",
       "table_name": "gov_settlements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_route_decisions_created_at_not_null",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_created_at_not_null",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -29290,6 +30039,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "openai_route_decisions_experiment_id_not_null",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_experiment_id_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_artifact_dispositions_experiment_id_not_null",
       "table_name": "record_artifact_dispositions",
       "validated": true
@@ -30290,6 +31059,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "openai_premium_approvals_expires_at_not_null",
+      "table_name": "openai_premium_approvals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL expires_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "operator_sessions_expires_at_not_null",
       "table_name": "operator_sessions",
       "validated": true
@@ -30322,6 +31101,16 @@
       "kind": "n",
       "name": "record_conversation_fact_ledgers_fact_key_not_null",
       "table_name": "record_conversation_fact_ledgers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL facts_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_route_decisions_facts_hash_not_null",
+      "table_name": "openai_route_decisions",
       "validated": true
     },
     {
@@ -32246,6 +33035,26 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL idempotency_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_route_decisions_idempotency_key_not_null",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL idempotency_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_idempotency_key_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL identity_id",
       "enforced": true,
       "initially_deferred": false,
@@ -32322,6 +33131,16 @@
       "kind": "n",
       "name": "record_live_strategy_observations_input_bundle_id_not_null",
       "table_name": "record_live_strategy_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL input_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_input_hash_not_null",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -32702,6 +33521,16 @@
       "kind": "n",
       "name": "gov_calls_logical_operation_id_not_null",
       "table_name": "gov_calls",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL logical_operation_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_route_decisions_logical_operation_id_not_null",
+      "table_name": "openai_route_decisions",
       "validated": true
     },
     {
@@ -33172,6 +34001,16 @@
       "kind": "n",
       "name": "record_strategy_execution_bin_model_config_workflow_id_not_null",
       "table_name": "record_strategy_execution_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL model_identifier",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_model_identifier_not_null",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -33810,6 +34649,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "openai_route_decisions_operation_id_not_null",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operation_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_operation_id_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operation_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_decision_workflow__operation_id_not_null",
       "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
@@ -34320,6 +35179,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "openai_run_intents_outcome_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL outcome",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_calibration_decisions_outcome_not_null",
       "table_name": "record_calibration_decisions",
       "validated": true
@@ -34392,6 +35261,16 @@
       "kind": "n",
       "name": "supply_qualifications_outcome_not_null",
       "table_name": "supply_qualifications",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL output_schema_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_output_schema_hash_not_null",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -35240,6 +36119,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "openai_run_intents_prompt_hash_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL prompt_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_offer_design_runs_prompt_hash_not_null",
       "table_name": "record_offer_design_runs",
       "validated": true
@@ -35272,6 +36161,16 @@
       "kind": "n",
       "name": "record_strategy_agent_versions_prompt_kind_not_null",
       "table_name": "record_strategy_agent_versions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL prompt_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_prompt_version_not_null",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -35782,6 +36681,16 @@
       "kind": "n",
       "name": "record_strategy_rollback_decisions_reason_codes_not_null",
       "table_name": "record_strategy_rollback_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL reasoning_effort",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_reasoning_effort_not_null",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -36946,6 +37855,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL route",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_route_decisions_route_not_null",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL rule_kind",
       "enforced": true,
       "initially_deferred": false,
@@ -37070,6 +37989,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "openai_run_intents_schema_version_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL schema_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_artifacts_schema_version_not_null",
       "table_name": "record_artifacts",
       "validated": true
@@ -37082,6 +38011,16 @@
       "kind": "n",
       "name": "gov_budget_accounts_scope_not_null",
       "table_name": "gov_budget_accounts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL scope",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_premium_approvals_scope_not_null",
+      "table_name": "openai_premium_approvals",
       "validated": true
     },
     {
@@ -38470,6 +39409,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "openai_route_decisions_workflow_id_not_null",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "openai_run_intents_workflow_id_not_null",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_agents_workflow_id_not_null",
       "table_name": "record_agents",
       "validated": true
@@ -38612,6 +39571,16 @@
       "kind": "p",
       "name": "record_live_regression_observations_pkey",
       "table_name": "record_live_regression_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (authorization_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "openai_premium_approvals_pkey",
+      "table_name": "openai_premium_approvals",
       "validated": true
     },
     {
@@ -40216,6 +41185,26 @@
     },
     {
       "deferrable": false,
+      "definition": "PRIMARY KEY (idempotency_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "openai_route_decisions_pkey",
+      "table_name": "openai_route_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (idempotency_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "openai_run_intents_pkey",
+      "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "PRIMARY KEY (matrix_id, criterion_code)",
       "enforced": true,
       "initially_deferred": false,
@@ -40566,6 +41555,16 @@
     },
     {
       "deferrable": false,
+      "definition": "UNIQUE (authorization_id, config_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "openai_premium_approvals_authorization_id_config_id_key",
+      "table_name": "openai_premium_approvals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "UNIQUE (batch_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -40692,6 +41691,16 @@
       "kind": "u",
       "name": "record_offer_packages_calibration_decision_id_key",
       "table_name": "record_offer_packages",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (call_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "openai_run_intents_call_id_key",
+      "table_name": "openai_run_intents",
       "validated": true
     },
     {
@@ -42915,6 +43924,21 @@
     },
     {
       "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.openai_premium_approval_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'OpenAI premium approval cannot be deleted'; END IF;\n IF (to_jsonb(NEW)-ARRAY['revoked_at']) IS DISTINCT FROM (to_jsonb(OLD)-ARRAY['revoked_at'])\n    OR (OLD.revoked_at IS NOT NULL AND NEW.revoked_at IS DISTINCT FROM OLD.revoked_at)\n    OR (NEW.revoked_at IS NOT NULL AND NEW.revoked_at < OLD.approved_at) THEN\n  RAISE EXCEPTION 'OpenAI premium approval is immutable except first revocation';\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "openai_premium_approval_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.openai_route_decision_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n RAISE EXCEPTION 'OpenAI route decision is immutable';\nEND $function$\n",
+      "name": "openai_route_decision_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.openai_run_intent_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'OpenAI run intent cannot be deleted'; END IF;\n IF TG_OP='INSERT' THEN\n  IF NEW.outcome<>'READY' THEN RAISE EXCEPTION 'OpenAI run must begin READY'; END IF;\n  RETURN NEW;\n END IF;\n IF (to_jsonb(NEW)-ARRAY['call_id','outcome','output_hash','finished_at'])\n    IS DISTINCT FROM (to_jsonb(OLD)-ARRAY['call_id','outcome','output_hash','finished_at']) THEN\n  RAISE EXCEPTION 'OpenAI run identity is immutable';\n END IF;\n IF NOT ((OLD.outcome='READY' AND NEW.outcome NOT IN ('READY','RECOVERING'))\n      OR (OLD.outcome='READY' AND NEW.outcome='RECOVERING')\n      OR (OLD.outcome='RECOVERING' AND NEW.outcome NOT IN ('READY','RECOVERING'))) THEN\n  RAISE EXCEPTION 'OpenAI run result is immutable';\n END IF;\n IF NEW.call_id IS NOT NULL AND NOT EXISTS(\n  SELECT 1 FROM gov_calls c WHERE c.id=NEW.call_id\n   AND c.idempotency_key=NEW.idempotency_key AND c.config_id=NEW.config_id\n   AND c.config_version=NEW.config_version AND c.experiment_id=NEW.experiment_id\n   AND c.workflow_id=NEW.workflow_id AND c.operation_id=NEW.operation_id\n ) THEN RAISE EXCEPTION 'OpenAI run call lineage mismatch'; END IF;\n IF NEW.outcome='SUCCEEDED' AND (NEW.output_hash IS NULL OR NOT EXISTS(\n  SELECT 1 FROM gov_calls c WHERE c.id=NEW.call_id AND c.state='FINAL'\n   AND c.result_metadata->>'status'='SUCCEEDED'\n )) THEN RAISE EXCEPTION 'OpenAI succeeded run requires final usage ledger'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "openai_run_intent_guard"
+    },
+    {
+      "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.operator_login_failure_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF TG_OP <> 'INSERT' THEN RAISE EXCEPTION 'operator login failure history is immutable'; END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "operator_login_failure_guard"
     },
@@ -43525,7 +44549,7 @@
     },
     {
       "arguments": "item gov_calls",
-      "definition": "CREATE OR REPLACE FUNCTION public.gov_validate_call_json(item gov_calls)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\nDECLARE operation gov_operations; config gov_configs; a jsonb; r jsonb; m jsonb; u jsonb; actor jsonb;\nBEGIN\n SELECT * INTO operation FROM gov_operations WHERE id=item.operation_id;\n SELECT * INTO config FROM gov_configs WHERE id=item.config_id;\n a:=item.attribution; r:=item.request; m:=item.result_metadata;\n IF operation.agent_id IS NOT NULL THEN\n  actor:=jsonb_build_object('schema_version',1,'kind','agent','agent_run_id',operation.agent_id::text);\n ELSE\n  actor:=jsonb_build_object('schema_version',1,'kind','system','service',operation.service);\n END IF;\n IF NOT gov_json_object(a,ARRAY['schema_version','experiment_id','workflow_run_id','operation_run_id',\n   'operation_run_kind','actor','correlation_id','logical_operation_id','config_version','deadline'])\n   OR NOT (a->>'experiment_id'=item.experiment_id::text AND a->>'workflow_run_id'=item.workflow_id::text\n    AND a->>'operation_run_id'=item.operation_id::text AND a->>'config_version'=item.config_version::text\n    AND a->>'logical_operation_id'=item.logical_operation_id::text AND a->>'operation_run_kind'=operation.kind\n    AND a->'actor'=actor AND a->'actor'->>'schema_version'='1') IS TRUE\n   OR NOT gov_json_uuid(a->'correlation_id') OR NOT gov_json_time(a->'deadline') THEN\n  RAISE EXCEPTION 'invalid governance attribution' USING ERRCODE='23514';\n END IF;\n IF NOT gov_json_object(r,ARRAY['schema_version','config_ref','requested_count'])\n   OR NOT (r->>'config_ref'=item.config_id::text AND jsonb_typeof(r->'requested_count')='number'\n    AND r->>'requested_count' ~ '^[1-9][0-9]*$' AND (r->>'requested_count')::integer BETWEEN 1 AND 100\n    AND r->'requested_count'=config.data->'requested_count') IS TRUE THEN\n  RAISE EXCEPTION 'invalid governance request metadata' USING ERRCODE='23514';\n END IF;\n IF m IS NULL THEN RETURN; END IF;\n IF NOT gov_json_object(m,ARRAY['schema_version','capability','external_request_id','started_at','finished_at','status','error_code','usage'])\n   OR NOT (m->>'capability'=config.capability AND item.state IN ('DISPATCHED','RECONCILING','FINAL')\n    AND item.token IS NOT NULL AND item.finished_at IS NOT NULL\n    AND m->>'status' IN ('SUCCEEDED','REFUSED','FAILED')\n    AND ((m->>'status'='SUCCEEDED' AND m->'error_code'='null'::jsonb)\n     OR (m->>'status'<>'SUCCEEDED' AND m->>'error_code' IN ('DENIED','CAPABILITY_MISMATCH','TIMEOUT','UNAVAILABLE','MALFORMED_RESPONSE','REFUSED','WRITE_AUTHORITY_REQUIRED')))\n    AND (m->'external_request_id'='null'::jsonb OR (jsonb_typeof(m->'external_request_id')='string' AND m->>'external_request_id' ~ '^[A-Za-z0-9_-]{1,100}$'))\n    AND jsonb_typeof(m->'usage')='array') IS TRUE\n   OR NOT gov_json_time(m->'started_at') OR NOT gov_json_time(m->'finished_at') THEN\n  RAISE EXCEPTION 'invalid governance result metadata' USING ERRCODE='23514';\n END IF;\n IF (m->>'finished_at')::timestamptz < (m->>'started_at')::timestamptz THEN\n  RAISE EXCEPTION 'invalid governance result timing' USING ERRCODE='23514';\n END IF;\n FOR u IN SELECT value FROM jsonb_array_elements(m->'usage') LOOP\n  IF NOT gov_json_object(u,ARRAY['schema_version','component','quantity','currency','cost','knowledge','observation_key'])\n    OR NOT gov_json_uuid(u->'observation_key') OR NOT gov_json_quantity(u->'quantity') OR NOT gov_json_quantity(u->'cost')\n    OR NOT (u->>'currency'=item.currency AND u->>'knowledge' IN ('ESTIMATE','FINAL','UNAVAILABLE')\n      AND ((u->>'knowledge'='UNAVAILABLE' AND u->'cost'='null'::jsonb)\n       OR (u->>'knowledge'<>'UNAVAILABLE' AND u->'cost'<>'null'::jsonb))) IS TRUE THEN\n   RAISE EXCEPTION 'invalid governance usage metadata' USING ERRCODE='23514';\n  END IF;\n  IF NOT EXISTS(SELECT 1 FROM gov_usage existing WHERE existing.call_id=item.id\n    AND existing.observation_key::text=u->>'observation_key' AND existing.component=u->>'component'\n    AND existing.currency=u->>'currency' AND existing.knowledge=u->>'knowledge'\n    AND existing.quantity IS NOT DISTINCT FROM (u->>'quantity')::numeric\n    AND existing.cost IS NOT DISTINCT FROM (u->>'cost')::numeric) THEN\n   RAISE EXCEPTION 'governance usage metadata binding' USING ERRCODE='23514';\n  END IF;\n END LOOP;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.gov_validate_call_json(item gov_calls)\n RETURNS void\n LANGUAGE plpgsql\nAS $function$\nDECLARE operation gov_operations; config gov_configs; a jsonb; r jsonb; m jsonb; u jsonb; actor jsonb;\nBEGIN\n SELECT * INTO operation FROM gov_operations WHERE id=item.operation_id;\n SELECT * INTO config FROM gov_configs WHERE id=item.config_id;\n a:=item.attribution; r:=item.request; m:=item.result_metadata;\n IF operation.agent_id IS NOT NULL THEN\n  actor:=jsonb_build_object('schema_version',1,'kind','agent','agent_run_id',operation.agent_id::text);\n ELSE\n  actor:=jsonb_build_object('schema_version',1,'kind','system','service',operation.service);\n END IF;\n IF NOT gov_json_object(a,ARRAY['schema_version','experiment_id','workflow_run_id','operation_run_id',\n   'operation_run_kind','actor','correlation_id','logical_operation_id','config_version','deadline'])\n   OR NOT (a->>'experiment_id'=item.experiment_id::text AND a->>'workflow_run_id'=item.workflow_id::text\n    AND a->>'operation_run_id'=item.operation_id::text AND a->>'config_version'=item.config_version::text\n    AND a->>'logical_operation_id'=item.logical_operation_id::text AND a->>'operation_run_kind'=operation.kind\n    AND a->'actor'=actor AND a->'actor'->>'schema_version'='1') IS TRUE\n   OR NOT gov_json_uuid(a->'correlation_id') OR NOT gov_json_time(a->'deadline') THEN\n  RAISE EXCEPTION 'invalid governance attribution' USING ERRCODE='23514';\n END IF;\n IF NOT gov_json_object(r,ARRAY['schema_version','config_ref','requested_count'])\n   OR NOT (r->>'config_ref'=item.config_id::text AND jsonb_typeof(r->'requested_count')='number'\n    AND r->>'requested_count' ~ '^[1-9][0-9]*$' AND (r->>'requested_count')::integer BETWEEN 1 AND 100\n    AND r->'requested_count'=config.data->'requested_count') IS TRUE THEN\n  RAISE EXCEPTION 'invalid governance request metadata' USING ERRCODE='23514';\n END IF;\n IF m IS NULL THEN RETURN; END IF;\n IF NOT gov_json_object(m,ARRAY['schema_version','capability','external_request_id','started_at','finished_at','status','error_code','usage'])\n   OR NOT (m->>'capability'=config.capability AND item.state IN ('DISPATCHED','RECONCILING','FINAL')\n    AND item.token IS NOT NULL AND item.finished_at IS NOT NULL\n    AND m->>'status' IN ('SUCCEEDED','REFUSED','FAILED')\n    AND ((m->>'status'='SUCCEEDED' AND m->'error_code'='null'::jsonb)\n     OR (m->>'status'<>'SUCCEEDED' AND m->>'error_code' IN ('DENIED','CAPABILITY_MISMATCH','TIMEOUT','UNAVAILABLE','MALFORMED_RESPONSE','REFUSED','WRITE_AUTHORITY_REQUIRED','INCOMPLETE_RESULT','CANCELLED_RESULT')))\n    AND (m->'external_request_id'='null'::jsonb OR (jsonb_typeof(m->'external_request_id')='string' AND m->>'external_request_id' ~ '^[A-Za-z0-9_-]{1,100}$'))\n    AND jsonb_typeof(m->'usage')='array') IS TRUE\n   OR NOT gov_json_time(m->'started_at') OR NOT gov_json_time(m->'finished_at') THEN\n  RAISE EXCEPTION 'invalid governance result metadata' USING ERRCODE='23514';\n END IF;\n IF (m->>'finished_at')::timestamptz < (m->>'started_at')::timestamptz THEN\n  RAISE EXCEPTION 'invalid governance result timing' USING ERRCODE='23514';\n END IF;\n FOR u IN SELECT value FROM jsonb_array_elements(m->'usage') LOOP\n  IF NOT gov_json_object(u,ARRAY['schema_version','component','quantity','currency','cost','knowledge','observation_key'])\n    OR NOT gov_json_uuid(u->'observation_key') OR NOT gov_json_quantity(u->'quantity') OR NOT gov_json_quantity(u->'cost')\n    OR NOT (u->>'currency'=item.currency AND u->>'knowledge' IN ('ESTIMATE','FINAL','UNAVAILABLE')\n      AND ((u->>'knowledge'='UNAVAILABLE' AND u->'cost'='null'::jsonb)\n       OR (u->>'knowledge'<>'UNAVAILABLE' AND u->'cost'<>'null'::jsonb))) IS TRUE THEN\n   RAISE EXCEPTION 'invalid governance usage metadata' USING ERRCODE='23514';\n  END IF;\n  IF NOT EXISTS(SELECT 1 FROM gov_usage existing WHERE existing.call_id=item.id\n    AND existing.observation_key::text=u->>'observation_key' AND existing.component=u->>'component'\n    AND existing.currency=u->>'currency' AND existing.knowledge=u->>'knowledge'\n    AND existing.quantity IS NOT DISTINCT FROM (u->>'quantity')::numeric\n    AND existing.cost IS NOT DISTINCT FROM (u->>'cost')::numeric) THEN\n   RAISE EXCEPTION 'governance usage metadata binding' USING ERRCODE='23514';\n  END IF;\n END LOOP;\nEND $function$\n",
       "name": "gov_validate_call_json"
     },
     {
@@ -44057,6 +45081,24 @@
       "primary_index": false,
       "ready": true,
       "table_name": "gov_workflows",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_openai_route_decisions_operation ON public.openai_route_decisions USING btree (operation_id, created_at)",
+      "name": "ix_openai_route_decisions_operation",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "openai_route_decisions",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_openai_run_intents_operation ON public.openai_run_intents USING btree (operation_id, created_at)",
+      "name": "ix_openai_run_intents_operation",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "openai_run_intents",
       "unique_index": false,
       "valid": true
     },
@@ -45596,6 +46638,51 @@
       "primary_index": true,
       "ready": true,
       "table_name": "gov_workflows",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX openai_premium_approvals_authorization_id_config_id_key ON public.openai_premium_approvals USING btree (authorization_id, config_id)",
+      "name": "openai_premium_approvals_authorization_id_config_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "openai_premium_approvals",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX openai_premium_approvals_pkey ON public.openai_premium_approvals USING btree (authorization_id)",
+      "name": "openai_premium_approvals_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "openai_premium_approvals",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX openai_route_decisions_pkey ON public.openai_route_decisions USING btree (idempotency_key)",
+      "name": "openai_route_decisions_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "openai_route_decisions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX openai_run_intents_call_id_key ON public.openai_run_intents USING btree (call_id)",
+      "name": "openai_run_intents_call_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "openai_run_intents",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX openai_run_intents_pkey ON public.openai_run_intents USING btree (idempotency_key)",
+      "name": "openai_run_intents_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "openai_run_intents",
       "unique_index": true,
       "valid": true
     },
@@ -49120,6 +50207,24 @@
       "force_row_security": false,
       "kind": "r",
       "name": "gov_workflows",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "openai_premium_approvals",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "openai_route_decisions",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "openai_run_intents",
       "row_security": false
     },
     {
@@ -53331,6 +54436,422 @@
       "internal": true,
       "name": null,
       "table_name": "gov_experiments"
+    },
+    {
+      "constraint_name": "openai_premium_approvals_config_id_fkey",
+      "constraint_table": "openai_premium_approvals",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_premium_approvals"
+    },
+    {
+      "constraint_name": "openai_premium_approvals_config_id_fkey",
+      "constraint_table": "openai_premium_approvals",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "openai_premium_approvals_config_id_fkey",
+      "constraint_table": "openai_premium_approvals",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_premium_approvals"
+    },
+    {
+      "constraint_name": "openai_premium_approvals_config_id_fkey",
+      "constraint_table": "openai_premium_approvals",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "openai_route_decisions_approval_id_config_id_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_route_decisions"
+    },
+    {
+      "constraint_name": "openai_route_decisions_approval_id_config_id_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_premium_approvals"
+    },
+    {
+      "constraint_name": "openai_route_decisions_approval_id_config_id_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_route_decisions"
+    },
+    {
+      "constraint_name": "openai_route_decisions_approval_id_config_id_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_premium_approvals"
+    },
+    {
+      "constraint_name": "openai_route_decisions_config_id_workflow_id_config_versio_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_route_decisions"
+    },
+    {
+      "constraint_name": "openai_route_decisions_config_id_workflow_id_config_versio_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "openai_route_decisions_config_id_workflow_id_config_versio_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_route_decisions"
+    },
+    {
+      "constraint_name": "openai_route_decisions_config_id_workflow_id_config_versio_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "openai_route_decisions_operation_id_workflow_id_experiment_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_route_decisions"
+    },
+    {
+      "constraint_name": "openai_route_decisions_operation_id_workflow_id_experiment_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_operations"
+    },
+    {
+      "constraint_name": "openai_route_decisions_operation_id_workflow_id_experiment_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_route_decisions"
+    },
+    {
+      "constraint_name": "openai_route_decisions_operation_id_workflow_id_experiment_fkey",
+      "constraint_table": "openai_route_decisions",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_operations"
+    },
+    {
+      "constraint_name": "openai_run_intents_agent_run_id_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_run_intents"
+    },
+    {
+      "constraint_name": "openai_run_intents_agent_run_id_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_agents"
+    },
+    {
+      "constraint_name": "openai_run_intents_agent_run_id_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_run_intents"
+    },
+    {
+      "constraint_name": "openai_run_intents_agent_run_id_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_agents"
+    },
+    {
+      "constraint_name": "openai_run_intents_call_id_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_run_intents"
+    },
+    {
+      "constraint_name": "openai_run_intents_call_id_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_calls"
+    },
+    {
+      "constraint_name": "openai_run_intents_call_id_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_run_intents"
+    },
+    {
+      "constraint_name": "openai_run_intents_call_id_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_calls"
+    },
+    {
+      "constraint_name": "openai_run_intents_config_id_workflow_id_config_version_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_run_intents"
+    },
+    {
+      "constraint_name": "openai_run_intents_config_id_workflow_id_config_version_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "openai_run_intents_config_id_workflow_id_config_version_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_run_intents"
+    },
+    {
+      "constraint_name": "openai_run_intents_config_id_workflow_id_config_version_fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_configs"
+    },
+    {
+      "constraint_name": "openai_run_intents_operation_id_workflow_id_experiment_id__fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_run_intents"
+    },
+    {
+      "constraint_name": "openai_run_intents_operation_id_workflow_id_experiment_id__fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_operations"
+    },
+    {
+      "constraint_name": "openai_run_intents_operation_id_workflow_id_experiment_id__fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "openai_run_intents"
+    },
+    {
+      "constraint_name": "openai_run_intents_operation_id_workflow_id_experiment_id__fkey",
+      "constraint_table": "openai_run_intents",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_operations"
     },
     {
       "constraint_name": "operator_sessions_operator_id_fkey",
@@ -77030,6 +78551,45 @@
       "internal": false,
       "name": "immutable",
       "table_name": "gov_workflows"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER openai_premium_approval_immutable BEFORE DELETE OR UPDATE ON openai_premium_approvals FOR EACH ROW EXECUTE FUNCTION openai_premium_approval_guard()",
+      "enabled": "O",
+      "events": 27,
+      "function_name": "public.openai_premium_approval_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "openai_premium_approval_immutable",
+      "table_name": "openai_premium_approvals"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER openai_route_decision_immutable BEFORE DELETE OR UPDATE ON openai_route_decisions FOR EACH ROW EXECUTE FUNCTION openai_route_decision_guard()",
+      "enabled": "O",
+      "events": 27,
+      "function_name": "public.openai_route_decision_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "openai_route_decision_immutable",
+      "table_name": "openai_route_decisions"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER openai_run_intent_immutable BEFORE INSERT OR DELETE OR UPDATE ON openai_run_intents FOR EACH ROW EXECUTE FUNCTION openai_run_intent_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.openai_run_intent_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "openai_run_intent_immutable",
+      "table_name": "openai_run_intents"
     },
     {
       "constraint_name": null,

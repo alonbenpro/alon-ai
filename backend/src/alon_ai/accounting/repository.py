@@ -412,6 +412,31 @@ class GovernanceRepository:
             row = await self._call(c, call_id)
             return await self._config(c, row["config_id"])
 
+    @safe_errors
+    async def generation_config_and_prices(
+        self, config_id: UUID
+    ) -> tuple[CapabilityConfig, tuple[PriceVersion, ...]]:
+        """Read the same immutable price versions used by reservation and settlement."""
+        async with self.engine.connect() as c:
+            config = await self._config(c, config_id)
+            prices, _, _, _ = await self._prices(c, config, self.clock())
+            return config, tuple(prices)
+
+    @safe_errors
+    async def receipt_for_idempotency_key(self, key: UUID) -> CallReceipt | None:
+        """Find a fenced attempt after cancellation or an interrupted response path."""
+        async with self.engine.connect() as c:
+            row = (
+                (
+                    await c.execute(
+                        select(s.calls).where(s.calls.c.idempotency_key == key)
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            return self._receipt(row) if row is not None else None
+
     async def _call(self, c, call_id, *, lock=False):
         q = select(s.calls).where(s.calls.c.id == call_id)
         row = (

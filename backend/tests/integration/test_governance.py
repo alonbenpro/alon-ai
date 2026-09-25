@@ -89,6 +89,7 @@ async def seed(
     gate="NONE",
     capability=Capability.BRAVE_WEB_COVERAGE,
     transient=False,
+    price_components=(UsageComponent.REQUEST,),
 ):
     from alon_ai.accounting.repository import (
         GovernanceProvisioner,
@@ -122,6 +123,8 @@ async def seed(
         if transient
         else Purpose.GATEWAY_EFFECT
         if CAPABILITIES[capability].nature == Nature.WRITE
+        else Purpose.GENERATION
+        if capability is Capability.OPENAI_GENERATE
         else Purpose.RESEARCH,
         required_fields=frozenset() if transient else frozenset({ContentField.TEXT}),
     )
@@ -158,28 +161,36 @@ async def seed(
     )
     await register(admin, grant.supporting_evidence_ref, "GRANT", now)
     await admin.grant(grant)
-    p = PriceVersion(
-        id=uuid4(),
-        capability=use.capability,
-        component=UsageComponent.REQUEST,
-        currency="USD",
-        unit_price=price,
-        unit_quantity=Decimal(1),
-        currency_quantum=quantum,
-        effective_at=now - timedelta(days=1),
-        expires_at=now + timedelta(days=1),
-        evidence_id=uuid4(),
+    model_identifier = (
+        "gpt-5-mini" if capability is Capability.OPENAI_GENERATE else None
+    )
+    prices = tuple(
+        PriceVersion(
+            id=uuid4(),
+            capability=use.capability,
+            component=component,
+            model_identifier=model_identifier,
+            currency="USD",
+            unit_price=price,
+            unit_quantity=Decimal(1),
+            currency_quantum=quantum,
+            effective_at=now - timedelta(days=1),
+            expires_at=now + timedelta(days=1),
+            evidence_id=uuid4(),
+        )
+        for component in price_components
     )
     f = FxVersion(
         id=uuid4(),
         currency="USD",
         rate=Decimal("3.5"),
-        effective_at=p.effective_at,
-        expires_at=p.expires_at,
+        effective_at=prices[0].effective_at,
+        expires_at=prices[0].expires_at,
         evidence_id=uuid4(),
     )
-    await register(admin, p.evidence_id, "PRICE", now)
-    await admin.price(p)
+    for p in prices:
+        await register(admin, p.evidence_id, "PRICE", now)
+        await admin.price(p)
     await register(admin, f.evidence_id, "FX", now)
     await admin.fx(f)
     config = CapabilityConfig(
@@ -187,10 +198,26 @@ async def seed(
         version=attr.config_version,
         workflow_id=attr.workflow_run_id,
         intended_use=use,
-        prices=(PriceBound(price_id=p.id, max_quantity=Decimal(1)),),
+        prices=tuple(
+            PriceBound(
+                price_id=p.id,
+                max_quantity=(
+                    Decimal(4000)
+                    if p.component
+                    in {UsageComponent.INPUT_TOKEN, UsageComponent.CACHED_TOKEN}
+                    else Decimal(300)
+                    if p.component is UsageComponent.OUTPUT_TOKEN
+                    else Decimal(1)
+                )
+                if capability is Capability.OPENAI_GENERATE
+                else Decimal(1),
+            )
+            for p in prices
+        ),
         fx_id=f.id,
         requested_count=1,
         adapter_version=uuid4(),
+        model_identifier=model_identifier,
     )
     await admin.config(config)
     await admin.budgets(
@@ -198,8 +225,8 @@ async def seed(
         provider=use.provider,
         currencies=("USD", "ILS"),
         limit=limit,
-        effective_at=p.effective_at,
-        expires_at=p.expires_at,
+        effective_at=prices[0].effective_at,
+        expires_at=prices[0].expires_at,
     )
     repo = GovernanceRepository(engine, clock=lambda: now)
     return repo, admin, attr, config, grant, now

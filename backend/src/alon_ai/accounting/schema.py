@@ -642,7 +642,7 @@ BEGIN
     AND item.token IS NOT NULL AND item.finished_at IS NOT NULL
     AND m->>'status' IN ('SUCCEEDED','REFUSED','FAILED')
     AND ((m->>'status'='SUCCEEDED' AND m->'error_code'='null'::jsonb)
-     OR (m->>'status'<>'SUCCEEDED' AND m->>'error_code' IN ('DENIED','CAPABILITY_MISMATCH','TIMEOUT','UNAVAILABLE','MALFORMED_RESPONSE','REFUSED','WRITE_AUTHORITY_REQUIRED')))
+     OR (m->>'status'<>'SUCCEEDED' AND m->>'error_code' IN ('DENIED','CAPABILITY_MISMATCH','TIMEOUT','UNAVAILABLE','MALFORMED_RESPONSE','REFUSED','WRITE_AUTHORITY_REQUIRED','INCOMPLETE_RESULT','CANCELLED_RESULT')))
     AND (m->'external_request_id'='null'::jsonb OR (jsonb_typeof(m->'external_request_id')='string' AND m->>'external_request_id' ~ '^[A-Za-z0-9_-]{1,100}$'))
     AND jsonb_typeof(m->'usage')='array') IS TRUE
    OR NOT gov_json_time(m->'started_at') OR NOT gov_json_time(m->'finished_at') THEN

@@ -1,0 +1,366 @@
+"""Bounded, advisory Idea Discovery and Refinement Responses profiles."""
+
+from __future__ import annotations
+
+from collections.abc import Mapping
+from enum import StrEnum
+from types import MappingProxyType
+from typing import Annotated, Literal, Self
+from uuid import UUID
+
+from pydantic import Field, StringConstraints, model_validator
+from sqlalchemy import select
+
+from alon_ai.openai_runtime.contract import (
+    OpenAIProfile,
+    RoutingFacts,
+    canonical_json,
+)
+from alon_ai.openai_runtime.runtime import (
+    AcceptedArtifact,
+    AcceptedOperatorProfile,
+    OpenAIExecution,
+    OpenAIRuntime,
+)
+from alon_ai.providers.contracts import CallAttribution, StrictDTO
+from alon_ai.records import ArtifactInput, ArtifactKind, ProductRecordsRepository
+from alon_ai.records import schema as records
+
+
+class IdeaStage(StrEnum):
+    USER_SEEDED_REFINEMENT = "USER_SEEDED_REFINEMENT"
+    SYSTEM_DISCOVERY = "SYSTEM_DISCOVERY"
+    SYSTEM_CANDIDATE_REFINEMENT = "SYSTEM_CANDIDATE_REFINEMENT"
+
+
+AdviceText = Annotated[
+    str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)
+]
+
+
+class IdeaCandidateAdvice(StrictDTO):
+    """A hypothesis for an operator to review, not an IDEA_CANDIDATE command."""
+
+    title: AdviceText
+    hypothesis: AdviceText
+    grounding_refs: tuple[str, ...]
+    uncertainties: tuple[AdviceText, ...] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def grounded_in_operator_profile(self) -> Self:
+        if self.grounding_refs != ("OPERATOR_PROFILE",):
+            raise ValueError("discovery grounding must cite the operator profile")
+        return self
+
+
+class IdeaBriefAdvice(StrictDTO):
+    """An advisory brief; existing record commands own all state changes."""
+
+    title: AdviceText
+    customer: AdviceText
+    problem: AdviceText
+    core_intent: AdviceText
+    material_pivot: bool
+    grounding_refs: tuple[str, ...]
+    uncertainties: tuple[AdviceText, ...] = Field(min_length=1)
+
+
+def _brief_grounding(refs: tuple[str, ...], required: str) -> bool:
+    return (
+        required in refs
+        and len(refs) == len(set(refs))
+        and set(refs)
+        <= {
+            required,
+            "OPERATOR_PROFILE",
+        }
+    )
+
+
+class SeededIdeaBriefAdvice(IdeaBriefAdvice):
+    @model_validator(mode="after")
+    def grounded_in_seed(self) -> Self:
+        if not _brief_grounding(self.grounding_refs, "SEED"):
+            raise ValueError("seeded brief grounding must cite the seed")
+        return self
+
+
+class SelectedCandidateIdeaBriefAdvice(IdeaBriefAdvice):
+    @model_validator(mode="after")
+    def grounded_in_selection(self) -> Self:
+        if not _brief_grounding(self.grounding_refs, "SELECTED_CANDIDATE"):
+            raise ValueError("selected brief grounding must cite the candidate")
+        return self
+
+
+_STRING = {"type": "string"}
+_STRINGS = {"type": "array", "items": _STRING}
+_BRIEF_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": _STRING,
+        "customer": _STRING,
+        "problem": _STRING,
+        "core_intent": _STRING,
+        "material_pivot": {"type": "boolean"},
+        "grounding_refs": _STRINGS,
+        "uncertainties": _STRINGS,
+    },
+    "required": [
+        "title",
+        "customer",
+        "problem",
+        "core_intent",
+        "material_pivot",
+        "grounding_refs",
+        "uncertainties",
+    ],
+    "additionalProperties": False,
+}
+_CANDIDATE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "title": _STRING,
+        "hypothesis": _STRING,
+        "grounding_refs": _STRINGS,
+        "uncertainties": _STRINGS,
+    },
+    "required": ["title", "hypothesis", "grounding_refs", "uncertainties"],
+    "additionalProperties": False,
+}
+
+_STAGE_SETTINGS = {
+    IdeaStage.USER_SEEDED_REFINEMENT: (
+        "idea-seeded-refinement-v1",
+        "idea-brief-advice-v2",
+        (
+            "Refine only the operator's exact IDEA_SEED. Preserve its core intent; "
+            "flag a material pivot explicitly. Cite SEED in grounding_refs only for "
+            "claims supported by that input. Identify unknowns. Return advisory JSON "
+            "only. Never issue record commands, select candidates, accept ideas, "
+            "send messages, or invent market evidence."
+        ),
+        _BRIEF_SCHEMA,
+        SeededIdeaBriefAdvice,
+    ),
+    IdeaStage.SYSTEM_DISCOVERY: (
+        "idea-system-discovery-v1",
+        "idea-candidate-advice-v2",
+        (
+            "Suggest one business idea hypothesis grounded in the supplied exact "
+            "operator capability profile. Cite OPERATOR_PROFILE only for capability "
+            "and constraint facts; no external market evidence has been supplied, "
+            "so demand must be identified as unverified. Return advisory JSON only. Never "
+            "issue record commands, select a candidate, accept an idea, send "
+            "messages, or invent observed market evidence."
+        ),
+        _CANDIDATE_SCHEMA,
+        IdeaCandidateAdvice,
+    ),
+    IdeaStage.SYSTEM_CANDIDATE_REFINEMENT: (
+        "idea-system-candidate-refinement-v1",
+        "idea-brief-advice-v2",
+        (
+            "Refine only the selected IDEA_CANDIDATE from the existing "
+            "SYSTEM_DISCOVERY cycle. Cite SELECTED_CANDIDATE in grounding_refs "
+            "only for claims supported by that candidate. Identify unknowns. "
+            "Return advisory JSON only. Never issue record commands, select "
+            "candidates, accept ideas, send messages, or invent market evidence."
+        ),
+        _BRIEF_SCHEMA,
+        SelectedCandidateIdeaBriefAdvice,
+    ),
+}
+
+
+def idea_profile(
+    stage: IdeaStage,
+    *,
+    config_id: UUID,
+    config_version: UUID,
+    adapter_version: UUID,
+    model_identifier: str,
+    reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"],
+    max_output_tokens: int,
+    timeout_seconds: int = 60,
+) -> OpenAIProfile:
+    """Bind a reviewed role prompt/schema to an immutable capability config."""
+
+    prompt_version, schema_version, instructions, json_schema, output_model = (
+        _STAGE_SETTINGS[stage]
+    )
+    return OpenAIProfile(
+        config_id=config_id,
+        config_version=config_version,
+        adapter_version=adapter_version,
+        prompt_version=prompt_version,
+        instructions=instructions,
+        schema_version=schema_version,
+        json_schema=json_schema,
+        output_model=output_model,
+        model_identifier=model_identifier,
+        reasoning_effort=reasoning_effort,
+        max_output_tokens=max_output_tokens,
+        timeout_seconds=timeout_seconds,
+    )
+
+
+class IdeaRuntime:
+    """Choose the application profile from durable cycle mode, never model output."""
+
+    def __init__(
+        self,
+        records_repository: ProductRecordsRepository,
+        runtimes: Mapping[IdeaStage, OpenAIRuntime],
+    ) -> None:
+        if set(runtimes) != set(IdeaStage):
+            raise ValueError("Idea runtime requires all three stages")
+        for stage, runtime in runtimes.items():
+            settings = _STAGE_SETTINGS[stage]
+            if len(runtime.profiles) != 1:
+                raise ValueError("Idea runtime profile does not match its stage")
+            profile = next(iter(runtime.profiles.values()))
+            if (
+                profile.prompt_version != settings[0]
+                or profile.schema_version != settings[1]
+                or profile.instructions != settings[2]
+                or profile.schema_json != canonical_json(settings[3])
+                or profile.output_model is not settings[4]
+                or runtime.routes.cheap != profile.config_id
+            ):
+                raise ValueError("Idea runtime profile does not match its stage")
+        self.records = records_repository
+        self.runtimes = MappingProxyType(dict(runtimes))
+
+    async def _operator_profile(self, experiment_id: UUID) -> AcceptedOperatorProfile:
+        async with self.records.engine.connect() as connection:
+            profile = (
+                (
+                    await connection.execute(
+                        select(
+                            records.operator_profiles.c.id,
+                            records.operator_profiles.c.version,
+                            records.operator_profiles.c.content_hash,
+                        )
+                        .select_from(
+                            records.experiments.join(
+                                records.operator_profiles,
+                                (
+                                    records.experiments.c.operator_profile_id
+                                    == records.operator_profiles.c.id
+                                )
+                                & (
+                                    records.experiments.c.operator_profile_version
+                                    == records.operator_profiles.c.version
+                                ),
+                            )
+                        )
+                        .where(records.experiments.c.id == experiment_id)
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+        if profile is None:
+            raise PermissionError("Idea run requires an exact operator profile")
+        return AcceptedOperatorProfile(
+            profile_id=profile["id"],
+            version=profile["version"],
+            content_hash=profile["content_hash"],
+            experiment_id=experiment_id,
+            profile_schema_version=2,
+        )
+
+    async def discover_system(
+        self,
+        attribution: CallAttribution,
+        *,
+        facts: RoutingFacts,
+        idempotency_key: UUID,
+    ) -> OpenAIExecution:
+        operator_profile = await self._operator_profile(attribution.experiment_id)
+        return await self.runtimes[IdeaStage.SYSTEM_DISCOVERY].run(
+            attribution,
+            facts=facts,
+            sources=(),
+            artifacts=(),
+            operator_profiles=(operator_profile,),
+            idempotency_key=idempotency_key,
+        )
+
+    async def refine_cycle(
+        self,
+        attribution: CallAttribution,
+        *,
+        cycle_id: UUID,
+        facts: RoutingFacts,
+        idempotency_key: UUID,
+    ) -> OpenAIExecution:
+        async with self.records.engine.connect() as connection:
+            cycle = (
+                (
+                    await connection.execute(
+                        select(records.cycles).where(
+                            records.cycles.c.id == cycle_id,
+                            records.cycles.c.experiment_id == attribution.experiment_id,
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if cycle is None:
+                raise PermissionError("Idea cycle is not in the attributed experiment")
+            if cycle["purpose"] != "INITIAL":
+                raise PermissionError("Idea profile is limited to initial cycles")
+            schema_version = await connection.scalar(
+                select(records.artifacts.c.schema_version).where(
+                    records.artifacts.c.id == cycle["seed_artifact_id"],
+                    records.artifacts.c.experiment_id == attribution.experiment_id,
+                    records.artifacts.c.kind == cycle["seed_kind"],
+                    records.artifacts.c.version == cycle["seed_version"],
+                    records.artifacts.c.content_hash == cycle["seed_hash"],
+                )
+            )
+        if schema_version is None:
+            raise PermissionError("Idea cycle origin is no longer exact")
+        if cycle["idea_mode"] == IdeaStage.USER_SEEDED_REFINEMENT:
+            stage = IdeaStage.USER_SEEDED_REFINEMENT
+            kind = ArtifactKind.IDEA_SEED
+            role = "SEED"
+            selection_id = None
+        elif cycle["idea_mode"] == IdeaStage.SYSTEM_DISCOVERY:
+            if cycle["selection_id"] is None:
+                raise PermissionError("System idea cycle lacks candidate selection")
+            stage = IdeaStage.SYSTEM_CANDIDATE_REFINEMENT
+            kind = ArtifactKind.IDEA_CANDIDATE
+            role = "SELECTED_CANDIDATE"
+            selection_id = cycle["selection_id"]
+        else:
+            raise PermissionError("Unknown idea cycle mode")
+        if cycle["seed_kind"] != kind:
+            raise PermissionError("Idea cycle mode and origin disagree")
+        operator_profile = await self._operator_profile(attribution.experiment_id)
+        origin = ArtifactInput(
+            artifact_id=cycle["seed_artifact_id"],
+            kind=kind,
+            version=cycle["seed_version"],
+            content_hash=cycle["seed_hash"],
+            role=role,
+        )
+        return await self.runtimes[stage].run(
+            attribution,
+            facts=facts,
+            sources=(),
+            artifacts=(
+                AcceptedArtifact(
+                    artifact=origin,
+                    experiment_id=attribution.experiment_id,
+                    schema_version=schema_version,
+                    selection_id=selection_id,
+                    cycle_id=cycle_id,
+                ),
+            ),
+            operator_profiles=(operator_profile,),
+            idempotency_key=idempotency_key,
+        )
