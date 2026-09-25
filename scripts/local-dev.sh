@@ -21,6 +21,8 @@ Usage: scripts/local-dev.sh {up|down|status|help}
   down    Stop the stack while keeping the database volume and login material
   status  Show container status
   help    Show this help
+  Live OpenAI requires an explicit reviewed authority manifest and paid-call acknowledgment.
+  See docs/runbooks/local-development.md; default provider mode is disabled.
 EOF
 }
 
@@ -51,6 +53,30 @@ docker_preflight() {
         *) fail 'COMPOSE must be either "docker compose" or "docker-compose".' ;;
     esac
     docker info >/dev/null 2>&1 || fail 'Docker engine is unavailable. Start Docker Desktop or your selected engine.'
+}
+
+live_preflight() {
+    [ "${ALON_AI_L07_LIVE_ACK:-}" = I_ACCEPT_PAID_CALLS ] || fail 'Live OpenAI mode requires ALON_AI_L07_LIVE_ACK=I_ACCEPT_PAID_CALLS for each startup.'
+    [ -n "${ALON_AI_L07_LIVE_MANIFEST:-}" ] || fail 'Live OpenAI mode requires ALON_AI_L07_LIVE_MANIFEST pointing to the reviewed, non-secret authority manifest.'
+    case "$ALON_AI_L07_LIVE_MANIFEST" in
+        /*) ;;
+        *) ALON_AI_L07_LIVE_MANIFEST="$ROOT/$ALON_AI_L07_LIVE_MANIFEST" ;;
+    esac
+    export ALON_AI_L07_LIVE_MANIFEST
+    python3 - "$ALON_AI_L07_LIVE_MANIFEST" <<'PY'
+import os
+import stat
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+try:
+    info = path.lstat()
+except OSError:
+    raise SystemExit("local-dev: live authority manifest is missing") from None
+if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o022:
+    raise SystemExit("local-dev: live authority manifest must be an owner-owned regular file without group/world write permission")
+PY
 }
 
 compose_cli() {
@@ -219,8 +245,13 @@ case "${1:-help}" in
         ;;
     up)
         [ "$#" -eq 1 ] || fail 'Usage: scripts/local-dev.sh up'
-        init_compose_project
         command -v python3 >/dev/null 2>&1 || fail 'Python 3 is required for secure local setup.'
+        case "${ALON_AI_PROVIDER_MODE:-disabled}" in
+            disabled|fake) ;;
+            live) live_preflight ;;
+            *) fail 'Unknown ALON_AI_PROVIDER_MODE; use disabled, fake, or explicitly provisioned live.' ;;
+        esac
+        init_compose_project
         command -v curl >/dev/null 2>&1 || fail 'curl is required for readiness checks.'
         docker_preflight
         check_ports
@@ -232,6 +263,16 @@ case "${1:-help}" in
         compose run --rm --no-deps api alembic upgrade head || fail 'Database migration failed; application services were not started.'
         compose run --rm --no-deps -v "$ROOT/scripts/provision_operator.py:/tmp/provision_operator.py:ro" api python /tmp/provision_operator.py || fail 'Operator provisioning failed. Existing operator data was left intact.'
         compose run --rm --no-deps worker dbos migrate --sys-db-url postgresql://alon_ai:alon_ai@postgres:5432/alon_ai --schema dbos || fail 'DBOS migration failed; application services were not started.'
+        if [ "${ALON_AI_PROVIDER_MODE:-disabled}" = live ]; then
+            compose build live-provision || fail 'Live provisioner image build failed.'
+            compose run --rm --no-deps --user root live-provision sh -c 'chown 10001:10001 /app/.local && chmod 700 /app/.local' || fail 'Live secret volume initialization failed.'
+            if ! compose run --rm --no-deps live-provision test -d /app/.local/live; then
+                compose run --rm --no-deps -v "$ALON_AI_L07_LIVE_MANIFEST:/app/authority-manifest.json:ro" live-provision test -f /app/authority-manifest.json || fail 'Live manifest is not a regular file inside Docker; place it in the checkout .local directory shared with Docker.'
+                compose run --rm --no-deps -v "$ALON_AI_L07_LIVE_MANIFEST:/app/authority-manifest.json:ro" live-provision python -m alon_ai.api.live_idea_provision --manifest /app/authority-manifest.json --data-dir /app/.local || fail 'Live authority/key provisioning failed; no model request was sent.'
+            else
+                compose run --rm --no-deps live-provision sh -c 'test -f /app/.local/live/live-idea.json && test -f /app/.local/live/live-secret.key && test -d /app/.local/live/secrets' || fail 'Live private volume is incomplete; review it privately before restarting.'
+            fi
+        fi
         compose up -d --wait api worker frontend || fail 'Application services did not become ready. Inspect docker compose logs.'
         compose ps --status running --services worker | grep -Fx worker >/dev/null || fail 'Worker exited after startup. Inspect worker logs.'
         curl --fail --silent --show-error "http://127.0.0.1:$api_port/health/ready" >/dev/null || fail 'API readiness failed.'

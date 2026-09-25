@@ -1,6 +1,27 @@
 {
   "components": {
     "schemas": {
+      "AcceptRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "command_key"
+        ],
+        "title": "AcceptRequest",
+        "type": "object"
+      },
       "ActivityItem": {
         "properties": {
           "id": {
@@ -70,6 +91,317 @@
         "title": "ActivityResponse",
         "type": "object"
       },
+      "CommercialInput": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "hourly_cost": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Hourly Cost"
+          },
+          "maximum_discount_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Maximum Discount Rate"
+          },
+          "minimum_deposit_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Minimum Deposit Rate"
+          },
+          "minimum_margin_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Minimum Margin Rate"
+          },
+          "minimum_project_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Minimum Project Price"
+          }
+        },
+        "required": [
+          "currency",
+          "hourly_cost",
+          "minimum_project_price",
+          "minimum_margin_rate",
+          "maximum_discount_rate",
+          "minimum_deposit_rate"
+        ],
+        "title": "CommercialInput",
+        "type": "object"
+      },
+      "CreateExperimentRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "brief": {
+            "$ref": "#/components/schemas/ExperimentBriefInput"
+          },
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "idea_seed": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Idea Seed",
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "operator_profile": {
+            "$ref": "#/components/schemas/OperatorProfileInput"
+          }
+        },
+        "required": [
+          "name",
+          "idea_seed",
+          "brief",
+          "operator_profile",
+          "command_key"
+        ],
+        "title": "CreateExperimentRequest",
+        "type": "object"
+      },
+      "CreateExperimentResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "brief_artifact_id": {
+            "format": "uuid",
+            "title": "Brief Artifact Id",
+            "type": "string"
+          },
+          "cycle_id": {
+            "format": "uuid",
+            "title": "Cycle Id",
+            "type": "string"
+          },
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "seed_artifact_id": {
+            "format": "uuid",
+            "title": "Seed Artifact Id",
+            "type": "string"
+          },
+          "state": {
+            "const": "AWAITING_REFINEMENT",
+            "default": "AWAITING_REFINEMENT",
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "cycle_id",
+          "brief_artifact_id",
+          "seed_artifact_id"
+        ],
+        "title": "CreateExperimentResponse",
+        "type": "object"
+      },
+      "DeliveryInput": {
+        "additionalProperties": false,
+        "properties": {
+          "concurrent_projects": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Concurrent Projects",
+            "type": "integer"
+          },
+          "hours_per_week": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 168.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Hours Per Week"
+          },
+          "max_project_hours": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Max Project Hours"
+          }
+        },
+        "required": [
+          "max_project_hours",
+          "hours_per_week",
+          "concurrent_projects"
+        ],
+        "title": "DeliveryInput",
+        "type": "object"
+      },
+      "ExperimentBriefInput": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_usd": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "commercial_boundaries": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Commercial Boundaries",
+            "type": "string"
+          },
+          "evidence_definitions": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Evidence Definitions",
+            "type": "array"
+          },
+          "geographies": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 20,
+            "minItems": 1,
+            "title": "Geographies",
+            "type": "array"
+          },
+          "launch_stage": {
+            "const": "SHADOW",
+            "title": "Launch Stage",
+            "type": "string"
+          },
+          "objective": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Objective",
+            "type": "string"
+          },
+          "problem": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Problem",
+            "type": "string"
+          },
+          "target_customer": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Target Customer",
+            "type": "string"
+          }
+        },
+        "required": [
+          "objective",
+          "target_customer",
+          "problem",
+          "geographies",
+          "commercial_boundaries",
+          "budget_usd",
+          "evidence_definitions",
+          "launch_stage"
+        ],
+        "title": "ExperimentBriefInput",
+        "type": "object"
+      },
+      "ExperimentRuntimeStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "provider_mode": {
+            "enum": [
+              "disabled",
+              "fake",
+              "live"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "ready": {
+            "title": "Ready",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "provider_mode",
+          "ready"
+        ],
+        "title": "ExperimentRuntimeStatus",
+        "type": "object"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -116,6 +448,42 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "OperatorProfileInput": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "commercial": {
+            "$ref": "#/components/schemas/CommercialInput"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Constraints",
+            "type": "array"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryInput"
+          }
+        },
+        "required": [
+          "capabilities",
+          "constraints",
+          "delivery",
+          "commercial"
+        ],
+        "title": "OperatorProfileInput",
         "type": "object"
       },
       "OperatorSession": {
@@ -175,6 +543,21 @@
           "database"
         ],
         "title": "ReadinessUnavailableResponse",
+        "type": "object"
+      },
+      "RefineRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "idempotency_key": {
+            "format": "uuid",
+            "title": "Idempotency Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "idempotency_key"
+        ],
+        "title": "RefineRequest",
         "type": "object"
       },
       "SessionResponse": {
@@ -490,6 +873,208 @@
           }
         },
         "summary": "Activity Events"
+      }
+    },
+    "/operator/experiments": {
+      "post": {
+        "operationId": "create_experiment_operator_experiments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateExperimentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateExperimentResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Experiment"
+      }
+    },
+    "/operator/experiments/runtime": {
+      "get": {
+        "operationId": "experiment_runtime_status_operator_experiments_runtime_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentRuntimeStatus"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Experiment Runtime Status"
+      }
+    },
+    "/operator/experiments/{experiment_id}": {
+      "get": {
+        "operationId": "get_experiment_operator_experiments__experiment_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Experiment Operator Experiments  Experiment Id  Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Experiment"
+      }
+    },
+    "/operator/experiments/{experiment_id}/accept": {
+      "post": {
+        "operationId": "accept_experiment_idea_operator_experiments__experiment_id__accept_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AcceptRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Accept Experiment Idea Operator Experiments  Experiment Id  Accept Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Accept Experiment Idea"
+      }
+    },
+    "/operator/experiments/{experiment_id}/refine": {
+      "post": {
+        "operationId": "refine_experiment_operator_experiments__experiment_id__refine_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Refine Experiment Operator Experiments  Experiment Id  Refine Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Refine Experiment"
       }
     },
     "/operator/status": {

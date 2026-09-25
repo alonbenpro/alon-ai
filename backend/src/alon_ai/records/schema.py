@@ -908,6 +908,37 @@ Index(
     ),
 )
 
+idea_refinements = table(
+    "idea_refinements",
+    gov.col("run_id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("cycle_id", gov.U),
+    gov.col("seed_artifact_id", gov.U),
+    gov.col("operation_id", gov.U),
+    gov.col("state", String(32)),
+    gov.col("advice_source", String(16)),
+    gov.col("advice", JSONB, nullable=True),
+    gov.col("output_hash", String(64), nullable=True),
+    gov.col("created_at", gov.T),
+    gov.col("finished_at", gov.T, nullable=True),
+    ForeignKeyConstraint(["experiment_id"], ["record_experiments.id"]),
+    ForeignKeyConstraint(["cycle_id"], ["record_cycles.id"]),
+    ForeignKeyConstraint(["seed_artifact_id"], ["record_artifacts.id"]),
+    ForeignKeyConstraint(["operation_id"], ["gov_operations.id"]),
+    CheckConstraint(
+        "state IN ('RUNNING','SUCCEEDED','REFINEMENT_FAILED','REFINEMENT_BLOCKED')"
+    ),
+    CheckConstraint("advice_source IN ('RECORDED_FAKE','OPENAI')"),
+    CheckConstraint(
+        "(state='RUNNING' AND advice IS NULL AND output_hash IS NULL AND finished_at IS NULL) OR (state IN ('REFINEMENT_FAILED','REFINEMENT_BLOCKED') AND advice IS NULL AND output_hash IS NULL AND finished_at IS NOT NULL) OR (state='SUCCEEDED' AND advice IS NOT NULL AND output_hash ~ '^[0-9a-f]{64}$' AND finished_at IS NOT NULL)"
+    ),
+)
+Index(
+    "ix_record_idea_refinements_cycle",
+    idea_refinements.c.cycle_id,
+    idea_refinements.c.created_at.desc(),
+)
+
 RECORD_TABLES = (
     operator_profiles,
     experiments,
@@ -923,6 +954,7 @@ RECORD_TABLES = (
     cycles,
     pivot_decisions,
     idea_acceptances,
+    idea_refinements,
     research_attempts,
     cycle_transitions,
     cycle_states,

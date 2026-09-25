@@ -217,6 +217,17 @@ def _nonempty(value: object) -> bool:
 
 def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, Any]:
     expected = _PAYLOAD_FIELDS[kind]
+    if kind is ArtifactKind.EXPERIMENT_BRIEF and set(payload) != {"objective"}:
+        expected = {
+            "objective": str,
+            "target_customer": str,
+            "problem": str,
+            "geographies": list,
+            "commercial_boundaries": str,
+            "budget_usd": str,
+            "evidence_definitions": list,
+            "launch_stage": str,
+        }
     if set(payload) != set(expected):
         raise ValueError("artifact payload fields do not match kind")
     for key, expected_type in expected.items():
@@ -248,6 +259,17 @@ def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, A
         "USER_SUPPLIED",
     }:
         raise ValueError("invalid idea origin")
+    if kind is ArtifactKind.EXPERIMENT_BRIEF and set(payload) != {"objective"}:
+        try:
+            budget = Decimal(payload["budget_usd"])
+        except InvalidOperation as error:
+            raise ValueError("invalid experiment budget") from error
+        if (
+            budget <= 0
+            or payload["launch_stage"] != "SHADOW"
+            or len(payload["geographies"]) != len(set(payload["geographies"]))
+        ):
+            raise ValueError("invalid experiment bounds")
     if kind is ArtifactKind.MARKET_RESEARCH_RECOMMENDATION and payload[
         "recommendation"
     ] not in {

@@ -1,5 +1,6 @@
 import re
 from functools import lru_cache
+from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
 from urllib.parse import urlsplit
 
@@ -61,6 +62,10 @@ class Settings(BaseSettings):
     session_signing_key: SecretStr | None = None
     # Configuration selects an execution mode; it never grants call/effect authority.
     provider_mode: Literal["disabled", "fake", "live"] = "disabled"
+    l07_live_config_path: Path | None = None
+    l07_secret_root: Path | None = None
+    l07_secret_key_file: Path | None = None
+    l07_secret_key_version: str | None = None
     generative_ai_provider: Literal["openai"] = "openai"
     openai_api_key_handle: SecretHandle | None = None
     brave_api_key_handle: SecretHandle | None = None

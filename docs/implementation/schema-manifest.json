@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260924_24"
+    "20260925_25"
   ],
   "columns": [
     {
@@ -6050,6 +6050,105 @@
       "not_null": false,
       "table_name": "record_idea_acceptances",
       "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "advice",
+      "not_null": false,
+      "table_name": "record_idea_refinements",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "advice_source",
+      "not_null": true,
+      "table_name": "record_idea_refinements",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_idea_refinements",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_idea_refinements",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_idea_refinements",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "finished_at",
+      "not_null": false,
+      "table_name": "record_idea_refinements",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operation_id",
+      "not_null": true,
+      "table_name": "record_idea_refinements",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "output_hash",
+      "not_null": false,
+      "table_name": "record_idea_refinements",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "run_id",
+      "not_null": true,
+      "table_name": "record_idea_refinements",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "seed_artifact_id",
+      "not_null": true,
+      "table_name": "record_idea_refinements",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "state",
+      "not_null": true,
+      "table_name": "record_idea_refinements",
+      "type": "character varying(32)"
     },
     {
       "default_expression": null,
@@ -16115,6 +16214,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (advice_source::text = ANY (ARRAY['RECORDED_FAKE'::character varying, 'OPENAI'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_idea_refinements_advice_source_check",
+      "table_name": "record_idea_refinements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (agent_id IS NOT NULL AND service IS NULL OR agent_id IS NULL AND (service::text = ANY (ARRAY['provider-executor'::character varying, 'contact-resolution'::character varying, 'campaign-supply'::character varying, 'send-gateway'::character varying, 'calendar-gateway'::character varying]::text[])))",
       "enforced": true,
       "initially_deferred": false,
@@ -18485,6 +18594,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (state::text = 'RUNNING'::text AND advice IS NULL AND output_hash IS NULL AND finished_at IS NULL OR (state::text = ANY (ARRAY['REFINEMENT_FAILED'::character varying, 'REFINEMENT_BLOCKED'::character varying]::text[])) AND advice IS NULL AND output_hash IS NULL AND finished_at IS NOT NULL OR state::text = 'SUCCEEDED'::text AND advice IS NOT NULL AND output_hash::text ~ '^[0-9a-f]{64}$'::text AND finished_at IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_idea_refinements_check",
+      "table_name": "record_idea_refinements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (state::text = ANY (ARRAY['ACTIVE'::character varying, 'TARGET_50_REACHED'::character varying, 'EMAIL_SUPPLY_INSUFFICIENT_AFTER_BATCH_2'::character varying, 'QUALIFIED_SUPPLY_INSUFFICIENT_AFTER_BATCH_3'::character varying, 'CANCELLED'::character varying, 'BUDGET_EXHAUSTED'::character varying, 'DEADLINE_EXHAUSTED'::character varying, 'SOURCE_FAILURE'::character varying, 'PROVIDER_FAILURE'::character varying, 'SEARCH_EXHAUSTED'::character varying, 'SAFETY_STOP'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -18501,6 +18620,16 @@
       "kind": "c",
       "name": "gov_calls_state_check",
       "table_name": "gov_calls",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (state::text = ANY (ARRAY['RUNNING'::character varying, 'SUCCEEDED'::character varying, 'REFINEMENT_FAILED'::character varying, 'REFINEMENT_BLOCKED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_idea_refinements_state_check",
+      "table_name": "record_idea_refinements",
       "validated": true
     },
     {
@@ -20615,6 +20744,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id) REFERENCES record_cycles(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_idea_refinements_cycle_id_fkey",
+      "table_name": "record_idea_refinements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (cycle_id, experiment_id) REFERENCES record_cycles(id, experiment_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -21261,6 +21400,16 @@
       "kind": "f",
       "name": "record_experiment_strategy_bindings_experiment_id_fkey",
       "table_name": "record_experiment_strategy_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES record_experiments(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_idea_refinements_experiment_id_fkey",
+      "table_name": "record_idea_refinements",
       "validated": true
     },
     {
@@ -22081,6 +22230,16 @@
       "kind": "f",
       "name": "record_returns_offer_input_bundle_id_experiment_id_fkey",
       "table_name": "record_returns",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (operation_id) REFERENCES gov_operations(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_idea_refinements_operation_id_fkey",
+      "table_name": "record_idea_refinements",
       "validated": true
     },
     {
@@ -23345,6 +23504,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (seed_artifact_id) REFERENCES record_artifacts(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_idea_refinements_seed_artifact_id_fkey",
+      "table_name": "record_idea_refinements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (seed_artifact_id, experiment_id, seed_kind, seed_version, seed_hash) REFERENCES record_artifacts(id, experiment_id, kind, version, content_hash)",
       "enforced": true,
       "initially_deferred": false,
@@ -24161,6 +24330,16 @@
       "kind": "n",
       "name": "record_qualification_dossiers_admission_id_not_null",
       "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL advice_source",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_refinements_advice_source_not_null",
+      "table_name": "record_idea_refinements",
       "validated": true
     },
     {
@@ -28069,6 +28248,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_idea_refinements_created_at_not_null",
+      "table_name": "record_idea_refinements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_learning_candidate_versions_created_at_not_null",
       "table_name": "record_learning_candidate_versions",
       "validated": true
@@ -28771,6 +28960,16 @@
       "kind": "n",
       "name": "record_idea_acceptances_cycle_id_not_null",
       "table_name": "record_idea_acceptances",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_refinements_cycle_id_not_null",
+      "table_name": "record_idea_refinements",
       "validated": true
     },
     {
@@ -30331,6 +30530,16 @@
       "kind": "n",
       "name": "record_idea_acceptances_experiment_id_not_null",
       "table_name": "record_idea_acceptances",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_refinements_experiment_id_not_null",
+      "table_name": "record_idea_refinements",
       "validated": true
     },
     {
@@ -34669,6 +34878,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_idea_refinements_operation_id_not_null",
+      "table_name": "record_idea_refinements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operation_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_decision_workflow__operation_id_not_null",
       "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
@@ -37899,6 +38118,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_idea_refinements_run_id_not_null",
+      "table_name": "record_idea_refinements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL run_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_learning_input_bundles_run_id_not_null",
       "table_name": "record_learning_input_bundles",
       "validated": true
@@ -38101,6 +38330,16 @@
       "kind": "n",
       "name": "record_cycles_seed_artifact_id_not_null",
       "table_name": "record_cycles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL seed_artifact_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_refinements_seed_artifact_id_not_null",
+      "table_name": "record_idea_refinements",
       "validated": true
     },
     {
@@ -38561,6 +38800,16 @@
       "kind": "n",
       "name": "record_cycle_states_state_not_null",
       "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_refinements_state_not_null",
+      "table_name": "record_idea_refinements",
       "validated": true
     },
     {
@@ -41365,6 +41614,16 @@
     },
     {
       "deferrable": false,
+      "definition": "PRIMARY KEY (run_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_idea_refinements_pkey",
+      "table_name": "record_idea_refinements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "PRIMARY KEY (sequence_artifact_id, ordinal)",
       "enforced": true,
       "initially_deferred": false,
@@ -44059,6 +44318,11 @@
     },
     {
       "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_idea_refinement_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE intent openai_run_intents; cycle record_cycles; operation gov_operations;\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'refinement history is immutable'; END IF;\n IF TG_OP='UPDATE' AND (OLD.state<>'RUNNING' OR NEW.state='RUNNING'\n   OR (to_jsonb(OLD)-ARRAY['state','advice','output_hash','finished_at'])\n      IS DISTINCT FROM (to_jsonb(NEW)-ARRAY['state','advice','output_hash','finished_at']))\n THEN RAISE EXCEPTION 'refinement identity or terminal result is immutable'; END IF;\n SELECT * INTO cycle FROM record_cycles WHERE id=NEW.cycle_id AND experiment_id=NEW.experiment_id\n   AND seed_artifact_id=NEW.seed_artifact_id AND idea_mode='USER_SEEDED_REFINEMENT' AND purpose='INITIAL';\n SELECT * INTO operation FROM gov_operations WHERE id=NEW.operation_id AND experiment_id=NEW.experiment_id;\n IF cycle.id IS NULL OR operation.id IS NULL THEN RAISE EXCEPTION 'refinement scope mismatch'; END IF;\n IF NEW.state='SUCCEEDED' THEN\n  SELECT * INTO intent FROM openai_run_intents WHERE idempotency_key=NEW.run_id\n    AND experiment_id=NEW.experiment_id AND operation_id=NEW.operation_id\n    AND outcome='SUCCEEDED' AND output_hash=NEW.output_hash;\n  IF intent.idempotency_key IS NULL\n  THEN RAISE EXCEPTION 'refinement output is not a successful governed run'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_idea_refinement_guard"
+    },
+    {
+      "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_lead_readiness_immutable()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$ BEGIN RAISE EXCEPTION 'immutable lead readiness record'; END $function$\n",
       "name": "record_lead_readiness_immutable"
     },
@@ -44559,8 +44823,13 @@
     },
     {
       "arguments": "kind text, value jsonb",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_payload_valid(kind text, value jsonb)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\nAS $function$\n SELECT CASE kind\n  WHEN 'INITIAL_OUTREACH_POLICY' THEN\n   record_json_exact(value,ARRAY['pricing','formal_proposal','detailed_scope','budget_question','primary_goal','max_sequence_steps'])\n   AND value->>'pricing'='OMIT' AND value->>'formal_proposal'='FORBIDDEN'\n   AND value->>'detailed_scope'='OMIT' AND value->>'budget_question'='FORBIDDEN'\n   AND value->>'primary_goal'='START_RELEVANT_CONVERSATION'\n   AND jsonb_typeof(value->'max_sequence_steps')='number' AND (value->>'max_sequence_steps')::integer>0\n  WHEN 'OUTREACH_PROMPT_CONFIGURATION' THEN record_json_exact(value,ARRAY['template']) AND record_nonempty_text(value->'template')\n  WHEN 'OUTREACH_CONTEXT_BUNDLE' THEN record_json_exact(value,ARRAY['status','recipient_mode','recipient_label','greeting']) AND value->>'status'='FROZEN' AND value->>'recipient_mode' IN ('NAMED_PERSON','ROLE_INBOX','GENERAL_BUSINESS_INBOX') AND record_nonempty_text(value->'greeting') AND ((value->>'recipient_mode'='GENERAL_BUSINESS_INBOX' AND value->'recipient_label'='null'::jsonb AND value->>'greeting'='Hello team') OR (value->>'recipient_mode'='NAMED_PERSON' AND record_nonempty_text(value->'recipient_label') AND value->>'greeting'='Hi '||(value->>'recipient_label')) OR (value->>'recipient_mode'='ROLE_INBOX' AND record_nonempty_text(value->'recipient_label') AND value->>'greeting'='Hello '||(value->>'recipient_label')||' team'))\n  WHEN 'LEAD_OPPORTUNITY_NARRATIVE' THEN record_json_exact(value,ARRAY['text']) AND record_nonempty_text(value->'text')\n  WHEN 'CONVERSATION_STRATEGY' THEN record_json_exact(value,ARRAY['text']) AND record_nonempty_text(value->'text')\n  WHEN 'OUTREACH_SEQUENCE_PLAN' THEN record_json_exact(value,ARRAY['objective','step_count']) AND record_nonempty_text(value->'objective') AND jsonb_typeof(value->'step_count')='number' AND (value->>'step_count')::integer>0\n  WHEN 'EMAIL_DRAFT' THEN record_json_exact(value,ARRAY['recipient_mode','greeting','subject','body']) AND value->>'recipient_mode' IN ('NAMED_PERSON','ROLE_INBOX','GENERAL_BUSINESS_INBOX') AND record_nonempty_text(value->'greeting') AND record_nonempty_text(value->'subject') AND record_nonempty_text(value->'body')\n  WHEN 'DRAFT_VALIDATION_RESULT' THEN record_json_exact(value,ARRAY['validator','disposition','input_hash','reason_codes']) AND record_nonempty_text(value->'validator') AND value->>'disposition' IN ('PASS','FAIL') AND value->>'input_hash' ~ '^[0-9a-f]{64}$' AND jsonb_typeof(value->'reason_codes')='array'\n  ELSE record_payload_valid_pre_outreach(kind,value) END\n$function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_payload_valid(kind text, value jsonb)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\nAS $function$\n SELECT CASE WHEN kind='EXPERIMENT_BRIEF' AND value ? 'target_customer' THEN\n   record_json_exact(value,ARRAY['objective','target_customer','problem','geographies',\n     'commercial_boundaries','budget_usd','evidence_definitions','launch_stage'])\n   AND record_nonempty_text(value->'objective')\n   AND record_nonempty_text(value->'target_customer')\n   AND record_nonempty_text(value->'problem')\n   AND record_nonempty_text(value->'commercial_boundaries')\n   AND record_nonempty_text_array(value->'geographies')\n   AND record_nonempty_text_array(value->'evidence_definitions')\n   AND value->>'launch_stage'='SHADOW'\n   AND value->>'budget_usd' ~ '^[0-9]+(\\.[0-9]{1,2})?$'\n   AND (value->>'budget_usd')::numeric>0\n   AND jsonb_array_length(value->'geographies') =\n     (SELECT count(DISTINCT item) FROM jsonb_array_elements(value->'geographies') item)\n ELSE record_payload_valid_before_l07(kind,value) END\n$function$\n",
       "name": "record_payload_valid"
+    },
+    {
+      "arguments": "kind text, value jsonb",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_payload_valid_before_l07(kind text, value jsonb)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\nAS $function$\n SELECT CASE kind\n  WHEN 'INITIAL_OUTREACH_POLICY' THEN\n   record_json_exact(value,ARRAY['pricing','formal_proposal','detailed_scope','budget_question','primary_goal','max_sequence_steps'])\n   AND value->>'pricing'='OMIT' AND value->>'formal_proposal'='FORBIDDEN'\n   AND value->>'detailed_scope'='OMIT' AND value->>'budget_question'='FORBIDDEN'\n   AND value->>'primary_goal'='START_RELEVANT_CONVERSATION'\n   AND jsonb_typeof(value->'max_sequence_steps')='number' AND (value->>'max_sequence_steps')::integer>0\n  WHEN 'OUTREACH_PROMPT_CONFIGURATION' THEN record_json_exact(value,ARRAY['template']) AND record_nonempty_text(value->'template')\n  WHEN 'OUTREACH_CONTEXT_BUNDLE' THEN record_json_exact(value,ARRAY['status','recipient_mode','recipient_label','greeting']) AND value->>'status'='FROZEN' AND value->>'recipient_mode' IN ('NAMED_PERSON','ROLE_INBOX','GENERAL_BUSINESS_INBOX') AND record_nonempty_text(value->'greeting') AND ((value->>'recipient_mode'='GENERAL_BUSINESS_INBOX' AND value->'recipient_label'='null'::jsonb AND value->>'greeting'='Hello team') OR (value->>'recipient_mode'='NAMED_PERSON' AND record_nonempty_text(value->'recipient_label') AND value->>'greeting'='Hi '||(value->>'recipient_label')) OR (value->>'recipient_mode'='ROLE_INBOX' AND record_nonempty_text(value->'recipient_label') AND value->>'greeting'='Hello '||(value->>'recipient_label')||' team'))\n  WHEN 'LEAD_OPPORTUNITY_NARRATIVE' THEN record_json_exact(value,ARRAY['text']) AND record_nonempty_text(value->'text')\n  WHEN 'CONVERSATION_STRATEGY' THEN record_json_exact(value,ARRAY['text']) AND record_nonempty_text(value->'text')\n  WHEN 'OUTREACH_SEQUENCE_PLAN' THEN record_json_exact(value,ARRAY['objective','step_count']) AND record_nonempty_text(value->'objective') AND jsonb_typeof(value->'step_count')='number' AND (value->>'step_count')::integer>0\n  WHEN 'EMAIL_DRAFT' THEN record_json_exact(value,ARRAY['recipient_mode','greeting','subject','body']) AND value->>'recipient_mode' IN ('NAMED_PERSON','ROLE_INBOX','GENERAL_BUSINESS_INBOX') AND record_nonempty_text(value->'greeting') AND record_nonempty_text(value->'subject') AND record_nonempty_text(value->'body')\n  WHEN 'DRAFT_VALIDATION_RESULT' THEN record_json_exact(value,ARRAY['validator','disposition','input_hash','reason_codes']) AND record_nonempty_text(value->'validator') AND value->>'disposition' IN ('PASS','FAIL') AND value->>'input_hash' ~ '^[0-9a-f]{64}$' AND jsonb_typeof(value->'reason_codes')='array'\n  ELSE record_payload_valid_pre_outreach(kind,value) END\n$function$\n",
+      "name": "record_payload_valid_before_l07"
     },
     {
       "arguments": "kind text, value jsonb",
@@ -45423,6 +45692,15 @@
       "primary_index": false,
       "ready": true,
       "table_name": "record_idea_acceptances",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_idea_refinements_cycle ON public.record_idea_refinements USING btree (cycle_id, created_at DESC)",
+      "name": "ix_record_idea_refinements_cycle",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_idea_refinements",
       "unique_index": false,
       "valid": true
     },
@@ -47547,6 +47825,15 @@
       "primary_index": true,
       "ready": true,
       "table_name": "record_idea_acceptances",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_idea_refinements_pkey ON public.record_idea_refinements USING btree (run_id)",
+      "name": "record_idea_refinements_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_idea_refinements",
       "unique_index": true,
       "valid": true
     },
@@ -50489,6 +50776,12 @@
       "force_row_security": false,
       "kind": "r",
       "name": "record_idea_acceptances",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_idea_refinements",
       "row_security": false
     },
     {
@@ -61729,6 +62022,214 @@
       "internal": true,
       "name": null,
       "table_name": "record_pivot_decisions"
+    },
+    {
+      "constraint_name": "record_idea_refinements_cycle_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_refinements_cycle_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_idea_refinements_cycle_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_refinements_cycle_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_idea_refinements_experiment_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_refinements_experiment_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_idea_refinements_experiment_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_refinements_experiment_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_idea_refinements_operation_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_refinements_operation_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_operations"
+    },
+    {
+      "constraint_name": "record_idea_refinements_operation_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_refinements_operation_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_operations"
+    },
+    {
+      "constraint_name": "record_idea_refinements_seed_artifact_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_refinements_seed_artifact_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_idea_refinements_seed_artifact_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_refinements_seed_artifact_id_fkey",
+      "constraint_table": "record_idea_refinements",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
     },
     {
       "constraint_name": "record_initial_outreach_polic_artifact_id_experiment_id_ar_fkey",
@@ -79422,6 +79923,19 @@
       "internal": false,
       "name": "record_idea_acceptances_guard",
       "table_name": "record_idea_acceptances"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_idea_refinement_guard BEFORE INSERT OR DELETE OR UPDATE ON record_idea_refinements FOR EACH ROW EXECUTE FUNCTION record_idea_refinement_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_idea_refinement_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_idea_refinement_guard",
+      "table_name": "record_idea_refinements"
     },
     {
       "constraint_name": null,

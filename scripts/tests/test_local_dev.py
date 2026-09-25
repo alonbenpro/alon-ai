@@ -39,6 +39,8 @@ class LocalDevTests(unittest.TestCase):
             "esac\n"
             "if [ \"$1 $2\" = 'volume ls' ] && [ \"${FAKE_VOLUME_PRESENT:-0}\" = 1 ]; then printf '%s_postgres_data\\n' \"${COMPOSE_PROJECT_NAME:-default}\"; exit 0; fi\n"
             "if [ -n \"${FAKE_FAIL_CONTAINS:-}\" ]; then case \"$*\" in *\"$FAKE_FAIL_CONTAINS\"*) exit 1;; esac; fi\n"
+            "case \"$*\" in *'live-provision test -d /app/.local/live'*) [ \"${FAKE_LIVE_UNPROVISIONED:-0}\" != 1 ]; exit $?;; esac\n"
+            "case \"$*\" in *'live-provision test -f /app/authority-manifest.json'*) [ \"${FAKE_BAD_LIVE_MOUNT:-0}\" != 1 ]; exit $?;; esac\n"
             "case \"$*\" in *'ps --status running --services worker'*) [ \"${FAKE_WORKER_DOWN:-0}\" = 1 ] || printf '%s\\n' worker; exit 0;; esac\n"
             "if [ \"$1\" = compose ] && [ \"$2\" = version ]; then exit 0; fi\n"
             "if [ \"$1\" = compose ] && [ \"$2\" = ps ]; then exit 0; fi\n"
@@ -107,6 +109,79 @@ class LocalDevTests(unittest.TestCase):
         result = self.run_script("help")
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("Usage:", result.stdout)
+
+    def test_live_provider_requires_explicit_paid_call_acknowledgment(self):
+        result = self.run_script(
+            "up", extra_env={"ALON_AI_PROVIDER_MODE": "live"}
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ALON_AI_L07_LIVE_ACK", result.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_live_provider_requires_manifest_before_first_provisioning(self):
+        self.write_auth()
+        result = self.run_script(
+            "up",
+            extra_env={
+                "ALON_AI_PROVIDER_MODE": "live",
+                "ALON_AI_L07_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
+                "ALON_AI_POSTGRES_PORT": "55432",
+                "ALON_AI_API_PORT": "18000",
+                "ALON_AI_FRONTEND_PORT": "13000",
+            },
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("ALON_AI_L07_LIVE_MANIFEST", result.stderr)
+
+    def test_live_provider_provisions_private_volume_once_after_explicit_ack(self):
+        self.write_auth()
+        manifest = self.root / "live-authority.json"
+        manifest.write_text("{}\n")
+        common = {
+            "ALON_AI_PROVIDER_MODE": "live",
+            "ALON_AI_L07_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
+            "ALON_AI_L07_LIVE_MANIFEST": str(manifest),
+            "ALON_AI_POSTGRES_PORT": "55432",
+            "ALON_AI_API_PORT": "18000",
+            "ALON_AI_FRONTEND_PORT": "13000",
+        }
+        result = self.run_script(
+            "up", extra_env={**common, "FAKE_LIVE_UNPROVISIONED": "1"}
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        commands = self.log.read_text()
+        self.assertIn("live-provision sh -c chown 10001:10001", commands)
+        self.assertIn("python -m alon_ai.api.live_idea_provision", commands)
+        self.assertNotIn("OPENAI_API_KEY", commands)
+        self.log.unlink()
+        result = self.run_script("up", extra_env=common)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertNotIn(
+            "python -m alon_ai.api.live_idea_provision", self.log.read_text()
+        )
+
+    def test_live_manifest_mount_must_be_a_regular_file(self):
+        self.write_auth()
+        manifest = self.root / "live-authority.json"
+        manifest.write_text("{}\n")
+        result = self.run_script(
+            "up",
+            extra_env={
+                "ALON_AI_PROVIDER_MODE": "live",
+                "ALON_AI_L07_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
+                "ALON_AI_L07_LIVE_MANIFEST": str(manifest),
+                "ALON_AI_POSTGRES_PORT": "55432",
+                "ALON_AI_API_PORT": "18000",
+                "ALON_AI_FRONTEND_PORT": "13000",
+                "FAKE_LIVE_UNPROVISIONED": "1",
+                "FAKE_BAD_LIVE_MOUNT": "1",
+            },
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("not a regular file inside Docker", result.stderr)
+        self.assertNotIn(
+            "python -m alon_ai.api.live_idea_provision", self.log.read_text()
+        )
 
     def test_down_preserves_database_volume(self):
         result = self.run_script("down")
