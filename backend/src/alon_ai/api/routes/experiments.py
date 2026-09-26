@@ -514,6 +514,8 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
             )
             .mappings()
             .one_or_none()
+            if cycle
+            else None
         )
         discovery = (
             (

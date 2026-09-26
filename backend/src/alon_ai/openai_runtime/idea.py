@@ -340,7 +340,7 @@ class IdeaRuntime:
         runtimes: Mapping[IdeaStage, OpenAIRuntime],
     ) -> None:
         if set(runtimes) != set(IdeaStage):
-            raise ValueError("Idea runtime requires all three stages")
+            raise ValueError("Idea runtime requires all configured stages")
         for stage, runtime in runtimes.items():
             settings = _STAGE_SETTINGS[stage]
             if len(runtime.profiles) != 1:
