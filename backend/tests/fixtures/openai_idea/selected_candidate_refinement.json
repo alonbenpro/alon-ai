@@ -11,6 +11,7 @@
     "customer": "Small clinics (hypothesis)",
     "problem": "Appointment coordination (hypothesis)",
     "core_intent": "Explore a synthetic Python appointment scheduling backend",
+    "intent_relationship": "PRESERVES_CORE_INTENT",
     "material_pivot": false,
     "grounding_refs": [
       "SELECTED_CANDIDATE",
@@ -169,6 +170,7 @@
       "id": "unapproved_material_pivot",
       "changes": {
         "material_pivot": true,
+        "intent_relationship": "MATERIAL_PIVOT",
         "core_intent": "Sell insurance leads"
       },
       "violates": [

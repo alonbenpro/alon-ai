@@ -15,6 +15,7 @@ from test_product_records import artifact
 from alon_ai.openai_runtime.contract import RoutingFacts
 from alon_ai.openai_runtime.idea import (
     IdeaCandidateAdvice,
+    IdeaCandidateSetAdvice,
     IdeaStage,
     SeededIdeaBriefAdvice,
     SelectedCandidateIdeaBriefAdvice,
@@ -119,7 +120,9 @@ def _score_run(stage, run, case, elapsed_ns, transport_ns, transport):
     assert run.outcome is OpenAIRunOutcome.SUCCEEDED
     assert run.output is not None and run.receipt is not None
     report = score_recorded_idea(
-        run.output,
+        run.output.candidates[0]
+        if isinstance(run.output, IdeaCandidateSetAdvice)
+        else run.output,
         case,
         cost_usd=run.receipt.accrued,
         offline_runtime_ms=elapsed_ns / 1_000_000,
@@ -219,7 +222,23 @@ async def test_system_and_selected_recorded_eval_cost_and_measured_offline_time(
         IdeaStage.SYSTEM_CANDIDATE_REFINEMENT: selected,
     }
     service, attribution, product, transports = await setup_idea(
-        governance_engine, {stage: case["advice"] for stage, case in cases.items()}
+        governance_engine,
+        {
+            IdeaStage.SYSTEM_DISCOVERY: {
+                "candidates": [
+                    discovery["advice"],
+                    {
+                        **discovery["advice"],
+                        "title": "Synthetic clinic scheduling backend 2",
+                    },
+                    {
+                        **discovery["advice"],
+                        "title": "Synthetic clinic scheduling backend 3",
+                    },
+                ]
+            },
+            IdeaStage.SYSTEM_CANDIDATE_REFINEMENT: selected["advice"],
+        },
     )
     transport_ns = _measure_transports(monkeypatch, transports, cases)
     no_ai_discovery = await service.discover_system(
@@ -237,7 +256,7 @@ async def test_system_and_selected_recorded_eval_cost_and_measured_offline_time(
         idempotency_key=uuid4(),
     )
     discovery_ns = perf_counter_ns() - started
-    assert isinstance(discovery_run.output, IdeaCandidateAdvice)
+    assert isinstance(discovery_run.output, IdeaCandidateSetAdvice)
     discovery_input = json.loads(
         transports[IdeaStage.SYSTEM_DISCOVERY].calls[0]["input_json"]
     )
@@ -249,10 +268,13 @@ async def test_system_and_selected_recorded_eval_cost_and_measured_offline_time(
         discovery["source_facts"]["PROFILE.CONSTRAINT"]
         in discovery_input["operator_profiles"][0]["constraints"]
     )
-    assert selected["source_facts"]["CANDIDATE.TITLE"] == discovery_run.output.title
+    assert (
+        selected["source_facts"]["CANDIDATE.TITLE"]
+        == discovery_run.output.candidates[0].title
+    )
     assert (
         selected["source_facts"]["CANDIDATE.HYPOTHESIS"]
-        == discovery_run.output.hypothesis
+        == discovery_run.output.candidates[0].hypothesis
     )
     async with governance_engine.connect() as conn:
         agent_id = await conn.scalar(
@@ -266,8 +288,8 @@ async def test_system_and_selected_recorded_eval_cost_and_measured_offline_time(
             attribution.experiment_id,
             ArtifactKind.IDEA_CANDIDATE,
             {
-                "title": discovery_run.output.title,
-                "hypothesis": discovery_run.output.hypothesis,
+                "title": discovery_run.output.candidates[0].title,
+                "hypothesis": discovery_run.output.candidates[0].hypothesis,
             },
             workflow_id=attribution.workflow_run_id,
             agent_id=agent_id,

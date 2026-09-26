@@ -12,6 +12,7 @@
     "customer": "Small clinics",
     "problem": "Manual appointment coordination",
     "core_intent": "Reduce clinic administration time with a synthetic Python backend",
+    "intent_relationship": "PRESERVES_CORE_INTENT",
     "material_pivot": false,
     "grounding_refs": [
       "SEED",
@@ -176,6 +177,7 @@
       "id": "unapproved_material_pivot",
       "changes": {
         "material_pivot": true,
+        "intent_relationship": "MATERIAL_PIVOT",
         "core_intent": "Sell insurance leads"
       },
       "violates": [

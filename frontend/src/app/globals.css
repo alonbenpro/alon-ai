@@ -206,6 +206,11 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .experiment-field > span { font-weight: 560; }
 .experiment-field input, .experiment-field textarea, .experiment-field select { width: 100%; min-height: 42px; padding: 11px 12px; border: 1px solid var(--line-strong); border-radius: 9px; color: var(--ink); background: #0a1424; font-size: 13px; line-height: 1.5; }
 .experiment-field textarea { min-height: 72px; resize: vertical; }
+.experiment-fieldset { min-width: 0; margin: 0; padding: 0; border: 0; }
+.experiment-mode-label { margin-top: 22px; color: var(--subtle); font: 10px var(--font-geist-mono), monospace; letter-spacing: .1em; text-transform: uppercase; }
+.experiment-mode-options { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 13px; }
+.experiment-mode-options label { display: inline-flex; align-items: center; gap: 8px; padding: 11px 14px; border: 1px solid var(--line-strong); border-radius: 9px; color: var(--ink); font-size: 12px; cursor: pointer; }
+.experiment-mode-options input, .experiment-candidate input, .experiment-intent input { accent-color: var(--blue); }
 .experiment-field input:hover, .experiment-field textarea:hover, .experiment-field select:hover { border-color: #6881ad; }
 .experiment-field small { color: var(--subtle); font-size: 10px; line-height: 1.4; }
 .experiment-action-row { display: flex; align-items: center; gap: 18px; padding-top: 18px; border-top: 1px solid var(--line); }
@@ -225,6 +230,20 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .experiment-saved-seed p { margin-top: 22px; color: var(--subtle); font: 10px var(--font-geist-mono), monospace; }
 .experiment-review { margin-top: 20px; }
 .experiment-review > p { color: var(--muted); font-size: 13px; }
+.experiment-review > button, .experiment-review > div[role="status"] button { margin-top: 20px; }
+.experiment-candidates { display: grid; gap: 18px; margin: 22px 0; }
+.experiment-candidates > p, .experiment-intent > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+.experiment-candidates fieldset { display: grid; gap: 10px; min-width: 0; margin: 0; padding: 0; border: 0; }
+.experiment-candidates legend { margin-bottom: 12px; color: var(--ink); font-size: 13px; font-weight: 600; }
+.experiment-candidate { display: flex; align-items: flex-start; gap: 12px; padding: 16px; border: 1px solid var(--line-strong); border-radius: 10px; background: #14233c; cursor: pointer; }
+.experiment-candidate:has(input:checked) { border-color: #7c9bff; background: #1b3459; }
+.experiment-candidate > span { display: grid; gap: 7px; }
+.experiment-candidate strong { color: var(--ink); font-size: 14px; }
+.experiment-candidate span span { color: var(--muted); font-size: 12px; }
+.experiment-candidate small { color: var(--subtle); font-size: 11px; }
+.experiment-selected { color: var(--mint); font-size: 12px; }
+.experiment-intent { grid-column: 1 / -1; display: grid; gap: 14px; padding: 18px; border: 1px solid var(--line-strong); border-radius: 10px; }
+.experiment-intent > label:last-of-type { display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 12px; }
 .experiment-advice { display: grid; grid-template-columns: 1.2fr .8fr; gap: 24px; padding-top: 25px; }
 .experiment-advice__lead { grid-row: span 2; padding: 24px; border: 1px solid #6889d975; border-radius: 12px; background: #18315a; }
 .experiment-advice__lead h3 { margin: 15px 0 10px; font-size: 27px; font-weight: 560; letter-spacing: -.04em; }

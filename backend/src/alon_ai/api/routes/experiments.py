@@ -16,7 +16,11 @@ from sqlalchemy.dialects.postgresql import insert as pg_insert
 from alon_ai.accounting import schema as gov
 from alon_ai.api.recorded_idea_runtime import provision_recorded_seeded_runtime
 from alon_ai.openai_runtime.contract import RoutingFacts, canonical_json, sha256
-from alon_ai.openai_runtime.idea import SeededIdeaBriefAdvice
+from alon_ai.openai_runtime.idea import (
+    IdeaCandidateSetAdvice,
+    SeededIdeaBriefAdvice,
+    SelectedCandidateIdeaBriefAdvice,
+)
 from alon_ai.openai_runtime.schema import run_intents
 from alon_ai.openai_runtime.store import OpenAIRunOutcome, OpenAIRunStore
 from alon_ai.records import (
@@ -100,25 +104,25 @@ class OperatorProfileInput(StrictRequest):
 
 class CreateExperimentRequest(StrictRequest):
     name: str = Field(min_length=1, max_length=120)
-    idea_seed: str = Field(min_length=1, max_length=4000)
+    idea_seed: str | None = Field(default=None, min_length=1, max_length=4000)
     brief: ExperimentBriefInput
     operator_profile: OperatorProfileInput
     command_key: UUID
 
     @field_validator("name", "idea_seed")
     @classmethod
-    def not_blank(cls, value: str) -> str:
-        if not value.strip():
+    def not_blank(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
             raise ValueError("required text is blank")
         return value
 
 
 class CreateExperimentResponse(StrictRequest):
     experiment_id: UUID
-    cycle_id: UUID
+    cycle_id: UUID | None
     brief_artifact_id: UUID
-    seed_artifact_id: UUID
-    state: Literal["AWAITING_REFINEMENT"] = "AWAITING_REFINEMENT"
+    seed_artifact_id: UUID | None
+    state: Literal["AWAITING_REFINEMENT", "AWAITING_DISCOVERY"]
 
 
 async def _profile(
@@ -266,7 +270,10 @@ async def create_experiment(
                 experiment_id=experiment_id,
                 cycle_id=detail["cycle_id"],
                 brief_artifact_id=brief_id,
-                seed_artifact_id=seed_id,
+                seed_artifact_id=seed_id if body.idea_seed is not None else None,
+                state="AWAITING_REFINEMENT"
+                if body.idea_seed is not None
+                else "AWAITING_DISCOVERY",
             )
     try:
         if existing is None:
@@ -330,37 +337,42 @@ async def create_experiment(
             )
         elif brief_row["payload"] != body.brief.artifact_payload():
             raise HTTPException(409, "COMMAND_CONFLICT")
-        seed_row = await _artifact_row(request, seed_id)
-        if seed_row is None:
-            seed = await repository.append_artifact(
-                ArtifactDraft(
-                    id=seed_id,
-                    logical_id=seed_id,
-                    version=1,
-                    experiment_id=experiment_id,
-                    workflow_id=workflow_id,
-                    agent_id=agent_id,
+        seed_input: ArtifactInput | None = None
+        if body.idea_seed is not None:
+            seed_row = await _artifact_row(request, seed_id)
+            if seed_row is None:
+                seed = await repository.append_artifact(
+                    ArtifactDraft(
+                        id=seed_id,
+                        logical_id=seed_id,
+                        version=1,
+                        experiment_id=experiment_id,
+                        workflow_id=workflow_id,
+                        agent_id=agent_id,
+                        kind=ArtifactKind.IDEA_SEED,
+                        payload={
+                            "origin": "USER_SUPPLIED",
+                            "statement": body.idea_seed,
+                        },
+                        created_by=operator_id,
+                        created_at=now,
+                    ),
+                    command_key=_id(body.command_key, "seed-command"),
+                )
+                seed_input = ArtifactInput.from_receipt(seed, role="SEED")
+            else:
+                if seed_row["payload"] != {
+                    "origin": "USER_SUPPLIED",
+                    "statement": body.idea_seed,
+                }:
+                    raise HTTPException(409, "COMMAND_CONFLICT")
+                seed_input = ArtifactInput(
+                    artifact_id=seed_row["id"],
                     kind=ArtifactKind.IDEA_SEED,
-                    payload={"origin": "USER_SUPPLIED", "statement": body.idea_seed},
-                    created_by=operator_id,
-                    created_at=now,
-                ),
-                command_key=_id(body.command_key, "seed-command"),
-            )
-            seed_input = ArtifactInput.from_receipt(seed, role="SEED")
-        elif seed_row["payload"] != {
-            "origin": "USER_SUPPLIED",
-            "statement": body.idea_seed,
-        }:
-            raise HTTPException(409, "COMMAND_CONFLICT")
-        else:
-            seed_input = ArtifactInput(
-                artifact_id=seed_row["id"],
-                kind=ArtifactKind.IDEA_SEED,
-                version=seed_row["version"],
-                content_hash=seed_row["content_hash"],
-                role="SEED",
-            )
+                    version=seed_row["version"],
+                    content_hash=seed_row["content_hash"],
+                    role="SEED",
+                )
         async with request.app.state.engine.connect() as connection:
             existing_cycle = (
                 await connection.execute(
@@ -369,7 +381,12 @@ async def create_experiment(
                     )
                 )
             ).scalar_one_or_none()
-        if existing_cycle is None:
+        if body.idea_seed is None:
+            if existing_cycle is not None:
+                raise HTTPException(409, "COMMAND_CONFLICT")
+            cycle_id = None
+        elif existing_cycle is None:
+            assert seed_input is not None
             cycle = await repository.create_cycle(
                 experiment_id,
                 seed=seed_input,
@@ -384,12 +401,16 @@ async def create_experiment(
         experiment_id=experiment_id,
         cycle_id=cycle_id,
         brief_artifact_id=brief_id,
-        seed_artifact_id=seed_id,
+        seed_artifact_id=seed_id if body.idea_seed is not None else None,
+        state="AWAITING_REFINEMENT"
+        if body.idea_seed is not None
+        else "AWAITING_DISCOVERY",
     )
 
 
 async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None:
     await _reconcile_stale_refinement(request, experiment_id)
+    await _reconcile_stale_discovery(request, experiment_id)
     async with request.app.state.engine.connect() as connection:
         experiment = (
             (
@@ -470,6 +491,21 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
             .mappings()
             .one_or_none()
         )
+        discovery = (
+            (
+                await connection.execute(
+                    select(records.idea_discoveries)
+                    .where(records.idea_discoveries.c.experiment_id == experiment_id)
+                    .order_by(
+                        records.idea_discoveries.c.created_at.desc(),
+                        records.idea_discoveries.c.run_id.desc(),
+                    )
+                    .limit(1)
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
         run_outcome = (
             await connection.scalar(
                 select(run_intents.c.outcome).where(
@@ -477,6 +513,15 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
                 )
             )
             if latest
+            else None
+        )
+        discovery_outcome = (
+            await connection.scalar(
+                select(run_intents.c.outcome).where(
+                    run_intents.c.idempotency_key == discovery["run_id"]
+                )
+            )
+            if discovery
             else None
         )
     brief = next(
@@ -493,11 +538,38 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
         ),
         None,
     )
-    if brief is None or seed is None or cycle is None:
+    if brief is None:
         return None
+    mode = "USER_SEEDED_REFINEMENT" if seed else "SYSTEM_DISCOVERY"
+    candidate_advice = (
+        IdeaCandidateSetAdvice.model_validate_json(json.dumps(discovery["advice"]))
+        if discovery and discovery["state"] == "SUCCEEDED" and discovery["advice"]
+        else None
+    )
+    candidates = (
+        [
+            {
+                "artifact_id": artifact_id,
+                **candidate.model_dump(
+                    mode="json", exclude={"schema_version", "grounding_refs"}
+                ),
+            }
+            for artifact_id, candidate in zip(
+                discovery["candidate_ids"], candidate_advice.candidates, strict=True
+            )
+        ]
+        if candidate_advice
+        else []
+    )
+    advice_model = (
+        SeededIdeaBriefAdvice
+        if mode == "USER_SEEDED_REFINEMENT"
+        else SelectedCandidateIdeaBriefAdvice
+    )
     return {
         "experiment_id": experiment_id,
         "name": experiment["name"],
+        "mode": mode,
         "state": "IDEA_ACCEPTED"
         if acceptance
         else "AWAITING_REVIEW"
@@ -508,29 +580,196 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
         if latest and latest["state"] == "REFINEMENT_BLOCKED"
         else "REFINEMENT_IN_PROGRESS"
         if latest and latest["state"] == "RUNNING"
-        else "AWAITING_REFINEMENT",
+        else "AWAITING_REFINEMENT"
+        if cycle
+        else "AWAITING_SELECTION"
+        if discovery and discovery["state"] == "SUCCEEDED"
+        else "DISCOVERY_BLOCKED"
+        if discovery and discovery["state"] == "DISCOVERY_BLOCKED"
+        else "DISCOVERY_FAILED"
+        if discovery and discovery["state"] == "DISCOVERY_FAILED"
+        else "DISCOVERY_IN_PROGRESS"
+        if discovery and discovery["state"] == "RUNNING"
+        else "AWAITING_DISCOVERY",
         "brief": brief["payload"],
-        "idea_seed": seed["payload"]["statement"],
-        "cycle_id": cycle["id"],
-        "latest_run_id": latest["run_id"] if latest else None,
-        "latest_outcome": run_outcome if latest else None,
-        "advice_source": latest["advice_source"] if latest else None,
-        "advice": SeededIdeaBriefAdvice.model_validate_json(
+        "idea_seed": seed["payload"]["statement"] if seed else None,
+        "cycle_id": cycle["id"] if cycle else None,
+        "candidates": candidates,
+        "selected_candidate_artifact_id": cycle["seed_artifact_id"]
+        if cycle and mode == "SYSTEM_DISCOVERY"
+        else None,
+        "latest_run_id": latest["run_id"]
+        if latest
+        else discovery["run_id"]
+        if discovery
+        else None,
+        "latest_outcome": run_outcome if latest else discovery_outcome,
+        "advice_source": latest["advice_source"]
+        if latest
+        else discovery["advice_source"]
+        if discovery
+        else None,
+        "advice": advice_model.model_validate_json(
             json.dumps(latest["advice"])
         ).model_dump(mode="json", exclude={"schema_version"})
         if latest and latest["advice"]
         else None,
         "accepted_brief": accepted["payload"] if accepted else None,
+        "retry_safe": await _confirmed_safe_retry(
+            request.app.state.engine,
+            latest["run_id"] if latest else discovery["run_id"] if discovery else None,
+            latest["operation_id"]
+            if latest
+            else discovery["operation_id"]
+            if discovery
+            else None,
+            experiment_id,
+        )
+        if (latest and latest["state"] == "REFINEMENT_FAILED")
+        or (not latest and discovery and discovery["state"] == "DISCOVERY_FAILED")
+        else False,
     }
 
 
-async def _reconcile_stale_refinement(request: Request, experiment_id: UUID) -> None:
-    """Recover a dead RUNNING claim only after every live attribution has expired.
+async def _confirmed_safe_retry(
+    engine, run_id: UUID | None, operation_id: UUID | None, experiment_id: UUID
+) -> bool:
+    """A fresh key is allowed only after immutable terminal and call-ledger proof."""
+    if run_id is None or operation_id is None:
+        return False
+    async with engine.connect() as connection:
+        intent = (
+            (
+                await connection.execute(
+                    select(run_intents).where(
+                        run_intents.c.idempotency_key == run_id,
+                        run_intents.c.experiment_id == experiment_id,
+                        run_intents.c.operation_id == operation_id,
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        call = (
+            (
+                await connection.execute(
+                    select(gov.calls).where(
+                        gov.calls.c.idempotency_key == run_id,
+                        gov.calls.c.experiment_id == experiment_id,
+                        gov.calls.c.operation_id == operation_id,
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+    return _terminal_failure_settled(intent, call)
 
-    L07 live timeouts are bounded to 3600 seconds plus 30 seconds. An extra
-    minute ensures an old worker cannot pass the governed dispatch deadline.
-    Any evidence of a call or an ambiguous run keeps the experiment blocked.
-    """
+
+def _terminal_failure_settled(intent, call) -> bool:
+    """A missing call or intent cannot prove that the original owner has stopped."""
+    if intent is None or call is None:
+        return False
+    if (
+        intent["outcome"]
+        not in {
+            OpenAIRunOutcome.FAILED,
+            OpenAIRunOutcome.REFUSED,
+            OpenAIRunOutcome.SCHEMA_MISMATCH,
+            OpenAIRunOutcome.INCOMPLETE,
+            OpenAIRunOutcome.TIMEOUT,
+            OpenAIRunOutcome.CANCELLED,
+        }
+        or intent["finished_at"] is None
+    ):
+        return False
+    return intent["call_id"] == call["id"] and call["state"] == "FINAL"
+
+
+async def _reconcile_stale_discovery(request: Request, experiment_id: UUID) -> None:
+    stale_before = datetime.now(UTC) - timedelta(seconds=3690)
+    async with request.app.state.engine.begin() as connection:
+        owned = await connection.scalar(
+            select(records.experiments.c.id)
+            .select_from(
+                records.experiments.join(
+                    records.operator_profiles,
+                    (
+                        records.experiments.c.operator_profile_id
+                        == records.operator_profiles.c.id
+                    )
+                    & (
+                        records.experiments.c.operator_profile_version
+                        == records.operator_profiles.c.version
+                    ),
+                )
+            )
+            .where(
+                records.experiments.c.id == experiment_id,
+                records.operator_profiles.c.operator_id == request.state.operator.id,
+            )
+            .with_for_update(of=records.experiments)
+        )
+        if owned is None:
+            return
+        pending = (
+            (
+                await connection.execute(
+                    select(records.idea_discoveries).where(
+                        records.idea_discoveries.c.experiment_id == experiment_id,
+                        records.idea_discoveries.c.state == "RUNNING",
+                        records.idea_discoveries.c.created_at < stale_before,
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        if pending is None:
+            return
+        call = (
+            (
+                await connection.execute(
+                    select(gov.calls).where(
+                        gov.calls.c.idempotency_key == pending["run_id"],
+                        gov.calls.c.experiment_id == experiment_id,
+                        gov.calls.c.operation_id == pending["operation_id"],
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        intent = (
+            (
+                await connection.execute(
+                    select(run_intents).where(
+                        run_intents.c.idempotency_key == pending["run_id"],
+                        run_intents.c.experiment_id == experiment_id,
+                        run_intents.c.operation_id == pending["operation_id"],
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        safe = _terminal_failure_settled(intent, call)
+        await connection.execute(
+            update(records.idea_discoveries)
+            .where(
+                records.idea_discoveries.c.run_id == pending["run_id"],
+                records.idea_discoveries.c.state == "RUNNING",
+            )
+            .values(
+                state="DISCOVERY_FAILED" if safe else "DISCOVERY_BLOCKED",
+                finished_at=datetime.now(UTC),
+            )
+        )
+
+
+async def _reconcile_stale_refinement(request: Request, experiment_id: UUID) -> None:
+    """Resolve stale claims only from settled terminal evidence; otherwise block."""
     stale_before = datetime.now(UTC) - timedelta(seconds=3690)
     async with request.app.state.engine.begin() as connection:
         owned = await connection.scalar(
@@ -574,21 +813,33 @@ async def _reconcile_stale_refinement(request: Request, experiment_id: UUID) -> 
         )
         if pending is None:
             return
-        call_id = await connection.scalar(
-            select(gov.calls.c.id).where(
-                gov.calls.c.idempotency_key == pending["run_id"],
-                gov.calls.c.experiment_id == experiment_id,
-                gov.calls.c.operation_id == pending["operation_id"],
+        call = (
+            (
+                await connection.execute(
+                    select(gov.calls).where(
+                        gov.calls.c.idempotency_key == pending["run_id"],
+                        gov.calls.c.experiment_id == experiment_id,
+                        gov.calls.c.operation_id == pending["operation_id"],
+                    )
+                )
             )
+            .mappings()
+            .one_or_none()
         )
-        outcome = await connection.scalar(
-            select(run_intents.c.outcome).where(
-                run_intents.c.idempotency_key == pending["run_id"],
-                run_intents.c.experiment_id == experiment_id,
-                run_intents.c.operation_id == pending["operation_id"],
+        intent = (
+            (
+                await connection.execute(
+                    select(run_intents).where(
+                        run_intents.c.idempotency_key == pending["run_id"],
+                        run_intents.c.experiment_id == experiment_id,
+                        run_intents.c.operation_id == pending["operation_id"],
+                    )
+                )
             )
+            .mappings()
+            .one_or_none()
         )
-        safe_to_retry = call_id is None and outcome in (None, "READY")
+        safe_to_retry = _terminal_failure_settled(intent, call)
         await connection.execute(
             update(records.idea_refinements)
             .where(
@@ -634,9 +885,388 @@ class RefineRequest(StrictRequest):
     idempotency_key: UUID
 
 
+@router.post("/experiments/{experiment_id}/discover")
+async def discover_experiment(
+    request: Request, experiment_id: UUID, body: RefineRequest
+) -> dict:
+    detail = await _read_experiment(request, experiment_id)
+    if detail is None:
+        raise HTTPException(404, "EXPERIMENT_NOT_FOUND")
+    if detail["mode"] != "SYSTEM_DISCOVERY":
+        raise HTTPException(409, "DISCOVERY_MODE_REQUIRED")
+    if detail["cycle_id"] is not None:
+        raise HTTPException(409, "CANDIDATE_ALREADY_SELECTED")
+    engine = request.app.state.engine
+    async with engine.connect() as connection:
+        prior = (
+            (
+                await connection.execute(
+                    select(records.idea_discoveries)
+                    .where(records.idea_discoveries.c.experiment_id == experiment_id)
+                    .order_by(
+                        records.idea_discoveries.c.created_at.desc(),
+                        records.idea_discoveries.c.run_id.desc(),
+                    )
+                    .limit(1)
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        roots = (
+            (
+                await connection.execute(
+                    select(
+                        records.workflows.c.id, records.agents.c.id.label("agent_id")
+                    )
+                    .select_from(
+                        records.workflows.join(
+                            records.agents,
+                            records.agents.c.workflow_id == records.workflows.c.id,
+                        )
+                    )
+                    .where(records.workflows.c.experiment_id == experiment_id)
+                )
+            )
+            .mappings()
+            .first()
+        )
+    if prior is not None:
+        if prior["run_id"] != body.idempotency_key:
+            if prior["state"] != "DISCOVERY_FAILED" or not detail["retry_safe"]:
+                raise HTTPException(
+                    409,
+                    "CANDIDATE_REVIEW_PENDING"
+                    if prior["state"] == "SUCCEEDED"
+                    else "DISCOVERY_RECONCILIATION_REQUIRED",
+                )
+        elif prior["state"] == "SUCCEEDED":
+            snapshot = await _read_experiment(request, experiment_id)
+            if snapshot is None:
+                raise HTTPException(409, "DISCOVERY_RECONCILIATION_REQUIRED")
+            return {
+                "run_id": body.idempotency_key,
+                "outcome": "SUCCEEDED",
+                "state": "AWAITING_SELECTION",
+                "candidates": snapshot["candidates"],
+            }
+        elif prior["state"] == "RUNNING":
+            raise HTTPException(409, "DISCOVERY_IN_PROGRESS")
+        else:
+            return {
+                "run_id": body.idempotency_key,
+                "outcome": await _run_outcome(engine, body.idempotency_key),
+                "state": prior["state"],
+                "candidates": [],
+            }
+    settings = request.app.state.settings
+    if settings.provider_mode == "disabled" or (
+        settings.provider_mode == "fake" and settings.environment == "production"
+    ):
+        raise HTTPException(409, "DISCOVERY_UNAVAILABLE")
+    if roots is None:
+        raise HTTPException(409, "EXPERIMENT_NOT_READY")
+    runtime_args = {
+        "experiment_id": experiment_id,
+        "workflow_id": roots["id"],
+        "agent_id": roots["agent_id"],
+        "operator_id": request.state.operator.id,
+        "run_id": body.idempotency_key,
+        "budget_usd": Decimal(detail["brief"]["budget_usd"]),
+    }
+    claimed_operation_id: UUID | None = None
+    try:
+        if settings.provider_mode == "fake":
+            service, attribution = await provision_recorded_seeded_runtime(
+                engine, **runtime_args
+            )
+            advice_source = "RECORDED_FAKE"
+        else:
+            provider = getattr(request.app.state, "idea_runtime_provider", None)
+            if provider is None:
+                raise HTTPException(409, "LIVE_CONFIG_REQUIRED")
+            service, attribution, advice_source = await provider(engine, **runtime_args)
+        async with engine.begin() as connection:
+            await connection.execute(
+                select(records.experiments.c.id)
+                .where(records.experiments.c.id == experiment_id)
+                .with_for_update()
+            )
+            latest_run = await connection.scalar(
+                select(records.idea_discoveries.c.run_id)
+                .where(records.idea_discoveries.c.experiment_id == experiment_id)
+                .order_by(
+                    records.idea_discoveries.c.created_at.desc(),
+                    records.idea_discoveries.c.run_id.desc(),
+                )
+                .limit(1)
+            )
+            if latest_run != (prior["run_id"] if prior else None):
+                raise HTTPException(409, "DISCOVERY_IN_PROGRESS")
+            await connection.execute(
+                records.idea_discoveries.insert().values(
+                    run_id=body.idempotency_key,
+                    experiment_id=experiment_id,
+                    operation_id=attribution.operation_run_id,
+                    state="RUNNING",
+                    advice_source=advice_source,
+                    created_at=datetime.now(UTC),
+                )
+            )
+        claimed_operation_id = attribution.operation_run_id
+        execution = await service.discover_system(
+            attribution,
+            facts=RoutingFacts(needs_ai=True),
+            idempotency_key=body.idempotency_key,
+        )
+        advice = (
+            execution.output
+            if isinstance(execution.output, IdeaCandidateSetAdvice)
+            else None
+        )
+        success = execution.outcome is OpenAIRunOutcome.SUCCEEDED and advice is not None
+        payload = (
+            advice.model_dump(mode="json") if success and advice is not None else None
+        )
+        durable = await OpenAIRunStore(engine).get(body.idempotency_key)
+        if (
+            not success
+            or durable is None
+            or durable.output_hash != sha256(canonical_json(payload))
+        ):
+            retry_safe = await _confirmed_safe_retry(
+                engine,
+                body.idempotency_key,
+                attribution.operation_run_id,
+                experiment_id,
+            )
+            async with engine.begin() as connection:
+                await connection.execute(
+                    update(records.idea_discoveries)
+                    .where(
+                        records.idea_discoveries.c.run_id == body.idempotency_key,
+                        records.idea_discoveries.c.state == "RUNNING",
+                    )
+                    .values(
+                        state="DISCOVERY_FAILED" if retry_safe else "DISCOVERY_BLOCKED",
+                        finished_at=datetime.now(UTC),
+                    )
+                )
+            return {
+                "run_id": body.idempotency_key,
+                "outcome": execution.outcome,
+                "state": "DISCOVERY_FAILED" if retry_safe else "DISCOVERY_BLOCKED",
+                "candidates": [],
+            }
+        repository = ProductRecordsRepository(engine)
+        assert advice is not None
+        candidate_ids = []
+        for index, candidate in enumerate(advice.candidates):
+            candidate_id = _id(body.idempotency_key, f"candidate-{index}")
+            receipt = await repository.append_artifact(
+                ArtifactDraft(
+                    id=candidate_id,
+                    logical_id=candidate_id,
+                    version=1,
+                    experiment_id=experiment_id,
+                    workflow_id=roots["id"],
+                    agent_id=roots["agent_id"],
+                    operation_id=attribution.operation_run_id,
+                    kind=ArtifactKind.IDEA_CANDIDATE,
+                    payload={
+                        "title": candidate.title,
+                        "hypothesis": candidate.hypothesis,
+                    },
+                    created_by=request.state.operator.id,
+                    created_at=datetime.now(UTC),
+                ),
+                command_key=_id(body.idempotency_key, f"candidate-command-{index}"),
+            )
+            candidate_ids.append(str(receipt.artifact_id))
+        async with engine.begin() as connection:
+            await connection.execute(
+                update(records.idea_discoveries)
+                .where(
+                    records.idea_discoveries.c.run_id == body.idempotency_key,
+                    records.idea_discoveries.c.state == "RUNNING",
+                )
+                .values(
+                    state="SUCCEEDED",
+                    advice=payload,
+                    output_hash=sha256(canonical_json(payload)),
+                    candidate_ids=candidate_ids,
+                    finished_at=datetime.now(UTC),
+                )
+            )
+        snapshot = await _read_experiment(request, experiment_id)
+        if snapshot is None:
+            raise HTTPException(409, "DISCOVERY_RECONCILIATION_REQUIRED")
+        return {
+            "run_id": body.idempotency_key,
+            "outcome": "SUCCEEDED",
+            "state": "AWAITING_SELECTION",
+            "candidates": snapshot["candidates"],
+        }
+    except HTTPException:
+        raise
+    except Exception as error:
+        if claimed_operation_id is not None:
+            async with engine.begin() as connection:
+                await connection.execute(
+                    update(records.idea_discoveries)
+                    .where(
+                        records.idea_discoveries.c.run_id == body.idempotency_key,
+                        records.idea_discoveries.c.experiment_id == experiment_id,
+                        records.idea_discoveries.c.operation_id == claimed_operation_id,
+                        records.idea_discoveries.c.state == "RUNNING",
+                    )
+                    .values(state="DISCOVERY_BLOCKED", finished_at=datetime.now(UTC))
+                )
+        raise HTTPException(409, "DISCOVERY_UNAVAILABLE") from error
+
+
+async def _run_outcome(engine, run_id: UUID) -> str | None:
+    async with engine.connect() as connection:
+        return await connection.scalar(
+            select(run_intents.c.outcome).where(run_intents.c.idempotency_key == run_id)
+        )
+
+
+class SelectCandidateRequest(StrictRequest):
+    candidate_artifact_id: UUID
+    reason: str = Field(min_length=1, max_length=4000)
+    command_key: UUID
+
+    @field_validator("reason")
+    @classmethod
+    def reason_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("selection reason is blank")
+        return value
+
+
+@router.post("/experiments/{experiment_id}/select")
+async def select_experiment_candidate(
+    request: Request, experiment_id: UUID, body: SelectCandidateRequest
+) -> dict:
+    detail = await _read_experiment(request, experiment_id)
+    if detail is None:
+        raise HTTPException(404, "EXPERIMENT_NOT_FOUND")
+    if detail["mode"] != "SYSTEM_DISCOVERY":
+        raise HTTPException(409, "DISCOVERY_MODE_REQUIRED")
+    if str(body.candidate_artifact_id) not in {
+        str(candidate["artifact_id"]) for candidate in detail["candidates"]
+    }:
+        raise HTTPException(409, "CANDIDATE_NOT_IN_DISCOVERY")
+    async with request.app.state.engine.connect() as connection:
+        candidate = (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.id == body.candidate_artifact_id,
+                        records.artifacts.c.experiment_id == experiment_id,
+                        records.artifacts.c.kind == ArtifactKind.IDEA_CANDIDATE,
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        selection = (
+            (
+                await connection.execute(
+                    select(records.candidate_selections).where(
+                        records.candidate_selections.c.experiment_id == experiment_id
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+        selection_command = (
+            (
+                await connection.execute(
+                    select(records.commands).where(
+                        records.commands.c.command_key
+                        == _id(body.command_key, "candidate-selection-command"),
+                        records.commands.c.experiment_id == experiment_id,
+                        records.commands.c.kind == "SELECT_IDEA_CANDIDATE",
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+    if candidate is None:
+        raise HTTPException(409, "CANDIDATE_NOT_IN_DISCOVERY")
+    if selection is None and detail["state"] != "AWAITING_SELECTION":
+        raise HTTPException(409, "CANDIDATE_SELECTION_UNAVAILABLE")
+    if selection and (
+        selection["artifact_id"] != body.candidate_artifact_id
+        or selection["reason"] != body.reason
+        or selection["selected_by"] != request.state.operator.id
+        or selection_command is None
+        or selection_command["result_id"] != selection["id"]
+    ):
+        raise HTTPException(409, "CANDIDATE_ALREADY_SELECTED")
+    if selection and detail["cycle_id"] is not None:
+        return {
+            "experiment_id": experiment_id,
+            "cycle_id": detail["cycle_id"],
+            "selection_id": selection["id"],
+            "state": "AWAITING_REFINEMENT",
+        }
+    repository = ProductRecordsRepository(request.app.state.engine)
+    candidate_input = ArtifactInput(
+        artifact_id=candidate["id"],
+        kind=ArtifactKind.IDEA_CANDIDATE,
+        version=candidate["version"],
+        content_hash=candidate["content_hash"],
+        role="SELECTED_CANDIDATE",
+    )
+    try:
+        receipt = await repository.select_idea_candidate(
+            experiment_id,
+            candidate_input,
+            selected_by=request.state.operator.id,
+            reason=body.reason,
+            command_key=_id(body.command_key, "candidate-selection-command"),
+        )
+        cycle = await repository.create_cycle(
+            experiment_id,
+            candidate=candidate_input,
+            selection_id=receipt.result_id,
+            command_key=_id(body.command_key, "selected-cycle-command"),
+        )
+    except ProductRecordsDenied as error:
+        raise HTTPException(409, error.reason) from None
+    return {
+        "experiment_id": experiment_id,
+        "cycle_id": cycle.id,
+        "selection_id": receipt.result_id,
+        "state": "AWAITING_REFINEMENT",
+    }
+
+
 class AcceptRequest(StrictRequest):
     run_id: UUID
     command_key: UUID
+    intent_relationship: Literal[
+        "PRESERVES_CORE_INTENT",
+        "CLARIFIES_CORE_INTENT",
+        "NARROWS_CORE_INTENT",
+        "MATERIAL_PIVOT",
+        "UNRELATED",
+    ]
+    intent_confirmed: bool
+    intent_rationale: str = Field(min_length=1, max_length=4000)
+
+    @field_validator("intent_rationale")
+    @classmethod
+    def rationale_not_blank(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("intent rationale is blank")
+        return value
 
 
 async def _claim_refinement(
@@ -715,12 +1345,20 @@ async def refine_experiment(
     detail = await _read_experiment(request, experiment_id)
     if detail is None:
         raise HTTPException(404, "EXPERIMENT_NOT_FOUND")
+    if detail["mode"] == "SYSTEM_DISCOVERY" and detail["cycle_id"] is None:
+        raise HTTPException(409, "CANDIDATE_SELECTION_REQUIRED")
     if detail["state"] == "IDEA_ACCEPTED":
         raise HTTPException(409, "IDEA_ALREADY_ACCEPTED")
     if detail["state"] == "REFINEMENT_IN_PROGRESS":
         raise HTTPException(409, "REFINEMENT_IN_PROGRESS")
     if (
         detail["state"] == "REFINEMENT_BLOCKED"
+        and body.idempotency_key != detail["latest_run_id"]
+    ):
+        raise HTTPException(409, "REFINEMENT_RECONCILIATION_REQUIRED")
+    if (
+        detail["state"] == "REFINEMENT_FAILED"
+        and not detail["retry_safe"]
         and body.idempotency_key != detail["latest_run_id"]
     ):
         raise HTTPException(409, "REFINEMENT_RECONCILIATION_REQUIRED")
@@ -776,9 +1414,13 @@ async def refine_experiment(
             if existing["state"] == "SUCCEEDED"
             else existing["state"],
             "advice_source": existing["advice_source"],
-            "advice": SeededIdeaBriefAdvice.model_validate_json(
-                json.dumps(existing["advice"])
-            ).model_dump(mode="json", exclude={"schema_version"})
+            "advice": (
+                SeededIdeaBriefAdvice
+                if detail["mode"] == "USER_SEEDED_REFINEMENT"
+                else SelectedCandidateIdeaBriefAdvice
+            )
+            .model_validate_json(json.dumps(existing["advice"]))
+            .model_dump(mode="json", exclude={"schema_version"})
             if existing["advice"]
             else None,
         }
@@ -825,7 +1467,10 @@ async def refine_experiment(
         )
         advice = execution.output
         success = execution.outcome is OpenAIRunOutcome.SUCCEEDED and isinstance(
-            advice, SeededIdeaBriefAdvice
+            advice,
+            SeededIdeaBriefAdvice
+            if detail["mode"] == "USER_SEEDED_REFINEMENT"
+            else SelectedCandidateIdeaBriefAdvice,
         )
         payload = advice.model_dump(mode="json") if success and advice else None
         if success and payload:
@@ -835,6 +1480,9 @@ async def refine_experiment(
             ):
                 success = False
                 payload = None
+        retry_safe = not success and await _confirmed_safe_retry(
+            engine, body.idempotency_key, claimed_operation_id, experiment_id
+        )
         async with engine.begin() as connection:
             finalized = await connection.execute(
                 update(records.idea_refinements)
@@ -845,7 +1493,11 @@ async def refine_experiment(
                     records.idea_refinements.c.state == "RUNNING",
                 )
                 .values(
-                    state="SUCCEEDED" if success else "REFINEMENT_BLOCKED",
+                    state="SUCCEEDED"
+                    if success
+                    else "REFINEMENT_FAILED"
+                    if retry_safe
+                    else "REFINEMENT_BLOCKED",
                     advice=payload if payload else null(),
                     output_hash=sha256(canonical_json(payload)) if payload else None,
                     finished_at=datetime.now(UTC),
@@ -856,7 +1508,11 @@ async def refine_experiment(
         return {
             "run_id": body.idempotency_key,
             "outcome": execution.outcome,
-            "state": "AWAITING_REVIEW" if success else "REFINEMENT_BLOCKED",
+            "state": "AWAITING_REVIEW"
+            if success
+            else "REFINEMENT_FAILED"
+            if retry_safe
+            else "REFINEMENT_BLOCKED",
             "advice_source": advice_source,
             "advice": advice.model_dump(mode="json", exclude={"schema_version"})
             if success and advice
@@ -942,15 +1598,24 @@ async def accept_experiment_idea(
         or workflow is None
     ):
         raise HTTPException(409, "REFINEMENT_NOT_SUCCESSFUL")
-    advice = SeededIdeaBriefAdvice.model_validate_json(json.dumps(reviewed["advice"]))
-    if advice.material_pivot:
-        raise HTTPException(409, "MATERIAL_PIVOT_REQUIRES_APPROVAL")
-    original_intent = " ".join(seed["payload"]["statement"].split()).casefold()
-    proposed_intent = " ".join(advice.core_intent.split()).casefold()
-    if proposed_intent != original_intent and not proposed_intent.startswith(
-        original_intent + " "
+    advice = (
+        SeededIdeaBriefAdvice
+        if detail["mode"] == "USER_SEEDED_REFINEMENT"
+        else SelectedCandidateIdeaBriefAdvice
+    ).model_validate_json(json.dumps(reviewed["advice"]))
+    if (
+        body.intent_relationship == "UNRELATED"
+        or advice.intent_relationship == "UNRELATED"
     ):
-        raise HTTPException(409, "IDEA_VALIDATION_FAILED")
+        raise HTTPException(409, "IDEA_UNRELATED")
+    if not body.intent_confirmed:
+        raise HTTPException(409, "INTENT_CONFIRMATION_REQUIRED")
+    if (
+        advice.material_pivot
+        or advice.intent_relationship == "MATERIAL_PIVOT"
+        or body.intent_relationship == "MATERIAL_PIVOT"
+    ):
+        raise HTTPException(409, "MATERIAL_PIVOT_REQUIRES_APPROVAL")
     repository = ProductRecordsRepository(engine)
     brief_id = _id(body.command_key, "accepted-idea-brief")
     payload = {
@@ -968,6 +1633,41 @@ async def accept_experiment_idea(
         or existing_artifact["created_by"] != request.state.operator.id
     ):
         raise HTTPException(409, "COMMAND_CONFLICT")
+    expected_review = {
+        "run_id": body.run_id,
+        "experiment_id": experiment_id,
+        "cycle_id": detail["cycle_id"],
+        "source_artifact_id": seed["id"],
+        "output_hash": reviewed["output_hash"],
+        "relationship": body.intent_relationship,
+        "rationale": body.intent_rationale,
+        "confirmed_by": request.state.operator.id,
+        "command_key": body.command_key,
+    }
+    async with engine.begin() as connection:
+        await connection.execute(
+            select(records.experiments.c.id)
+            .where(records.experiments.c.id == experiment_id)
+            .with_for_update()
+        )
+        await connection.execute(
+            pg_insert(records.idea_intent_reviews)
+            .values(**expected_review, created_at=datetime.now(UTC))
+            .on_conflict_do_nothing(index_elements=["run_id"])
+        )
+        intent_review = (
+            (
+                await connection.execute(
+                    select(records.idea_intent_reviews).where(
+                        records.idea_intent_reviews.c.run_id == body.run_id
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        if any(intent_review[key] != value for key, value in expected_review.items()):
+            raise HTTPException(409, "COMMAND_CONFLICT")
     if detail["state"] == "IDEA_ACCEPTED":
         async with engine.connect() as connection:
             accepted = (
@@ -1013,10 +1713,12 @@ async def accept_experiment_idea(
             inputs=(
                 ArtifactInput(
                     artifact_id=seed["id"],
-                    kind=ArtifactKind.IDEA_SEED,
+                    kind=ArtifactKind(seed["kind"]),
                     version=seed["version"],
                     content_hash=seed["content_hash"],
-                    role="SEED",
+                    role="SEED"
+                    if detail["mode"] == "USER_SEEDED_REFINEMENT"
+                    else "SELECTED_CANDIDATE",
                 ),
             ),
             command_key=_id(body.command_key, "accepted-brief-command"),

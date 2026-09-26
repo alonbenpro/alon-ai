@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260925_25"
+    "20260926_26"
   ],
   "columns": [
     {
@@ -6049,6 +6049,186 @@
       "name": "pivot_approval_id",
       "not_null": false,
       "table_name": "record_idea_acceptances",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "advice",
+      "not_null": false,
+      "table_name": "record_idea_discoveries",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "advice_source",
+      "not_null": true,
+      "table_name": "record_idea_discoveries",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "candidate_ids",
+      "not_null": false,
+      "table_name": "record_idea_discoveries",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_idea_discoveries",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_idea_discoveries",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "finished_at",
+      "not_null": false,
+      "table_name": "record_idea_discoveries",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operation_id",
+      "not_null": true,
+      "table_name": "record_idea_discoveries",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "output_hash",
+      "not_null": false,
+      "table_name": "record_idea_discoveries",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "run_id",
+      "not_null": true,
+      "table_name": "record_idea_discoveries",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "state",
+      "not_null": true,
+      "table_name": "record_idea_discoveries",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_key",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "confirmed_by",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cycle_id",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "output_hash",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "rationale",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
+      "type": "character varying(4000)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "relationship",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
+      "type": "character varying(32)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "run_id",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "source_artifact_id",
+      "not_null": true,
+      "table_name": "record_idea_intent_reviews",
       "type": "uuid"
     },
     {
@@ -16218,6 +16398,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
+      "name": "record_idea_discoveries_advice_source_check",
+      "table_name": "record_idea_discoveries",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (advice_source::text = ANY (ARRAY['RECORDED_FAKE'::character varying, 'OPENAI'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
       "name": "record_idea_refinements_advice_source_check",
       "table_name": "record_idea_refinements",
       "validated": true
@@ -17414,6 +17604,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (length(btrim(rationale::text)) >= 1 AND length(btrim(rationale::text)) <= 4000)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_idea_intent_reviews_rationale_check",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (length(model_identifier::text) >= 1 AND length(model_identifier::text) <= 100)",
       "enforced": true,
       "initially_deferred": false,
@@ -17934,6 +18134,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (output_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_idea_intent_reviews_output_hash_check",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (output_schema_hash::text ~ '^[0-9a-f]{64}$'::text)",
       "enforced": true,
       "initially_deferred": false,
@@ -18240,6 +18450,16 @@
       "kind": "c",
       "name": "record_learning_input_bundle_seals_check",
       "table_name": "record_learning_input_bundle_seals",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (relationship::text = ANY (ARRAY['PRESERVES_CORE_INTENT'::character varying, 'CLARIFIES_CORE_INTENT'::character varying, 'NARROWS_CORE_INTENT'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_idea_intent_reviews_relationship_check",
+      "table_name": "record_idea_intent_reviews",
       "validated": true
     },
     {
@@ -18604,6 +18824,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (state::text = 'RUNNING'::text AND candidate_ids IS NULL AND finished_at IS NULL OR state::text = 'SUCCEEDED'::text AND advice IS NOT NULL AND output_hash::text ~ '^[0-9a-f]{64}$'::text AND jsonb_array_length(candidate_ids) >= 3 AND jsonb_array_length(candidate_ids) <= 5 AND finished_at IS NOT NULL OR (state::text = ANY (ARRAY['DISCOVERY_FAILED'::character varying, 'DISCOVERY_BLOCKED'::character varying]::text[])) AND candidate_ids IS NULL AND finished_at IS NOT NULL)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_idea_discoveries_check",
+      "table_name": "record_idea_discoveries",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (state::text = ANY (ARRAY['ACTIVE'::character varying, 'TARGET_50_REACHED'::character varying, 'EMAIL_SUPPLY_INSUFFICIENT_AFTER_BATCH_2'::character varying, 'QUALIFIED_SUPPLY_INSUFFICIENT_AFTER_BATCH_3'::character varying, 'CANCELLED'::character varying, 'BUDGET_EXHAUSTED'::character varying, 'DEADLINE_EXHAUSTED'::character varying, 'SOURCE_FAILURE'::character varying, 'PROVIDER_FAILURE'::character varying, 'SEARCH_EXHAUSTED'::character varying, 'SAFETY_STOP'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -18620,6 +18850,16 @@
       "kind": "c",
       "name": "gov_calls_state_check",
       "table_name": "gov_calls",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (state::text = ANY (ARRAY['RUNNING'::character varying, 'SUCCEEDED'::character varying, 'DISCOVERY_FAILED'::character varying, 'DISCOVERY_BLOCKED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_idea_discoveries_state_check",
+      "table_name": "record_idea_discoveries",
       "validated": true
     },
     {
@@ -20748,6 +20988,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_idea_intent_reviews_cycle_id_fkey",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (cycle_id) REFERENCES record_cycles(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_idea_refinements_cycle_id_fkey",
       "table_name": "record_idea_refinements",
       "validated": true
@@ -21400,6 +21650,26 @@
       "kind": "f",
       "name": "record_experiment_strategy_bindings_experiment_id_fkey",
       "table_name": "record_experiment_strategy_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES record_experiments(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_idea_discoveries_experiment_id_fkey",
+      "table_name": "record_idea_discoveries",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES record_experiments(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_idea_intent_reviews_experiment_id_fkey",
+      "table_name": "record_idea_intent_reviews",
       "validated": true
     },
     {
@@ -22230,6 +22500,16 @@
       "kind": "f",
       "name": "record_returns_offer_input_bundle_id_experiment_id_fkey",
       "table_name": "record_returns",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (operation_id) REFERENCES gov_operations(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_idea_discoveries_operation_id_fkey",
+      "table_name": "record_idea_discoveries",
       "validated": true
     },
     {
@@ -23404,6 +23684,16 @@
     },
     {
       "deferrable": false,
+      "definition": "FOREIGN KEY (run_id) REFERENCES record_idea_refinements(run_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_idea_intent_reviews_run_id_fkey",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "FOREIGN KEY (run_id) REFERENCES record_learning_runs(id)",
       "enforced": true,
       "initially_deferred": false,
@@ -23550,6 +23840,16 @@
       "kind": "f",
       "name": "record_outreach_sequence_step_sequence_artifact_id_context_fkey",
       "table_name": "record_outreach_sequence_steps",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (source_artifact_id) REFERENCES record_artifacts(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_idea_intent_reviews_source_artifact_id_fkey",
+      "table_name": "record_idea_intent_reviews",
       "validated": true
     },
     {
@@ -24330,6 +24630,16 @@
       "kind": "n",
       "name": "record_qualification_dossiers_admission_id_not_null",
       "table_name": "record_qualification_dossiers",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL advice_source",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_discoveries_advice_source_not_null",
+      "table_name": "record_idea_discoveries",
       "validated": true
     },
     {
@@ -26638,6 +26948,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_idea_intent_reviews_command_key_not_null",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL command_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "supply_batches_command_key_not_null",
       "table_name": "supply_batches",
       "validated": true
@@ -27050,6 +27370,16 @@
       "kind": "n",
       "name": "record_conversation_booking_observatio_confirmation_id_not_null",
       "table_name": "record_conversation_booking_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL confirmed_by",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_intent_reviews_confirmed_by_not_null",
+      "table_name": "record_idea_intent_reviews",
       "validated": true
     },
     {
@@ -28248,6 +28578,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_idea_discoveries_created_at_not_null",
+      "table_name": "record_idea_discoveries",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_intent_reviews_created_at_not_null",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_idea_refinements_created_at_not_null",
       "table_name": "record_idea_refinements",
       "validated": true
@@ -28960,6 +29310,16 @@
       "kind": "n",
       "name": "record_idea_acceptances_cycle_id_not_null",
       "table_name": "record_idea_acceptances",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL cycle_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_intent_reviews_cycle_id_not_null",
+      "table_name": "record_idea_intent_reviews",
       "validated": true
     },
     {
@@ -30530,6 +30890,26 @@
       "kind": "n",
       "name": "record_idea_acceptances_experiment_id_not_null",
       "table_name": "record_idea_acceptances",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_discoveries_experiment_id_not_null",
+      "table_name": "record_idea_discoveries",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_intent_reviews_experiment_id_not_null",
+      "table_name": "record_idea_intent_reviews",
       "validated": true
     },
     {
@@ -34878,6 +35258,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_idea_discoveries_operation_id_not_null",
+      "table_name": "record_idea_discoveries",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operation_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_idea_refinements_operation_id_not_null",
       "table_name": "record_idea_refinements",
       "validated": true
@@ -35480,6 +35870,16 @@
       "kind": "n",
       "name": "supply_qualifications_outcome_not_null",
       "table_name": "supply_qualifications",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL output_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_intent_reviews_output_hash_not_null",
+      "table_name": "record_idea_intent_reviews",
       "validated": true
     },
     {
@@ -36718,6 +37118,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_idea_intent_reviews_rationale_not_null",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL rationale",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_qualification_criterion_results_rationale_not_null",
       "table_name": "record_qualification_criterion_results",
       "validated": true
@@ -37370,6 +37780,16 @@
       "kind": "n",
       "name": "record_learning_review_controls_registry_scope_not_null",
       "table_name": "record_learning_review_controls",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL relationship",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_intent_reviews_relationship_not_null",
+      "table_name": "record_idea_intent_reviews",
       "validated": true
     },
     {
@@ -38118,6 +38538,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_idea_discoveries_run_id_not_null",
+      "table_name": "record_idea_discoveries",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL run_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_intent_reviews_run_id_not_null",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL run_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_idea_refinements_run_id_not_null",
       "table_name": "record_idea_refinements",
       "validated": true
@@ -38514,6 +38954,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL source_artifact_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_intent_reviews_source_artifact_id_not_null",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL source_batch_id",
       "enforced": true,
       "initially_deferred": false,
@@ -38800,6 +39250,16 @@
       "kind": "n",
       "name": "record_cycle_states_state_not_null",
       "table_name": "record_cycle_states",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_idea_discoveries_state_not_null",
+      "table_name": "record_idea_discoveries",
       "validated": true
     },
     {
@@ -41618,6 +42078,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "p",
+      "name": "record_idea_discoveries_pkey",
+      "table_name": "record_idea_discoveries",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (run_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_idea_intent_reviews_pkey",
+      "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (run_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
       "name": "record_idea_refinements_pkey",
       "table_name": "record_idea_refinements",
       "validated": true
@@ -42210,6 +42690,16 @@
       "kind": "u",
       "name": "record_commands_command_key_key",
       "table_name": "record_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (command_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_idea_intent_reviews_command_key_key",
+      "table_name": "record_idea_intent_reviews",
       "validated": true
     },
     {
@@ -44318,7 +44808,17 @@
     },
     {
       "arguments": "",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_idea_refinement_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE intent openai_run_intents; cycle record_cycles; operation gov_operations;\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'refinement history is immutable'; END IF;\n IF TG_OP='UPDATE' AND (OLD.state<>'RUNNING' OR NEW.state='RUNNING'\n   OR (to_jsonb(OLD)-ARRAY['state','advice','output_hash','finished_at'])\n      IS DISTINCT FROM (to_jsonb(NEW)-ARRAY['state','advice','output_hash','finished_at']))\n THEN RAISE EXCEPTION 'refinement identity or terminal result is immutable'; END IF;\n SELECT * INTO cycle FROM record_cycles WHERE id=NEW.cycle_id AND experiment_id=NEW.experiment_id\n   AND seed_artifact_id=NEW.seed_artifact_id AND idea_mode='USER_SEEDED_REFINEMENT' AND purpose='INITIAL';\n SELECT * INTO operation FROM gov_operations WHERE id=NEW.operation_id AND experiment_id=NEW.experiment_id;\n IF cycle.id IS NULL OR operation.id IS NULL THEN RAISE EXCEPTION 'refinement scope mismatch'; END IF;\n IF NEW.state='SUCCEEDED' THEN\n  SELECT * INTO intent FROM openai_run_intents WHERE idempotency_key=NEW.run_id\n    AND experiment_id=NEW.experiment_id AND operation_id=NEW.operation_id\n    AND outcome='SUCCEEDED' AND output_hash=NEW.output_hash;\n  IF intent.idempotency_key IS NULL\n  THEN RAISE EXCEPTION 'refinement output is not a successful governed run'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_idea_discovery_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE intent openai_run_intents; operation gov_operations;\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'discovery history is immutable'; END IF;\n IF TG_OP='UPDATE' AND (OLD.state<>'RUNNING' OR NEW.state='RUNNING'\n   OR (to_jsonb(OLD)-ARRAY['state','advice','output_hash','candidate_ids','finished_at'])\n      IS DISTINCT FROM (to_jsonb(NEW)-ARRAY['state','advice','output_hash','candidate_ids','finished_at']))\n THEN RAISE EXCEPTION 'discovery identity or terminal result is immutable'; END IF;\n SELECT * INTO operation FROM gov_operations WHERE id=NEW.operation_id AND experiment_id=NEW.experiment_id;\n IF operation.id IS NULL THEN RAISE EXCEPTION 'discovery scope mismatch'; END IF;\n IF NEW.state='SUCCEEDED' THEN\n  SELECT * INTO intent FROM openai_run_intents WHERE idempotency_key=NEW.run_id\n    AND experiment_id=NEW.experiment_id AND operation_id=NEW.operation_id\n    AND outcome='SUCCEEDED' AND output_hash=NEW.output_hash;\n  IF intent.idempotency_key IS NULL THEN RAISE EXCEPTION 'discovery output is not a governed run'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_idea_discovery_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_idea_intent_review_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE refinement record_idea_refinements; source record_artifacts;\nBEGIN\n IF TG_OP<>'INSERT' THEN RAISE EXCEPTION 'intent review is immutable'; END IF;\n SELECT * INTO refinement FROM record_idea_refinements WHERE run_id=NEW.run_id\n   AND experiment_id=NEW.experiment_id AND cycle_id=NEW.cycle_id\n   AND seed_artifact_id=NEW.source_artifact_id AND output_hash=NEW.output_hash\n   AND state='SUCCEEDED';\n SELECT * INTO source FROM record_artifacts WHERE id=NEW.source_artifact_id\n   AND experiment_id=NEW.experiment_id AND kind IN ('IDEA_SEED','IDEA_CANDIDATE');\n IF refinement.run_id IS NULL OR source.id IS NULL\n THEN RAISE EXCEPTION 'intent review must bind exact successful output and source'; END IF;\n RETURN NEW;\nEND $function$\n",
+      "name": "record_idea_intent_review_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_idea_refinement_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nDECLARE intent openai_run_intents; cycle record_cycles; operation gov_operations;\nBEGIN\n IF TG_OP='DELETE' THEN RAISE EXCEPTION 'refinement history is immutable'; END IF;\n IF TG_OP='UPDATE' AND (OLD.state<>'RUNNING' OR NEW.state='RUNNING'\n   OR (to_jsonb(OLD)-ARRAY['state','advice','output_hash','finished_at'])\n      IS DISTINCT FROM (to_jsonb(NEW)-ARRAY['state','advice','output_hash','finished_at']))\n THEN RAISE EXCEPTION 'refinement identity or terminal result is immutable'; END IF;\n SELECT * INTO cycle FROM record_cycles WHERE id=NEW.cycle_id AND experiment_id=NEW.experiment_id\n   AND seed_artifact_id=NEW.seed_artifact_id AND purpose='INITIAL'\n   AND idea_mode IN ('USER_SEEDED_REFINEMENT','SYSTEM_DISCOVERY');\n SELECT * INTO operation FROM gov_operations WHERE id=NEW.operation_id AND experiment_id=NEW.experiment_id;\n IF cycle.id IS NULL OR operation.id IS NULL THEN RAISE EXCEPTION 'refinement scope mismatch'; END IF;\n IF NEW.state='SUCCEEDED' THEN\n  SELECT * INTO intent FROM openai_run_intents WHERE idempotency_key=NEW.run_id\n    AND experiment_id=NEW.experiment_id AND operation_id=NEW.operation_id\n    AND outcome='SUCCEEDED' AND output_hash=NEW.output_hash;\n  IF intent.idempotency_key IS NULL THEN RAISE EXCEPTION 'refinement output is not a successful governed run'; END IF;\n END IF;\n RETURN NEW;\nEND $function$\n",
       "name": "record_idea_refinement_guard"
     },
     {
@@ -45692,6 +46192,15 @@
       "primary_index": false,
       "ready": true,
       "table_name": "record_idea_acceptances",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_idea_discoveries_experiment ON public.record_idea_discoveries USING btree (experiment_id, created_at DESC)",
+      "name": "ix_record_idea_discoveries_experiment",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_idea_discoveries",
       "unique_index": false,
       "valid": true
     },
@@ -47825,6 +48334,33 @@
       "primary_index": true,
       "ready": true,
       "table_name": "record_idea_acceptances",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_idea_discoveries_pkey ON public.record_idea_discoveries USING btree (run_id)",
+      "name": "record_idea_discoveries_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_idea_discoveries",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_idea_intent_reviews_command_key_key ON public.record_idea_intent_reviews USING btree (command_key)",
+      "name": "record_idea_intent_reviews_command_key_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_idea_intent_reviews",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_idea_intent_reviews_pkey ON public.record_idea_intent_reviews USING btree (run_id)",
+      "name": "record_idea_intent_reviews_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_idea_intent_reviews",
       "unique_index": true,
       "valid": true
     },
@@ -50776,6 +51312,18 @@
       "force_row_security": false,
       "kind": "r",
       "name": "record_idea_acceptances",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_idea_discoveries",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_idea_intent_reviews",
       "row_security": false
     },
     {
@@ -62022,6 +62570,318 @@
       "internal": true,
       "name": null,
       "table_name": "record_pivot_decisions"
+    },
+    {
+      "constraint_name": "record_idea_discoveries_experiment_id_fkey",
+      "constraint_table": "record_idea_discoveries",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_discoveries"
+    },
+    {
+      "constraint_name": "record_idea_discoveries_experiment_id_fkey",
+      "constraint_table": "record_idea_discoveries",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_idea_discoveries_experiment_id_fkey",
+      "constraint_table": "record_idea_discoveries",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_discoveries"
+    },
+    {
+      "constraint_name": "record_idea_discoveries_experiment_id_fkey",
+      "constraint_table": "record_idea_discoveries",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_idea_discoveries_operation_id_fkey",
+      "constraint_table": "record_idea_discoveries",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_discoveries"
+    },
+    {
+      "constraint_name": "record_idea_discoveries_operation_id_fkey",
+      "constraint_table": "record_idea_discoveries",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_operations"
+    },
+    {
+      "constraint_name": "record_idea_discoveries_operation_id_fkey",
+      "constraint_table": "record_idea_discoveries",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_discoveries"
+    },
+    {
+      "constraint_name": "record_idea_discoveries_operation_id_fkey",
+      "constraint_table": "record_idea_discoveries",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "gov_operations"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_cycle_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_intent_reviews"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_cycle_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_cycle_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_intent_reviews"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_cycle_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_cycles"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_experiment_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_intent_reviews"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_experiment_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_experiment_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_intent_reviews"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_experiment_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_run_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_intent_reviews"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_run_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_run_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_intent_reviews"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_run_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_refinements"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_source_artifact_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_intent_reviews"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_source_artifact_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_source_artifact_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_idea_intent_reviews"
+    },
+    {
+      "constraint_name": "record_idea_intent_reviews_source_artifact_id_fkey",
+      "constraint_table": "record_idea_intent_reviews",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_artifacts"
     },
     {
       "constraint_name": "record_idea_refinements_cycle_id_fkey",
@@ -79923,6 +80783,32 @@
       "internal": false,
       "name": "record_idea_acceptances_guard",
       "table_name": "record_idea_acceptances"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_idea_discovery_guard BEFORE INSERT OR DELETE OR UPDATE ON record_idea_discoveries FOR EACH ROW EXECUTE FUNCTION record_idea_discovery_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_idea_discovery_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_idea_discovery_guard",
+      "table_name": "record_idea_discoveries"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_idea_intent_review_guard BEFORE INSERT OR DELETE OR UPDATE ON record_idea_intent_reviews FOR EACH ROW EXECUTE FUNCTION record_idea_intent_review_guard()",
+      "enabled": "O",
+      "events": 31,
+      "function_name": "public.record_idea_intent_review_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_idea_intent_review_guard",
+      "table_name": "record_idea_intent_reviews"
     },
     {
       "constraint_name": null,

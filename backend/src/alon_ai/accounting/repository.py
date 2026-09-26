@@ -346,6 +346,31 @@ class GovernanceProvisioner:
             await lock_experiment(c, attr.experiment_id)
             for scope in _scopes(attr, provider):
                 for currency in set(currencies):
+                    if scope["scope"] != "OPERATION":
+                        existing = (
+                            (
+                                await c.execute(
+                                    select(s.budget_accounts).where(
+                                        *(
+                                            s.budget_accounts.c[key].is_(None)
+                                            if value is None
+                                            else s.budget_accounts.c[key] == value
+                                            for key, value in scope.items()
+                                        ),
+                                        s.budget_accounts.c.currency == currency,
+                                        s.budget_accounts.c.effective_at
+                                        <= effective_at,
+                                        s.budget_accounts.c.expires_at > effective_at,
+                                    )
+                                )
+                            )
+                            .mappings()
+                            .one_or_none()
+                        )
+                        if existing is not None:
+                            if existing["limit"] != limit:
+                                raise AccountingDenied(Reason.BUDGET)
+                            continue
                     await c.execute(
                         pg_insert(s.budget_accounts)
                         .values(

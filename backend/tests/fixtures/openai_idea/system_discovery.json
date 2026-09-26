@@ -7,6 +7,7 @@
   "advice": {
     "title": "Synthetic clinic scheduling backend",
     "hypothesis": "Small clinics may benefit from a synthetic Python appointment scheduling backend; buyer demand is unverified",
+    "demand_status": "UNVERIFIED",
     "grounding_refs": [
       "OPERATOR_PROFILE"
     ],

@@ -9,6 +9,27 @@
             "title": "Command Key",
             "type": "string"
           },
+          "intent_confirmed": {
+            "title": "Intent Confirmed",
+            "type": "boolean"
+          },
+          "intent_rationale": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Intent Rationale",
+            "type": "string"
+          },
+          "intent_relationship": {
+            "enum": [
+              "PRESERVES_CORE_INTENT",
+              "CLARIFIES_CORE_INTENT",
+              "NARROWS_CORE_INTENT",
+              "MATERIAL_PIVOT",
+              "UNRELATED"
+            ],
+            "title": "Intent Relationship",
+            "type": "string"
+          },
           "run_id": {
             "format": "uuid",
             "title": "Run Id",
@@ -17,7 +38,10 @@
         },
         "required": [
           "run_id",
-          "command_key"
+          "command_key",
+          "intent_relationship",
+          "intent_confirmed",
+          "intent_rationale"
         ],
         "title": "AcceptRequest",
         "type": "object"
@@ -191,10 +215,17 @@
             "type": "string"
           },
           "idea_seed": {
-            "maxLength": 4000,
-            "minLength": 1,
-            "title": "Idea Seed",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idea Seed"
           },
           "name": {
             "maxLength": 120,
@@ -208,7 +239,6 @@
         },
         "required": [
           "name",
-          "idea_seed",
           "brief",
           "operator_profile",
           "command_key"
@@ -225,9 +255,16 @@
             "type": "string"
           },
           "cycle_id": {
-            "format": "uuid",
-            "title": "Cycle Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle Id"
           },
           "experiment_id": {
             "format": "uuid",
@@ -235,13 +272,22 @@
             "type": "string"
           },
           "seed_artifact_id": {
-            "format": "uuid",
-            "title": "Seed Artifact Id",
-            "type": "string"
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seed Artifact Id"
           },
           "state": {
-            "const": "AWAITING_REFINEMENT",
-            "default": "AWAITING_REFINEMENT",
+            "enum": [
+              "AWAITING_REFINEMENT",
+              "AWAITING_DISCOVERY"
+            ],
             "title": "State",
             "type": "string"
           }
@@ -250,7 +296,8 @@
           "experiment_id",
           "cycle_id",
           "brief_artifact_id",
-          "seed_artifact_id"
+          "seed_artifact_id",
+          "state"
         ],
         "title": "CreateExperimentResponse",
         "type": "object"
@@ -558,6 +605,34 @@
           "idempotency_key"
         ],
         "title": "RefineRequest",
+        "type": "object"
+      },
+      "SelectCandidateRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_artifact_id": {
+            "format": "uuid",
+            "title": "Candidate Artifact Id",
+            "type": "string"
+          },
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "candidate_artifact_id",
+          "reason",
+          "command_key"
+        ],
+        "title": "SelectCandidateRequest",
         "type": "object"
       },
       "SessionResponse": {
@@ -1025,6 +1100,58 @@
         "summary": "Accept Experiment Idea"
       }
     },
+    "/operator/experiments/{experiment_id}/discover": {
+      "post": {
+        "operationId": "discover_experiment_operator_experiments__experiment_id__discover_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RefineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Discover Experiment Operator Experiments  Experiment Id  Discover Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Discover Experiment"
+      }
+    },
     "/operator/experiments/{experiment_id}/refine": {
       "post": {
         "operationId": "refine_experiment_operator_experiments__experiment_id__refine_post",
@@ -1075,6 +1202,58 @@
           }
         },
         "summary": "Refine Experiment"
+      }
+    },
+    "/operator/experiments/{experiment_id}/select": {
+      "post": {
+        "operationId": "select_experiment_candidate_operator_experiments__experiment_id__select_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SelectCandidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Select Experiment Candidate Operator Experiments  Experiment Id  Select Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Select Experiment Candidate"
       }
     },
     "/operator/status": {

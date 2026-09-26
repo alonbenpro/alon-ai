@@ -314,7 +314,13 @@ async def test_recorded_refinement_is_reviewed_and_accepted_only_by_operator_com
         )
         accepted = client.post(
             f"/operator/experiments/{experiment_id}/accept",
-            json={"run_id": run_id, "command_key": str(uuid4())},
+            json={
+                "run_id": run_id,
+                "command_key": str(uuid4()),
+                "intent_relationship": "PRESERVES_CORE_INTENT",
+                "intent_confirmed": True,
+                "intent_rationale": "Same clinic intake service",
+            },
             headers=ORIGIN,
         )
         assert accepted.status_code == 200, accepted.text
@@ -325,7 +331,13 @@ async def test_recorded_refinement_is_reviewed_and_accepted_only_by_operator_com
         assert (
             client.post(
                 f"/operator/experiments/{experiment_id}/accept",
-                json={"run_id": run_id, "command_key": str(uuid4())},
+                json={
+                    "run_id": run_id,
+                    "command_key": str(uuid4()),
+                    "intent_relationship": "PRESERVES_CORE_INTENT",
+                    "intent_confirmed": True,
+                    "intent_rationale": "Same clinic intake service",
+                },
                 headers=ORIGIN,
             ).status_code
             == 409
@@ -362,7 +374,13 @@ async def test_disabled_runtime_cannot_create_advice_or_acceptance(governance_en
         assert (
             client.post(
                 f"/operator/experiments/{experiment_id}/accept",
-                json={"run_id": run_id, "command_key": str(uuid4())},
+                json={
+                    "run_id": run_id,
+                    "command_key": str(uuid4()),
+                    "intent_relationship": "PRESERVES_CORE_INTENT",
+                    "intent_confirmed": True,
+                    "intent_rationale": "No successful advice exists",
+                },
                 headers=ORIGIN,
             ).status_code
             == 409
@@ -650,18 +668,15 @@ async def test_stale_refinement_uses_ledger_to_decide_safe_retry(governance_engi
         ).json()
         first_roots = await roots_for(first["experiment_id"])
         uncalled = uuid4()
-        attribution = CallAttribution(
+        first_runtime, attribution = await provision_recorded_seeded_runtime(
+            governance_engine,
             experiment_id=UUID(first["experiment_id"]),
-            workflow_run_id=first_roots["id"],
-            operation_run_id=uuid4(),
-            operation_run_kind=OperationRunKind.SYSTEM,
-            actor=AgentActor(agent_run_id=first_roots["agent_id"]),
-            correlation_id=uuid4(),
-            logical_operation_id=uuid4(),
-            config_version=uuid4(),
-            deadline=datetime.now(UTC) + timedelta(minutes=1),
+            workflow_id=first_roots["id"],
+            agent_id=first_roots["agent_id"],
+            operator_id=operator_id,
+            run_id=uncalled,
+            budget_usd=Decimal("1.00"),
         )
-        await GovernanceProvisioner(governance_engine).scope(attribution)
         async with governance_engine.begin() as connection:
             await connection.execute(
                 records.idea_refinements.insert().values(
@@ -675,8 +690,29 @@ async def test_stale_refinement_uses_ledger_to_decide_safe_retry(governance_engi
                     created_at=old,
                 )
             )
-        safe = client.get(f"/operator/experiments/{first['experiment_id']}")
-        assert safe.json()["state"] == "REFINEMENT_FAILED"
+        unresolved = client.get(f"/operator/experiments/{first['experiment_id']}")
+        assert unresolved.json()["state"] == "REFINEMENT_BLOCKED"
+        assert unresolved.json()["retry_safe"] is False
+        fresh = client.post(
+            f"/operator/experiments/{first['experiment_id']}/refine",
+            json={"idempotency_key": str(uuid4())},
+            headers=ORIGIN,
+        )
+        assert fresh.json() == {"detail": "REFINEMENT_RECONCILIATION_REQUIRED"}
+        # The owner still has a valid attribution and can dispatch after the stale read.
+        late_execution = await first_runtime.refine_cycle(
+            attribution,
+            cycle_id=UUID(first["cycle_id"]),
+            facts=RoutingFacts(needs_ai=True),
+            idempotency_key=uncalled,
+        )
+        assert late_execution.outcome == "SUCCEEDED"
+        assert (
+            client.get(f"/operator/experiments/{first['experiment_id']}").json()[
+                "state"
+            ]
+            == "REFINEMENT_BLOCKED"
+        )
 
         second = client.post(
             "/operator/experiments", json=creation_body(), headers=ORIGIN
@@ -721,6 +757,166 @@ async def test_stale_refinement_uses_ledger_to_decide_safe_retry(governance_engi
             headers=ORIGIN,
         )
         assert fresh.json() == {"detail": "REFINEMENT_RECONCILIATION_REQUIRED"}
+
+
+async def test_stale_discovery_with_live_owner_remains_blocked(governance_engine):
+    app, operator_id = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    body = creation_body()
+    body.pop("idea_seed")
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        created = client.post("/operator/experiments", json=body, headers=ORIGIN).json()
+        experiment_id = UUID(created["experiment_id"])
+        async with governance_engine.connect() as connection:
+            roots = (
+                (
+                    await connection.execute(
+                        select(
+                            records.workflows.c.id,
+                            records.agents.c.id.label("agent_id"),
+                        )
+                        .select_from(
+                            records.workflows.join(
+                                records.agents,
+                                records.agents.c.workflow_id == records.workflows.c.id,
+                            )
+                        )
+                        .where(records.workflows.c.experiment_id == experiment_id)
+                    )
+                )
+                .mappings()
+                .one()
+            )
+        run_id = uuid4()
+        runtime, attribution = await provision_recorded_seeded_runtime(
+            governance_engine,
+            experiment_id=experiment_id,
+            workflow_id=roots["id"],
+            agent_id=roots["agent_id"],
+            operator_id=operator_id,
+            run_id=run_id,
+            budget_usd=Decimal("1.00"),
+        )
+        async with governance_engine.begin() as connection:
+            await connection.execute(
+                records.idea_discoveries.insert().values(
+                    run_id=run_id,
+                    experiment_id=experiment_id,
+                    operation_id=attribution.operation_run_id,
+                    state="RUNNING",
+                    advice_source="RECORDED_FAKE",
+                    created_at=datetime.now(UTC) - timedelta(hours=2),
+                )
+            )
+        snapshot = client.get(f"/operator/experiments/{experiment_id}").json()
+        assert snapshot["state"] == "DISCOVERY_BLOCKED"
+        assert snapshot["retry_safe"] is False
+        fresh = client.post(
+            f"/operator/experiments/{experiment_id}/discover",
+            json={"idempotency_key": str(uuid4())},
+            headers=ORIGIN,
+        )
+        assert fresh.json() == {"detail": "DISCOVERY_RECONCILIATION_REQUIRED"}
+        late_execution = await runtime.discover_system(
+            attribution,
+            facts=RoutingFacts(needs_ai=True),
+            idempotency_key=run_id,
+        )
+        assert late_execution.outcome == "SUCCEEDED"
+        assert (
+            client.get(f"/operator/experiments/{experiment_id}").json()["state"]
+            == "DISCOVERY_BLOCKED"
+        )
+
+
+async def test_other_experiment_same_discovery_key_cannot_block_existing_owner(
+    governance_engine, monkeypatch
+):
+    app, operator_id = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    body_a = creation_body()
+    body_a.pop("idea_seed")
+    body_b = creation_body()
+    body_b.pop("idea_seed")
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        first = client.post("/operator/experiments", json=body_a, headers=ORIGIN).json()
+        second = client.post(
+            "/operator/experiments", json=body_b, headers=ORIGIN
+        ).json()
+        first_id, second_id = (
+            UUID(first["experiment_id"]),
+            UUID(second["experiment_id"]),
+        )
+        async with governance_engine.connect() as connection:
+            roots = (
+                (
+                    await connection.execute(
+                        select(
+                            records.workflows.c.id,
+                            records.agents.c.id.label("agent_id"),
+                        )
+                        .select_from(
+                            records.workflows.join(
+                                records.agents,
+                                records.agents.c.workflow_id == records.workflows.c.id,
+                            )
+                        )
+                        .where(records.workflows.c.experiment_id == first_id)
+                    )
+                )
+                .mappings()
+                .one()
+            )
+        shared_key = uuid4()
+        _, attribution = await provision_recorded_seeded_runtime(
+            governance_engine,
+            experiment_id=first_id,
+            workflow_id=roots["id"],
+            agent_id=roots["agent_id"],
+            operator_id=operator_id,
+            run_id=shared_key,
+            budget_usd=Decimal("1.00"),
+        )
+        async with governance_engine.begin() as connection:
+            await connection.execute(
+                records.idea_discoveries.insert().values(
+                    run_id=shared_key,
+                    experiment_id=first_id,
+                    operation_id=attribution.operation_run_id,
+                    state="RUNNING",
+                    advice_source="RECORDED_FAKE",
+                    created_at=datetime.now(UTC),
+                )
+            )
+        route = importlib.import_module("alon_ai.api.routes.experiments")
+
+        async def collision(*args, **kwargs):
+            assert kwargs["experiment_id"] == second_id
+            assert kwargs["run_id"] == shared_key
+            raise RuntimeError("same-key provisioning conflict")
+
+        monkeypatch.setattr(route, "provision_recorded_seeded_runtime", collision)
+        denied = client.post(
+            f"/operator/experiments/{second_id}/discover",
+            json={"idempotency_key": str(shared_key)},
+            headers=ORIGIN,
+        )
+        assert denied.status_code == 409
+        owner = client.get(f"/operator/experiments/{first_id}").json()
+        assert owner["state"] == "DISCOVERY_IN_PROGRESS"
+        assert owner["retry_safe"] is False
 
 
 async def test_create_key_rejects_changed_operator_profile(governance_engine):
@@ -815,7 +1011,13 @@ async def test_accept_retry_reuses_committed_idea_brief(governance_engine, monke
             ).status_code
             == 200
         )
-        body = {"run_id": run_id, "command_key": str(uuid4())}
+        body = {
+            "run_id": run_id,
+            "command_key": str(uuid4()),
+            "intent_relationship": "PRESERVES_CORE_INTENT",
+            "intent_confirmed": True,
+            "intent_rationale": "Same clinic intake service",
+        }
         first = client.post(
             f"/operator/experiments/{experiment_id}/accept", json=body, headers=ORIGIN
         )
@@ -889,7 +1091,13 @@ async def test_recorded_transport_failure_never_leaks_or_accepts_advice(
         assert (
             client.post(
                 f"/operator/experiments/{experiment_id}/accept",
-                json={"run_id": run_id, "command_key": str(uuid4())},
+                json={
+                    "run_id": run_id,
+                    "command_key": str(uuid4()),
+                    "intent_relationship": "PRESERVES_CORE_INTENT",
+                    "intent_confirmed": True,
+                    "intent_rationale": "No successful advice exists",
+                },
                 headers=ORIGIN,
             ).status_code
             == 409
@@ -905,6 +1113,7 @@ async def test_material_pivot_advice_cannot_be_accepted(governance_engine, monke
         response = await original(self, **kwargs)
         advice = json.loads(response["output"][0]["content"][0]["text"])
         advice["material_pivot"] = True
+        advice["intent_relationship"] = "MATERIAL_PIVOT"
         response["output"][0]["content"][0]["text"] = json.dumps(advice)
         return response
 
@@ -929,7 +1138,13 @@ async def test_material_pivot_advice_cannot_be_accepted(governance_engine, monke
         assert refined.json()["advice"]["material_pivot"] is True
         denied = client.post(
             f"/operator/experiments/{experiment_id}/accept",
-            json={"run_id": run_id, "command_key": str(uuid4())},
+            json={
+                "run_id": run_id,
+                "command_key": str(uuid4()),
+                "intent_relationship": "MATERIAL_PIVOT",
+                "intent_confirmed": True,
+                "intent_rationale": "Model proposes a different service",
+            },
             headers=ORIGIN,
         )
         assert denied.status_code == 409
@@ -976,7 +1191,445 @@ async def test_seed_preserving_narrowing_can_be_accepted(
         assert refined.status_code == 200
         accepted = client.post(
             f"/operator/experiments/{created['experiment_id']}/accept",
-            json={"run_id": run_id, "command_key": str(uuid4())},
+            json={
+                "run_id": run_id,
+                "command_key": str(uuid4()),
+                "intent_relationship": "NARROWS_CORE_INTENT",
+                "intent_confirmed": True,
+                "intent_rationale": "Focuses on smaller clinics",
+            },
             headers=ORIGIN,
         )
         assert accepted.status_code == 200, accepted.text
+
+
+async def test_operator_review_rejects_unrelated_and_requires_confirmation(
+    governance_engine,
+):
+    app, _ = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        experiment_id = client.post(
+            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        ).json()["experiment_id"]
+        run_id = str(uuid4())
+        assert (
+            client.post(
+                f"/operator/experiments/{experiment_id}/refine",
+                json={"idempotency_key": run_id},
+                headers=ORIGIN,
+            ).status_code
+            == 200
+        )
+        path = f"/operator/experiments/{experiment_id}/accept"
+        base = {"run_id": run_id, "command_key": str(uuid4())}
+        assert client.post(
+            path,
+            json={
+                **base,
+                "intent_relationship": "UNRELATED",
+                "intent_confirmed": True,
+                "intent_rationale": "Different service",
+            },
+            headers=ORIGIN,
+        ).json() == {"detail": "IDEA_UNRELATED"}
+        assert client.post(
+            path,
+            json={
+                **base,
+                "intent_relationship": "PRESERVES_CORE_INTENT",
+                "intent_confirmed": False,
+                "intent_rationale": "Needs review",
+            },
+            headers=ORIGIN,
+        ).json() == {"detail": "INTENT_CONFIRMATION_REQUIRED"}
+        assert (
+            client.get(f"/operator/experiments/{experiment_id}").json()[
+                "accepted_brief"
+            ]
+            is None
+        )
+
+
+async def test_semantic_operator_review_accepts_paraphrase_without_prefix(
+    governance_engine, monkeypatch
+):
+    app, _ = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    original = _RecordedResponses.create
+
+    async def paraphrase(self, **kwargs):
+        response = await original(self, **kwargs)
+        advice = json.loads(response["output"][0]["content"][0]["text"])
+        advice["core_intent"] = (
+            "Provide software that improves the way clinics collect patient intake details."
+        )
+        response["output"][0]["content"][0]["text"] = json.dumps(advice)
+        return response
+
+    monkeypatch.setattr(_RecordedResponses, "create", paraphrase)
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        experiment_id = client.post(
+            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        ).json()["experiment_id"]
+        run_id = str(uuid4())
+        assert (
+            client.post(
+                f"/operator/experiments/{experiment_id}/refine",
+                json={"idempotency_key": run_id},
+                headers=ORIGIN,
+            ).status_code
+            == 200
+        )
+        accepted = client.post(
+            f"/operator/experiments/{experiment_id}/accept",
+            json={
+                "run_id": run_id,
+                "command_key": str(uuid4()),
+                "intent_relationship": "CLARIFIES_CORE_INTENT",
+                "intent_confirmed": True,
+                "intent_rationale": "Same workflow goal in clearer words",
+            },
+            headers=ORIGIN,
+        )
+        assert accepted.status_code == 200, accepted.text
+        assert accepted.json()["state"] == "IDEA_ACCEPTED"
+
+    async with governance_engine.connect() as connection:
+        review = (
+            (await connection.execute(select(records.idea_intent_reviews)))
+            .mappings()
+            .one()
+        )
+    assert review["relationship"] == "CLARIFIES_CORE_INTENT"
+    assert review["rationale"] == "Same workflow goal in clearer words"
+    assert review["source_artifact_id"] is not None
+
+
+async def test_model_unrelated_continuation_cannot_be_confirmed_as_preserved(
+    governance_engine, monkeypatch
+):
+    app, _ = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    original = _RecordedResponses.create
+
+    async def contradictory(self, **kwargs):
+        response = await original(self, **kwargs)
+        advice = json.loads(response["output"][0]["content"][0]["text"])
+        advice["core_intent"] += (
+            " Stop building clinic intake software and sell insurance leads."
+        )
+        advice["intent_relationship"] = "UNRELATED"
+        response["output"][0]["content"][0]["text"] = json.dumps(advice)
+        return response
+
+    monkeypatch.setattr(_RecordedResponses, "create", contradictory)
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        experiment_id = client.post(
+            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        ).json()["experiment_id"]
+        run_id = str(uuid4())
+        refined = client.post(
+            f"/operator/experiments/{experiment_id}/refine",
+            json={"idempotency_key": run_id},
+            headers=ORIGIN,
+        )
+        assert refined.status_code == 200, refined.text
+        assert refined.json()["advice"]["intent_relationship"] == "UNRELATED"
+        denied = client.post(
+            f"/operator/experiments/{experiment_id}/accept",
+            json={
+                "run_id": run_id,
+                "command_key": str(uuid4()),
+                "intent_relationship": "PRESERVES_CORE_INTENT",
+                "intent_confirmed": True,
+                "intent_rationale": "I think this is the same idea",
+            },
+            headers=ORIGIN,
+        )
+        assert denied.status_code == 409
+        assert denied.json() == {"detail": "IDEA_UNRELATED"}
+        assert (
+            client.get(f"/operator/experiments/{experiment_id}").json()[
+                "accepted_brief"
+            ]
+            is None
+        )
+
+
+async def test_system_discovery_persists_reviewable_batch_before_selection(
+    governance_engine,
+):
+    app, _ = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    body = creation_body()
+    body.pop("idea_seed")
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        created = client.post("/operator/experiments", json=body, headers=ORIGIN)
+        assert created.status_code == 201, created.text
+        experiment_id = created.json()["experiment_id"]
+        assert created.json()["state"] == "AWAITING_DISCOVERY"
+        assert created.json()["cycle_id"] is None
+        before = client.get(f"/operator/experiments/{experiment_id}").json()
+        assert before["mode"] == "SYSTEM_DISCOVERY"
+        assert before["candidates"] == []
+        assert client.post(
+            f"/operator/experiments/{experiment_id}/refine",
+            json={"idempotency_key": str(uuid4())},
+            headers=ORIGIN,
+        ).json() == {"detail": "CANDIDATE_SELECTION_REQUIRED"}
+        run_id = str(uuid4())
+        discovered = client.post(
+            f"/operator/experiments/{experiment_id}/discover",
+            json={"idempotency_key": run_id},
+            headers=ORIGIN,
+        )
+        assert discovered.status_code == 200, discovered.text
+        assert discovered.json()["state"] == "AWAITING_SELECTION"
+        assert len(discovered.json()["candidates"]) == 3
+        refreshed = client.get(f"/operator/experiments/{experiment_id}").json()
+        assert refreshed["candidates"] == discovered.json()["candidates"]
+        assert refreshed["latest_run_id"] == run_id
+        assert refreshed["selected_candidate_artifact_id"] is None
+        choice = refreshed["candidates"][1]["artifact_id"]
+        selection_body = {
+            "candidate_artifact_id": choice,
+            "reason": "Fits delivery constraints",
+            "command_key": str(uuid4()),
+        }
+        selected = client.post(
+            f"/operator/experiments/{experiment_id}/select",
+            json=selection_body,
+            headers=ORIGIN,
+        )
+        assert selected.status_code == 200, selected.text
+        assert selected.json()["state"] == "AWAITING_REFINEMENT"
+        assert (
+            client.get(f"/operator/experiments/{experiment_id}").json()[
+                "selected_candidate_artifact_id"
+            ]
+            == choice
+        )
+        refined = client.post(
+            f"/operator/experiments/{experiment_id}/refine",
+            json={"idempotency_key": str(uuid4())},
+            headers=ORIGIN,
+        )
+        assert refined.status_code == 200, refined.text
+        assert refined.json()["state"] == "AWAITING_REVIEW"
+        assert refined.json()["advice"]["grounding_refs"] == ["SELECTED_CANDIDATE"]
+        accepted = client.post(
+            f"/operator/experiments/{experiment_id}/accept",
+            json={
+                "run_id": refined.json()["run_id"],
+                "command_key": str(uuid4()),
+                "intent_relationship": "PRESERVES_CORE_INTENT",
+                "intent_confirmed": True,
+                "intent_rationale": "Keeps the selected workflow hypothesis",
+            },
+            headers=ORIGIN,
+        )
+        assert accepted.status_code == 200, accepted.text
+        assert accepted.json()["state"] == "IDEA_ACCEPTED"
+        assert (
+            client.get(f"/operator/experiments/{experiment_id}").json()[
+                "accepted_brief"
+            ]["core_intent"]
+            == refined.json()["advice"]["core_intent"]
+        )
+        replay = client.post(
+            f"/operator/experiments/{experiment_id}/select",
+            json=selection_body,
+            headers=ORIGIN,
+        )
+        assert replay.status_code == 200, replay.text
+        assert replay.json() == selected.json()
+
+
+async def test_settled_schema_failure_confirms_safe_retry_and_new_run(
+    governance_engine, monkeypatch
+):
+    app, _ = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    original = _RecordedResponses.create
+    calls = 0
+
+    async def malformed_once(self, **kwargs):
+        nonlocal calls
+        calls += 1
+        response = await original(self, **kwargs)
+        if calls == 1:
+            response["output"][0]["content"][0]["text"] = "{}"
+        return response
+
+    monkeypatch.setattr(_RecordedResponses, "create", malformed_once)
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        experiment_id = client.post(
+            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        ).json()["experiment_id"]
+        first_id = str(uuid4())
+        first = client.post(
+            f"/operator/experiments/{experiment_id}/refine",
+            json={"idempotency_key": first_id},
+            headers=ORIGIN,
+        )
+        assert first.status_code == 200, first.text
+        assert first.json()["outcome"] == "SCHEMA_MISMATCH"
+        assert first.json()["state"] == "REFINEMENT_FAILED"
+        snapshot = client.get(f"/operator/experiments/{experiment_id}").json()
+        assert snapshot["retry_safe"] is True
+        assert snapshot["latest_run_id"] == first_id
+        replay = client.post(
+            f"/operator/experiments/{experiment_id}/refine",
+            json={"idempotency_key": first_id},
+            headers=ORIGIN,
+        )
+        assert replay.json()["state"] == "REFINEMENT_FAILED"
+        second = client.post(
+            f"/operator/experiments/{experiment_id}/refine",
+            json={"idempotency_key": str(uuid4())},
+            headers=ORIGIN,
+        )
+        assert second.status_code == 200, second.text
+        assert second.json()["state"] == "AWAITING_REVIEW"
+
+
+async def test_settled_discovery_failure_allows_new_key(governance_engine, monkeypatch):
+    app, _ = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    original = _RecordedResponses.create
+    attempts = 0
+
+    async def malformed_once(self, **kwargs):
+        nonlocal attempts
+        attempts += 1
+        response = await original(self, **kwargs)
+        if attempts == 1:
+            response["output"][0]["content"][0]["text"] = "{}"
+        return response
+
+    monkeypatch.setattr(_RecordedResponses, "create", malformed_once)
+    body = creation_body()
+    body.pop("idea_seed")
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        experiment_id = client.post(
+            "/operator/experiments", json=body, headers=ORIGIN
+        ).json()["experiment_id"]
+        path = f"/operator/experiments/{experiment_id}/discover"
+        first_id = str(uuid4())
+        first = client.post(path, json={"idempotency_key": first_id}, headers=ORIGIN)
+        assert first.status_code == 200, first.text
+        assert first.json()["state"] == "DISCOVERY_FAILED"
+        assert (
+            client.get(f"/operator/experiments/{experiment_id}").json()["retry_safe"]
+            is True
+        )
+        second = client.post(
+            path, json={"idempotency_key": str(uuid4())}, headers=ORIGIN
+        )
+        assert second.status_code == 200, second.text
+        assert second.json()["state"] == "AWAITING_SELECTION"
+        assert (
+            len(
+                client.get(f"/operator/experiments/{experiment_id}").json()[
+                    "candidates"
+                ]
+            )
+            == 3
+        )
+
+
+async def test_interrupted_candidate_batch_cannot_be_selected(
+    governance_engine, monkeypatch
+):
+    app, _ = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    original = ProductRecordsRepository.append_artifact
+    candidate_writes = 0
+
+    async def fail_second_candidate(self, draft, **kwargs):
+        nonlocal candidate_writes
+        if draft.kind == ArtifactKind.IDEA_CANDIDATE:
+            candidate_writes += 1
+            if candidate_writes == 2:
+                raise ProductRecordsDenied("INVALID_STATE")
+        return await original(self, draft, **kwargs)
+
+    monkeypatch.setattr(
+        ProductRecordsRepository, "append_artifact", fail_second_candidate
+    )
+    body = creation_body()
+    body.pop("idea_seed")
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        experiment_id = client.post(
+            "/operator/experiments", json=body, headers=ORIGIN
+        ).json()["experiment_id"]
+        first = client.post(
+            f"/operator/experiments/{experiment_id}/discover",
+            json={"idempotency_key": str(uuid4())},
+            headers=ORIGIN,
+        )
+        assert first.status_code == 409
+        snapshot = client.get(f"/operator/experiments/{experiment_id}").json()
+        assert snapshot["state"] == "DISCOVERY_BLOCKED"
+        assert snapshot["candidates"] == []
+        assert snapshot["retry_safe"] is False
+        async with governance_engine.connect() as connection:
+            partial_id = await connection.scalar(
+                select(records.artifacts.c.id).where(
+                    records.artifacts.c.experiment_id == UUID(experiment_id),
+                    records.artifacts.c.kind == ArtifactKind.IDEA_CANDIDATE,
+                )
+            )
+        assert partial_id is not None
+        assert client.post(
+            f"/operator/experiments/{experiment_id}/select",
+            json={
+                "candidate_artifact_id": str(partial_id),
+                "reason": "Looks useful",
+                "command_key": str(uuid4()),
+            },
+            headers=ORIGIN,
+        ).json() == {"detail": "CANDIDATE_NOT_IN_DISCOVERY"}

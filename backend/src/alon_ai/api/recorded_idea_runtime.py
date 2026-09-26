@@ -60,20 +60,53 @@ class _RecordedResponses:
             raise TypeError("recorded input missing")
         bound = json.loads(raw)
         artifacts = bound.get("artifacts", [])
-        if len(artifacts) != 1 or artifacts[0].get("kind") != "IDEA_SEED":
-            raise ValueError("recorded transport requires exact seed")
-        statement = artifacts[0]["payload"]["statement"].strip()
-        advice = {
-            "title": statement[:120],
-            "customer": "Customer stated in original seed; verify before research",
-            "problem": "Problem stated in original seed; verify before research",
-            "core_intent": statement,
-            "material_pivot": False,
-            "grounding_refs": ["SEED"],
-            "uncertainties": [
-                "Synthetic recorded advice; customer, problem and demand are unverified"
-            ],
-        }
+        if len(artifacts) != 1:
+            raise ValueError("recorded transport requires one exact origin")
+        kind = artifacts[0].get("kind")
+        if kind == "EXPERIMENT_BRIEF":
+            brief = artifacts[0]["payload"]
+            capability = bound["operator_profiles"][0]["capabilities"][0]
+            approaches = (
+                ("self-service form", "a self-service form to collect requests"),
+                ("staff triage queue", "a staff queue to prioritize requests"),
+                ("workflow status dashboard", "a dashboard to track request progress"),
+            )
+            advice = {
+                "candidates": [
+                    {
+                        "title": f"{brief['target_customer']} {name}",
+                        "hypothesis": f"Use {capability} to explore {approach} for {brief['target_customer']} facing {brief['problem']} in {brief['geographies'][0]}; demand is unverified",
+                        "demand_status": "UNVERIFIED",
+                        "grounding_refs": ["OPERATOR_PROFILE"],
+                        "uncertainties": [
+                            "Customer demand and delivery fit are unverified"
+                        ],
+                    }
+                    for name, approach in approaches
+                ]
+            }
+        elif kind in {"IDEA_SEED", "IDEA_CANDIDATE"}:
+            statement = (
+                artifacts[0]["payload"]["statement"]
+                if kind == "IDEA_SEED"
+                else artifacts[0]["payload"]["hypothesis"]
+            ).strip()
+            advice = {
+                "title": statement[:120],
+                "customer": "Customer stated in original seed; verify before research",
+                "problem": "Problem stated in original seed; verify before research",
+                "core_intent": statement,
+                "intent_relationship": "PRESERVES_CORE_INTENT",
+                "material_pivot": False,
+                "grounding_refs": [
+                    "SEED" if kind == "IDEA_SEED" else "SELECTED_CANDIDATE"
+                ],
+                "uncertainties": [
+                    "Synthetic recorded advice; customer, problem and demand are unverified"
+                ],
+            }
+        else:
+            raise ValueError("recorded transport requires exact Idea origin")
         return {
             "id": "resp_l07_recorded",
             "status": "completed",

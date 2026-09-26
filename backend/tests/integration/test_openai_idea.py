@@ -21,7 +21,7 @@ from alon_ai.openai_runtime.contract import (
 )
 from alon_ai.openai_runtime.idea import (
     IdeaBriefAdvice,
-    IdeaCandidateAdvice,
+    IdeaCandidateSetAdvice,
     IdeaRuntime,
     IdeaStage,
     idea_profile,
@@ -45,17 +45,17 @@ from alon_ai.records import schema as records
     [
         (
             IdeaStage.USER_SEEDED_REFINEMENT,
-            '{"title":"Appointment triage","customer":"Clinics","problem":"Manual triage","core_intent":"Reduce admin time","material_pivot":false,"grounding_refs":["SEED"],"uncertainties":["Demand unverified"]}',
+            '{"title":"Appointment triage","customer":"Clinics","problem":"Manual triage","core_intent":"Reduce admin time","intent_relationship":"PRESERVES_CORE_INTENT","material_pivot":false,"grounding_refs":["SEED"],"uncertainties":["Demand unverified"]}',
             IdeaBriefAdvice,
         ),
         (
             IdeaStage.SYSTEM_DISCOVERY,
-            '{"title":"Appointment triage","hypothesis":"Clinics may pay for triage","grounding_refs":["OPERATOR_PROFILE"],"uncertainties":["Demand unverified"]}',
-            IdeaCandidateAdvice,
+            '{"candidates":[{"title":"Appointment triage 1","hypothesis":"Clinics may pay for triage","demand_status":"UNVERIFIED","grounding_refs":["OPERATOR_PROFILE"],"uncertainties":["Demand unverified"]},{"title":"Appointment triage 2","hypothesis":"Clinics may pay for triage","demand_status":"UNVERIFIED","grounding_refs":["OPERATOR_PROFILE"],"uncertainties":["Demand unverified"]},{"title":"Appointment triage 3","hypothesis":"Clinics may pay for triage","demand_status":"UNVERIFIED","grounding_refs":["OPERATOR_PROFILE"],"uncertainties":["Demand unverified"]}]}',
+            IdeaCandidateSetAdvice,
         ),
         (
             IdeaStage.SYSTEM_CANDIDATE_REFINEMENT,
-            '{"title":"Appointment triage","customer":"Clinics","problem":"Manual triage","core_intent":"Reduce admin time","material_pivot":false,"grounding_refs":["SELECTED_CANDIDATE"],"uncertainties":["Demand unverified"]}',
+            '{"title":"Appointment triage","customer":"Clinics","problem":"Manual triage","core_intent":"Reduce admin time","intent_relationship":"PRESERVES_CORE_INTENT","material_pivot":false,"grounding_refs":["SELECTED_CANDIDATE"],"uncertainties":["Demand unverified"]}',
             IdeaBriefAdvice,
         ),
     ],
@@ -139,6 +139,81 @@ def test_fabricated_grounding_reference_is_rejected(stage, advice):
     assert parsed.outcome == "SCHEMA_MISMATCH"
 
 
+def test_discovery_profile_requires_three_to_five_typed_distinct_candidates():
+    profile = idea_profile(
+        IdeaStage.SYSTEM_DISCOVERY,
+        config_id=uuid4(),
+        config_version=uuid4(),
+        adapter_version=uuid4(),
+        model_identifier="gpt-5-mini",
+        reasoning_effort="low",
+        max_output_tokens=1200,
+    )
+    candidate = {
+        "title": "Clinic workflow",
+        "hypothesis": "Clinics might need workflow software",
+        "demand_status": "UNVERIFIED",
+        "grounding_refs": ["OPERATOR_PROFILE"],
+        "uncertainties": ["Demand unverified"],
+    }
+    for size, expected in [
+        (2, "SCHEMA_MISMATCH"),
+        (3, "SUCCEEDED"),
+        (6, "SCHEMA_MISMATCH"),
+    ]:
+        items = [{**candidate, "title": f"Idea {number}"} for number in range(size)]
+        parsed = classify_response(
+            recorded(text=json.dumps({"candidates": items})), profile
+        )
+        assert parsed.outcome == expected
+        if expected == "SUCCEEDED":
+            assert isinstance(parsed.output, IdeaCandidateSetAdvice)
+            assert len(parsed.output.candidates) == 3
+    invalid = [{**candidate, "title": f"Idea {number}"} for number in range(3)]
+    invalid[1]["demand_status"] = "VALIDATED"
+    assert (
+        classify_response(
+            recorded(text=json.dumps({"candidates": invalid})), profile
+        ).outcome
+        == "SCHEMA_MISMATCH"
+    )
+
+
+def test_seeded_brief_requires_typed_advisory_intent_relationship():
+    profile = idea_profile(
+        IdeaStage.USER_SEEDED_REFINEMENT,
+        config_id=uuid4(),
+        config_version=uuid4(),
+        adapter_version=uuid4(),
+        model_identifier="gpt-5-mini",
+        reasoning_effort="low",
+        max_output_tokens=300,
+    )
+    advice = {
+        "title": "Clinic intake",
+        "customer": "Clinics",
+        "problem": "Manual intake",
+        "core_intent": "Simplify clinic intake",
+        "material_pivot": False,
+        "grounding_refs": ["SEED"],
+        "uncertainties": ["Demand unverified"],
+    }
+    assert (
+        classify_response(recorded(text=json.dumps(advice)), profile).outcome
+        == "SCHEMA_MISMATCH"
+    )
+    advice["intent_relationship"] = "CLARIFIES_CORE_INTENT"
+    assert (
+        classify_response(recorded(text=json.dumps(advice)), profile).outcome
+        == "SUCCEEDED"
+    )
+    advice["material_pivot"] = True
+    assert (
+        classify_response(recorded(text=json.dumps(advice)), profile).outcome
+        == "SCHEMA_MISMATCH"
+    )
+
+
 @pytest.mark.parametrize(
     ("stage", "field"),
     [
@@ -207,6 +282,7 @@ async def setup_idea(governance_engine, responses):
         "customer": "unknown",
         "problem": "unknown",
         "core_intent": "unknown",
+        "intent_relationship": "PRESERVES_CORE_INTENT",
         "material_pivot": False,
         "grounding_refs": ["SEED"],
         "uncertainties": ["unverified"],
@@ -214,10 +290,16 @@ async def setup_idea(governance_engine, responses):
     all_responses = {
         IdeaStage.USER_SEEDED_REFINEMENT: default_brief,
         IdeaStage.SYSTEM_DISCOVERY: {
-            "title": "default",
-            "hypothesis": "unverified",
-            "grounding_refs": ["OPERATOR_PROFILE"],
-            "uncertainties": ["unverified"],
+            "candidates": [
+                {
+                    "title": f"default {number}",
+                    "hypothesis": "unverified",
+                    "demand_status": "UNVERIFIED",
+                    "grounding_refs": ["OPERATOR_PROFILE"],
+                    "uncertainties": ["unverified"],
+                }
+                for number in range(3)
+            ]
         },
         IdeaStage.SYSTEM_CANDIDATE_REFINEMENT: {
             **default_brief,
@@ -267,6 +349,25 @@ async def setup_idea(governance_engine, responses):
         ),
         command_key=uuid4(),
     )
+    await product.append_artifact(
+        artifact(
+            attribution.experiment_id,
+            ArtifactKind.EXPERIMENT_BRIEF,
+            {
+                "objective": "Explore capability fit",
+                "target_customer": "Clinics",
+                "problem": "Manual coordination",
+                "geographies": ["Israel"],
+                "commercial_boundaries": "No price before evidence",
+                "budget_usd": "100.00",
+                "evidence_definitions": ["Observe workflow"],
+                "launch_stage": "SHADOW",
+            },
+            workflow_id=attribution.workflow_run_id,
+            agent_id=agent_id,
+        ),
+        command_key=uuid4(),
+    )
     runtimes = {}
     transports = {}
     for stage, advice in all_responses.items():
@@ -308,6 +409,7 @@ async def test_seeded_cycle_uses_exact_operator_seed_without_record_authority(
         "customer": "Clinics",
         "problem": "Manual triage",
         "core_intent": "Reduce admin time",
+        "intent_relationship": "PRESERVES_CORE_INTENT",
         "material_pivot": False,
         "grounding_refs": ["SEED"],
         "uncertainties": ["Demand unverified"],
@@ -404,6 +506,7 @@ async def test_system_discovery_then_selected_candidate_refinement_stays_advisor
     candidate_advice = {
         "title": "Appointment triage",
         "hypothesis": "Clinics may pay for triage",
+        "demand_status": "UNVERIFIED",
         "grounding_refs": ["OPERATOR_PROFILE"],
         "uncertainties": ["Demand unverified"],
     }
@@ -412,6 +515,7 @@ async def test_system_discovery_then_selected_candidate_refinement_stays_advisor
         "customer": "Clinics",
         "problem": "Manual triage",
         "core_intent": "Reduce admin time",
+        "intent_relationship": "PRESERVES_CORE_INTENT",
         "material_pivot": False,
         "grounding_refs": ["SELECTED_CANDIDATE"],
         "uncertainties": ["Demand unverified"],
@@ -419,7 +523,12 @@ async def test_system_discovery_then_selected_candidate_refinement_stays_advisor
     service, attribution, product, transports = await setup_idea(
         governance_engine,
         {
-            IdeaStage.SYSTEM_DISCOVERY: candidate_advice,
+            IdeaStage.SYSTEM_DISCOVERY: {
+                "candidates": [
+                    {**candidate_advice, "title": f"Appointment triage {number}"}
+                    for number in range(3)
+                ]
+            },
             IdeaStage.SYSTEM_CANDIDATE_REFINEMENT: brief_advice,
         },
     )
@@ -429,9 +538,8 @@ async def test_system_discovery_then_selected_candidate_refinement_stays_advisor
         idempotency_key=uuid4(),
     )
     assert discovered.outcome is OpenAIRunOutcome.SUCCEEDED
-    assert discovered.output == IdeaCandidateAdvice.model_validate_json(
-        json.dumps(candidate_advice)
-    )
+    assert isinstance(discovered.output, IdeaCandidateSetAdvice)
+    assert len(discovered.output.candidates) == 3
     discovery_input = transports[IdeaStage.SYSTEM_DISCOVERY].calls[0]["input_json"]
     assert "Python backend development" in discovery_input
     assert "Synthetic work only" in discovery_input
@@ -540,6 +648,7 @@ async def test_no_ai_in_both_modes_stays_zero_call(governance_engine):
     candidate = {
         "title": "x",
         "hypothesis": "y",
+        "demand_status": "UNVERIFIED",
         "grounding_refs": ["OPERATOR_PROFILE"],
         "uncertainties": ["z"],
     }
@@ -548,6 +657,7 @@ async def test_no_ai_in_both_modes_stays_zero_call(governance_engine):
         "customer": "y",
         "problem": "z",
         "core_intent": "q",
+        "intent_relationship": "PRESERVES_CORE_INTENT",
         "material_pivot": False,
         "grounding_refs": ["SEED"],
         "uncertainties": ["w"],
@@ -555,7 +665,11 @@ async def test_no_ai_in_both_modes_stays_zero_call(governance_engine):
     service, attribution, product, transports = await setup_idea(
         governance_engine,
         {
-            IdeaStage.SYSTEM_DISCOVERY: candidate,
+            IdeaStage.SYSTEM_DISCOVERY: {
+                "candidates": [
+                    {**candidate, "title": f"Idea {number}"} for number in range(3)
+                ]
+            },
             IdeaStage.USER_SEEDED_REFINEMENT: brief,
         },
     )
