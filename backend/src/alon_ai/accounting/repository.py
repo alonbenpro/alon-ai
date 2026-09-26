@@ -368,7 +368,10 @@ class GovernanceProvisioner:
                             .one_or_none()
                         )
                         if existing is not None:
-                            if existing["limit"] != limit:
+                            if (
+                                scope["scope"] == "WORKFLOW"
+                                and existing["limit"] != limit
+                            ):
                                 raise AccountingDenied(Reason.BUDGET)
                             continue
                     await c.execute(
