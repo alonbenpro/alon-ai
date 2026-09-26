@@ -98,6 +98,7 @@ class AcceptedArtifact:
     selection_id: UUID | None = None
     cycle_id: UUID | None = None
     attempt_id: UUID | None = None
+    return_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -309,6 +310,7 @@ async def _accepted_input(
                 ArtifactKind.EXPERIMENT_BRIEF,
                 ArtifactKind.IDEA_BRIEF,
                 ArtifactKind.RESEARCH_PLAN,
+                ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
             }:
                 raise PermissionError("artifact is outside accepted first-party inputs")
             row = (
@@ -348,6 +350,7 @@ async def _accepted_input(
             if ref.kind not in {
                 ArtifactKind.IDEA_BRIEF,
                 ArtifactKind.RESEARCH_PLAN,
+                ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
             } and (
                 await connection.scalar(
                     select(record_schema.source_refs.c.id).where(
@@ -361,7 +364,19 @@ async def _accepted_input(
                 )
             ):
                 raise PermissionError("artifact has external or linked inputs")
-            if ref.kind is ArtifactKind.IDEA_BRIEF:
+            if ref.kind is ArtifactKind.IDEA_BRIEF and accepted.return_id is not None:
+                if accepted.cycle_id is None:
+                    raise PermissionError("returned brief lacks a cycle")
+                returned = await connection.scalar(
+                    select(record_schema.returns.c.id).where(
+                        record_schema.returns.c.id == accepted.return_id,
+                        record_schema.returns.c.to_cycle_id == accepted.cycle_id,
+                        record_schema.returns.c.idea_artifact_id == ref.artifact_id,
+                    )
+                )
+                if returned is None:
+                    raise PermissionError("returned brief lineage changed")
+            elif ref.kind is ArtifactKind.IDEA_BRIEF:
                 if (
                     accepted.cycle_id is None
                     or accepted.selection_id is not None
@@ -406,6 +421,29 @@ async def _accepted_input(
                 )
                 if state != "MARKET_RESEARCH":
                     raise PermissionError("research cycle is not active")
+            elif ref.kind is ArtifactKind.RESEARCH_FEEDBACK_BRIEF:
+                if accepted.return_id is None or accepted.cycle_id is None:
+                    raise PermissionError("feedback lacks return lineage")
+                returned = await connection.scalar(
+                    select(record_schema.returns.c.id).where(
+                        record_schema.returns.c.id == accepted.return_id,
+                        record_schema.returns.c.to_cycle_id == accepted.cycle_id,
+                        record_schema.returns.c.feedback_artifact_id == ref.artifact_id,
+                        record_schema.returns.c.feedback_kind == ref.kind,
+                        record_schema.returns.c.feedback_version == ref.version,
+                        record_schema.returns.c.feedback_hash == ref.content_hash,
+                    )
+                )
+                if returned is None:
+                    raise PermissionError("feedback return lineage changed")
+                if not await connection.scalar(
+                    select(record_schema.artifact_dispositions.c.id).where(
+                        record_schema.artifact_dispositions.c.artifact_id
+                        == ref.artifact_id,
+                        record_schema.artifact_dispositions.c.disposition == "ACCEPTED",
+                    )
+                ):
+                    raise PermissionError("feedback is not committed")
             elif ref.kind is ArtifactKind.RESEARCH_PLAN:
                 if (
                     accepted.cycle_id is None

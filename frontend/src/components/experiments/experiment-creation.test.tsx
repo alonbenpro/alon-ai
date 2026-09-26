@@ -279,4 +279,168 @@ describe("experiment creation checkpoint", () => {
     expect(screen.getByRole("button", { name: "Accept and save idea" })).toBeDisabled();
     expect(screen.getByText(/unrelated proposal cannot be accepted here/i)).toBeInTheDocument();
   });
+
+  it("shows committed feedback and the prior accepted brief before starting a bounded return", async () => {
+    const returnAvailable = {
+      verdict_id: "verdict-1", research_cycle_id: "research-cycle-1",
+      prior_brief: {
+        artifact_id: "idea-1", version: 1, content_hash: "prior-hash",
+        payload: { ...advice, buyer: { segment: "Independent clinics", role: "Operations lead" },
+          service_hypothesis: "A scheduling workflow setup", value_hypothesis: "Fewer manual requests",
+          assumptions: ["Clinic staff own intake"], exclusions: ["No clinical advice"],
+          research_questions: ["Will clinics pay for setup?"] },
+      },
+      feedback: { artifact_id: "feedback-1", version: 1, content_hash: "feedback-hash",
+        payload: { preserve: ["Clinic scheduling"], change: ["Narrow to intake"],
+          evidence_summary: "Two operators reported intake delays" },
+        failed_dimensions: ["Willingness to pay"] },
+      evidence: { report_artifact_id: "report-1", recommendation_artifact_id: "recommendation-1" },
+      return_lineage: [{ return_id: "return-1", ordinal: 1, from_cycle_id: "cycle-1",
+        to_cycle_id: "cycle-2", verdict_id: "verdict-1", prior_brief_artifact_id: "idea-1",
+        feedback_artifact_id: "feedback-1" }],
+    };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ ...saved, state: "RETURN_REVIEW_REQUIRED",
+      accepted_brief: returnAvailable.prior_brief.payload, return_available: returnAvailable }));
+    vi.stubGlobal("fetch", fetcher);
+
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+
+    expect(await screen.findByRole("heading", { name: "Research feedback return" })).toBeInTheDocument();
+    expect(screen.getByText("Two operators reported intake delays")).toBeInTheDocument();
+    expect(screen.getByText("Clinic scheduling")).toBeInTheDocument();
+    expect(screen.getByText("Willingness to pay")).toBeInTheDocument();
+    expect(screen.getByText(/research cycle: research-cycle-1/i)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start refinement from committed feedback" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accept and save idea" })).not.toBeInTheDocument();
+  });
+
+  it("retries the exact committed-feedback command before allowing returned refinement", async () => {
+    const returnAvailable = {
+      verdict_id: "verdict-1", research_cycle_id: "research-cycle-1",
+      prior_brief: { artifact_id: "idea-1", version: 1, content_hash: "prior-hash", payload: advice },
+      feedback: { artifact_id: "feedback-1", version: 1, content_hash: "feedback-hash",
+        payload: { preserve: ["Clinic scheduling"] }, failed_dimensions: ["Willingness to pay"] },
+      evidence: { report_artifact_id: "report-1", recommendation_artifact_id: "recommendation-1" },
+      return_lineage: [],
+    };
+    const returnState = { ...saved, state: "RETURN_REVIEW_REQUIRED", return_available: returnAvailable };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(returnState))
+      .mockRejectedValueOnce(new Error("lost return response"))
+      .mockResolvedValueOnce(Response.json(returnState))
+      .mockResolvedValueOnce(Response.json({ experiment_id: "exp-1", cycle_id: "cycle-2", state: "AWAITING_REFINEMENT" }));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start refinement from committed feedback" }));
+    expect(await screen.findByRole("button", { name: "Retry return refinement" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Retry return refinement" }));
+
+    expect(await screen.findByRole("button", { name: "Refine returned idea" })).toBeEnabled();
+    expect(fetcher.mock.calls[3][1].body).toBe(fetcher.mock.calls[1][1].body);
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({
+      verdict_id: "verdict-1", command_key: expect.any(String), feedback: {
+        artifact_id: "feedback-1", kind: "RESEARCH_FEEDBACK_BRIEF", version: 1,
+        content_hash: "feedback-hash", role: "RESEARCH_FEEDBACK",
+      },
+    });
+  });
+
+  it("keeps a server validation failure visible after refreshing return status", async () => {
+    const returnAvailable = {
+      verdict_id: "verdict-1", research_cycle_id: "research-cycle-1",
+      prior_brief: { artifact_id: "idea-1", version: 1, content_hash: "prior-hash", payload: advice },
+      feedback: { artifact_id: "feedback-1", version: 1, content_hash: "feedback-hash", payload: { preserve: ["Clinic scheduling"] }, failed_dimensions: [] },
+      evidence: { report_artifact_id: "report-1", recommendation_artifact_id: "recommendation-1" }, return_lineage: [],
+    };
+    const returnState = { ...saved, state: "RETURN_REVIEW_REQUIRED", return_available: returnAvailable };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(returnState))
+      .mockResolvedValueOnce(Response.json({ detail: [{ loc: ["body", "feedback", "role"] }] }, { status: 422 }))
+      .mockResolvedValueOnce(Response.json(returnState));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start refinement from committed feedback" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Review role: the server rejected this value.");
+    expect(screen.getByRole("button", { name: "Retry return refinement" })).toBeInTheDocument();
+  });
+
+  it("replaces a return failure with the fail-closed status message when refresh fails", async () => {
+    const returnAvailable = {
+      verdict_id: "verdict-1", research_cycle_id: "research-cycle-1",
+      prior_brief: { artifact_id: "idea-1", version: 1, content_hash: "prior-hash", payload: advice },
+      feedback: { artifact_id: "feedback-1", version: 1, content_hash: "feedback-hash", payload: { preserve: ["Clinic scheduling"] }, failed_dimensions: [] },
+      evidence: { report_artifact_id: "report-1", recommendation_artifact_id: "recommendation-1" }, return_lineage: [],
+    };
+    const returnState = { ...saved, state: "RETURN_REVIEW_REQUIRED", return_available: returnAvailable };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(returnState))
+      .mockResolvedValueOnce(Response.json({ detail: "FORGED_RESEARCH_FEEDBACK" }, { status: 409 }))
+      .mockRejectedValueOnce(new Error("status offline"));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "Start refinement from committed feedback" }));
+
+    expect(await screen.findByRole("alert")).toHaveTextContent("Saved status is unavailable. No new run will start until the server confirms its state.");
+    expect(screen.getByRole("button", { name: "Retry return refinement" })).toBeDisabled();
+  });
+
+  it("clears a pending return command when refresh confirms its child cycle", async () => {
+    const returnContext = {
+      verdict_id: "verdict-1", research_cycle_id: "research-cycle-1",
+      prior_brief: { artifact_id: "idea-1", version: 1, content_hash: "prior-hash", payload: advice },
+      feedback: { artifact_id: "feedback-1", version: 1, content_hash: "feedback-hash", payload: { preserve: ["Clinic scheduling"] }, failed_dimensions: [] },
+      evidence: { report_artifact_id: "report-1", recommendation_artifact_id: "recommendation-1" }, return_lineage: [],
+    };
+    sessionStorage.setItem("experiment-exp-1-return-pending", JSON.stringify({ verdict_id: "verdict-1",
+      feedback: { artifact_id: "feedback-1", kind: "RESEARCH_FEEDBACK_BRIEF", version: 1,
+        content_hash: "feedback-hash", role: "RESEARCH_FEEDBACK" }, command_key: "return-key" }));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ...saved, state: "AWAITING_REFINEMENT",
+      cycle_purpose: "SAME_INTENT_RETURN", return_context: returnContext })));
+
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+
+    await screen.findByRole("button", { name: "Refine returned idea" });
+    expect(sessionStorage.getItem("experiment-exp-1-return-pending")).toBeNull();
+  });
+
+  it("shows a durable repeated-blocker review state without another return action", async () => {
+    const returnAvailable = {
+      verdict_id: "verdict-3", research_cycle_id: "research-cycle-3",
+      prior_brief: { artifact_id: "idea-3", version: 3, content_hash: "prior-hash", payload: advice },
+      feedback: { artifact_id: "feedback-3", version: 1, content_hash: "feedback-hash", payload: { preserve: ["Clinic scheduling"] }, failed_dimensions: ["Willingness to pay"] },
+      evidence: { report_artifact_id: "report-3", recommendation_artifact_id: "recommendation-3" }, return_lineage: [],
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ...saved, state: "RETURN_REVIEW_REQUIRED",
+      return_available: returnAvailable, return_review: { reason_code: "REPEATED_BLOCKER",
+        verdict_id: "verdict-3", research_cycle_id: "research-cycle-3" } })));
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+
+    expect(await screen.findByRole("heading", { name: "Operator review required" })).toBeInTheDocument();
+    expect(screen.getByText(/same blocker returned again/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Start refinement from committed feedback" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Refine returned idea" })).not.toBeInTheDocument();
+  });
+
+  it("compares the returned proposal with the committed prior version before acceptance", async () => {
+    const prior = { ...advice, buyer: { segment: "Independent clinics", role: "Operations lead" },
+      service_hypothesis: "Scheduling workflow setup", value_hypothesis: "Fewer manual requests",
+      assumptions: ["Staff own intake"], exclusions: ["No clinical advice"], research_questions: ["Will clinics pay?"] };
+    const returnedAdvice = { ...prior, title: "Intake workflow for clinics", service_hypothesis: "Intake-only workflow setup",
+      value_hypothesis: "Faster intake triage", research_questions: ["Will clinics pay for intake setup?"] };
+    const returnAvailable = {
+      verdict_id: "verdict-1", research_cycle_id: "research-cycle-1",
+      prior_brief: { artifact_id: "idea-1", version: 1, content_hash: "prior-hash", payload: prior },
+      feedback: { artifact_id: "feedback-1", version: 1, content_hash: "feedback-hash", payload: { change: ["Narrow to intake"] }, failed_dimensions: [] },
+      evidence: { report_artifact_id: "report-1", recommendation_artifact_id: "recommendation-1" }, return_lineage: [],
+    };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ...saved, state: "AWAITING_REVIEW",
+      latest_run_id: "run-return-1", advice: returnedAdvice, accepted_brief: prior, return_context: returnAvailable })));
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+
+    expect(await screen.findByText("Proposed new version")).toBeInTheDocument();
+    expect(screen.getByText("Intake-only workflow setup")).toBeInTheDocument();
+    expect(screen.getAllByText("Independent clinics · Operations lead")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Accept and save idea" })).toBeInTheDocument();
+  });
 });

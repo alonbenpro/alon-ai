@@ -13,9 +13,15 @@ type Values = {
   minimumProjectPrice: string; minimumMarginRate: string;
   maximumDiscountRate: string; minimumDepositRate: string;
 };
-type Advice = {
+type Brief = {
   title: string; customer: string; problem: string; core_intent: string;
-  material_pivot: boolean; intent_relationship: Relationship;
+  material_pivot: boolean;
+  buyer?: { segment: string; role: string };
+  service_hypothesis?: string; value_hypothesis?: string;
+  assumptions?: string[]; exclusions?: string[]; research_questions?: string[];
+};
+type Advice = Brief & {
+  intent_relationship: Relationship;
   grounding_refs: string[]; uncertainties: string[];
 };
 const relationshipLabels: Record<Relationship, string> = {
@@ -29,24 +35,41 @@ type Candidate = { artifact_id: string; title: string; hypothesis: string; deman
 type SelectionCommand = { candidate_artifact_id: string; reason: string; command_key: string };
 type AcceptanceCommand = { run_id: string; command_key: string; intent_relationship: Relationship;
   intent_rationale: string; intent_confirmed: true };
+type ReturnAvailable = {
+  verdict_id: string; research_cycle_id: string;
+  prior_brief: { artifact_id: string; version: number; content_hash: string; payload: Brief };
+  feedback: { artifact_id: string; version: number; content_hash: string;
+    payload: Record<string, unknown>; failed_dimensions: string[] };
+  evidence: { report_artifact_id: string; recommendation_artifact_id: string };
+  return_lineage: { return_id: string; ordinal: number; from_cycle_id: string; to_cycle_id: string;
+    verdict_id: string; prior_brief_artifact_id: string; feedback_artifact_id: string }[];
+};
+type ReturnCommand = { verdict_id: string; feedback: { artifact_id: string; kind: "RESEARCH_FEEDBACK_BRIEF";
+  version: number; content_hash: string; role: "RESEARCH_FEEDBACK" }; command_key: string };
+type ReturnReview = { reason_code: "REPEATED_BLOCKER" | "SAME_INTENT_LIMIT_REACHED" | string;
+  verdict_id: string; research_cycle_id: string };
 type ServerState = "AWAITING_DISCOVERY" | "DISCOVERY_IN_PROGRESS" | "DISCOVERY_FAILED" | "DISCOVERY_BLOCKED" |
   "AWAITING_SELECTION" | "AWAITING_REFINEMENT" | "REFINEMENT_IN_PROGRESS" | "REFINEMENT_FAILED" |
-  "REFINEMENT_BLOCKED" | "AWAITING_REVIEW" | "IDEA_ACCEPTED";
+  "REFINEMENT_BLOCKED" | "AWAITING_REVIEW" | "RETURN_REVIEW_REQUIRED" | "IDEA_ACCEPTED";
 type Snapshot = {
   experiment_id: string; name: string; mode: Mode; idea_seed: string | null; state: ServerState;
   brief: { objective: string; target_customer: string; problem: string; geographies: string[];
     commercial_boundaries: string; budget_usd: string; evidence_definitions: string[] };
   candidates: Candidate[]; selected_candidate_artifact_id: string | null; retry_safe: boolean;
+  cycle_purpose?: string | null;
   latest_run_id: string | null; advice: Advice | null;
   advice_source: "RECORDED_FAKE" | "OPENAI" | null;
-  accepted_brief: Pick<Advice, "title" | "customer" | "problem" | "core_intent" | "material_pivot"> | null;
+  accepted_brief: Brief | null;
+  return_available?: ReturnAvailable | null;
+  return_context?: ReturnAvailable | null;
+  return_review?: ReturnReview | null;
 };
 export type RuntimeReadiness = { provider_mode: "disabled" | "fake" | "live"; ready: boolean };
 
 const draftKey = "experiment-create-pending";
 const runKey = (experiment: string, action: "discover" | "refine") => `experiment-${experiment}-${action}-key`;
-const commandKey = (experiment: string, action: "select" | "accept") => `experiment-${experiment}-${action}-pending`;
-function pendingCommand<T>(experiment: string, action: "select" | "accept"): T | null {
+const commandKey = (experiment: string, action: "select" | "accept" | "return") => `experiment-${experiment}-${action}-pending`;
+function pendingCommand<T>(experiment: string, action: "select" | "accept" | "return"): T | null {
   try { return JSON.parse(sessionStorage.getItem(commandKey(experiment, action)) ?? "null") as T | null; }
   catch { return null; }
 }
@@ -131,6 +154,33 @@ function createBody(values: Values, mode: Mode, commandKey: string) {
   };
 }
 
+function BriefDetails({ brief }: { brief: Brief }) {
+  return <dl className="experiment-brief-details">
+    <div><dt>Title</dt><dd>{brief.title}</dd></div>
+    <div><dt>Customer</dt><dd>{brief.customer}</dd></div>
+    <div><dt>Problem</dt><dd>{brief.problem}</dd></div>
+    <div><dt>Core intent</dt><dd>{brief.core_intent}</dd></div>
+    {brief.buyer && <div><dt>Buyer</dt><dd>{brief.buyer.segment} · {brief.buyer.role}</dd></div>}
+    {brief.service_hypothesis && <div><dt>Service hypothesis</dt><dd>{brief.service_hypothesis}</dd></div>}
+    {brief.value_hypothesis && <div><dt>Value hypothesis</dt><dd>{brief.value_hypothesis}</dd></div>}
+    {brief.assumptions && <div><dt>Assumptions</dt><dd>{brief.assumptions.join(" · ")}</dd></div>}
+    {brief.exclusions && <div><dt>Exclusions</dt><dd>{brief.exclusions.join(" · ")}</dd></div>}
+    {brief.research_questions && <div><dt>Research questions</dt><dd>{brief.research_questions.join(" · ")}</dd></div>}
+  </dl>;
+}
+
+function feedbackValue(value: unknown): string {
+  if (Array.isArray(value)) return value.map((item) => feedbackValue(item)).join(" · ");
+  if (typeof value === "object" && value !== null) return JSON.stringify(value);
+  return String(value);
+}
+
+function returnReviewMessage(reason: ReturnReview["reason_code"]) {
+  if (reason === "REPEATED_BLOCKER") return "The same blocker returned again. Review the direction before continuing.";
+  if (reason === "SAME_INTENT_LIMIT_REACHED") return "Two same-intent returns have already been used. Review the direction before continuing.";
+  return "This research return needs operator review before another refinement can start.";
+}
+
 export function ExperimentCreation({ experimentId, runtime }: { experimentId?: string; runtime: RuntimeReadiness | null }) {
   const [values, setValues] = useState<Values>(empty);
   const [mode, setMode] = useState<Mode>("USER_SEEDED_REFINEMENT");
@@ -155,6 +205,9 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
   const [intentRationale, setIntentRationale] = useState("");
   const [intentConfirmed, setIntentConfirmed] = useState(false);
   const [pendingAcceptance, setPendingAcceptance] = useState<AcceptanceCommand | null>(null);
+  const [returnAvailable, setReturnAvailable] = useState<ReturnAvailable | null>(null);
+  const [pendingReturn, setPendingReturn] = useState<ReturnCommand | null>(null);
+  const [returnReview, setReturnReview] = useState<ReturnReview | null>(null);
   const [liveConfirmed, setLiveConfirmed] = useState(false);
   const createPayload = useRef<ReturnType<typeof createBody> | null>(null);
   const discoverKey = useRef("");
@@ -177,6 +230,15 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
     }
     setRunId(saved.latest_run_id ?? ""); setAdvice(saved.advice); setAdviceSource(saved.advice_source);
     setAcceptedBrief(saved.accepted_brief); setRetrySafe(saved.retry_safe === true);
+    const returned = saved.return_context ?? saved.return_available ?? null;
+    setReturnAvailable(returned);
+    setReturnReview(saved.return_review ?? null);
+    const returnCommand = pendingCommand<ReturnCommand>(saved.experiment_id, "return");
+    const returnedCycleConfirmed = saved.cycle_purpose === "SAME_INTENT_RETURN" &&
+      returned?.verdict_id === returnCommand?.verdict_id;
+    if (returnCommand && (returnedCycleConfirmed || (!returned || returned.verdict_id !== returnCommand.verdict_id) && saved.state === "AWAITING_REFINEMENT")) {
+      sessionStorage.removeItem(commandKey(saved.experiment_id, "return")); setPendingReturn(null);
+    } else setPendingReturn(returnCommand);
     if (saved.state === "IDEA_ACCEPTED") {
       sessionStorage.removeItem(commandKey(saved.experiment_id, "accept")); setPendingAcceptance(null);
     } else {
@@ -198,13 +260,13 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       }
     }
   }, []);
-  const load = useCallback(async (experiment: string) => {
+  const load = useCallback(async (experiment: string, preserveMessage = false) => {
     try {
       const response = await fetch(`/api/operator/experiments/${encodeURIComponent(experiment)}`, { cache: "no-store" });
       if (response.status === 401) { window.location.replace("/login"); return; }
       if (!response.ok) throw new Error("STATUS_UNAVAILABLE");
       apply(await response.json() as Snapshot);
-      setMessage("");
+      if (!preserveMessage) setMessage("");
     } catch {
       setBusy(""); setStatusUnavailable(true);
       setMessage("Saved status is unavailable. No new run will start until the server confirms its state.");
@@ -301,6 +363,27 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       setSelectedCandidateId(payload.candidate_artifact_id); setState("AWAITING_REFINEMENT"); setBusy("");
     } catch (error) { setBusy(""); setMessage(failure(error, "Selection")); await load(id); }
   };
+  const startReturn = async () => {
+    if (!id || !returnAvailable || statusUnavailable) return;
+    const payload: ReturnCommand = pendingReturn ?? {
+      verdict_id: returnAvailable.verdict_id,
+      feedback: { artifact_id: returnAvailable.feedback.artifact_id, kind: "RESEARCH_FEEDBACK_BRIEF",
+        version: returnAvailable.feedback.version, content_hash: returnAvailable.feedback.content_hash,
+        role: "RESEARCH_FEEDBACK" },
+      command_key: crypto.randomUUID(),
+    };
+    if (!pendingReturn) {
+      sessionStorage.setItem(commandKey(id, "return"), JSON.stringify(payload));
+      setPendingReturn(payload);
+    }
+    setBusy("Starting refinement from committed feedback…"); setMessage("");
+    try {
+      const result = await post(`/api/operator/experiments/${encodeURIComponent(id)}/returns/refine`, payload);
+      if (result.state !== "AWAITING_REFINEMENT" || result.experiment_id !== id || !result.cycle_id) throw new Error("RETURN_UNCONFIRMED");
+      sessionStorage.removeItem(commandKey(id, "return")); setPendingReturn(null);
+      setState("AWAITING_REFINEMENT"); setBusy("");
+    } catch (error) { setBusy(""); setMessage(failure(error, "Return refinement")); await load(id, true); }
+  };
   const accept = async () => {
     if (!id || !runId || !advice || statusUnavailable || advice.material_pivot || advice.intent_relationship === "MATERIAL_PIVOT" || advice.intent_relationship === "UNRELATED") return;
     const payload: AcceptanceCommand | null = pendingAcceptance ?? (intentConfirmed && intentRationale.trim() && relationship && relationship !== "MATERIAL_PIVOT" && relationship !== "UNRELATED" ? {
@@ -356,11 +439,20 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       {!busy && canRetry && <button type="button" disabled={!runtime?.ready} onClick={() => void run(state === "DISCOVERY_FAILED" ? "discover" : "refine")}>Retry {state === "DISCOVERY_FAILED" ? "discovery" : "refinement"}</button>}
       {!busy && !statusUnavailable && (state === "DISCOVERY_BLOCKED" || state === "REFINEMENT_BLOCKED" || failed(state) && !retrySafe) && <div role="status"><p>This attempt needs server resolution before another run can start.</p><button type="button" onClick={() => void load(id)}>Check status</button></div>}
       {message && <p className="experiment-error" role="alert">{message}</p>}
+      {returnAvailable && <section className="experiment-return" aria-labelledby="return-heading"><div className="experiment-section-heading"><span>Research return</span><h3 id="return-heading">Research feedback return</h3></div>
+        <p>Committed verdict: <strong>REFINE_SAME_IDEA</strong> · Research cycle: {returnAvailable.research_cycle_id}</p>
+        <div className="experiment-return__grid"><div><h4>Committed feedback</h4><dl><div><dt>Feedback artifact</dt><dd>{returnAvailable.feedback.artifact_id} · v{returnAvailable.feedback.version}</dd></div><div><dt>Evidence</dt><dd>{returnAvailable.evidence.report_artifact_id} · {returnAvailable.evidence.recommendation_artifact_id}</dd></div></dl>
+          {Object.entries(returnAvailable.feedback.payload).map(([field, value]) => <p key={field}><strong>{field.replaceAll("_", " ")}: </strong>{feedbackValue(value)}</p>)}
+          <h4>Blocked or unverified</h4><ul>{returnAvailable.feedback.failed_dimensions.map((item) => <li key={item}>{item}</li>)}</ul></div>
+          <div><h4>Prior accepted version</h4><BriefDetails brief={returnAvailable.prior_brief.payload} /><h4>Return lineage</h4><ol>{returnAvailable.return_lineage.map((lineage) => <li key={lineage.return_id}>Return {lineage.ordinal}: {lineage.from_cycle_id} → {lineage.to_cycle_id}</li>)}</ol></div></div>
+        {state === "RETURN_REVIEW_REQUIRED" && !returnReview && (pendingReturn ? <><p>Return confirmation is pending. Retry the exact saved command after checking server status.</p><button type="button" disabled={!!busy || statusUnavailable} onClick={() => void startReturn()}>Retry return refinement</button></> : <button type="button" disabled={!!busy || statusUnavailable || !runtime?.ready} onClick={() => void startReturn()}>Start refinement from committed feedback</button>)}</section>}
+      {state === "RETURN_REVIEW_REQUIRED" && returnReview && <section className="experiment-return experiment-return--review" aria-labelledby="return-review-heading" role="status"><div className="experiment-section-heading"><span>Operator decision</span><h3 id="return-review-heading">Operator review required</h3></div><p>{returnReviewMessage(returnReview.reason_code)}</p><p>Research cycle: {returnReview.research_cycle_id} · Reason: {returnReview.reason_code}</p></section>}
       {mode === "SYSTEM_DISCOVERY" && candidates.length >= 3 && candidates.length <= 5 && <div className="experiment-candidates"><p>These are grounded hypotheses; demand is unverified.</p>
         {state === "AWAITING_SELECTION" ? <><fieldset disabled={!!busy || !!pendingSelection}><legend>Choose one direction to refine</legend>{candidates.map((candidate) => <label key={candidate.artifact_id} className="experiment-candidate"><input type="radio" name="candidate" checked={candidateChoice === candidate.artifact_id} onChange={() => setCandidateChoice(candidate.artifact_id)} /><span><strong>{candidate.title}</strong><span>{candidate.hypothesis}</span><small>{candidate.demand_status === "UNVERIFIED" ? "Unverified demand" : "Demand status unknown"} · Grounded in your operator profile · Unknowns: {candidate.uncertainties.join(" · ")}</small></span></label>)}</fieldset>{pendingSelection ? <><p>Selection confirmation is pending. Retry the saved choice and reason with the same command.</p><p>Reason: {pendingSelection.reason}</p><button type="button" disabled={!!busy || statusUnavailable} onClick={() => void select()}>Retry selection</button></> : <><label className="experiment-field"><span>Reason for selection</span><textarea aria-label="Reason for selection" value={selectionReason} onChange={(event) => setSelectionReason(event.target.value)} rows={2} /></label><button type="button" disabled={!candidateChoice || !selectionReason.trim() || !!busy || statusUnavailable} onClick={() => void select()}>Select direction</button></>}</> :
           selectedCandidate && <p className="experiment-selected">Selected direction: <strong>{selectedCandidate.title}</strong></p>}</div>}
-      {!busy && canRefine && <button type="button" disabled={!runtime?.ready} onClick={() => void run("refine")}>{mode === "SYSTEM_DISCOVERY" ? "Refine selected direction" : "Refine idea"}</button>}
-      {advice && state === "AWAITING_REVIEW" && <div className="experiment-advice"><div className="experiment-advice__lead"><span className="eyebrow">{adviceSource === "RECORDED_FAKE" ? "Recorded demo advice" : "Proposed direction · unaccepted advice"}</span><h3>{advice.title}</h3><p>{advice.core_intent}</p></div><dl><div><dt>Customer</dt><dd>{advice.customer}</dd></div><div><dt>Problem</dt><dd>{advice.problem}</dd></div><div><dt>Grounded in</dt><dd>{advice.grounding_refs.join(" · ")}</dd></div></dl><div className="experiment-uncertainties"><h4>Starting assumptions <small>supplied by you</small></h4><ul aria-label="Starting assumptions"><li>Customer: <span>{values.targetCustomer}</span></li><li>Problem: <span>{values.problem}</span></li><li>Objective: <span>{values.objective}</span></li></ul><h4>Unknowns to test <small>from refinement advice</small></h4><ul aria-label="Unknowns to test">{advice.uncertainties.map((item) => <li key={item}>{item}</li>)}</ul></div>
+      {!busy && canRefine && <button type="button" disabled={!runtime?.ready} onClick={() => void run("refine")}>{returnAvailable ? "Refine returned idea" : mode === "SYSTEM_DISCOVERY" ? "Refine selected direction" : "Refine idea"}</button>}
+      {advice && state === "AWAITING_REVIEW" && <div className="experiment-advice"><div className="experiment-advice__lead"><span className="eyebrow">{returnAvailable ? "Returned proposal · unaccepted advice" : adviceSource === "RECORDED_FAKE" ? "Recorded demo advice" : "Proposed direction · unaccepted advice"}</span><h3>{advice.title}</h3><p>{advice.core_intent}</p></div><dl><div><dt>Customer</dt><dd>{advice.customer}</dd></div><div><dt>Problem</dt><dd>{advice.problem}</dd></div><div><dt>Grounded in</dt><dd>{advice.grounding_refs.join(" · ")}</dd></div></dl><div className="experiment-uncertainties"><h4>Starting assumptions <small>supplied by you</small></h4><ul aria-label="Starting assumptions"><li>Customer: <span>{values.targetCustomer}</span></li><li>Problem: <span>{values.problem}</span></li><li>Objective: <span>{values.objective}</span></li></ul><h4>Unknowns to test <small>from refinement advice</small></h4><ul aria-label="Unknowns to test">{advice.uncertainties.map((item) => <li key={item}>{item}</li>)}</ul></div>
+        <div className="experiment-proposed-brief"><h4>Proposed new version</h4><BriefDetails brief={advice} /></div>
         <div className="experiment-intent"><p>Model suggestion: {relationshipLabels[advice.intent_relationship]}</p>{pendingAcceptance ? <><p>Acceptance confirmation is pending. Retry the exact saved review command.</p><p>Operator classification: {relationshipLabels[pendingAcceptance.intent_relationship]}</p><p>Reason: {pendingAcceptance.intent_rationale}</p><button type="button" disabled={!!busy || statusUnavailable || !!blockedIntent || pendingAcceptance.run_id !== runId} onClick={() => void accept()}>Retry acceptance</button></> : <><label className="experiment-field"><span>Intent relationship</span><select aria-label="Intent relationship" value={relationship} onChange={(event) => { setRelationship(event.target.value as Relationship); setIntentConfirmed(false); }}><option value="">Classify the proposal</option><option value="PRESERVES_CORE_INTENT">Preserves core intent</option><option value="CLARIFIES_CORE_INTENT">Clarifies core intent</option><option value="NARROWS_CORE_INTENT">Narrows core intent</option><option value="MATERIAL_PIVOT">Material pivot</option><option value="UNRELATED">Unrelated</option></select></label><p>Compare the proposal with the original seed or selected discovery direction. The model suggestion is advisory; your classification and confirmation control acceptance.</p><label className="experiment-field"><span>Reason for classification</span><textarea aria-label="Reason for classification" value={intentRationale} onChange={(event) => setIntentRationale(event.target.value)} rows={2} /></label><label><input type="checkbox" checked={intentConfirmed} disabled={!relationship || !!blockedIntent} onChange={(event) => setIntentConfirmed(event.target.checked)} /> I confirm this classification and approve accepting this idea</label></>}
         {blockedIntent && <p className="experiment-error">{relationship === "UNRELATED" || advice.intent_relationship === "UNRELATED" ? "An unrelated proposal cannot be accepted here." : "A material pivot cannot be accepted here; it requires a separate approval decision."}</p>}</div>
         {!pendingAcceptance && <button type="button" disabled={!relationship || !intentConfirmed || !intentRationale.trim() || !!blockedIntent || !!busy || statusUnavailable} onClick={() => void accept()}>Accept and save idea</button>}</div>}

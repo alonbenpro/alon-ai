@@ -607,6 +607,45 @@
         "title": "RefineRequest",
         "type": "object"
       },
+      "ReturnFeedbackInput": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "format": "uuid",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "kind": {
+            "const": "RESEARCH_FEEDBACK_BRIEF",
+            "title": "Kind",
+            "type": "string"
+          },
+          "role": {
+            "const": "RESEARCH_FEEDBACK",
+            "title": "Role",
+            "type": "string"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "kind",
+          "version",
+          "content_hash",
+          "role"
+        ],
+        "title": "ReturnFeedbackInput",
+        "type": "object"
+      },
       "SelectCandidateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -650,6 +689,31 @@
           "operator"
         ],
         "title": "SessionResponse",
+        "type": "object"
+      },
+      "StartReturnRefinementRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "feedback": {
+            "$ref": "#/components/schemas/ReturnFeedbackInput"
+          },
+          "verdict_id": {
+            "format": "uuid",
+            "title": "Verdict Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "verdict_id",
+          "feedback",
+          "command_key"
+        ],
+        "title": "StartReturnRefinementRequest",
         "type": "object"
       },
       "SystemStatus": {
@@ -1202,6 +1266,59 @@
           }
         },
         "summary": "Refine Experiment"
+      }
+    },
+    "/operator/experiments/{experiment_id}/returns/refine": {
+      "post": {
+        "description": "Claim an already-committed L08 feedback return; no model call occurs here.",
+        "operationId": "start_return_refinement_operator_experiments__experiment_id__returns_refine_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartReturnRefinementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Start Return Refinement Operator Experiments  Experiment Id  Returns Refine Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Return Refinement"
       }
     },
     "/operator/experiments/{experiment_id}/select": {

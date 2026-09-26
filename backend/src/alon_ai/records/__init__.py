@@ -75,6 +75,7 @@ from alon_ai.records.models import (
     ResearchAttemptReceipt,
     ResearchContinuationReceipt,
     ResearchCycleBudgetInput,
+    SameIntentReturnReceipt,
     SourceReference,
     VerdictReceipt,
 )
@@ -247,6 +248,7 @@ __all__ = [
     "ResearchAttemptReceipt",
     "ResearchContinuationReceipt",
     "ResearchCycleBudgetInput",
+    "SameIntentReturnReceipt",
     "ResearchEvidenceLinkRequest",
     "ResearchPlanRequest",
     "ResearchRunRequest",

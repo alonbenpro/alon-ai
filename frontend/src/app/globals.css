@@ -242,6 +242,14 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .experiment-candidate span span { color: var(--muted); font-size: 12px; }
 .experiment-candidate small { color: var(--subtle); font-size: 11px; }
 .experiment-selected { color: var(--mint); font-size: 12px; }
+.experiment-return { display: grid; gap: 17px; margin: 24px 0; padding: 21px; border: 1px solid #5d7fba; border-radius: 12px; background: #122744; }
+.experiment-return .experiment-section-heading { padding-bottom: 14px; }.experiment-return .experiment-section-heading h3 { margin: 0; font-size: 18px; font-weight: 560; letter-spacing: -.025em; }
+.experiment-return > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }.experiment-return > p strong { color: var(--blue-soft); }
+.experiment-return__grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }.experiment-return__grid > div { min-width: 0; padding: 17px; border: 1px solid var(--line-strong); border-radius: 10px; background: #0d1c31; }
+.experiment-return h4 { margin: 0 0 11px; color: var(--ink); font-size: 12px; }.experiment-return h4:not(:first-child) { margin-top: 20px; }.experiment-return p { color: var(--muted); font-size: 12px; line-height: 1.55; overflow-wrap: anywhere; }.experiment-return p strong { color: var(--ink); text-transform: capitalize; }
+.experiment-return dl, .experiment-brief-details { display: grid; gap: 0; margin: 0; }.experiment-return dl div, .experiment-brief-details div { display: flex; justify-content: space-between; gap: 13px; padding: 9px 0; border-bottom: 1px solid var(--line); }.experiment-return dt, .experiment-brief-details dt { color: var(--subtle); font: 10px var(--font-geist-mono), monospace; }.experiment-return dd, .experiment-brief-details dd { max-width: 64%; margin: 0; color: var(--ink); text-align: right; font-size: 11px; line-height: 1.5; overflow-wrap: anywhere; }
+.experiment-return ul, .experiment-return ol { margin: 0; padding-left: 18px; color: var(--muted); font-size: 11px; line-height: 1.7; }
+.experiment-return--review { border-color: #b89359; background: #30291d; }
 .experiment-intent { grid-column: 1 / -1; display: grid; gap: 14px; padding: 18px; border: 1px solid var(--line-strong); border-radius: 10px; }
 .experiment-intent > label:last-of-type { display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 12px; }
 .experiment-advice { display: grid; grid-template-columns: 1.2fr .8fr; gap: 24px; padding-top: 25px; }
@@ -253,6 +261,7 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .experiment-uncertainties h4:not(:first-child) { margin-top: 20px; }
 .experiment-uncertainties h4 small { margin-left: 7px; color: var(--subtle); font-size: 10px; font-weight: 400; }
 .experiment-uncertainties ul { margin: 0; padding-left: 19px; color: var(--muted); font-size: 12px; line-height: 1.7; }
+.experiment-proposed-brief { padding: 18px; border: 1px solid #6889d975; border-radius: 10px; background: #112844; }.experiment-proposed-brief h4 { margin: 0 0 12px; color: var(--ink); font-size: 13px; }
 .experiment-advice > button, .experiment-advice > .experiment-error { grid-column: 1 / -1; justify-self: start; }
 .experiment-error { margin: 14px 0; color: var(--rose); font-size: 12px; line-height: 1.55; }
 .experiment-success { padding-top: 25px; }
@@ -260,4 +269,4 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .experiment-success p { color: var(--muted); font-size: 13px; }
 .experiment-success a { margin-top: 10px; }
 @media (max-width: 1100px) { .experiment-columns { grid-template-columns: 1fr; }.experiment-preview { position: static; }.experiment-advice { grid-template-columns: 1fr; }.experiment-advice__lead { grid-row: auto; } }
-@media (max-width: 650px) { .experiment-fields { grid-template-columns: 1fr; }.experiment-field--wide { grid-column: auto; }.experiment-step-track span { padding: 12px 8px; text-align: center; }.experiment-action-row { align-items: flex-start; flex-direction: column; } }
+@media (max-width: 650px) { .experiment-fields, .experiment-return__grid { grid-template-columns: 1fr; }.experiment-field--wide { grid-column: auto; }.experiment-step-track span { padding: 12px 8px; text-align: center; }.experiment-action-row { align-items: flex-start; flex-direction: column; } }

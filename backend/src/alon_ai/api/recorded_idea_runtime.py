@@ -60,8 +60,8 @@ class _RecordedResponses:
             raise TypeError("recorded input missing")
         bound = json.loads(raw)
         artifacts = bound.get("artifacts", [])
-        if len(artifacts) != 1:
-            raise ValueError("recorded transport requires one exact origin")
+        if len(artifacts) not in {1, 2}:
+            raise ValueError("recorded transport requires exact Idea inputs")
         kind = artifacts[0].get("kind")
         if kind == "EXPERIMENT_BRIEF":
             brief = artifacts[0]["payload"]
@@ -85,11 +85,18 @@ class _RecordedResponses:
                     for name, approach in approaches
                 ]
             }
-        elif kind in {"IDEA_SEED", "IDEA_CANDIDATE"}:
+        elif kind in {"IDEA_SEED", "IDEA_CANDIDATE", "IDEA_BRIEF"}:
+            is_return = kind == "IDEA_BRIEF"
+            if is_return and (
+                len(artifacts) != 2
+                or artifacts[1].get("kind") != "RESEARCH_FEEDBACK_BRIEF"
+            ):
+                raise ValueError("recorded return requires feedback")
             statement = (
                 artifacts[0]["payload"]["statement"]
                 if kind == "IDEA_SEED"
-                else artifacts[0]["payload"]["hypothesis"]
+                else artifacts[0]["payload"].get("hypothesis")
+                or artifacts[0]["payload"]["core_intent"]
             ).strip()
             advice = {
                 "title": statement[:120],
@@ -98,9 +105,20 @@ class _RecordedResponses:
                 "core_intent": statement,
                 "intent_relationship": "PRESERVES_CORE_INTENT",
                 "material_pivot": False,
-                "grounding_refs": [
-                    "SEED" if kind == "IDEA_SEED" else "SELECTED_CANDIDATE"
-                ],
+                "buyer": {
+                    "segment": "Customer stated in original input",
+                    "role": "Buyer role remains unverified",
+                },
+                "service_hypothesis": "Recorded local service hypothesis; verify before research",
+                "value_hypothesis": "Recorded local value hypothesis; verify before research",
+                "assumptions": ["Recorded local assumptions require operator review"],
+                "exclusions": ["No market claim or provider action is authorized"],
+                "research_questions": ["Which buyer evidence would validate this?"],
+                "grounding_refs": (
+                    ["PRIOR_IDEA_BRIEF", "RESEARCH_FEEDBACK"]
+                    if is_return
+                    else ["SEED" if kind == "IDEA_SEED" else "SELECTED_CANDIDATE"]
+                ),
                 "uncertainties": [
                     "Synthetic recorded advice; customer, problem and demand are unverified"
                 ],

@@ -225,6 +225,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operator/experiments/{experiment_id}/returns/refine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Start Return Refinement
+         * @description Claim an already-committed L08 feedback return; no model call occurs here.
+         */
+        post: operations["start_return_refinement_operator_experiments__experiment_id__returns_refine_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operator/experiments/{experiment_id}/select": {
         parameters: {
             query?: never;
@@ -482,6 +502,28 @@ export interface components {
              */
             idempotency_key: string;
         };
+        /** ReturnFeedbackInput */
+        ReturnFeedbackInput: {
+            /**
+             * Artifact Id
+             * Format: uuid
+             */
+            artifact_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /**
+             * Kind
+             * @constant
+             */
+            kind: "RESEARCH_FEEDBACK_BRIEF";
+            /**
+             * Role
+             * @constant
+             */
+            role: "RESEARCH_FEEDBACK";
+            /** Version */
+            version: number;
+        };
         /** SelectCandidateRequest */
         SelectCandidateRequest: {
             /**
@@ -505,6 +547,20 @@ export interface components {
              */
             authenticated: boolean;
             operator: components["schemas"]["OperatorSession"];
+        };
+        /** StartReturnRefinementRequest */
+        StartReturnRefinementRequest: {
+            /**
+             * Command Key
+             * Format: uuid
+             */
+            command_key: string;
+            feedback: components["schemas"]["ReturnFeedbackInput"];
+            /**
+             * Verdict Id
+             * Format: uuid
+             */
+            verdict_id: string;
         };
         /** SystemStatus */
         SystemStatus: {
@@ -897,6 +953,43 @@ export interface operations {
         requestBody: {
             content: {
                 "application/json": components["schemas"]["RefineRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    start_return_refinement_operator_experiments__experiment_id__returns_refine_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartReturnRefinementRequest"];
             };
         };
         responses: {

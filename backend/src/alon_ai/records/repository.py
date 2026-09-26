@@ -40,6 +40,7 @@ from alon_ai.records.models import (
     ResearchAttemptReceipt,
     ResearchContinuationReceipt,
     ResearchCycleBudgetInput,
+    SameIntentReturnReceipt,
     SourceReference,
     VerdictReceipt,
 )
@@ -3223,6 +3224,362 @@ class ProductRecordsRepository:
         return await self.return_to_research(
             verdict_id, kind=kind, feedback=feedback, command_key=command_key
         )
+
+    @safe_records
+    async def start_same_intent_refinement_return(
+        self,
+        verdict_id: UUID,
+        *,
+        feedback: ArtifactInput,
+        command_key: UUID,
+    ) -> SameIntentReturnReceipt:
+        """Start the bounded L07 return without accepting a successor brief.
+
+        This intentionally consumes only the plain committed verdict contract.
+        Managed L08 outcomes own their own continuation workflow and are refused.
+        """
+        async with self.engine.begin() as connection:
+            verdict = (
+                (
+                    await connection.execute(
+                        select(s.verdicts).where(s.verdicts.c.id == verdict_id)
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            await lock_experiment(connection, verdict["experiment_id"])
+            request_hash = _request_hash(
+                verdict_id=verdict_id, feedback=feedback, command="L07_SAME_INTENT"
+            )
+            old = await _existing(
+                connection,
+                command_key,
+                "START_SAME_INTENT_REFINEMENT_RETURN",
+                request_hash,
+            )
+            if old:
+                if old["result_type"] == "RESEARCH_RETURN_BLOCK":
+                    block = (
+                        (
+                            await connection.execute(
+                                select(s.research_return_blocks).where(
+                                    s.research_return_blocks.c.id == old["result_id"]
+                                )
+                            )
+                        )
+                        .mappings()
+                        .one()
+                    )
+                    return SameIntentReturnReceipt(
+                        command_id=old["id"],
+                        result_id=block["id"],
+                        experiment_id=verdict["experiment_id"],
+                        verdict_id=verdict_id,
+                        outcome="REVIEW_REQUIRED",
+                        block_id=block["id"],
+                        reason_code=block["reason_code"],
+                    )
+                cycle = (
+                    (
+                        await connection.execute(
+                            select(s.cycles).where(s.cycles.c.id == old["result_id"])
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                return SameIntentReturnReceipt(
+                    command_id=old["id"],
+                    result_id=cycle["id"],
+                    id=cycle["id"],
+                    experiment_id=cycle["experiment_id"],
+                    verdict_id=verdict_id,
+                    outcome="STARTED",
+                )
+            if verdict["verdict"] != "REFINE_SAME_IDEA":
+                raise ProductRecordsDenied("REFINE_SAME_IDEA_VERDICT_REQUIRED")
+            if await connection.scalar(
+                select(s.cycle_transitions.c.id)
+                .join(s.commands, s.commands.c.id == s.cycle_transitions.c.command_id)
+                .where(
+                    s.cycle_transitions.c.verdict_id == verdict_id,
+                    s.commands.c.kind == "COMMIT_MARKET_RESEARCH_OUTCOME",
+                )
+            ):
+                raise ProductRecordsDenied("MANAGED_RETURN_COMMAND_REQUIRED")
+            await _require_exact_artifact(
+                connection, verdict["experiment_id"], feedback
+            )
+            if feedback.kind is not ArtifactKind.RESEARCH_FEEDBACK_BRIEF:
+                raise ProductRecordsDenied("RESEARCH_FEEDBACK_REQUIRED")
+            feedback_row = (
+                (
+                    await connection.execute(
+                        select(s.artifacts).where(
+                            s.artifacts.c.id == feedback.artifact_id
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            if set(feedback_row["payload"]) != {
+                "preserve",
+                "change",
+                "failed_dimensions",
+                "research_questions",
+            }:
+                raise ProductRecordsDenied("STRUCTURED_FEEDBACK_REQUIRED")
+            if not await connection.scalar(
+                select(s.artifact_dispositions.c.id).where(
+                    s.artifact_dispositions.c.artifact_id == feedback.artifact_id,
+                    s.artifact_dispositions.c.disposition == "ACCEPTED",
+                )
+            ):
+                raise ProductRecordsDenied("UNCOMMITTED_FEEDBACK")
+            if await connection.scalar(
+                select(s.artifacts.c.id).where(
+                    s.artifacts.c.logical_id == feedback_row["logical_id"],
+                    s.artifacts.c.version > feedback_row["version"],
+                )
+            ) or await connection.scalar(
+                select(s.artifact_dispositions.c.id).where(
+                    s.artifact_dispositions.c.artifact_id == feedback.artifact_id,
+                    s.artifact_dispositions.c.disposition == "SUPERSEDED",
+                )
+            ):
+                raise ProductRecordsDenied("STALE_RESEARCH_FEEDBACK")
+            parent = (
+                (
+                    await connection.execute(
+                        select(s.cycles).where(s.cycles.c.id == verdict["cycle_id"])
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            current_cycle = await connection.scalar(
+                select(s.cycles.c.id)
+                .where(s.cycles.c.experiment_id == verdict["experiment_id"])
+                .order_by(s.cycles.c.ordinal.desc())
+                .limit(1)
+            )
+            if current_cycle != parent["id"]:
+                raise ProductRecordsDenied("STALE_IDEA_LINEAGE")
+            acceptance = (
+                (
+                    await connection.execute(
+                        select(s.idea_acceptances).where(
+                            s.idea_acceptances.c.cycle_id == parent["id"],
+                            s.idea_acceptances.c.experiment_id
+                            == verdict["experiment_id"],
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if acceptance is None:
+                raise ProductRecordsDenied("MISSING_ACCEPTED_IDEA")
+            state = await connection.scalar(
+                select(s.cycle_states.c.state).where(
+                    s.cycle_states.c.cycle_id == parent["id"],
+                    s.cycle_states.c.experiment_id == verdict["experiment_id"],
+                )
+            )
+            if state != "MARKET_RESEARCH":
+                raise ProductRecordsDenied("RESEARCH_CYCLE_NOT_ACTIVE")
+            expected_links = {
+                (
+                    acceptance["artifact_id"],
+                    acceptance["artifact_kind"],
+                    acceptance["artifact_version"],
+                    acceptance["artifact_hash"],
+                    "ACCEPTED_IDEA",
+                ),
+                (
+                    verdict["report_artifact_id"],
+                    verdict["report_kind"],
+                    verdict["report_version"],
+                    verdict["report_hash"],
+                    "REPORT",
+                ),
+                (
+                    verdict["recommendation_artifact_id"],
+                    verdict["recommendation_kind"],
+                    verdict["recommendation_version"],
+                    verdict["recommendation_hash"],
+                    "RECOMMENDATION",
+                ),
+            }
+            links = {
+                (
+                    row["producer_id"],
+                    row["producer_kind"],
+                    row["producer_version"],
+                    row["producer_hash"],
+                    row["role"],
+                )
+                for row in (
+                    (
+                        await connection.execute(
+                            select(s.artifact_links).where(
+                                s.artifact_links.c.consumer_id == feedback.artifact_id
+                            )
+                        )
+                    )
+                    .mappings()
+                    .all()
+                )
+            }
+            if links != expected_links:
+                raise ProductRecordsDenied("FORGED_RESEARCH_FEEDBACK")
+            scope_id = (
+                parent["seed_artifact_id"]
+                if parent["idea_mode"] == "USER_SEEDED_REFINEMENT"
+                else await connection.scalar(
+                    select(s.idea_acceptances.c.artifact_id).where(
+                        s.idea_acceptances.c.cycle_id
+                        == select(s.cycles.c.id)
+                        .where(
+                            s.cycles.c.experiment_id == verdict["experiment_id"],
+                            s.cycles.c.ordinal == 1,
+                        )
+                        .scalar_subquery()
+                    )
+                )
+            )
+            assert scope_id is not None
+            prior_feedbacks = (
+                (
+                    await connection.execute(
+                        select(s.artifacts.c.payload)
+                        .select_from(
+                            s.returns.join(
+                                s.artifacts,
+                                s.artifacts.c.id == s.returns.c.feedback_artifact_id,
+                            )
+                        )
+                        .where(
+                            s.returns.c.experiment_id == verdict["experiment_id"],
+                            s.returns.c.kind == "SAME_INTENT",
+                            s.returns.c.applicable_scope_id == scope_id,
+                        )
+                    )
+                )
+                .scalars()
+                .all()
+            )
+            dimensions = tuple(
+                sorted(set(feedback_row["payload"]["failed_dimensions"]))
+            )
+            reason = (
+                "SAME_INTENT_LIMIT_REACHED"
+                if len(prior_feedbacks) >= 2
+                else "REPEATED_BLOCKER"
+                if any(
+                    tuple(sorted(set(item.get("failed_dimensions", [])))) == dimensions
+                    for item in prior_feedbacks
+                )
+                else None
+            )
+            now = self.clock()
+            if reason is not None:
+                block_id = uuid4()
+                command_id = await _complete(
+                    connection,
+                    command_key=command_key,
+                    experiment_id=verdict["experiment_id"],
+                    kind="START_SAME_INTENT_REFINEMENT_RETURN",
+                    request_hash=request_hash,
+                    result_type="RESEARCH_RETURN_BLOCK",
+                    result_id=block_id,
+                    now=now,
+                )
+                await connection.execute(
+                    insert(s.research_return_blocks).values(
+                        id=block_id,
+                        experiment_id=verdict["experiment_id"],
+                        cycle_id=parent["id"],
+                        verdict_id=verdict_id,
+                        return_kind="SAME_INTENT",
+                        reason_code=reason,
+                        command_id=command_id,
+                        created_at=now,
+                    )
+                )
+                return SameIntentReturnReceipt(
+                    command_id=command_id,
+                    result_id=block_id,
+                    experiment_id=verdict["experiment_id"],
+                    verdict_id=verdict_id,
+                    outcome="REVIEW_REQUIRED",
+                    block_id=block_id,
+                    reason_code=reason,
+                )
+            child_id = uuid4()
+            ordinal = (
+                await connection.scalar(
+                    select(func.count())
+                    .select_from(s.cycles)
+                    .where(s.cycles.c.experiment_id == verdict["experiment_id"])
+                )
+                or 0
+            ) + 1
+            await connection.execute(
+                insert(s.cycles).values(
+                    id=child_id,
+                    experiment_id=verdict["experiment_id"],
+                    ordinal=ordinal,
+                    parent_cycle_id=parent["id"],
+                    idea_mode=parent["idea_mode"],
+                    selection_id=parent["selection_id"],
+                    purpose="SAME_INTENT_RETURN",
+                    episode_id=parent["episode_id"],
+                    seed_artifact_id=parent["seed_artifact_id"],
+                    seed_kind=parent["seed_kind"],
+                    seed_version=parent["seed_version"],
+                    seed_hash=parent["seed_hash"],
+                    created_at=now,
+                )
+            )
+            await connection.execute(
+                insert(s.returns).values(
+                    id=uuid4(),
+                    experiment_id=verdict["experiment_id"],
+                    from_cycle_id=parent["id"],
+                    verdict_id=verdict_id,
+                    to_cycle_id=child_id,
+                    ordinal=len(prior_feedbacks) + 1,
+                    kind="SAME_INTENT",
+                    applicable_scope_id=scope_id,
+                    idea_artifact_id=acceptance["artifact_id"],
+                    feedback_artifact_id=feedback.artifact_id,
+                    feedback_kind=feedback.kind,
+                    feedback_version=feedback.version,
+                    feedback_hash=feedback.content_hash,
+                    created_at=now,
+                )
+            )
+            command_id = await _complete(
+                connection,
+                command_key=command_key,
+                experiment_id=verdict["experiment_id"],
+                kind="START_SAME_INTENT_REFINEMENT_RETURN",
+                request_hash=request_hash,
+                result_type="CYCLE",
+                result_id=child_id,
+                now=now,
+            )
+            return SameIntentReturnReceipt(
+                command_id=command_id,
+                result_id=child_id,
+                id=child_id,
+                experiment_id=verdict["experiment_id"],
+                verdict_id=verdict_id,
+                outcome="STARTED",
+            )
 
     @safe_records
     async def return_to_research(

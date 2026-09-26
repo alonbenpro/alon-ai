@@ -31,6 +31,7 @@ class IdeaStage(StrEnum):
     USER_SEEDED_REFINEMENT = "USER_SEEDED_REFINEMENT"
     SYSTEM_DISCOVERY = "SYSTEM_DISCOVERY"
     SYSTEM_CANDIDATE_REFINEMENT = "SYSTEM_CANDIDATE_REFINEMENT"
+    RESEARCH_FEEDBACK_REFINEMENT = "RESEARCH_FEEDBACK_REFINEMENT"
 
 
 AdviceText = Annotated[
@@ -85,6 +86,12 @@ class IdeaBriefAdvice(StrictDTO):
         "UNRELATED",
     ]
     material_pivot: bool
+    buyer: dict[Literal["segment", "role"], AdviceText]
+    service_hypothesis: AdviceText
+    value_hypothesis: AdviceText
+    assumptions: tuple[AdviceText, ...] = Field(min_length=1)
+    exclusions: tuple[AdviceText, ...] = Field(min_length=1)
+    research_questions: tuple[AdviceText, ...] = Field(min_length=1)
     grounding_refs: tuple[str, ...]
     uncertainties: tuple[AdviceText, ...] = Field(min_length=1)
 
@@ -123,6 +130,33 @@ class SelectedCandidateIdeaBriefAdvice(IdeaBriefAdvice):
         return self
 
 
+class ReturnedIdeaBriefAdvice(IdeaBriefAdvice):
+    @model_validator(mode="after")
+    def grounded_in_return(self) -> Self:
+        if set(self.grounding_refs) != {"PRIOR_IDEA_BRIEF", "RESEARCH_FEEDBACK"}:
+            raise ValueError("returned brief must cite prior brief and feedback")
+        return self
+
+
+class LegacyIdeaBriefAdvice(StrictDTO):
+    """Read-only shape for immutable advice written before L07's rich contract."""
+
+    title: AdviceText
+    customer: AdviceText
+    problem: AdviceText
+    core_intent: AdviceText
+    intent_relationship: Literal[
+        "PRESERVES_CORE_INTENT",
+        "CLARIFIES_CORE_INTENT",
+        "NARROWS_CORE_INTENT",
+        "MATERIAL_PIVOT",
+        "UNRELATED",
+    ]
+    material_pivot: bool
+    grounding_refs: tuple[str, ...]
+    uncertainties: tuple[AdviceText, ...] = Field(min_length=1)
+
+
 _STRING = {"type": "string"}
 _STRINGS = {"type": "array", "items": _STRING}
 _BRIEF_SCHEMA = {
@@ -143,6 +177,17 @@ _BRIEF_SCHEMA = {
             ],
         },
         "material_pivot": {"type": "boolean"},
+        "buyer": {
+            "type": "object",
+            "properties": {"segment": _STRING, "role": _STRING},
+            "required": ["segment", "role"],
+            "additionalProperties": False,
+        },
+        "service_hypothesis": _STRING,
+        "value_hypothesis": _STRING,
+        "assumptions": _STRINGS,
+        "exclusions": _STRINGS,
+        "research_questions": _STRINGS,
         "grounding_refs": _STRINGS,
         "uncertainties": _STRINGS,
     },
@@ -153,6 +198,12 @@ _BRIEF_SCHEMA = {
         "core_intent",
         "intent_relationship",
         "material_pivot",
+        "buyer",
+        "service_hypothesis",
+        "value_hypothesis",
+        "assumptions",
+        "exclusions",
+        "research_questions",
         "grounding_refs",
         "uncertainties",
     ],
@@ -230,6 +281,20 @@ _STAGE_SETTINGS = {
         ),
         _BRIEF_SCHEMA,
         SelectedCandidateIdeaBriefAdvice,
+    ),
+    IdeaStage.RESEARCH_FEEDBACK_REFINEMENT: (
+        "idea-research-feedback-refinement-v1",
+        "idea-brief-advice-v3",
+        (
+            "Refine only the exact current accepted IDEA_BRIEF using the exact "
+            "accepted RESEARCH_FEEDBACK_BRIEF. Preserve the same core intent; "
+            "classify the relationship and set material_pivot true exactly for "
+            "MATERIAL_PIVOT. Cite both PRIOR_IDEA_BRIEF and RESEARCH_FEEDBACK. "
+            "Keep research claims unverified unless present in the feedback. Return "
+            "advisory JSON only; never accept an idea, create a cycle, or act."
+        ),
+        _BRIEF_SCHEMA,
+        ReturnedIdeaBriefAdvice,
     ),
 }
 
@@ -400,8 +465,11 @@ class IdeaRuntime:
             )
             if cycle is None:
                 raise PermissionError("Idea cycle is not in the attributed experiment")
-            if cycle["purpose"] != "INITIAL":
-                raise PermissionError("Idea profile is limited to initial cycles")
+            returned = None
+            if cycle["purpose"] not in {"INITIAL", "SAME_INTENT_RETURN"}:
+                raise PermissionError(
+                    "Idea profile is limited to initial and same-intent cycles"
+                )
             schema_version = await connection.scalar(
                 select(records.artifacts.c.schema_version).where(
                     records.artifacts.c.id == cycle["seed_artifact_id"],
@@ -413,6 +481,93 @@ class IdeaRuntime:
             )
         if schema_version is None:
             raise PermissionError("Idea cycle origin is no longer exact")
+        if cycle["purpose"] == "SAME_INTENT_RETURN":
+            async with self.records.engine.connect() as connection:
+                returned = (
+                    (
+                        await connection.execute(
+                            select(records.returns).where(
+                                records.returns.c.to_cycle_id == cycle_id,
+                                records.returns.c.experiment_id
+                                == attribution.experiment_id,
+                                records.returns.c.kind == "SAME_INTENT",
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if returned is None:
+                    raise PermissionError("same-intent cycle lacks return evidence")
+                prior = (
+                    (
+                        await connection.execute(
+                            select(records.artifacts).where(
+                                records.artifacts.c.id == returned["idea_artifact_id"],
+                                records.artifacts.c.experiment_id
+                                == attribution.experiment_id,
+                                records.artifacts.c.kind == ArtifactKind.IDEA_BRIEF,
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                feedback = (
+                    (
+                        await connection.execute(
+                            select(records.artifacts).where(
+                                records.artifacts.c.id
+                                == returned["feedback_artifact_id"],
+                                records.artifacts.c.experiment_id
+                                == attribution.experiment_id,
+                                records.artifacts.c.kind
+                                == ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+            if prior is None or feedback is None:
+                raise PermissionError("same-intent inputs are no longer exact")
+            stage = IdeaStage.RESEARCH_FEEDBACK_REFINEMENT
+            operator_profile = await self._operator_profile(attribution.experiment_id)
+            return await self.runtimes[stage].run(
+                attribution,
+                facts=facts,
+                sources=(),
+                artifacts=(
+                    AcceptedArtifact(
+                        artifact=ArtifactInput(
+                            artifact_id=prior["id"],
+                            kind=ArtifactKind.IDEA_BRIEF,
+                            version=prior["version"],
+                            content_hash=prior["content_hash"],
+                            role="PRIOR_IDEA_BRIEF",
+                        ),
+                        experiment_id=attribution.experiment_id,
+                        schema_version=prior["schema_version"],
+                        cycle_id=cycle_id,
+                        return_id=returned["id"],
+                    ),
+                    AcceptedArtifact(
+                        artifact=ArtifactInput(
+                            artifact_id=feedback["id"],
+                            kind=ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
+                            version=feedback["version"],
+                            content_hash=feedback["content_hash"],
+                            role="RESEARCH_FEEDBACK",
+                        ),
+                        experiment_id=attribution.experiment_id,
+                        schema_version=feedback["schema_version"],
+                        cycle_id=cycle_id,
+                        return_id=returned["id"],
+                    ),
+                ),
+                operator_profiles=(operator_profile,),
+                idempotency_key=idempotency_key,
+            )
         if cycle["idea_mode"] == IdeaStage.USER_SEEDED_REFINEMENT:
             stage = IdeaStage.USER_SEEDED_REFINEMENT
             kind = ArtifactKind.IDEA_SEED

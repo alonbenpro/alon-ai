@@ -9,7 +9,7 @@ from typing import Annotated, Literal
 from uuid import NAMESPACE_URL, UUID, uuid5
 
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator
 from sqlalchemy import null, select, update
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
@@ -18,6 +18,8 @@ from alon_ai.api.recorded_idea_runtime import provision_recorded_seeded_runtime
 from alon_ai.openai_runtime.contract import RoutingFacts, canonical_json, sha256
 from alon_ai.openai_runtime.idea import (
     IdeaCandidateSetAdvice,
+    LegacyIdeaBriefAdvice,
+    ReturnedIdeaBriefAdvice,
     SeededIdeaBriefAdvice,
     SelectedCandidateIdeaBriefAdvice,
 )
@@ -40,6 +42,25 @@ from alon_ai.records import schema as records
 from alon_ai.records.operators import OperatorRepository
 
 router = APIRouter()
+
+
+def _read_persisted_advice(model, payload: object) -> dict:
+    """Read historical advice without relaxing the current provider contract."""
+    raw = json.dumps(payload)
+    for candidate in (
+        model,
+        SeededIdeaBriefAdvice,
+        SelectedCandidateIdeaBriefAdvice,
+    ):
+        try:
+            return candidate.model_validate_json(raw).model_dump(
+                mode="json", exclude={"schema_version"}
+            )
+        except ValidationError:
+            continue
+    return LegacyIdeaBriefAdvice.model_validate_json(raw).model_dump(
+        mode="json", exclude={"schema_version"}
+    )
 
 
 def _id(key: UUID, name: str) -> UUID:
@@ -480,7 +501,10 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
             (
                 await connection.execute(
                     select(records.idea_refinements)
-                    .where(records.idea_refinements.c.experiment_id == experiment_id)
+                    .where(
+                        records.idea_refinements.c.experiment_id == experiment_id,
+                        records.idea_refinements.c.cycle_id == cycle["id"],
+                    )
                     .order_by(
                         records.idea_refinements.c.created_at.desc(),
                         records.idea_refinements.c.run_id.desc(),
@@ -524,6 +548,126 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
             if discovery
             else None
         )
+        returned = (
+            (
+                await connection.execute(
+                    select(records.returns).where(
+                        records.returns.c.to_cycle_id == cycle["id"]
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+            if cycle and cycle["purpose"] == "SAME_INTENT_RETURN"
+            else None
+        )
+        return_context_rows = None
+        if returned is not None:
+            return_context_rows = (
+                (
+                    await connection.execute(
+                        select(records.artifacts).where(
+                            records.artifacts.c.id.in_(
+                                [
+                                    returned["idea_artifact_id"],
+                                    returned["feedback_artifact_id"],
+                                ]
+                            )
+                        )
+                    )
+                )
+                .mappings()
+                .all()
+            )
+        return_verdict = (
+            (
+                await connection.execute(
+                    select(records.verdicts).where(
+                        records.verdicts.c.id == returned["verdict_id"]
+                    )
+                )
+            )
+            .mappings()
+            .one()
+            if returned is not None
+            else None
+        )
+        available_verdict = (
+            (
+                await connection.execute(
+                    select(records.verdicts)
+                    .where(
+                        records.verdicts.c.experiment_id == experiment_id,
+                        records.verdicts.c.cycle_id == cycle["id"],
+                        records.verdicts.c.verdict == "REFINE_SAME_IDEA",
+                    )
+                    .order_by(records.verdicts.c.committed_at.desc())
+                    .limit(1)
+                )
+            )
+            .mappings()
+            .one_or_none()
+            if cycle and acceptance and cycle["purpose"] != "SAME_INTENT_RETURN"
+            else None
+        )
+        available_feedback_rows = (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.experiment_id == experiment_id,
+                        records.artifacts.c.kind
+                        == ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
+                    )
+                )
+            )
+            .mappings()
+            .all()
+            if available_verdict is not None
+            else []
+        )
+        return_block = (
+            (
+                await connection.execute(
+                    select(records.research_return_blocks)
+                    .where(
+                        records.research_return_blocks.c.experiment_id == experiment_id,
+                        records.research_return_blocks.c.cycle_id == cycle["id"],
+                        records.research_return_blocks.c.return_kind == "SAME_INTENT",
+                    )
+                    .order_by(records.research_return_blocks.c.created_at.desc())
+                    .limit(1)
+                )
+            )
+            .mappings()
+            .one_or_none()
+            if cycle
+            else None
+        )
+        cycle_state = (
+            await connection.scalar(
+                select(records.cycle_states.c.state).where(
+                    records.cycle_states.c.cycle_id == cycle["id"],
+                    records.cycle_states.c.experiment_id == experiment_id,
+                )
+            )
+            if cycle
+            else None
+        )
+        managed_return = (
+            await connection.scalar(
+                select(records.cycle_transitions.c.id)
+                .join(
+                    records.commands,
+                    records.commands.c.id == records.cycle_transitions.c.command_id,
+                )
+                .where(
+                    records.cycle_transitions.c.verdict_id == available_verdict["id"],
+                    records.commands.c.kind == "COMMIT_MARKET_RESEARCH_OUTCOME",
+                )
+            )
+            if available_verdict is not None
+            else None
+        )
     brief = next(
         (row for row in artifacts if row["kind"] == ArtifactKind.EXPERIMENT_BRIEF), None
     )
@@ -538,6 +682,211 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
         ),
         None,
     )
+    return_context = None
+    async with request.app.state.engine.connect() as connection:
+        lineage_rows = (
+            (
+                await connection.execute(
+                    select(records.returns)
+                    .where(
+                        records.returns.c.experiment_id == experiment_id,
+                        records.returns.c.kind == "SAME_INTENT",
+                    )
+                    .order_by(records.returns.c.ordinal)
+                )
+            )
+            .mappings()
+            .all()
+        )
+    lineage_payload = [
+        {
+            "return_id": row["id"],
+            "ordinal": row["ordinal"],
+            "from_cycle_id": row["from_cycle_id"],
+            "to_cycle_id": row["to_cycle_id"],
+            "verdict_id": row["verdict_id"],
+            "prior_brief_artifact_id": row["idea_artifact_id"],
+            "feedback_artifact_id": row["feedback_artifact_id"],
+        }
+        for row in lineage_rows
+    ]
+    if returned is not None and return_context_rows is not None:
+        assert return_verdict is not None
+        prior = next(
+            row
+            for row in return_context_rows
+            if row["id"] == returned["idea_artifact_id"]
+        )
+        feedback = next(
+            row
+            for row in return_context_rows
+            if row["id"] == returned["feedback_artifact_id"]
+        )
+        return_context = {
+            "return_id": returned["id"],
+            "ordinal": returned["ordinal"],
+            "from_cycle_id": returned["from_cycle_id"],
+            "to_cycle_id": returned["to_cycle_id"],
+            "verdict_id": returned["verdict_id"],
+            "research_cycle_id": returned["from_cycle_id"],
+            "prior_brief": {
+                "artifact_id": prior["id"],
+                "version": prior["version"],
+                "content_hash": prior["content_hash"],
+                "payload": prior["payload"],
+            },
+            "feedback": {
+                "artifact_id": feedback["id"],
+                "version": feedback["version"],
+                "content_hash": feedback["content_hash"],
+                "payload": feedback["payload"],
+                "failed_dimensions": feedback["payload"].get("failed_dimensions", []),
+            },
+            "evidence": {
+                "report_artifact_id": return_verdict["report_artifact_id"],
+                "recommendation_artifact_id": return_verdict[
+                    "recommendation_artifact_id"
+                ],
+            },
+            "return_lineage": lineage_payload,
+        }
+    return_available = None
+    return_review = (
+        {
+            "reason_code": return_block["reason_code"],
+            "verdict_id": return_block["verdict_id"],
+            "research_cycle_id": return_block["cycle_id"],
+        }
+        if return_block is not None
+        else None
+    )
+    if (
+        available_verdict is not None
+        and acceptance is not None
+        and cycle_state == "MARKET_RESEARCH"
+        and managed_return is None
+        and return_review is None
+    ):
+        matching = []
+        async with request.app.state.engine.connect() as connection:
+            for feedback in available_feedback_rows:
+                links = {
+                    (
+                        row["producer_id"],
+                        row["producer_kind"],
+                        row["producer_version"],
+                        row["producer_hash"],
+                        row["role"],
+                    )
+                    for row in (
+                        (
+                            await connection.execute(
+                                select(records.artifact_links).where(
+                                    records.artifact_links.c.consumer_id
+                                    == feedback["id"]
+                                )
+                            )
+                        )
+                        .mappings()
+                        .all()
+                    )
+                }
+                if {
+                    (
+                        acceptance["artifact_id"],
+                        acceptance["artifact_kind"],
+                        acceptance["artifact_version"],
+                        acceptance["artifact_hash"],
+                        "ACCEPTED_IDEA",
+                    ),
+                    (
+                        available_verdict["report_artifact_id"],
+                        available_verdict["report_kind"],
+                        available_verdict["report_version"],
+                        available_verdict["report_hash"],
+                        "REPORT",
+                    ),
+                    (
+                        available_verdict["recommendation_artifact_id"],
+                        available_verdict["recommendation_kind"],
+                        available_verdict["recommendation_version"],
+                        available_verdict["recommendation_hash"],
+                        "RECOMMENDATION",
+                    ),
+                } != links:
+                    continue
+                if set(feedback["payload"]) != {
+                    "preserve",
+                    "change",
+                    "failed_dimensions",
+                    "research_questions",
+                }:
+                    continue
+                if not await connection.scalar(
+                    select(records.artifact_dispositions.c.id).where(
+                        records.artifact_dispositions.c.artifact_id == feedback["id"],
+                        records.artifact_dispositions.c.disposition == "ACCEPTED",
+                    )
+                ):
+                    continue
+                if await connection.scalar(
+                    select(records.artifacts.c.id).where(
+                        records.artifacts.c.logical_id == feedback["logical_id"],
+                        records.artifacts.c.version > feedback["version"],
+                    )
+                ) or await connection.scalar(
+                    select(records.artifact_dispositions.c.id).where(
+                        records.artifact_dispositions.c.artifact_id == feedback["id"],
+                        records.artifact_dispositions.c.disposition == "SUPERSEDED",
+                    )
+                ):
+                    continue
+                if len(feedback["payload"]["failed_dimensions"]) != len(
+                    set(feedback["payload"]["failed_dimensions"])
+                ):
+                    continue
+                if all(
+                    isinstance(value, str) and value.strip()
+                    for field in (
+                        "preserve",
+                        "change",
+                        "failed_dimensions",
+                        "research_questions",
+                    )
+                    for value in feedback["payload"][field]
+                ):
+                    matching.append(feedback)
+        if len(matching) == 1:
+            feedback = matching[0]
+            prior = next(
+                row for row in artifacts if row["id"] == acceptance["artifact_id"]
+            )
+            return_available = {
+                "verdict_id": available_verdict["id"],
+                "research_cycle_id": cycle["id"],
+                "prior_brief": {
+                    "artifact_id": prior["id"],
+                    "version": prior["version"],
+                    "content_hash": prior["content_hash"],
+                    "payload": prior["payload"],
+                },
+                "feedback": {
+                    "artifact_id": feedback["id"],
+                    "version": feedback["version"],
+                    "content_hash": feedback["content_hash"],
+                    "payload": feedback["payload"],
+                    "failed_dimensions": feedback["payload"].get(
+                        "failed_dimensions", []
+                    ),
+                },
+                "evidence": {
+                    "report_artifact_id": available_verdict["report_artifact_id"],
+                    "recommendation_artifact_id": available_verdict[
+                        "recommendation_artifact_id"
+                    ],
+                },
+                "return_lineage": lineage_payload,
+            }
     if brief is None:
         return None
     mode = "USER_SEEDED_REFINEMENT" if seed else "SYSTEM_DISCOVERY"
@@ -562,7 +911,9 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
         else []
     )
     advice_model = (
-        SeededIdeaBriefAdvice
+        ReturnedIdeaBriefAdvice
+        if cycle and cycle["purpose"] == "SAME_INTENT_RETURN"
+        else SeededIdeaBriefAdvice
         if mode == "USER_SEEDED_REFINEMENT"
         else SelectedCandidateIdeaBriefAdvice
     )
@@ -570,7 +921,9 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
         "experiment_id": experiment_id,
         "name": experiment["name"],
         "mode": mode,
-        "state": "IDEA_ACCEPTED"
+        "state": "RETURN_REVIEW_REQUIRED"
+        if return_review is not None or return_available is not None
+        else "IDEA_ACCEPTED"
         if acceptance
         else "AWAITING_REVIEW"
         if latest and latest["state"] == "SUCCEEDED"
@@ -594,6 +947,10 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
         "brief": brief["payload"],
         "idea_seed": seed["payload"]["statement"] if seed else None,
         "cycle_id": cycle["id"] if cycle else None,
+        "cycle_purpose": cycle["purpose"] if cycle else None,
+        "return_context": return_context,
+        "return_available": return_available,
+        "return_review": return_review,
         "candidates": candidates,
         "selected_candidate_artifact_id": cycle["seed_artifact_id"]
         if cycle and mode == "SYSTEM_DISCOVERY"
@@ -609,9 +966,7 @@ async def _read_experiment(request: Request, experiment_id: UUID) -> dict | None
         else discovery["advice_source"]
         if discovery
         else None,
-        "advice": advice_model.model_validate_json(
-            json.dumps(latest["advice"])
-        ).model_dump(mode="json", exclude={"schema_version"})
+        "advice": _read_persisted_advice(advice_model, latest["advice"])
         if latest and latest["advice"]
         else None,
         "accepted_brief": accepted["payload"] if accepted else None,
@@ -883,6 +1238,68 @@ async def get_experiment(request: Request, experiment_id: UUID) -> dict:
 
 class RefineRequest(StrictRequest):
     idempotency_key: UUID
+
+
+class ReturnFeedbackInput(StrictRequest):
+    artifact_id: UUID
+    kind: Literal[ArtifactKind.RESEARCH_FEEDBACK_BRIEF]
+    version: int = Field(ge=1)
+    content_hash: str = Field(pattern=r"^[0-9a-f]{64}$")
+    role: Literal["RESEARCH_FEEDBACK"]
+
+    def artifact(self) -> ArtifactInput:
+        return ArtifactInput(
+            artifact_id=self.artifact_id,
+            kind=self.kind,
+            version=self.version,
+            content_hash=self.content_hash,
+            role=self.role,
+        )
+
+
+class StartReturnRefinementRequest(StrictRequest):
+    verdict_id: UUID
+    feedback: ReturnFeedbackInput
+    command_key: UUID
+
+
+@router.post("/experiments/{experiment_id}/returns/refine")
+async def start_return_refinement(
+    request: Request, experiment_id: UUID, body: StartReturnRefinementRequest
+) -> dict:
+    """Claim an already-committed L08 feedback return; no model call occurs here."""
+    detail = await _read_experiment(request, experiment_id)
+    if detail is None:
+        raise HTTPException(404, "EXPERIMENT_NOT_FOUND")
+    async with request.app.state.engine.connect() as connection:
+        owned_verdict = await connection.scalar(
+            select(records.verdicts.c.id).where(
+                records.verdicts.c.id == body.verdict_id,
+                records.verdicts.c.experiment_id == experiment_id,
+            )
+        )
+    if owned_verdict is None:
+        raise HTTPException(409, "FORGED_RESEARCH_FEEDBACK")
+    try:
+        receipt = await ProductRecordsRepository(
+            request.app.state.engine
+        ).start_same_intent_refinement_return(
+            body.verdict_id,
+            feedback=body.feedback.artifact(),
+            command_key=body.command_key,
+        )
+    except ProductRecordsDenied as error:
+        raise HTTPException(409, error.reason) from None
+    if receipt.experiment_id != experiment_id:
+        raise HTTPException(404, "EXPERIMENT_NOT_FOUND")
+    return {
+        "experiment_id": experiment_id,
+        "cycle_id": receipt.id,
+        "state": "AWAITING_REFINEMENT"
+        if receipt.outcome == "STARTED"
+        else "RETURN_REVIEW_REQUIRED",
+        "reason_code": receipt.reason_code,
+    }
 
 
 @router.post("/experiments/{experiment_id}/discover")
@@ -1296,7 +1713,10 @@ async def _claim_refinement(
             (
                 await connection.execute(
                     select(records.idea_refinements)
-                    .where(records.idea_refinements.c.experiment_id == experiment_id)
+                    .where(
+                        records.idea_refinements.c.experiment_id == experiment_id,
+                        records.idea_refinements.c.cycle_id == cycle_id,
+                    )
                     .order_by(
                         records.idea_refinements.c.created_at.desc(),
                         records.idea_refinements.c.run_id.desc(),
@@ -1317,6 +1737,12 @@ async def _claim_refinement(
             if latest["state"] == "REFINEMENT_BLOCKED":
                 raise HTTPException(409, "REFINEMENT_RECONCILIATION_REQUIRED")
         seed_id = await connection.scalar(
+            select(records.returns.c.idea_artifact_id).where(
+                records.returns.c.to_cycle_id == cycle_id,
+                records.returns.c.experiment_id == experiment_id,
+                records.returns.c.kind == "SAME_INTENT",
+            )
+        ) or await connection.scalar(
             select(records.cycles.c.seed_artifact_id).where(
                 records.cycles.c.id == cycle_id,
                 records.cycles.c.experiment_id == experiment_id,
@@ -1414,13 +1840,14 @@ async def refine_experiment(
             if existing["state"] == "SUCCEEDED"
             else existing["state"],
             "advice_source": existing["advice_source"],
-            "advice": (
-                SeededIdeaBriefAdvice
+            "advice": _read_persisted_advice(
+                ReturnedIdeaBriefAdvice
+                if detail["cycle_purpose"] == "SAME_INTENT_RETURN"
+                else SeededIdeaBriefAdvice
                 if detail["mode"] == "USER_SEEDED_REFINEMENT"
-                else SelectedCandidateIdeaBriefAdvice
+                else SelectedCandidateIdeaBriefAdvice,
+                existing["advice"],
             )
-            .model_validate_json(json.dumps(existing["advice"]))
-            .model_dump(mode="json", exclude={"schema_version"})
             if existing["advice"]
             else None,
         }
@@ -1468,7 +1895,9 @@ async def refine_experiment(
         advice = execution.output
         success = execution.outcome is OpenAIRunOutcome.SUCCEEDED and isinstance(
             advice,
-            SeededIdeaBriefAdvice
+            ReturnedIdeaBriefAdvice
+            if detail["cycle_purpose"] == "SAME_INTENT_RETURN"
+            else SeededIdeaBriefAdvice
             if detail["mode"] == "USER_SEEDED_REFINEMENT"
             else SelectedCandidateIdeaBriefAdvice,
         )
@@ -1589,6 +2018,45 @@ async def accept_experiment_idea(
             .mappings()
             .first()
         )
+        returned = (
+            (
+                await connection.execute(
+                    select(records.returns).where(
+                        records.returns.c.to_cycle_id == detail["cycle_id"]
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+            if detail["cycle_purpose"] == "SAME_INTENT_RETURN"
+            else None
+        )
+        prior = (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.id == returned["idea_artifact_id"]
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+            if returned is not None
+            else None
+        )
+        return_feedback = (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.id == returned["feedback_artifact_id"]
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+            if returned is not None
+            else None
+        )
     if (
         reviewed is None
         or reviewed["state"] != "SUCCEEDED"
@@ -1596,10 +2064,16 @@ async def accept_experiment_idea(
         or body.run_id != detail["latest_run_id"]
         or seed is None
         or workflow is None
+        or (
+            detail["cycle_purpose"] == "SAME_INTENT_RETURN"
+            and (prior is None or return_feedback is None)
+        )
     ):
         raise HTTPException(409, "REFINEMENT_NOT_SUCCESSFUL")
     advice = (
-        SeededIdeaBriefAdvice
+        ReturnedIdeaBriefAdvice
+        if detail["cycle_purpose"] == "SAME_INTENT_RETURN"
+        else SeededIdeaBriefAdvice
         if detail["mode"] == "USER_SEEDED_REFINEMENT"
         else SelectedCandidateIdeaBriefAdvice
     ).model_validate_json(json.dumps(reviewed["advice"]))
@@ -1618,10 +2092,25 @@ async def accept_experiment_idea(
         raise HTTPException(409, "MATERIAL_PIVOT_REQUIRES_APPROVAL")
     repository = ProductRecordsRepository(engine)
     brief_id = _id(body.command_key, "accepted-idea-brief")
+    advice_payload = advice.model_dump(mode="json")
     payload = {
-        key: getattr(advice, key)
-        for key in ("title", "customer", "problem", "core_intent", "material_pivot")
+        key: advice_payload[key]
+        for key in (
+            "title",
+            "customer",
+            "problem",
+            "core_intent",
+            "material_pivot",
+            "buyer",
+            "service_hypothesis",
+            "value_hypothesis",
+            "assumptions",
+            "exclusions",
+            "research_questions",
+        )
     }
+    logical_id = prior["logical_id"] if prior is not None else brief_id
+    version = prior["version"] + 1 if prior is not None else 1
     existing_artifact = await _artifact_row(request, brief_id)
     if existing_artifact is not None and (
         existing_artifact["experiment_id"] != experiment_id
@@ -1629,6 +2118,8 @@ async def accept_experiment_idea(
         or existing_artifact["agent_id"] != workflow["agent_id"]
         or existing_artifact["operation_id"] != reviewed["operation_id"]
         or existing_artifact["kind"] != ArtifactKind.IDEA_BRIEF
+        or existing_artifact["logical_id"] != logical_id
+        or existing_artifact["version"] != version
         or existing_artifact["payload"] != payload
         or existing_artifact["created_by"] != request.state.operator.id
     ):
@@ -1637,7 +2128,7 @@ async def accept_experiment_idea(
         "run_id": body.run_id,
         "experiment_id": experiment_id,
         "cycle_id": detail["cycle_id"],
-        "source_artifact_id": seed["id"],
+        "source_artifact_id": prior["id"] if prior is not None else seed["id"],
         "output_hash": reviewed["output_hash"],
         "relationship": body.intent_relationship,
         "rationale": body.intent_rationale,
@@ -1697,8 +2188,8 @@ async def accept_experiment_idea(
         artifact = await repository.append_artifact(
             ArtifactDraft(
                 id=brief_id,
-                logical_id=brief_id,
-                version=1,
+                logical_id=logical_id,
+                version=version,
                 experiment_id=experiment_id,
                 workflow_id=workflow["id"],
                 agent_id=workflow["agent_id"],
@@ -1711,14 +2202,37 @@ async def accept_experiment_idea(
                 else datetime.now(UTC),
             ),
             inputs=(
-                ArtifactInput(
-                    artifact_id=seed["id"],
-                    kind=ArtifactKind(seed["kind"]),
-                    version=seed["version"],
-                    content_hash=seed["content_hash"],
-                    role="SEED"
-                    if detail["mode"] == "USER_SEEDED_REFINEMENT"
-                    else "SELECTED_CANDIDATE",
+                (
+                    ArtifactInput(
+                        artifact_id=prior["id"],
+                        kind=ArtifactKind.IDEA_BRIEF,
+                        version=prior["version"],
+                        content_hash=prior["content_hash"],
+                        role="SUPERSEDES",
+                    )
+                    if prior is not None
+                    else ArtifactInput(
+                        artifact_id=seed["id"],
+                        kind=ArtifactKind(seed["kind"]),
+                        version=seed["version"],
+                        content_hash=seed["content_hash"],
+                        role="SEED"
+                        if detail["mode"] == "USER_SEEDED_REFINEMENT"
+                        else "SELECTED_CANDIDATE",
+                    )
+                ),
+                *(
+                    (
+                        ArtifactInput(
+                            artifact_id=return_feedback["id"],
+                            kind=ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
+                            version=return_feedback["version"],
+                            content_hash=return_feedback["content_hash"],
+                            role="RESEARCH_FEEDBACK",
+                        ),
+                    )
+                    if return_feedback is not None
+                    else ()
                 ),
             ),
             command_key=_id(body.command_key, "accepted-brief-command"),

@@ -11,7 +11,8 @@ from uuid import UUID, uuid4
 import pytest
 from fastapi.testclient import TestClient
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy import select
+from pydantic import ValidationError
+from sqlalchemy import func, select
 from test_operator_access import ORIGIN, _app
 from test_product_records import artifact, roots
 
@@ -22,8 +23,10 @@ from alon_ai.api.recorded_idea_runtime import (
     provision_recorded_seeded_runtime,
 )
 from alon_ai.openai_runtime.contract import RoutingFacts
+from alon_ai.openai_runtime.idea import SeededIdeaBriefAdvice
 from alon_ai.providers.contracts import AgentActor, CallAttribution, OperationRunKind
 from alon_ai.records import (
+    ArtifactDraft,
     ArtifactInput,
     ArtifactKind,
     ProductRecordsDenied,
@@ -32,6 +35,26 @@ from alon_ai.records import (
 from alon_ai.records import schema as records
 
 pytestmark = pytest.mark.integration
+
+
+def test_historical_advice_reads_without_weakening_new_profile_contract():
+    route = importlib.import_module("alon_ai.api.routes.experiments")
+    historical = {
+        "title": "Legacy brief",
+        "customer": "Legacy customer",
+        "problem": "Legacy problem",
+        "core_intent": "legacy intent",
+        "intent_relationship": "PRESERVES_CORE_INTENT",
+        "material_pivot": False,
+        "grounding_refs": ["SEED"],
+        "uncertainties": ["Legacy uncertainty"],
+    }
+    with pytest.raises(ValidationError):
+        SeededIdeaBriefAdvice.model_validate(historical)
+    assert (
+        route._read_persisted_advice(SeededIdeaBriefAdvice, historical)["core_intent"]
+        == "legacy intent"
+    )
 
 
 def creation_body():
@@ -1633,3 +1656,370 @@ async def test_interrupted_candidate_batch_cannot_be_selected(
             },
             headers=ORIGIN,
         ).json() == {"detail": "CANDIDATE_NOT_IN_DISCOVERY"}
+
+
+async def _seeded_return_fixture(client, engine, operator_id):
+    """Create only durable local records needed to exercise the L07 return UI."""
+    body = creation_body()
+    created = client.post("/operator/experiments", json=body, headers=ORIGIN).json()
+    experiment_id = UUID(created["experiment_id"])
+    run_id = str(uuid4())
+    refined = client.post(
+        f"/operator/experiments/{experiment_id}/refine",
+        json={"idempotency_key": run_id},
+        headers=ORIGIN,
+    )
+    assert refined.status_code == 200
+    accepted = client.post(
+        f"/operator/experiments/{experiment_id}/accept",
+        json={
+            "run_id": run_id,
+            "command_key": str(uuid4()),
+            "intent_relationship": "PRESERVES_CORE_INTENT",
+            "intent_confirmed": True,
+            "intent_rationale": "The recorded proposal preserves the supplied idea.",
+        },
+        headers=ORIGIN,
+    ).json()
+    repo = ProductRecordsRepository(engine)
+    cycle_id = UUID(created["cycle_id"])
+    async with engine.connect() as connection:
+        workflow = (
+            (
+                await connection.execute(
+                    select(records.workflows).where(
+                        records.workflows.c.experiment_id == experiment_id
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        agent = (
+            (
+                await connection.execute(
+                    select(records.agents).where(
+                        records.agents.c.workflow_id == workflow["id"]
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+    async with engine.connect() as connection:
+        prior = (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.id
+                        == UUID(accepted["idea_brief_artifact_id"])
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+
+    def record_input(row, role):
+        return ArtifactInput(
+            artifact_id=row["id"],
+            kind=ArtifactKind(row["kind"]),
+            version=row["version"],
+            content_hash=row["content_hash"],
+            role=role,
+        )
+
+    async def put(kind, payload, inputs=()):
+        return await repo.append_artifact(
+            ArtifactDraft(
+                id=uuid4(),
+                logical_id=uuid4(),
+                version=1,
+                experiment_id=experiment_id,
+                workflow_id=workflow["id"],
+                agent_id=agent["id"],
+                kind=kind,
+                payload=payload,
+                created_by=operator_id,
+                created_at=datetime.now(UTC),
+            ),
+            inputs=inputs,
+            command_key=uuid4(),
+        )
+
+    idea_input = record_input(prior, "ACCEPTED_IDEA")
+    plan = await put(
+        ArtifactKind.RESEARCH_PLAN,
+        {
+            "questions": ["Which buyer signal is missing?"],
+            "method": "Recorded fixture review",
+        },
+        (idea_input,),
+    )
+    attempt = await repo.start_market_research(
+        experiment_id,
+        cycle_id,
+        accepted_idea=idea_input,
+        plan=ArtifactInput.from_receipt(plan, role="PLAN"),
+        command_key=uuid4(),
+    )
+    report = await put(
+        ArtifactKind.MARKET_RESEARCH_REPORT,
+        {
+            "finding": "Buyer budget signal not established",
+            "limitations": ["Recorded fixture"],
+        },
+        (ArtifactInput.from_receipt(plan, role="PLAN"),),
+    )
+    recommendation = await put(
+        ArtifactKind.MARKET_RESEARCH_RECOMMENDATION,
+        {"recommendation": "REFINE_SAME_IDEA", "rationale": "Clarify buyer evidence"},
+        (ArtifactInput.from_receipt(report, role="REPORT"),),
+    )
+    verdict = await repo.commit_verdict(
+        attempt.id,
+        report=ArtifactInput.from_receipt(report, role="REPORT"),
+        recommendation=ArtifactInput.from_receipt(
+            recommendation, role="RECOMMENDATION"
+        ),
+        verdict="REFINE_SAME_IDEA",
+        committed_by=operator_id,
+        command_key=uuid4(),
+    )
+    feedback = await put(
+        ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
+        {
+            "preserve": ["Original buyer"],
+            "change": ["Clarify budget"],
+            "failed_dimensions": ["BUYER_BUDGET"],
+            "research_questions": ["Which buyer validates a range?"],
+        },
+        (
+            idea_input,
+            ArtifactInput.from_receipt(report, role="REPORT"),
+            ArtifactInput.from_receipt(recommendation, role="RECOMMENDATION"),
+        ),
+    )
+    validation = await put(
+        ArtifactKind.VALIDATION_RESULT,
+        {
+            "validator": "fixture",
+            "disposition": "PASS",
+            "reason": "Exact outcome feedback",
+        },
+        (ArtifactInput.from_receipt(feedback, role="TARGET"),),
+    )
+    await repo.record_disposition(
+        ArtifactInput.from_receipt(feedback, role="TARGET"),
+        experiment_id=experiment_id,
+        disposition="ACCEPTED",
+        decided_by=operator_id,
+        validation=ArtifactInput.from_receipt(validation, role="VALIDATION"),
+        command_key=uuid4(),
+    )
+    return experiment_id, created, accepted, verdict, feedback
+
+
+async def test_returned_refinement_requires_operator_acceptance_and_versions_brief(
+    governance_engine,
+):
+    app, operator_id = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        (
+            experiment_id,
+            created,
+            accepted,
+            verdict,
+            feedback,
+        ) = await _seeded_return_fixture(client, governance_engine, operator_id)
+        available = client.get(f"/operator/experiments/{experiment_id}")
+        assert available.status_code == 200, available.text
+        assert available.json()["state"] == "RETURN_REVIEW_REQUIRED"
+        assert available.json()["return_available"] is not None
+        assert available.json()["return_available"]["verdict_id"] == str(verdict.id)
+        assert (
+            available.json()["return_available"]["research_cycle_id"]
+            == created["cycle_id"]
+        )
+        assert available.json()["return_available"]["feedback"]["artifact_id"] == str(
+            feedback.artifact_id
+        )
+        assert available.json()["return_available"]["return_lineage"] == []
+        started = client.post(
+            f"/operator/experiments/{experiment_id}/returns/refine",
+            json={
+                "verdict_id": str(verdict.id),
+                "feedback": ArtifactInput.from_receipt(
+                    feedback, role="RESEARCH_FEEDBACK"
+                ).model_dump(mode="json", exclude={"schema_version"}),
+                "command_key": str(uuid4()),
+            },
+            headers=ORIGIN,
+        )
+        assert started.status_code == 200, started.text
+        assert started.json()["state"] == "AWAITING_REFINEMENT"
+        proposed_run = str(uuid4())
+        refined = client.post(
+            f"/operator/experiments/{experiment_id}/refine",
+            json={"idempotency_key": proposed_run},
+            headers=ORIGIN,
+        )
+        assert refined.status_code == 200, refined.text
+        snapshot = client.get(f"/operator/experiments/{experiment_id}").json()
+        assert snapshot["accepted_brief"] is None
+        assert (
+            snapshot["return_context"]["prior_brief"]["artifact_id"]
+            == accepted["idea_brief_artifact_id"]
+        )
+        accepted_return = client.post(
+            f"/operator/experiments/{experiment_id}/accept",
+            json={
+                "run_id": proposed_run,
+                "command_key": str(uuid4()),
+                "intent_relationship": "CLARIFIES_CORE_INTENT",
+                "intent_confirmed": True,
+                "intent_rationale": "Feedback narrows the same buyer and problem.",
+            },
+            headers=ORIGIN,
+        )
+        assert accepted_return.status_code == 200, accepted_return.text
+    async with governance_engine.connect() as connection:
+        old = (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.id
+                        == UUID(accepted["idea_brief_artifact_id"])
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        new = (
+            (
+                await connection.execute(
+                    select(records.artifacts).where(
+                        records.artifacts.c.id
+                        == UUID(accepted_return.json()["idea_brief_artifact_id"])
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        seed = await connection.scalar(
+            select(records.artifacts.c.id).where(
+                records.artifacts.c.experiment_id == experiment_id,
+                records.artifacts.c.kind == ArtifactKind.IDEA_SEED,
+            )
+        )
+        return_links = (
+            (
+                await connection.execute(
+                    select(
+                        records.artifact_links.c.producer_id,
+                        records.artifact_links.c.role,
+                    )
+                    .where(records.artifact_links.c.consumer_id == new["id"])
+                    .order_by(records.artifact_links.c.role)
+                )
+            )
+            .mappings()
+            .all()
+        )
+    assert new["logical_id"] == old["logical_id"]
+    assert new["version"] == old["version"] + 1
+    assert seed == UUID(created["seed_artifact_id"])
+    assert {(row["producer_id"], row["role"]) for row in return_links} == {
+        (old["id"], "SUPERSEDES"),
+        (feedback.artifact_id, "RESEARCH_FEEDBACK"),
+    }
+
+
+async def test_returned_brief_acceptance_retries_after_persisted_intent_review(
+    governance_engine, monkeypatch
+):
+    app, operator_id = await _app(governance_engine)
+    app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
+    original_append = ProductRecordsRepository.append_artifact
+    with TestClient(app) as client:
+        assert (
+            client.post(
+                "/auth/login", json={"password": "test-password"}, headers=ORIGIN
+            ).status_code
+            == 200
+        )
+        experiment_id, _, _, verdict, feedback = await _seeded_return_fixture(
+            client, governance_engine, operator_id
+        )
+        started = client.post(
+            f"/operator/experiments/{experiment_id}/returns/refine",
+            json={
+                "verdict_id": str(verdict.id),
+                "feedback": ArtifactInput.from_receipt(
+                    feedback, role="RESEARCH_FEEDBACK"
+                ).model_dump(mode="json", exclude={"schema_version"}),
+                "command_key": str(uuid4()),
+            },
+            headers=ORIGIN,
+        )
+        assert started.status_code == 200, started.text
+        proposed_run = str(uuid4())
+        refined = client.post(
+            f"/operator/experiments/{experiment_id}/refine",
+            json={"idempotency_key": proposed_run},
+            headers=ORIGIN,
+        )
+        assert refined.status_code == 200, refined.text
+
+        failed_once = False
+
+        async def fail_first_returned_brief(self, draft, **kwargs):
+            nonlocal failed_once
+            if (
+                draft.kind is ArtifactKind.IDEA_BRIEF
+                and draft.version == 2
+                and not failed_once
+            ):
+                failed_once = True
+                raise ProductRecordsDenied("INJECTED_APPEND_FAILURE")
+            return await original_append(self, draft, **kwargs)
+
+        monkeypatch.setattr(
+            ProductRecordsRepository, "append_artifact", fail_first_returned_brief
+        )
+        acceptance = {
+            "run_id": proposed_run,
+            "command_key": str(uuid4()),
+            "intent_relationship": "CLARIFIES_CORE_INTENT",
+            "intent_confirmed": True,
+            "intent_rationale": "The same bounded feedback clarifies the brief.",
+        }
+        first = client.post(
+            f"/operator/experiments/{experiment_id}/accept",
+            json=acceptance,
+            headers=ORIGIN,
+        )
+        assert first.status_code == 409
+        assert first.json() == {"detail": "INJECTED_APPEND_FAILURE"}
+        retry = client.post(
+            f"/operator/experiments/{experiment_id}/accept",
+            json=acceptance,
+            headers=ORIGIN,
+        )
+        assert retry.status_code == 200, retry.text
+    async with governance_engine.connect() as connection:
+        reviews = await connection.scalar(
+            select(func.count())
+            .select_from(records.idea_intent_reviews)
+            .where(records.idea_intent_reviews.c.run_id == UUID(proposed_run))
+        )
+    assert reviews == 1
