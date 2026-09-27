@@ -4,6 +4,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { LoginForm } from "@/components/operator/login-form";
 import { OperatorControls } from "@/components/operator/operator-controls";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+
 afterEach(() => { vi.restoreAllMocks(); window.localStorage.clear(); });
 
 describe("operator keyboard access", () => {
