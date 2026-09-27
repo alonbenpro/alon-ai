@@ -4,11 +4,7 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy import func, select, text
-from test_offer_records import (
-    PROTECTED_OFFER_FIELDS,
-    package_payload,
-    put,
-)
+from test_offer_records import PROTECTED_OFFER_FIELDS, package_payload, put
 from test_product_records import NOW
 from test_qualification_cohorts import (
     KEY,
@@ -18,32 +14,32 @@ from test_qualification_cohorts import (
     qualified_pool,
 )
 
-from alon_ai.records import calibration_schema
-from alon_ai.records import offer_schema as offers
-from alon_ai.records import qualification_schema as qualification
-from alon_ai.records.calibration import (
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.repositories.records_calibration import (
     CalibrationRepository,
     assert_no_pending_calibration,
 )
-from alon_ai.records.calibration_models import (
-    CalibrationDecisionRequest,
-    CalibrationFulfillmentRequest,
-    CalibrationProposalRequest,
-)
-from alon_ai.records.models import (
+from alon_ai.db.repositories.records_offers import OfferRecordsRepository
+from alon_ai.db.repositories.records_qualifications import QualificationCohortRepository
+from alon_ai.db.tables import records_calibration as calibration_schema
+from alon_ai.db.tables import records_offer as offers
+from alon_ai.db.tables import records_qualification as qualification
+from alon_ai.services.schemas.records import (
     ArtifactInput,
     ArtifactKind,
     ProductRecordsDenied,
 )
-from alon_ai.records.offer_models import (
+from alon_ai.services.schemas.records_calibration import (
+    CalibrationDecisionRequest,
+    CalibrationFulfillmentRequest,
+    CalibrationProposalRequest,
+)
+from alon_ai.services.schemas.records_offer import (
     INITIAL_OUTREACH_POLICY,
     OfferAcceptanceRequest,
     OfferFieldSource,
 )
-from alon_ai.records.offers import OfferRecordsRepository
-from alon_ai.records.qualification_models import FreezeCohortRequest
-from alon_ai.records.qualifications import QualificationCohortRepository
-from alon_ai.records.repository import ProductRecordsRepository
+from alon_ai.services.schemas.records_qualification import FreezeCohortRequest
 
 pytestmark = pytest.mark.integration
 

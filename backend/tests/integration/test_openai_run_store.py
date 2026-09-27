@@ -9,7 +9,7 @@ from sqlalchemy import inspect, text
 from sqlalchemy.exc import DBAPIError
 from test_governance import reserve, seed
 
-from alon_ai.openai_runtime.store import (
+from alon_ai.db.repositories.openai_run import (
     OpenAIRunConflict,
     OpenAIRunIntent,
     OpenAIRunOutcome,

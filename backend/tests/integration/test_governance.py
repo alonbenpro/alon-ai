@@ -9,17 +9,7 @@ import pytest
 from sqlalchemy import delete, inspect, select, text, update
 from sqlalchemy.exc import DBAPIError
 
-from alon_ai.accounting.models import (
-    AccountingDenied,
-    CallState,
-    CapabilityConfig,
-    ControlPolicy,
-    FxVersion,
-    PriceBound,
-    PriceVersion,
-    Reason,
-)
-from alon_ai.providers.contracts import (
+from alon_ai.integrations.schemas.provider import (
     CallAttribution,
     Capability,
     ContentField,
@@ -32,11 +22,21 @@ from alon_ai.providers.contracts import (
     UsageComponent,
     UsageObservation,
 )
-from alon_ai.providers.rights import (
+from alon_ai.policies.provider_rights import (
     GrantEvent,
     GrantEventKind,
     IntendedUse,
     ProviderUsageGrant,
+)
+from alon_ai.provider_usage.schemas.accounting import (
+    AccountingDenied,
+    CallState,
+    CapabilityConfig,
+    ControlPolicy,
+    FxVersion,
+    PriceBound,
+    PriceVersion,
+    Reason,
 )
 
 pytestmark = pytest.mark.integration
@@ -51,7 +51,7 @@ async def test_migration_installs_durable_governance(governance_engine):
 
 
 async def register(admin, id_, kind, now, call_id=None):
-    from alon_ai.accounting.models import EvidenceRecord
+    from alon_ai.provider_usage.schemas.accounting import EvidenceRecord
 
     await admin.evidence(
         EvidenceRecord(
@@ -66,7 +66,7 @@ async def register(admin, id_, kind, now, call_id=None):
 
 
 async def proof(repo, call_id, kind="RECONCILIATION"):
-    from alon_ai.accounting.repository import GovernanceProvisioner
+    from alon_ai.db.repositories.accounting import GovernanceProvisioner
 
     id_ = uuid4()
     await register(GovernanceProvisioner(repo.engine), id_, kind, repo.clock(), call_id)
@@ -91,7 +91,7 @@ async def seed(
     transient=False,
     price_components=(UsageComponent.REQUEST,),
 ):
-    from alon_ai.accounting.repository import (
+    from alon_ai.db.repositories.accounting import (
         GovernanceProvisioner,
         GovernanceRepository,
     )
@@ -110,7 +110,7 @@ async def seed(
     )
     admin = GovernanceProvisioner(engine)
     await admin.scope(attr, gate_kind=gate)
-    from alon_ai.providers.contracts import CAPABILITIES, Nature
+    from alon_ai.integrations.schemas.provider import CAPABILITIES, Nature
 
     use = IntendedUse(
         provider=CAPABILITIES[capability].provider,
@@ -245,8 +245,8 @@ async def reserve(repo, attr, config, key=None):
 
 
 async def test_reservation_race_and_restart_preserve_all_twelve_caps(governance_engine):
-    from alon_ai.accounting import schema as s
-    from alon_ai.accounting.repository import GovernanceRepository
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.tables import accounting as s
 
     repo, _, attr, config, _, now = await seed(governance_engine, limit=Decimal(".01"))
     results = await asyncio.gather(
@@ -270,7 +270,7 @@ async def test_reservation_race_and_restart_preserve_all_twelve_caps(governance_
 async def test_idempotency_conflict_scope_and_omitted_account_fail_closed(
     governance_engine,
 ):
-    from alon_ai.accounting import schema as s
+    from alon_ai.db.tables import accounting as s
 
     repo, _, attr, config, _, _ = await seed(governance_engine)
     key = uuid4()
@@ -312,7 +312,7 @@ async def test_idempotency_conflict_scope_and_omitted_account_fail_closed(
 async def test_any_single_exhausted_scope_rolls_back_every_reservation(
     governance_engine, kind, currency
 ):
-    from alon_ai.accounting import schema as s
+    from alon_ai.db.tables import accounting as s
 
     repo, _, attr, config, _, _ = await seed(governance_engine)
     async with governance_engine.begin() as c:
@@ -336,7 +336,7 @@ async def test_any_single_exhausted_scope_rolls_back_every_reservation(
 async def test_database_rejects_nonfinite_wrong_scope_and_immutable_changes(
     governance_engine,
 ):
-    from alon_ai.accounting import schema as s
+    from alon_ai.db.tables import accounting as s
 
     _, _, _attr, _, _grant, _ = await seed(governance_engine)
     for value in ["NaN", "Infinity", "-Infinity", "-1", "0.0000000000000000000000001"]:
@@ -376,7 +376,7 @@ def observation(
 async def test_dispatch_quota_race_and_expired_lease_never_frees_unknown_slot(
     governance_engine,
 ):
-    from alon_ai.accounting.repository import GovernanceRepository
+    from alon_ai.db.repositories.accounting import GovernanceRepository
 
     repo, _, attr, config, _, now = await seed(
         governance_engine, quota=1, concurrency=1
@@ -433,7 +433,7 @@ async def test_grant_revocation_before_dispatch_and_unused_release(governance_en
 async def test_final_unknown_correction_overrun_and_cash_are_not_double_spend(
     governance_engine,
 ):
-    from alon_ai.accounting import schema as s
+    from alon_ai.db.tables import accounting as s
 
     repo, _, attr, config, _, _ = await seed(governance_engine, limit=Decimal(".01"))
     call = await reserve(repo, attr, config)
@@ -495,7 +495,7 @@ async def test_final_unknown_correction_overrun_and_cash_are_not_double_spend(
 async def test_subcent_accrual_and_duplicate_usage_do_not_round_to_zero(
     governance_engine,
 ):
-    from alon_ai.accounting import schema as s
+    from alon_ai.db.tables import accounting as s
 
     repo, _, attr, config, _, _ = await seed(
         governance_engine, price=Decimal(".000001")
@@ -531,7 +531,7 @@ async def test_subcent_accrual_and_duplicate_usage_do_not_round_to_zero(
 async def test_circuit_has_one_half_open_probe_and_restart_preserves_failures(
     governance_engine,
 ):
-    from alon_ai.accounting.repository import GovernanceRepository
+    from alon_ai.db.repositories.accounting import GovernanceRepository
 
     repo, _, attr, config, _, now = await seed(governance_engine)
     for _ in range(2):
@@ -570,9 +570,9 @@ async def test_persisted_required_gate_cannot_be_bypassed(governance_engine):
 
 
 async def test_retention_current_scope_fields_expiry_and_revocation(governance_engine):
-    from alon_ai.accounting import schema as s
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.providers.rights import RuntimeContent
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.tables import accounting as s
+    from alon_ai.policies.provider_rights import RuntimeContent
 
     repo, admin, attr, config, grant, now = await seed(governance_engine)
     call = await reserve(repo, attr, config)
@@ -617,13 +617,13 @@ async def test_retention_current_scope_fields_expiry_and_revocation(governance_e
 async def test_executor_durable_dispatch_no_transaction_and_timeout_replay(
     governance_engine,
 ):
-    from alon_ai.accounting import schema as s
-    from alon_ai.providers.contracts import (
+    from alon_ai.db.tables import accounting as s
+    from alon_ai.integrations.schemas.provider import (
         ProviderCallResult,
         ProviderResultMetadata,
         ResultStatus,
     )
-    from alon_ai.providers.execution import GovernedExecutor
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     repo, _, attr, config, _, now = await seed(governance_engine)
 
@@ -664,8 +664,8 @@ async def test_executor_durable_dispatch_no_transaction_and_timeout_replay(
 
 
 async def test_executor_typed_exception_omits_raw_provider_content(governance_engine):
-    from alon_ai.accounting import schema as s
-    from alon_ai.providers.execution import GovernedExecutor
+    from alon_ai.db.tables import accounting as s
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     repo, _, attr, config, _, _ = await seed(governance_engine)
 
@@ -685,9 +685,9 @@ async def test_executor_typed_exception_omits_raw_provider_content(governance_en
 
 
 async def test_timeouts_count_toward_circuit_without_freeing_slots(governance_engine):
-    from alon_ai.accounting import schema as s
-    from alon_ai.providers.contracts import ProviderErrorCode
-    from alon_ai.providers.execution import GovernedExecutor
+    from alon_ai.db.tables import accounting as s
+    from alon_ai.integrations.schemas.provider import ProviderErrorCode
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     repo, _, attr, config, _, _ = await seed(governance_engine, concurrency=10)
 
@@ -720,7 +720,7 @@ async def test_database_error_does_not_leak_source_content(governance_engine):
 
 
 async def test_foreign_grant_event_identity_is_rejected_in_database(governance_engine):
-    from alon_ai.accounting import schema as s
+    from alon_ai.db.tables import accounting as s
 
     _, admin, _, _, grant, now = await seed(governance_engine)
     event = GrantEvent(
@@ -834,7 +834,7 @@ async def test_query_separates_reserved_estimated_accrual_and_cash(governance_en
 async def test_postgres_rejects_cross_capability_price_and_missing_proof(
     governance_engine,
 ):
-    from alon_ai.accounting import schema as s
+    from alon_ai.db.tables import accounting as s
 
     repo, admin, attr, config, _grant, now = await seed(governance_engine)
     p = PriceVersion(
@@ -873,7 +873,7 @@ async def test_postgres_rejects_cross_capability_price_and_missing_proof(
 async def test_scope_actor_mismatch_and_new_child_do_not_reset_parent_budget(
     governance_engine,
 ):
-    from alon_ai.providers.contracts import AgentActor
+    from alon_ai.integrations.schemas.provider import AgentActor
 
     repo, admin, attr, config, _, now = await seed(
         governance_engine, limit=Decimal(".01")
@@ -915,7 +915,7 @@ async def test_scope_actor_mismatch_and_new_child_do_not_reset_parent_budget(
 async def test_generic_writes_denied_even_with_full_configuration(
     governance_engine, capability
 ):
-    from alon_ai.providers.execution import GovernedExecutor
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     repo, _, attr, config, _, _ = await seed(governance_engine, capability=capability)
 
@@ -937,14 +937,14 @@ async def test_transient_success_is_not_durable_content_or_replay_cache(
     import hashlib
     import pickle
 
-    from alon_ai.accounting import schema as s
-    from alon_ai.providers.contracts import (
+    from alon_ai.db.tables import accounting as s
+    from alon_ai.integrations.schemas.provider import (
         ProviderCallResult,
         ProviderResultMetadata,
         ResultStatus,
     )
-    from alon_ai.providers.execution import GovernedExecutor
-    from alon_ai.providers.rights import RuntimeContent
+    from alon_ai.policies.provider_rights import RuntimeContent
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     repo, _, attr, config, grant, now = await seed(governance_engine, transient=True)
     sentinel = "https://synthetic-transient-content.invalid/private"
@@ -990,8 +990,8 @@ async def test_transient_success_is_not_durable_content_or_replay_cache(
 
 
 async def test_admission_hook_mutations_rollback_with_denied_budget(governance_engine):
-    from alon_ai.accounting import schema as s
-    from alon_ai.accounting.repository import GovernanceRepository
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.tables import accounting as s
 
     repo, _, attr, config, _, now = await seed(
         governance_engine, gate="SUPPLY", limit=Decimal(0)
@@ -1019,7 +1019,7 @@ async def test_admission_hook_mutations_rollback_with_denied_budget(governance_e
 
 
 async def test_dispatch_preserves_positive_fractional_deadline(governance_engine):
-    from alon_ai.accounting import schema as s
+    from alon_ai.db.tables import accounting as s
 
     repo, _, attr, config, _, now = await seed(governance_engine)
     attr = attr.model_copy(update={"deadline": now + timedelta(milliseconds=100)})
@@ -1035,7 +1035,7 @@ async def test_dispatch_preserves_positive_fractional_deadline(governance_engine
 async def test_restart_reconciles_with_registered_proof_without_dispatch_token(
     governance_engine,
 ):
-    from alon_ai.accounting.repository import GovernanceRepository
+    from alon_ai.db.repositories.accounting import GovernanceRepository
 
     repo, _, attr, config, _, now = await seed(governance_engine)
     call = await reserve(repo, attr, config)
@@ -1060,8 +1060,8 @@ async def test_restart_reconciles_with_registered_proof_without_dispatch_token(
 
 
 async def test_executor_cancellation_quarantines_occupied_slot(governance_engine):
-    from alon_ai.accounting import schema as s
-    from alon_ai.providers.execution import GovernedExecutor
+    from alon_ai.db.tables import accounting as s
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     repo, _, attr, config, _, _ = await seed(governance_engine)
     started = asyncio.Event()
@@ -1120,9 +1120,9 @@ async def wait_for_pg_lock(engine, task):
 async def test_expiry_during_required_lock_wait_denies(
     governance_engine, phase, lock_kind
 ):
-    from alon_ai.accounting import schema as s
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.providers.rights import RuntimeContent
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.tables import accounting as s
+    from alon_ai.policies.provider_rights import RuntimeContent
 
     _, _, attr, config, grant, now = await seed(governance_engine)
     moment = [now]
@@ -1190,7 +1190,7 @@ async def test_expiry_during_required_lock_wait_denies(
 async def test_postgres_rejects_malformed_call_intent_json(governance_engine, mutation):
     import copy
 
-    from alon_ai.accounting import schema as s
+    from alon_ai.db.tables import accounting as s
 
     repo, _, attr, config, _, _ = await seed(governance_engine)
     await reserve(repo, attr, config)
@@ -1259,8 +1259,11 @@ async def test_postgres_rejects_malformed_call_intent_json(governance_engine, mu
     ],
 )
 async def test_postgres_rejects_malformed_result_json(governance_engine, mutation):
-    from alon_ai.accounting import schema as s
-    from alon_ai.providers.contracts import ProviderResultMetadata, ResultStatus
+    from alon_ai.db.tables import accounting as s
+    from alon_ai.integrations.schemas.provider import (
+        ProviderResultMetadata,
+        ResultStatus,
+    )
 
     repo, _, attr, config, _, now = await seed(governance_engine)
     call = await reserve(repo, attr, config)
@@ -1312,8 +1315,8 @@ async def test_postgres_rejects_malformed_result_json(governance_engine, mutatio
 async def test_expiry_during_sql_admission_hook_wait_denies(
     governance_engine, target_phase
 ):
-    from alon_ai.accounting import schema as s
-    from alon_ai.accounting.repository import GovernanceRepository
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.tables import accounting as s
 
     _, _, attr, config, grant, now = await seed(governance_engine, gate="SUPPLY")
     moment = [now]
@@ -1350,9 +1353,9 @@ async def test_expiry_during_sql_admission_hook_wait_denies(
 
 
 async def test_retention_expiry_during_content_row_lock_wait_denies(governance_engine):
-    from alon_ai.accounting import schema as s
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.providers.rights import RuntimeContent
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.tables import accounting as s
+    from alon_ai.policies.provider_rights import RuntimeContent
 
     _, _, attr, config, grant, now = await seed(governance_engine)
     moment = [now]

@@ -5,7 +5,7 @@ from uuid import UUID
 
 from pydantic import AwareDatetime, Field, model_validator
 
-from alon_ai.providers.contracts import StrictDTO
+from alon_ai.integrations.schemas.provider import StrictDTO
 
 Dimension = Literal["SOURCE", "QUERY", "CATEGORY", "GEOGRAPHY", "TRAIT"]
 FactKind = Literal[

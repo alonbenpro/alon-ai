@@ -19,9 +19,14 @@ from starlette.requests import Request
 from test_governance import reserve, seed, wait_for_pg_lock
 
 from alon_ai.api.app import create_app
-from alon_ai.api.auth import COOKIE_NAME, AuthService, LoginRateLimited, hash_password
 from alon_ai.api.routes import operator as operator_routes
 from alon_ai.config import Settings
+from alon_ai.services.auth import (
+    COOKIE_NAME,
+    AuthService,
+    LoginRateLimited,
+    hash_password,
+)
 
 ORIGIN = {"Origin": "http://localhost:3000"}
 
@@ -184,7 +189,7 @@ async def test_login_failures_delay_but_do_not_lock_out_correct_credentials(
 ):
     app, _ = await _app(governance_engine)
     service = AuthService(governance_engine, app.state.settings)
-    from alon_ai.api import auth as auth_module
+    from alon_ai.services import auth as auth_module
 
     original = auth_module._password_matches
 
@@ -237,7 +242,7 @@ async def test_correct_login_completes_during_continuing_wrong_password_traffic(
     for _ in range(5):
         assert await attacker.login("wrong") is None
 
-    from alon_ai.api import auth as auth_module
+    from alon_ai.services import auth as auth_module
 
     original = auth_module._password_matches
     started = threading.Event()
@@ -283,7 +288,7 @@ async def test_login_admission_bounds_waiters_and_releases_cancelled_capacity(
     app, _ = await _app(governance_engine)
     service = AuthService(governance_engine, app.state.settings)
     other_service = AuthService(governance_engine, app.state.settings)
-    from alon_ai.api import auth as auth_module
+    from alon_ai.services import auth as auth_module
 
     original = auth_module._password_matches
     started = threading.Event()
@@ -354,7 +359,7 @@ async def test_login_admission_rejects_excess_before_waiting_for_a_connection(
         governance_engine.url, pool_size=1, max_overflow=0
     )
     service = AuthService(bounded_engine, app.state.settings)
-    from alon_ai.api import auth as auth_module
+    from alon_ai.services import auth as auth_module
 
     original = auth_module._password_matches
     started = threading.Event()
@@ -391,7 +396,7 @@ async def test_cancelling_a_login_retains_capacity_until_scrypt_finishes(
     app, _ = await _app(governance_engine)
     service = AuthService(governance_engine, app.state.settings)
     other_service = AuthService(governance_engine, app.state.settings)
-    from alon_ai.api import auth as auth_module
+    from alon_ai.services import auth as auth_module
 
     original = auth_module._password_matches
     started = threading.Event()
@@ -546,7 +551,9 @@ async def test_activity_stream_updates_and_stops_after_revocation(
     login = await auth.login("test-password")
     assert login is not None
     token, _ = login
-    monkeypatch.setattr(operator_routes, "EVENT_POLL_SECONDS", 0.01)
+    from alon_ai.api import operator_stream
+
+    monkeypatch.setattr(operator_stream, "EVENT_POLL_SECONDS", 0.01)
 
     async def receive():
         return {"type": "http.request", "body": b"", "more_body": False}
@@ -562,7 +569,16 @@ async def test_activity_stream_updates_and_stops_after_revocation(
         },
         receive,
     )
-    response = await operator_routes.activity_events(request)
+    from alon_ai.api.operator_stream import OperatorStreamFactory
+    from alon_ai.db.repositories.operator_activity import OperatorActivityRepository
+    from alon_ai.services.operator import OperatorService
+
+    stream_factory = OperatorStreamFactory(
+        OperatorService(OperatorActivityRepository(governance_engine))
+    )
+    response = await operator_routes.activity_events(
+        stream_factory.for_request(token, auth.resolve, request.is_disconnected)
+    )
     stream = aiter(response.body_iterator)
     first = await asyncio.wait_for(anext(stream), timeout=1)
     first = first.decode() if isinstance(first, bytes) else first
@@ -574,3 +590,48 @@ async def test_activity_stream_updates_and_stops_after_revocation(
     await auth.logout(token)
     with pytest.raises(StopAsyncIteration):
         await asyncio.wait_for(anext(stream), timeout=1)
+
+
+async def test_health_service_reports_database_outage_without_http_state():
+    from alon_ai.services.health import HealthService, ReadinessUnavailable
+
+    async def down():
+        return False
+
+    service = HealthService(down)
+    assert service.live().model_dump() == {"status": "ok", "service": "api"}
+    with pytest.raises(ReadinessUnavailable):
+        await service.ready()
+
+
+async def test_operator_service_projects_reserved_call(governance_engine):
+    from alon_ai.db.repositories.operator_activity import OperatorActivityRepository
+    from alon_ai.services.operator import OperatorService
+
+    repo, _, attr, config, _, _ = await seed(governance_engine)
+    await reserve(repo, attr, config)
+    service = OperatorService(OperatorActivityRepository(governance_engine))
+    status = await service.status()
+    assert status.counts == {"queued": 1, "running": 0, "completed": 0, "blocked": 0}
+    activity = await service.activity(None)
+    assert len(activity.items) == 1
+    assert activity.items[0].state == "queued"
+    assert activity.cursor is not None
+
+
+async def test_health_readiness_maps_database_failure_to_503(governance_engine):
+    app, _ = await _app(governance_engine)
+    with TestClient(app) as client:
+        assert client.get("/health/live").json() == {"status": "ok", "service": "api"}
+        assert client.get("/health/ready").json() == {
+            "status": "ready",
+            "database": "up",
+        }
+
+        async def unavailable():
+            return False
+
+        app.state.database_health = unavailable
+        response = client.get("/health/ready")
+        assert response.status_code == 503
+        assert response.json() == {"status": "not_ready", "database": "down"}

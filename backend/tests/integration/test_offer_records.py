@@ -10,25 +10,24 @@ from sqlalchemy.exc import SQLAlchemyError
 from test_product_record_guards import cycle_fixture, put
 from test_product_records import NOW, register_test_operator
 
-from alon_ai.accounting import schema as gov
-from alon_ai.accounting.models import EvidenceRecord
-from alon_ai.accounting.repository import GovernanceProvisioner
-from alon_ai.records import (
+from alon_ai.db.repositories.accounting import GovernanceProvisioner
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.repositories.records_offers import OfferRecordsRepository
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables import records
+from alon_ai.db.tables import records_offer as offers
+from alon_ai.provider_usage.schemas.accounting import EvidenceRecord
+from alon_ai.services.schemas.records import (
     ArtifactInput,
     ArtifactKind,
-    CommercialConstraints,
-    DeliveryConstraints,
     OperatorCapabilityProfile,
     ProductAgent,
     ProductExperiment,
     ProductRecordsDenied,
-    ProductRecordsRepository,
     ProductWorkflow,
     SourceReference,
 )
-from alon_ai.records import offer_schema as offers
-from alon_ai.records import schema as records
-from alon_ai.records.offer_models import (
+from alon_ai.services.schemas.records_offer import (
     INITIAL_OUTREACH_POLICY,
     OFFER_FIELD_EVIDENCE_ROLES,
     OPERATOR_FIELD_CONSTRAINTS,
@@ -40,7 +39,10 @@ from alon_ai.records.offer_models import (
     OfferGapRequest,
     QualificationCriterion,
 )
-from alon_ai.records.offers import OfferRecordsRepository
+from alon_ai.services.schemas.records_operator import (
+    CommercialConstraints,
+    DeliveryConstraints,
+)
 
 pytestmark = pytest.mark.integration
 

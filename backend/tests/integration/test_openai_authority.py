@@ -17,19 +17,19 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import create_async_engine
 from test_governance import add_event, reserve, seed
 
-from alon_ai.openai_runtime.authority import (
+from alon_ai.agents.schemas.openai import PremiumAuthorization, Route
+from alon_ai.db.repositories.openai_authority import (
     OpenAIAuthorityStore,
     OpenAIRunConflict,
 )
-from alon_ai.openai_runtime.contract import PremiumAuthorization, Route
-from alon_ai.openai_runtime.schema import run_intents
-from alon_ai.openai_runtime.store import (
+from alon_ai.db.repositories.openai_run import (
     OpenAIRunIntent,
     OpenAIRunOutcome,
     OpenAIRunStore,
 )
-from alon_ai.providers.contracts import Capability, UsageComponent
-from alon_ai.providers.rights import GrantEvent, GrantEventKind
+from alon_ai.db.tables.openai import run_intents
+from alon_ai.integrations.schemas.provider import Capability, UsageComponent
+from alon_ai.policies.provider_rights import GrantEvent, GrantEventKind
 
 pytestmark = pytest.mark.integration
 

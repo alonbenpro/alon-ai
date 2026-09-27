@@ -13,13 +13,13 @@ import pytest
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncEngine
 
-from alon_ai.api import live_idea_provision as provision
-from alon_ai.api.live_idea_provision import (
+from alon_ai.integrations.schemas.provider import UsageComponent
+from alon_ai.services import live_idea_provision as provision
+from alon_ai.services.live_idea_provision import (
     LiveIdeaSetupManifest,
     LivePriceSpec,
     make_authority_bundle,
 )
-from alon_ai.providers.contracts import UsageComponent
 
 
 def sample_manifest() -> LiveIdeaSetupManifest:

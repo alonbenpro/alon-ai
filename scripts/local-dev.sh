@@ -268,7 +268,7 @@ case "${1:-help}" in
             compose run --rm --no-deps --user root live-provision sh -c 'chown 10001:10001 /app/.local && chmod 700 /app/.local' || fail 'Live secret volume initialization failed.'
             if ! compose run --rm --no-deps live-provision test -d /app/.local/live; then
                 compose run --rm --no-deps -v "$ALON_AI_L07_LIVE_MANIFEST:/app/authority-manifest.json:ro" live-provision test -f /app/authority-manifest.json || fail 'Live manifest is not a regular file inside Docker; place it in the checkout .local directory shared with Docker.'
-                compose run --rm --no-deps -v "$ALON_AI_L07_LIVE_MANIFEST:/app/authority-manifest.json:ro" live-provision python -m alon_ai.api.live_idea_provision --manifest /app/authority-manifest.json --data-dir /app/.local || fail 'Live authority/key provisioning failed; no model request was sent.'
+                compose run --rm --no-deps -v "$ALON_AI_L07_LIVE_MANIFEST:/app/authority-manifest.json:ro" live-provision python -m alon_ai.services.live_idea_provision --manifest /app/authority-manifest.json --data-dir /app/.local || fail 'Live authority/key provisioning failed; no model request was sent.'
             else
                 compose run --rm --no-deps live-provision sh -c 'test -f /app/.local/live/live-idea.json && test -f /app/.local/live/live-secret.key && test -d /app/.local/live/secrets' || fail 'Live private volume is incomplete; review it privately before restarting.'
             fi

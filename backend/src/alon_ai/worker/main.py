@@ -8,21 +8,23 @@ from dbos import DBOS
 from alon_ai.config import Settings, get_settings
 from alon_ai.db.engine import create_engine
 from alon_ai.logging import configure_logging
+from alon_ai.worker.config import configure_dbos
 from alon_ai.workflows.campaign_supply import (
     assert_campaign_supply_compatible_application_version,
     recover_campaign_supply_workflows,
 )
 from alon_ai.workflows.market_research import (
-    DBOS_APPLICATION_NAME,
-    DBOS_APPLICATION_VERSION,
     assert_compatible_application_version,
-    configure_dbos,
     recover_market_research_decision_workflows,
     recover_market_research_workflows,
 )
 from alon_ai.workflows.offer_design import (
     assert_offer_design_compatible_application_version,
     recover_offer_design_workflows,
+)
+from alon_ai.workflows.schemas.runtime import (
+    DBOS_APPLICATION_NAME,
+    DBOS_APPLICATION_VERSION,
 )
 
 DBOS_EXECUTOR_ID = "alon-ai-worker"

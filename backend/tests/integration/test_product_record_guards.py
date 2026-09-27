@@ -7,7 +7,8 @@ from sqlalchemy import insert, select
 from sqlalchemy.exc import SQLAlchemyError
 from test_product_records import NOW, accept_feedback, artifact, roots
 
-from alon_ai.records import (
+from alon_ai.db.tables import records
+from alon_ai.services.schemas.records import (
     ArtifactInput,
     ArtifactKind,
     ProductAgent,
@@ -16,7 +17,6 @@ from alon_ai.records import (
     ProductWorkflow,
     SourceReference,
 )
-from alon_ai.records import schema as records
 
 pytestmark = pytest.mark.integration
 
@@ -222,7 +222,7 @@ async def test_authoritative_receipts_close_artifact_lineage(
     if late_source:
         from test_governance import register
 
-        from alon_ai.accounting.repository import GovernanceProvisioner
+        from alon_ai.db.repositories.accounting import GovernanceProvisioner
 
         evidence_id = uuid4()
         await register(
@@ -625,7 +625,7 @@ async def test_append_replay_compares_sources_and_ignores_input_order(
 ):
     from test_governance import register
 
-    from alon_ai.accounting.repository import GovernanceProvisioner
+    from alon_ai.db.repositories.accounting import GovernanceProvisioner
 
     repo, experiment_id, seed, _, idea, _ = await cycle_fixture(governance_engine)
     draft = artifact(

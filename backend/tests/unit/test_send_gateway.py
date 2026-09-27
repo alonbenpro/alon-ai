@@ -3,15 +3,15 @@ from uuid import uuid4
 
 import pytest
 
-from alon_ai.domain.sending import (
+from alon_ai.integrations.gmail import GmailProvider, SendResult
+from alon_ai.policies.sending import PolicyDecision, SendPolicy
+from alon_ai.provider_usage.sending import (
     EmailDraft,
     OutreachDisabledError,
     SendGateway,
     SendRejectedError,
     SendRequest,
 )
-from alon_ai.policies.sending import PolicyDecision, SendPolicy
-from alon_ai.providers.gmail import GmailProvider, SendResult
 
 
 def make_request() -> SendRequest:

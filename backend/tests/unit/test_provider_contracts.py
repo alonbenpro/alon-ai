@@ -8,7 +8,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from alon_ai.providers.contracts import (
+from alon_ai.integrations.schemas.provider import (
     CAPABILITIES,
     AgentActor,
     CallAttribution,
@@ -162,7 +162,7 @@ def test_validation_errors_never_retain_raw_inputs_or_unknown_field_names():
 
 
 def test_brave_malformed_candidate_is_present_not_absent():
-    from alon_ai.providers.contracts import EmailPresence, inspect_brave_email
+    from alon_ai.integrations.schemas.provider import EmailPresence, inspect_brave_email
 
     args: dict[str, Any] = {
         "business_id": uuid4(),
@@ -197,9 +197,9 @@ def deny_network(monkeypatch):
 def fake_session(capability, scenario=None):
     from datetime import timedelta
 
-    from alon_ai.providers.contracts import ContentField, Purpose
-    from alon_ai.providers.fakes import FakeSession, FixtureScenario
-    from alon_ai.providers.rights import IntendedUse, ProviderUsageGrant
+    from alon_ai.integrations.fakes import FakeSession, FixtureScenario
+    from alon_ai.integrations.schemas.provider import ContentField, Purpose
+    from alon_ai.policies.provider_rights import IntendedUse, ProviderUsageGrant
 
     now = datetime(2026, 9, 12, tzinfo=UTC)
     purpose = {
@@ -274,8 +274,7 @@ async def test_every_fake_port_is_typed_synthetic_and_offline(capability, method
 
     from pydantic import SecretStr
 
-    from alon_ai.providers import contracts as c
-    from alon_ai.providers.fakes import (
+    from alon_ai.integrations.fakes import (
         FakeBraveProvider,
         FakeCalendarProvider,
         FakeContactDiscoveryProvider,
@@ -284,6 +283,7 @@ async def test_every_fake_port_is_typed_synthetic_and_offline(capability, method
         FakeGmailProvider,
         FakeOpenAIProvider,
     )
+    from alon_ai.integrations.schemas import provider as c
 
     session = fake_session(capability)
     now = datetime(2026, 9, 12, tzinfo=UTC)
@@ -366,8 +366,8 @@ async def test_each_hunter_discovery_port_blocks_without_evidenced_absence(
 ):
     from pydantic import SecretStr
 
-    from alon_ai.providers import contracts as c
-    from alon_ai.providers.fakes import FakeContactDiscoveryProvider
+    from alon_ai.integrations.fakes import FakeContactDiscoveryProvider
+    from alon_ai.integrations.schemas import provider as c
 
     session = fake_session(Capability.HUNTER_DOMAIN_SEARCH)
     business = uuid4()
@@ -406,8 +406,8 @@ async def test_fake_failure_results_classify_without_raw_upstream_text(
 ):
     from pydantic import SecretStr
 
-    from alon_ai.providers import contracts as c
-    from alon_ai.providers.fakes import FakeOpenAIProvider, FixtureScenario
+    from alon_ai.integrations.fakes import FakeOpenAIProvider, FixtureScenario
+    from alon_ai.integrations.schemas import provider as c
 
     session = fake_session(Capability.OPENAI_GENERATE, FixtureScenario(scenario))
     result = await FakeOpenAIProvider(session).generate(
@@ -424,9 +424,9 @@ async def test_fake_failure_results_classify_without_raw_upstream_text(
 
 
 async def test_fake_write_ports_fail_closed_and_gmail_compatibility_is_preserved():
-    from alon_ai.providers import contracts as c
-    from alon_ai.providers.fakes import FakeCalendarProvider, FakeGmailProvider
-    from alon_ai.providers.gmail import EmailDraft, GmailProvider, SendRequest
+    from alon_ai.integrations.fakes import FakeCalendarProvider, FakeGmailProvider
+    from alon_ai.integrations.gmail import EmailDraft, GmailProvider, SendRequest
+    from alon_ai.integrations.schemas import provider as c
 
     session = fake_session(Capability.GMAIL_READ)
     gmail = FakeGmailProvider(session)
@@ -459,8 +459,11 @@ def test_malformed_json_contract_entry_point_strips_input():
 
 
 async def test_fake_wrong_capability_method_denies_before_invocation():
-    from alon_ai.providers.contracts import FirecrawlMapRequest, ProviderFailure
-    from alon_ai.providers.fakes import FakeFirecrawlProvider
+    from alon_ai.integrations.fakes import FakeFirecrawlProvider
+    from alon_ai.integrations.schemas.provider import (
+        FirecrawlMapRequest,
+        ProviderFailure,
+    )
 
     session = fake_session(Capability.FIRECRAWL_MAP)
     with pytest.raises(ProviderFailure):
@@ -475,7 +478,7 @@ def test_strict_dto_json_roundtrip_preserves_decimal_uuid_and_aware_datetime():
 
     from pydantic import AwareDatetime, field_validator
 
-    from alon_ai.providers.contracts import StrictDTO
+    from alon_ai.integrations.schemas.provider import StrictDTO
 
     class ExactValue(StrictDTO):
         record_id: UUID
@@ -518,7 +521,7 @@ def test_strict_dto_json_roundtrip_preserves_decimal_uuid_and_aware_datetime():
 def test_strict_dto_python_ingress_still_rejects_float_and_bool_money(amount):
     from pydantic import TypeAdapter
 
-    from alon_ai.providers.contracts import StrictDTO
+    from alon_ai.integrations.schemas.provider import StrictDTO
 
     class ExactMoney(StrictDTO):
         amount: Decimal
@@ -533,7 +536,7 @@ def test_strict_dto_python_ingress_still_rejects_float_and_bool_money(amount):
 
 
 def test_nested_strict_dto_json_errors_hide_fields_input_and_context():
-    from alon_ai.providers.contracts import StrictDTO
+    from alon_ai.integrations.schemas.provider import StrictDTO
 
     class ExactMoney(StrictDTO):
         amount: Decimal

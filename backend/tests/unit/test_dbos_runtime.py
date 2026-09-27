@@ -1,15 +1,17 @@
 from uuid import UUID
 
 from alon_ai.config import Settings
-from alon_ai.workflows.market_research import (
-    DBOS_APPLICATION_NAME,
-    DBOS_APPLICATION_VERSION,
-    DBOS_SYSTEM_SCHEMA,
-    build_dbos_config,
+from alon_ai.worker.config import build_dbos_config
+from alon_ai.workflows.schemas.market_research import (
     inconclusive_supplement_workflow_id,
     market_research_outcome_workflow_id,
     market_research_workflow_id,
     material_pivot_decision_workflow_id,
+)
+from alon_ai.workflows.schemas.runtime import (
+    DBOS_APPLICATION_NAME,
+    DBOS_APPLICATION_VERSION,
+    DBOS_SYSTEM_SCHEMA,
 )
 
 

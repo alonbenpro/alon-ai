@@ -10,10 +10,12 @@ from sqlalchemy.exc import SQLAlchemyError
 from test_learning_records import NOW, digest, proposal_request
 from test_organization_records import complete_content, provision_call
 
-from alon_ai import records
-from alon_ai.accounting import schema as governance
-from alon_ai.accounting.repository import GovernanceProvisioner
-from alon_ai.providers.contracts import (
+import alon_ai.db.repositories.records_learning as learning_repository
+import alon_ai.db.tables.records as product_schema
+import alon_ai.services.schemas.records_learning as learning_contracts
+from alon_ai.db.repositories.accounting import GovernanceProvisioner
+from alon_ai.db.tables import accounting as governance
+from alon_ai.integrations.schemas.provider import (
     AgentActor,
     CallAttribution,
     Capability,
@@ -21,7 +23,9 @@ from alon_ai.providers.contracts import (
     OperationRunKind,
     SafeRequestMetadata,
 )
-from alon_ai.records import (
+from alon_ai.services.schemas.records import ProductRecordsDenied
+from alon_ai.services.schemas.records_learning import (
+    DiscoveryStrategyConfiguration,
     FreezeExperimentStrategyRequest,
     GlobalStrategyPackageRequest,
     LearningCallSnapshot,
@@ -33,29 +37,26 @@ from alon_ai.records import (
     LiveRegressionAssessmentRequest,
     LiveStrategyMetricInput,
     LiveStrategyObservationRequest,
-    ProductRecordsDenied,
+    OutreachStrategyConfiguration,
     PromotionDecisionRequest,
+    QualificationStrategyConfiguration,
+    ReplyStrategyConfiguration,
     RollbackCandidateInput,
     RollbackDecisionRequest,
     StrategyAgentVersionInput,
     StrategyControlRequest,
     StrategyExecutionBindingRequest,
 )
-from alon_ai.records import schema as product_schema
-from alon_ai.records.learning_models import (
-    DiscoveryStrategyConfiguration,
-    OutreachStrategyConfiguration,
-    QualificationStrategyConfiguration,
-    ReplyStrategyConfiguration,
-)
 
 pytestmark = pytest.mark.integration
 
 
 def test_strategy_package_contract_is_public():
-    assert hasattr(records, "StrategyAgentVersionInput")
-    assert hasattr(records, "GlobalStrategyPackageRequest")
-    assert hasattr(records.LearningRecordsRepository, "record_strategy_package")
+    assert hasattr(learning_contracts, "StrategyAgentVersionInput")
+    assert hasattr(learning_contracts, "GlobalStrategyPackageRequest")
+    assert hasattr(
+        learning_repository.LearningRecordsRepository, "record_strategy_package"
+    )
 
 
 def test_promotion_observation_rollback_and_control_contracts_are_public():
@@ -66,7 +67,7 @@ def test_promotion_observation_rollback_and_control_contracts_are_public():
         "RollbackDecisionRequest",
         "StrategyControlRequest",
     ):
-        assert hasattr(records, name)
+        assert hasattr(learning_contracts, name)
 
 
 async def strategy_package(engine, *, version=1, supersedes_id=None):

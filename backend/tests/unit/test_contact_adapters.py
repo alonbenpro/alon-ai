@@ -5,8 +5,12 @@ from uuid import uuid4
 import pytest
 from pydantic import SecretStr
 
-from alon_ai.accounting.models import CapabilityConfig, PriceBound
-from alon_ai.providers.contracts import (
+from alon_ai.integrations.fakes import (
+    FakeBraveProvider,
+    FakeContactDiscoveryProvider,
+    FakeEmailVerificationProvider,
+)
+from alon_ai.integrations.schemas.provider import (
     BraveSearchRequest,
     Capability,
     ContactDiscoveryRequest,
@@ -18,18 +22,14 @@ from alon_ai.providers.contracts import (
     Purpose,
     VerificationStatus,
 )
-from alon_ai.providers.fakes import (
-    FakeBraveProvider,
-    FakeContactDiscoveryProvider,
-    FakeEmailVerificationProvider,
-)
-from alon_ai.providers.rights import (
+from alon_ai.policies.provider_rights import (
     GrantEvent,
     GrantEventKind,
     IntendedUse,
     ProviderUsageGrant,
     RuntimeContent,
 )
+from alon_ai.provider_usage.schemas.accounting import CapabilityConfig, PriceBound
 
 NOW = datetime(2026, 9, 12, 12, tzinfo=UTC)
 
@@ -154,7 +154,7 @@ def licensed(capability: Capability, field: ContentField):
 def test_contact_adapter_builds_only_the_pinned_typed_call(
     capability, provider_type, request_type, method
 ):
-    from alon_ai.providers.contact_adapters import ConfiguredContactAdapter
+    from alon_ai.integrations.contact import ConfiguredContactAdapter
 
     business_id = uuid4()
     source = observation(business_id)
@@ -183,7 +183,7 @@ def test_contact_adapter_builds_only_the_pinned_typed_call(
 
 
 def test_contact_adapter_rejects_config_or_quantity_substitution():
-    from alon_ai.providers.contact_adapters import ConfiguredContactAdapter
+    from alon_ai.integrations.contact import ConfiguredContactAdapter
 
     request = BraveSearchRequest(
         capability=Capability.BRAVE_LOCAL_DISCOVERY,
@@ -220,7 +220,7 @@ def test_contact_adapter_rejects_config_or_quantity_substitution():
     ],
 )
 def test_verification_status_requires_exact_licensed_content(raw, expected):
-    from alon_ai.contact import observe_verification_status
+    from alon_ai.policies.contact import observe_verification_status
 
     use, grant = licensed(Capability.HUNTER_EMAIL_VERIFICATION, ContentField.TEXT)
     content = RuntimeContent(
@@ -231,7 +231,7 @@ def test_verification_status_requires_exact_licensed_content(raw, expected):
 
 @pytest.mark.parametrize("candidate", ["malformed-candidate", "", "   "])
 def test_any_observed_brave_candidate_counts_present_even_if_malformed(candidate):
-    from alon_ai.contact import observe_email_presence
+    from alon_ai.policies.contact import observe_email_presence
 
     use, grant = licensed(Capability.BRAVE_LOCAL_DISCOVERY, ContentField.EMAIL)
     content = RuntimeContent(
@@ -244,7 +244,7 @@ def test_any_observed_brave_candidate_counts_present_even_if_malformed(candidate
 
 
 def test_runtime_parser_rechecks_exact_grant_and_revocation():
-    from alon_ai.contact import observe_verification_status
+    from alon_ai.policies.contact import observe_verification_status
 
     use, grant = licensed(Capability.HUNTER_EMAIL_VERIFICATION, ContentField.TEXT)
     content = RuntimeContent(

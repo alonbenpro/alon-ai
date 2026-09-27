@@ -10,18 +10,27 @@ from pydantic import SecretStr
 from sqlalchemy import select
 from test_governance import seed
 
-from alon_ai.accounting import schema as gov
-from alon_ai.accounting.models import AccountingDenied, CallState, Reason
-from alon_ai.openai_runtime.contract import (
+from alon_ai.agents.runtime import AcceptedSource
+from alon_ai.agents.schemas.openai import (
     AdvisoryAnswer,
     OpenAIProfile,
     RoutingFacts,
     RoutingPolicy,
 )
-from alon_ai.openai_runtime.runtime import AcceptedSource, OpenAIRuntime
-from alon_ai.openai_runtime.store import OpenAIRunOutcome, OpenAIRunStore
-from alon_ai.providers.contracts import Capability, ContentField, UsageComponent
-from alon_ai.providers.rights import RuntimeContent
+from alon_ai.db.repositories.openai_run import OpenAIRunOutcome, OpenAIRunStore
+from alon_ai.db.tables import accounting as gov
+from alon_ai.integrations.schemas.provider import (
+    Capability,
+    ContentField,
+    UsageComponent,
+)
+from alon_ai.policies.provider_rights import RuntimeContent
+from alon_ai.provider_usage.schemas.accounting import (
+    AccountingDenied,
+    CallState,
+    Reason,
+)
+from alon_ai.services.agent_runs import OpenAIRuntime
 
 pytestmark = pytest.mark.integration
 

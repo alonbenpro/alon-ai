@@ -23,36 +23,40 @@ from test_offer_records import (
 from test_organization_records import complete_content, provision_call, snapshot
 from test_product_records import NOW, artifact
 
-from alon_ai.contact import ContactPolicyRepository
-from alon_ai.providers.contracts import Capability, ContentField
-from alon_ai.providers.execution import ExecutionResult
-from alon_ai.records import (
-    AngleCandidateInput,
+from alon_ai.db.repositories.contact import ContactPolicyRepository
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.repositories.records_organizations import OrganizationRepository
+from alon_ai.db.repositories.records_outreach import OutreachRecordsRepository
+from alon_ai.db.repositories.records_qualifications import QualificationCohortRepository
+from alon_ai.db.tables import records_offer as offers
+from alon_ai.db.tables import records_organization as organizations
+from alon_ai.db.tables import records_outreach as outreach
+from alon_ai.db.tables import records_qualification as qualification
+from alon_ai.db.tables import supply as supply_schema
+from alon_ai.integrations.schemas.provider import Capability, ContentField
+from alon_ai.provider_usage.service import ExecutionResult
+from alon_ai.services.schemas.records import (
     ArtifactInput,
     ArtifactKind,
-    ClaimInput,
-    DraftGraphRequest,
-    EvidenceCoverageInput,
-    FreezeOutreachContextRequest,
-    OutreachRecordsRepository,
     ProductRecordsDenied,
-    ProductRecordsRepository,
-    SequenceStepInput,
-    SubjectCandidateInput,
 )
-from alon_ai.records import offer_schema as offers
-from alon_ai.records import organization_schema as organizations
-from alon_ai.records import outreach_schema as outreach
-from alon_ai.records import qualification_schema as qualification
-from alon_ai.records.offer_models import (
+from alon_ai.services.schemas.records_offer import (
     INITIAL_OUTREACH_POLICY,
     OfferAcceptanceRequest,
     OfferFieldSource,
     QualificationCriterion,
 )
-from alon_ai.records.organization_models import RetainedOrganizationSource
-from alon_ai.records.organizations import OrganizationRepository
-from alon_ai.records.qualification_models import (
+from alon_ai.services.schemas.records_organization import RetainedOrganizationSource
+from alon_ai.services.schemas.records_outreach import (
+    AngleCandidateInput,
+    ClaimInput,
+    DraftGraphRequest,
+    EvidenceCoverageInput,
+    FreezeOutreachContextRequest,
+    SequenceStepInput,
+    SubjectCandidateInput,
+)
+from alon_ai.services.schemas.records_qualification import (
     CriterionResultInput,
     FreezeCohortRequest,
     LeadDossierRequest,
@@ -60,8 +64,6 @@ from alon_ai.records.qualification_models import (
     QualificationDecisionRequest,
     QualificationOutcome,
 )
-from alon_ai.records.qualifications import QualificationCohortRepository
-from alon_ai.supply import schema as supply_schema
 
 pytestmark = pytest.mark.integration
 
@@ -634,7 +636,9 @@ async def test_matrix_rejects_incomplete_failed_stale_and_protected_inputs(
 
 
 async def test_exact_fifty_freeze_is_atomic_protected_and_replayable(governance_engine):
-    from alon_ai.workflows.campaign_supply import CampaignSupplyWorkflowRepository
+    from alon_ai.db.repositories.workflow_campaign_supply import (
+        CampaignSupplyWorkflowRepository,
+    )
 
     (
         experiment_id,

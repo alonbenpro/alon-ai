@@ -9,24 +9,26 @@ import pytest
 from sqlalchemy import insert, select, text
 from sqlalchemy.exc import SQLAlchemyError
 
-from alon_ai.accounting import schema as gov
-from alon_ai.records import (
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.repositories.records_operators import OperatorRepository
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables import records
+from alon_ai.services.schemas.records import (
     ArtifactDraft,
     ArtifactInput,
     ArtifactKind,
-    CommercialConstraints,
-    DeliveryConstraints,
     OperatorCapabilityProfile,
-    OperatorIdentity,
-    OperatorRepository,
     ProductAgent,
     ProductExperiment,
     ProductRecordsDenied,
-    ProductRecordsRepository,
     ProductWorkflow,
     SourceReference,
 )
-from alon_ai.records import schema as records
+from alon_ai.services.schemas.records_operator import (
+    CommercialConstraints,
+    DeliveryConstraints,
+    OperatorIdentity,
+)
 
 pytestmark = pytest.mark.integration
 NOW = datetime(2026, 9, 12, 12, tzinfo=UTC)
@@ -339,9 +341,9 @@ async def test_source_reference_is_exact_but_does_not_block_retention_purge(
 ):
     from test_governance import reserve, seed
 
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.providers.contracts import ContentField
-    from alon_ai.providers.rights import RuntimeContent
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.integrations.schemas.provider import ContentField
+    from alon_ai.policies.provider_rights import RuntimeContent
 
     governance, _, attr, config, grant, now = await seed(governance_engine)
     call = await reserve(governance, attr, config)

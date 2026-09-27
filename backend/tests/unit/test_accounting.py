@@ -7,8 +7,12 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from alon_ai.accounting.models import FxVersion, PriceVersion, reserve_amount
-from alon_ai.providers.contracts import Capability, UsageComponent
+from alon_ai.integrations.schemas.provider import Capability, UsageComponent
+from alon_ai.provider_usage.schemas.accounting import (
+    FxVersion,
+    PriceVersion,
+    reserve_amount,
+)
 
 
 def price(**changes):

@@ -9,15 +9,20 @@ from dbos import DBOS
 
 from alon_ai.config import get_settings
 from alon_ai.db.engine import create_engine
-from alon_ai.workflows.campaign_supply import (
+from alon_ai.db.repositories.workflow_campaign_supply import (
     CampaignSupplyWorkflowRepository,
-    CampaignSupplyWorkflowRequest,
-    campaign_supply_workflow_id,
+)
+from alon_ai.worker.config import configure_dbos
+from alon_ai.workflows.campaign_supply import (
     finalize_campaign_supply_workflow,
     recover_campaign_supply_workflows,
     start_campaign_supply_workflow,
 )
-from alon_ai.workflows.market_research import DBOS_APPLICATION_VERSION, configure_dbos
+from alon_ai.workflows.schemas.campaign_supply import (
+    CampaignSupplyWorkflowRequest,
+    campaign_supply_workflow_id,
+)
+from alon_ai.workflows.schemas.runtime import DBOS_APPLICATION_VERSION
 
 
 async def run(args: argparse.Namespace) -> None:

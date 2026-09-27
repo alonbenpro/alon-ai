@@ -11,10 +11,10 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alon_ai.api.app import create_app
-from alon_ai.api.auth import OperatorSession
 from alon_ai.config import Settings
 from alon_ai.db.engine import DatabaseHealthChecker
 from alon_ai.logging import configure_logging
+from alon_ai.services.auth import OperatorSession
 
 
 def production_settings() -> Settings:

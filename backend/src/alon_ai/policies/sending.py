@@ -2,7 +2,7 @@ from typing import Protocol, runtime_checkable
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from alon_ai.providers.gmail import SendRequest
+from alon_ai.integrations.gmail import SendRequest
 
 
 class PolicyDecision(BaseModel):

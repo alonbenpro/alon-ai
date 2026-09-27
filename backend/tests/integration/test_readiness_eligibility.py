@@ -17,10 +17,10 @@ from test_qualification_cohorts import (
     qualified_pool,
 )
 
-from alon_ai.records import ProductRecordsDenied
-from alon_ai.records import qualification_schema as q
-from alon_ai.records.qualifications import QualificationCohortRepository
-from alon_ai.supply import schema as supply
+from alon_ai.db.repositories.records_qualifications import QualificationCohortRepository
+from alon_ai.db.tables import records_qualification as q
+from alon_ai.db.tables import supply
+from alon_ai.services.schemas.records import ProductRecordsDenied
 
 pytestmark = pytest.mark.integration
 

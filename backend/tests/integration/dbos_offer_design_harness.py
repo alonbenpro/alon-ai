@@ -11,18 +11,21 @@ from dbos import DBOS
 
 from alon_ai.config import get_settings
 from alon_ai.db.engine import create_engine
-from alon_ai.workflows.market_research import DBOS_APPLICATION_VERSION, configure_dbos
+from alon_ai.db.repositories.workflow_offer_design import OfferDesignWorkflowRepository
+from alon_ai.worker.config import configure_dbos
 from alon_ai.workflows.offer_design import (
-    OfferDesignDecisionWorkflowRequest,
-    OfferDesignWorkflowRepository,
-    OfferIdeaRefinementWorkflowRequest,
-    OfferTargetedResearchWorkflowRequest,
     finalize_offer_design_workflow,
-    offer_design_decision_workflow_id,
-    offer_idea_refinement_workflow_id,
     recover_offer_design_workflows,
     start_offer_design_workflow,
 )
+from alon_ai.workflows.schemas.offer_design import (
+    OfferDesignDecisionWorkflowRequest,
+    OfferIdeaRefinementWorkflowRequest,
+    OfferTargetedResearchWorkflowRequest,
+    offer_design_decision_workflow_id,
+    offer_idea_refinement_workflow_id,
+)
+from alon_ai.workflows.schemas.runtime import DBOS_APPLICATION_VERSION
 
 
 async def run(args: argparse.Namespace) -> None:

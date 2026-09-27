@@ -13,31 +13,28 @@ from test_governance import another, seed
 from test_openai_runtime import FakeSecrets, RecordedResponses, recorded
 from test_product_records import NOW, artifact, roots
 
-from alon_ai.accounting import schema as gov
-from alon_ai.openai_runtime.contract import (
-    RoutingFacts,
-    RoutingPolicy,
-    classify_response,
-)
-from alon_ai.openai_runtime.idea import (
+from alon_ai.agents.idea_discovery import (
     IdeaBriefAdvice,
     IdeaCandidateSetAdvice,
-    IdeaRuntime,
     IdeaStage,
     idea_profile,
 )
-from alon_ai.openai_runtime.runtime import AcceptedArtifact, OpenAIRuntime
-from alon_ai.openai_runtime.store import OpenAIRunOutcome, OpenAIRunStore
-from alon_ai.providers.contracts import Capability, UsageComponent
-from alon_ai.records import (
+from alon_ai.agents.runtime import AcceptedArtifact
+from alon_ai.agents.schemas.openai import RoutingFacts, RoutingPolicy, classify_response
+from alon_ai.db.repositories.openai_run import OpenAIRunOutcome, OpenAIRunStore
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables import records
+from alon_ai.integrations.schemas.provider import Capability, UsageComponent
+from alon_ai.services.agent_runs import OpenAIRuntime
+from alon_ai.services.ideas import IdeaRuntime
+from alon_ai.services.schemas.records import (
     ArtifactInput,
     ArtifactKind,
     ProductAgent,
     ProductExperiment,
-    ProductRecordsRepository,
     ProductWorkflow,
 )
-from alon_ai.records import schema as records
 
 
 def brief_advice(*, grounding_refs, **overrides):
@@ -767,7 +764,7 @@ async def test_forged_seed_hash_and_operator_profile_never_dispatch(governance_e
         seed=ArtifactInput.from_receipt(seed_receipt, role="SEED"),
         command_key=uuid4(),
     )
-    profile = await service._operator_profile(attribution.experiment_id)
+    profile = await service.inputs.operator_profile(attribution.experiment_id)
     forged = ArtifactInput.from_receipt(seed_receipt, role="SEED").model_copy(
         update={"content_hash": "0" * 64}
     )
@@ -848,7 +845,7 @@ async def test_candidate_refinement_requires_durable_selection_and_cycle(
                 ),
             ),
             operator_profiles=(
-                await service._operator_profile(attribution.experiment_id),
+                await service.inputs.operator_profile(attribution.experiment_id),
             ),
             idempotency_key=uuid4(),
         )

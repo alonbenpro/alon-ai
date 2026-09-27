@@ -16,29 +16,33 @@ from sqlalchemy import func, select
 from test_operator_access import ORIGIN, _app
 from test_product_records import artifact, roots
 
-from alon_ai.accounting.repository import GovernanceProvisioner
-from alon_ai.api.auth import COOKIE_NAME
-from alon_ai.api.recorded_idea_runtime import (
+from alon_ai.agents.idea_discovery import SeededIdeaBriefAdvice
+from alon_ai.agents.schemas.openai import RoutingFacts
+from alon_ai.db.repositories.accounting import GovernanceProvisioner
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.tables import records
+from alon_ai.integrations.schemas.provider import (
+    AgentActor,
+    CallAttribution,
+    OperationRunKind,
+)
+from alon_ai.provider_usage.recorded_idea import (
     _RecordedResponses,
     provision_recorded_seeded_runtime,
 )
-from alon_ai.openai_runtime.contract import RoutingFacts
-from alon_ai.openai_runtime.idea import SeededIdeaBriefAdvice
-from alon_ai.providers.contracts import AgentActor, CallAttribution, OperationRunKind
-from alon_ai.records import (
+from alon_ai.services.auth import COOKIE_NAME
+from alon_ai.services.schemas.records import (
     ArtifactDraft,
     ArtifactInput,
     ArtifactKind,
     ProductRecordsDenied,
-    ProductRecordsRepository,
 )
-from alon_ai.records import schema as records
 
 pytestmark = pytest.mark.integration
 
 
 def test_historical_advice_reads_without_weakening_new_profile_contract():
-    route = importlib.import_module("alon_ai.api.routes.experiments")
+    route = importlib.import_module("alon_ai.services.experiments")
     historical = {
         "title": "Legacy brief",
         "customer": "Legacy customer",
@@ -158,7 +162,7 @@ async def test_live_mode_uses_only_explicit_startup_provider_with_recorded_test_
             "l07_secret_key_version": "v1",
         }
     )
-    app_module = importlib.import_module("alon_ai.api.app")
+    app_module = importlib.import_module("alon_ai.bootstrap")
     observed = []
 
     def load_config(path):
@@ -495,7 +499,7 @@ async def test_concurrent_refinement_claim_dispatches_only_one_run(
 ):
     app, _ = await _app(governance_engine)
     app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
-    route = importlib.import_module("alon_ai.api.routes.experiments")
+    route = importlib.import_module("alon_ai.bootstrap")
     original = route.provision_recorded_seeded_runtime
     both_provisioned = asyncio.Event()
     dispatch_count = 0
@@ -571,7 +575,7 @@ async def test_same_key_claim_loser_does_not_block_winning_run(
 ):
     app, operator_id = await _app(governance_engine)
     app.state.settings = app.state.settings.model_copy(update={"provider_mode": "fake"})
-    route = importlib.import_module("alon_ai.api.routes.experiments")
+    route = importlib.import_module("alon_ai.bootstrap")
     run_id = uuid4()
     with TestClient(app) as setup:
         assert (
@@ -923,7 +927,7 @@ async def test_other_experiment_same_discovery_key_cannot_block_existing_owner(
                     created_at=datetime.now(UTC),
                 )
             )
-        route = importlib.import_module("alon_ai.api.routes.experiments")
+        route = importlib.import_module("alon_ai.bootstrap")
 
         async def collision(*args, **kwargs):
             assert kwargs["experiment_id"] == second_id
