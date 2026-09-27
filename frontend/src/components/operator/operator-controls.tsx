@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 
 const destinations = [
   { title: "Overview", detail: "Top of the control desk", href: "#overview" },
@@ -10,6 +11,7 @@ const destinations = [
 ];
 
 export function OperatorControls({ onOverview = true }: { onOverview?: boolean }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [motionOff, setMotionOff] = useState(false);
@@ -26,7 +28,7 @@ export function OperatorControls({ onOverview = true }: { onOverview?: boolean }
   const navigate = (href: string) => {
     close();
     if (!onOverview) {
-      window.location.assign(href);
+      router.push(href);
       return;
     }
     window.history.pushState(null, "", href);
@@ -108,7 +110,7 @@ export function OperatorControls({ onOverview = true }: { onOverview?: boolean }
             if (event.key === "Enter" && matches[0]) { event.preventDefault(); navigate(matches[0].href); }
           }} />
           <div className="palette-results">
-            {matches.length ? matches.map((item) => <a key={item.href} href={item.href} onClick={(event) => { if (onOverview) { event.preventDefault(); navigate(item.href); } else close(); }}><span><strong>{item.title}</strong><small>{item.detail}</small></span><span aria-hidden="true">↗</span></a>) : <p>No matching views</p>}
+            {matches.length ? matches.map((item) => <a key={item.href} href={item.href} onClick={(event) => { event.preventDefault(); navigate(item.href); }}><span><strong>{item.title}</strong><small>{item.detail}</small></span><span aria-hidden="true">↗</span></a>) : <p>No matching views</p>}
           </div>
           <div className="palette-hint">Esc to close · Enter to open first result</div>
         </div>
