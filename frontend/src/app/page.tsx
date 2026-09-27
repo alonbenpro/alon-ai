@@ -38,7 +38,7 @@ export default async function Home() {
         <a className="operator-brand" href="#overview" aria-label="Alon AI overview"><Image src="/alon-ai-mark.png" alt="" width={42} height={42} priority /><span>ALON <b>AI</b><small>OPERATOR DESK</small></span></a>
         <div className="sidebar-divider" />
         <p className="sidebar-label">Workspace</p>
-        <nav className="operator-nav" aria-label="Workspace"><a className="operator-nav__active" href="#overview" aria-current="page"><span aria-hidden="true">◫</span> Overview</a><a href="#system"><span aria-hidden="true">◈</span> System status</a><a href="#activity"><span aria-hidden="true">≡</span> Activity log</a></nav>
+        <nav className="operator-nav" aria-label="Workspace"><a className="operator-nav__active" href="#overview" aria-current="page"><span aria-hidden="true">◫</span> Overview</a><Link href="/experiments/new"><span aria-hidden="true">◇</span> New experiment</Link><a href="#system"><span aria-hidden="true">◈</span> System status</a><a href="#activity"><span aria-hidden="true">≡</span> Activity log</a></nav>
         <p className="sidebar-label sidebar-label--tools">Navigate</p>
         <OperatorControls />
         <div className="sidebar-identity"><span className="identity-avatar" aria-hidden="true">{session.session.operator.display_name.slice(0, 1).toUpperCase()}</span><span><strong>{session.session.operator.display_name}</strong><small>Private operator</small></span></div>

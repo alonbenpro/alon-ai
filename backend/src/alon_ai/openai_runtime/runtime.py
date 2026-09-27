@@ -98,6 +98,7 @@ class AcceptedArtifact:
     selection_id: UUID | None = None
     cycle_id: UUID | None = None
     attempt_id: UUID | None = None
+    return_id: UUID | None = None
 
 
 @dataclass(frozen=True)
@@ -297,6 +298,8 @@ async def _accepted_input(
                     "hash": accepted_profile.content_hash,
                     "capabilities": profile["capabilities"],
                     "constraints": profile["constraints"],
+                    "delivery": profile["delivery"],
+                    "commercial": profile["commercial"],
                 }
             )
         for accepted in artifacts:
@@ -304,8 +307,10 @@ async def _accepted_input(
             if accepted.experiment_id != experiment_id or ref.kind not in {
                 ArtifactKind.IDEA_SEED,
                 ArtifactKind.IDEA_CANDIDATE,
+                ArtifactKind.EXPERIMENT_BRIEF,
                 ArtifactKind.IDEA_BRIEF,
                 ArtifactKind.RESEARCH_PLAN,
+                ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
             }:
                 raise PermissionError("artifact is outside accepted first-party inputs")
             row = (
@@ -345,6 +350,7 @@ async def _accepted_input(
             if ref.kind not in {
                 ArtifactKind.IDEA_BRIEF,
                 ArtifactKind.RESEARCH_PLAN,
+                ArtifactKind.RESEARCH_FEEDBACK_BRIEF,
             } and (
                 await connection.scalar(
                     select(record_schema.source_refs.c.id).where(
@@ -358,7 +364,19 @@ async def _accepted_input(
                 )
             ):
                 raise PermissionError("artifact has external or linked inputs")
-            if ref.kind is ArtifactKind.IDEA_BRIEF:
+            if ref.kind is ArtifactKind.IDEA_BRIEF and accepted.return_id is not None:
+                if accepted.cycle_id is None:
+                    raise PermissionError("returned brief lacks a cycle")
+                returned = await connection.scalar(
+                    select(record_schema.returns.c.id).where(
+                        record_schema.returns.c.id == accepted.return_id,
+                        record_schema.returns.c.to_cycle_id == accepted.cycle_id,
+                        record_schema.returns.c.idea_artifact_id == ref.artifact_id,
+                    )
+                )
+                if returned is None:
+                    raise PermissionError("returned brief lineage changed")
+            elif ref.kind is ArtifactKind.IDEA_BRIEF:
                 if (
                     accepted.cycle_id is None
                     or accepted.selection_id is not None
@@ -403,6 +421,29 @@ async def _accepted_input(
                 )
                 if state != "MARKET_RESEARCH":
                     raise PermissionError("research cycle is not active")
+            elif ref.kind is ArtifactKind.RESEARCH_FEEDBACK_BRIEF:
+                if accepted.return_id is None or accepted.cycle_id is None:
+                    raise PermissionError("feedback lacks return lineage")
+                returned = await connection.scalar(
+                    select(record_schema.returns.c.id).where(
+                        record_schema.returns.c.id == accepted.return_id,
+                        record_schema.returns.c.to_cycle_id == accepted.cycle_id,
+                        record_schema.returns.c.feedback_artifact_id == ref.artifact_id,
+                        record_schema.returns.c.feedback_kind == ref.kind,
+                        record_schema.returns.c.feedback_version == ref.version,
+                        record_schema.returns.c.feedback_hash == ref.content_hash,
+                    )
+                )
+                if returned is None:
+                    raise PermissionError("feedback return lineage changed")
+                if not await connection.scalar(
+                    select(record_schema.artifact_dispositions.c.id).where(
+                        record_schema.artifact_dispositions.c.artifact_id
+                        == ref.artifact_id,
+                        record_schema.artifact_dispositions.c.disposition == "ACCEPTED",
+                    )
+                ):
+                    raise PermissionError("feedback is not committed")
             elif ref.kind is ArtifactKind.RESEARCH_PLAN:
                 if (
                     accepted.cycle_id is None
@@ -497,6 +538,33 @@ async def _accepted_input(
                     or state != "MARKET_RESEARCH"
                 ):
                     raise PermissionError("research plan is not the active attempt")
+            elif ref.kind is ArtifactKind.EXPERIMENT_BRIEF:
+                if (
+                    accepted.selection_id is not None
+                    or accepted.cycle_id is not None
+                    or accepted.attempt_id is not None
+                ):
+                    raise PermissionError(
+                        "discovery brief cannot be selected or cycled"
+                    )
+                if row["created_by"] != await connection.scalar(
+                    select(record_schema.operator_profiles.c.operator_id)
+                    .select_from(
+                        record_schema.experiments.join(
+                            record_schema.operator_profiles,
+                            (
+                                record_schema.experiments.c.operator_profile_id
+                                == record_schema.operator_profiles.c.id
+                            )
+                            & (
+                                record_schema.experiments.c.operator_profile_version
+                                == record_schema.operator_profiles.c.version
+                            ),
+                        )
+                    )
+                    .where(record_schema.experiments.c.id == experiment_id)
+                ):
+                    raise PermissionError("discovery brief is not operator supplied")
             elif ref.kind is ArtifactKind.IDEA_SEED:
                 operator_id = await connection.scalar(
                     select(record_schema.operator_profiles.c.operator_id)
@@ -910,7 +978,7 @@ class _ConfiguredResponsesAdapter:
         )
         async with AsyncExitStack() as stack:
             root_enabled = True
-            if self.artifacts:
+            if self.artifacts or self.operator_profiles:
                 # Product commands take this experiment lock before changing
                 # versions, acceptances or cycle state. Keep the same order as
                 # governance: experiment first, then provider authority.

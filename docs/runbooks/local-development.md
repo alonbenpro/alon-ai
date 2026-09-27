@@ -1,6 +1,6 @@
 # Local operator development
 
-This is the private L05 login and operator shell. Run from the repository root. The launcher reuses `infra/compose.yaml`, keeps all published ports on loopback, and leaves outreach and provider calls disabled.
+This is the private operator shell and L07 user-seeded experiment flow. Run from the repository root. The launcher reuses `infra/compose.yaml`, keeps all published ports on loopback, and leaves outreach disabled. Model calls are disabled by default.
 
 ## Prerequisites
 
@@ -58,6 +58,65 @@ For an isolated, disposable verification run, set `COMPOSE_PROJECT_NAME=l05_disp
 6. For a failure drill, stop PostgreSQL via Compose and refresh status. The UI should show an unavailable state rather than retaining a healthy claim; restore with `make local-up`.
 
 Do not paste login cookies, verifier, signing key, or passwords into bug reports or logs. This local stack uses example database credentials and HTTP on loopback. It is not a public deployment.
+
+## Manual L07 seeded experiment check
+
+The API keeps provider execution disabled by default. For a local walkthrough of the first L07 slice, start the same Compose stack with `ALON_AI_PROVIDER_MODE=fake` exported in the terminal running `./scripts/local-dev.sh up`. The API then uses recorded synthetic responses through the governed Idea runtime and ledger; the worker and outreach remain disabled. Recorded advice is labeled in the browser and is not evidence of actual customer demand or a live OpenAI result.
+
+After signing in, open **New experiment** from the operator desk. Enter a user-supplied idea, the experiment bounds, and an operator-approved capability profile. The seed preview shows the exact submitted text. Submit to create the immutable experiment and seed, then wait for typed refinement advice. Before pressing **Accept and save idea**, refresh the experiment page: the advice should recover, while no IdeaBrief is accepted yet. Accept explicitly, refresh again, and confirm the server reports the accepted brief. A failed refinement must leave the experiment saved without an accepted brief, with a retry path.
+
+Unset `ALON_AI_PROVIDER_MODE` and run `./scripts/local-dev.sh up` again to return the API to its default disabled mode. Keep the same Compose project and port overrides when doing so. The local login material and PostgreSQL volume are retained by ordinary `down`.
+
+### Explicit live OpenAI setup
+
+Live refinement is optional and can incur a charge. First run the ordinary stack to provision the local operator; copy the operator UUID printed by the provisioner. Prepare a **reviewed, non-secret** JSON manifest on the host with the fields in `LiveIdeaSetupManifest` (`backend/src/alon_ai/api/live_idea_provision.py`). It must identify that active operator, the OpenAI account/plan/terms and evidence references, current model pricing in **USD per one token** (not per million tokens), a current USD-to-ILS rate, effective and expiry times, request/token bounds, a budget cap, and control limits. Supply actual reviewed values; placeholder values do not confer rights. Include both `INPUT_TOKEN` and `OUTPUT_TOKEN` prices, and a `CACHED_TOKEN` price/bound when that usage is expected. Keep the underlying terms, price card, FX quote, and control approval available for audit; the manifest's reference strings alone do not prove their contents. This template is intentionally invalid until the placeholders are replaced:
+
+```json
+{
+  "operator_id": "<ACTIVE_OPERATOR_UUID>",
+  "effective_at": "<UTC_START>",
+  "expires_at": "<UTC_END>",
+  "account_handle": "<APPROVED_ACCOUNT_HANDLE>",
+  "plan_identifier": "<APPROVED_PLAN>",
+  "order_form_ref": "<APPROVED_ORDER_REF>",
+  "terms_version": "<REVIEWED_TERMS_VERSION>",
+  "rights_reference": "<REVIEWED_TERMS_EVIDENCE>",
+  "pricing_reference": "<CURRENT_PRICE_CARD_EVIDENCE>",
+  "fx_reference": "<CURRENT_USD_ILS_QUOTE_EVIDENCE>",
+  "control_reference": "<OPERATOR_LIMIT_APPROVAL>",
+  "model_identifier": "<APPROVED_MODEL>",
+  "reasoning_effort": "low",
+  "max_output_tokens": 300,
+  "timeout_seconds": 30,
+  "budget_cap_usd": "<APPROVED_USD_CAP>",
+  "secret_handle": "openai-idea-key",
+  "fx_rate": "<CURRENT_USD_TO_ILS_RATE>",
+  "retention_seconds": 60,
+  "quota_limit": 10,
+  "window_seconds": 3600,
+  "concurrency_limit": 1,
+  "failure_threshold": 2,
+  "failure_window_seconds": 3600,
+  "cooldown_seconds": 60,
+  "prices": [
+    {"component": "INPUT_TOKEN", "unit_price": "<CURRENT_USD_PER_ONE_INPUT_TOKEN>", "max_quantity": "<REVIEWED_INPUT_BOUND>"},
+    {"component": "OUTPUT_TOKEN", "unit_price": "<CURRENT_USD_PER_ONE_OUTPUT_TOKEN>", "max_quantity": "<REVIEWED_OUTPUT_BOUND_AT_LEAST_300>"}
+  ]
+}
+```
+
+Save the manifest under this checkout's ignored `.local/` directory, for example `.local/live-authority.json`. This path is shared with the local Docker engine; a host-only temporary directory may mount as a directory instead of the intended file. The manifest contains no key, so mode `0644` is acceptable inside the owner-only `.local` directory. The launcher verifies that Docker sees a regular file. For example:
+
+```sh
+export ALON_AI_PROVIDER_MODE=live
+export ALON_AI_L07_LIVE_ACK=I_ACCEPT_PAID_CALLS
+export ALON_AI_L07_LIVE_MANIFEST="$PWD/.local/live-authority.json"
+./scripts/local-dev.sh up
+```
+
+The launcher checks the explicit acknowledgment and owner-owned, non-writable manifest. On first live setup, a one-time service in the **same Compose project** registers the reviewed grant, prices, FX and controls atomically in the existing governance tables and prompts for the OpenAI API key without echoing it. It stores the encrypted credential, its encryption key, and the bound runtime config in a separate Compose volume owned by the API container's user; no key is put in the host manifest or printed. The API mounts that volume read-only. Later `up` commands reuse it without another key prompt. Keep the manifest path and acknowledgment set for each live startup, and use the same Compose project name for `up` and `down`. The worker remains provider-disabled and outreach-disabled.
+
+The browser names live mode before submission and requires a separate cost acknowledgment. Creation saves records, then the server executes the existing governed `USER_SEEDED_REFINEMENT` profile; only **Accept and save idea** creates an accepted IdeaBrief. A configured key by itself never grants authority: the bound grant, price, budget, operator, and time limits are checked before dispatch. If setup fails, no live request is sent; review the manifest and private-volume state deliberately rather than deleting the database volume. Replacing an existing live config/key needs a separate reviewed rotation procedure. No live paid call is part of the automated L07 verification.
 
 ## Development and verification
 

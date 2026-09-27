@@ -53,6 +53,24 @@ export async function getSession(): Promise<SessionResult> {
   return { kind: "unavailable" };
 }
 
+export async function getExperimentRuntime(): Promise<{
+  provider_mode: "disabled" | "fake" | "live";
+  ready: boolean;
+} | null> {
+  try {
+    const response = await backendFetch("/operator/experiments/runtime");
+    if (!response.ok) return null;
+    const value: unknown = await response.json();
+    if (typeof value !== "object" || value === null ||
+      !("provider_mode" in value) || !("ready" in value) ||
+      !["disabled", "fake", "live"].includes(String(value.provider_mode)) ||
+      typeof value.ready !== "boolean") return null;
+    return { provider_mode: value.provider_mode as "disabled" | "fake" | "live", ready: value.ready };
+  } catch {
+    return null;
+  }
+}
+
 function operatorOrigin(request: Request) {
   const configured = process.env.ALON_AI_FRONTEND_ORIGIN;
   return configured ? new URL(configured).origin : new URL(request.url).origin;
@@ -93,6 +111,29 @@ export async function authProxy(path: string, request: Request) {
     headers.set("Content-Type", response.headers.get("Content-Type") ?? "application/json");
     for (const cookie of response.headers.getSetCookie()) headers.append("Set-Cookie", cookie);
     return new Response(response.status === 204 ? null : response.body, { status: response.status, headers });
+  } catch {
+    return Response.json({ detail: "Service unavailable" }, { status: 503, headers: privateHeaders });
+  }
+}
+
+export async function privateMutationProxy(path: string, request: Request) {
+  if (!isSameOrigin(request)) {
+    return Response.json({ detail: "Origin not allowed" }, { status: 403, headers: privateHeaders });
+  }
+  try {
+    const response = await backendFetch(path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Origin: operatorOrigin(request) },
+      body: await request.text(),
+      signal: request.signal,
+    });
+    return new Response(response.status === 204 ? null : response.body, {
+      status: response.status,
+      headers: {
+        ...privateHeaders,
+        "Content-Type": response.headers.get("Content-Type") ?? "application/json",
+      },
+    });
   } catch {
     return Response.json({ detail: "Service unavailable" }, { status: 503, headers: privateHeaders });
   }

@@ -11,7 +11,26 @@
     "customer": "Small clinics (hypothesis)",
     "problem": "Appointment coordination (hypothesis)",
     "core_intent": "Explore a synthetic Python appointment scheduling backend",
+    "intent_relationship": "PRESERVES_CORE_INTENT",
     "material_pivot": false,
+    "buyer": {
+      "segment": "Small clinics (hypothesis)",
+      "role": "Clinic owner or scheduling manager (hypothesis)"
+    },
+    "service_hypothesis": "A synthetic Python backend could coordinate appointments for small clinics",
+    "value_hypothesis": "Small clinics may benefit from less manual appointment coordination if workflow pain exists",
+    "assumptions": [
+      "Small clinics have appointment coordination pain; this has not been verified",
+      "Clinic staff would consider a backend scheduling service; buyer demand is unverified"
+    ],
+    "exclusions": [
+      "Live clinic deployment and patient data integration are outside the synthetic scope",
+      "No outreach, meeting booking, or external record change is authorized"
+    ],
+    "research_questions": [
+      "How do small clinics currently coordinate appointments?",
+      "Which clinic role would evaluate or buy scheduling software?"
+    ],
     "grounding_refs": [
       "SELECTED_CANDIDATE",
       "OPERATOR_PROFILE"
@@ -40,6 +59,16 @@
       "field": "core_intent",
       "source_fact": "CANDIDATE.HYPOTHESIS",
       "expected": "Explore a synthetic Python appointment scheduling backend"
+    },
+    {
+      "field": "service_hypothesis",
+      "source_fact": "CANDIDATE.HYPOTHESIS",
+      "expected": "A synthetic Python backend could coordinate appointments for small clinics"
+    },
+    {
+      "field": "value_hypothesis",
+      "source_fact": "CANDIDATE.HYPOTHESIS",
+      "expected": "Small clinics may benefit from less manual appointment coordination if workflow pain exists"
     }
   ],
   "constraints": [
@@ -169,6 +198,7 @@
       "id": "unapproved_material_pivot",
       "changes": {
         "material_pivot": true,
+        "intent_relationship": "MATERIAL_PIVOT",
         "core_intent": "Sell insurance leads"
       },
       "violates": [

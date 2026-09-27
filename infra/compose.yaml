@@ -22,7 +22,11 @@ services:
       ALON_AI_DATABASE_URL: postgresql+psycopg://alon_ai:alon_ai@postgres:5432/alon_ai
       ALON_AI_ENVIRONMENT: ${ALON_AI_ENVIRONMENT:-development}
       ALON_AI_OUTREACH_ENABLED: "false"
-      ALON_AI_PROVIDER_MODE: disabled
+      ALON_AI_PROVIDER_MODE: ${ALON_AI_PROVIDER_MODE:-disabled}
+      ALON_AI_L07_LIVE_CONFIG_PATH: /app/.local/live/live-idea.json
+      ALON_AI_L07_SECRET_ROOT: /app/.local/live/secrets
+      ALON_AI_L07_SECRET_KEY_FILE: /app/.local/live/live-secret.key
+      ALON_AI_L07_SECRET_KEY_VERSION: v1
       ALON_AI_OPERATOR_AUTH_SUBJECT: local-operator@alon.ai
       ALON_AI_OPERATOR_PASSWORD_HASH: ${ALON_AI_OPERATOR_PASSWORD_HASH:-}
       ALON_AI_SESSION_SIGNING_KEY: ${ALON_AI_SESSION_SIGNING_KEY:-}
@@ -30,6 +34,8 @@ services:
     command: ["uvicorn", "alon_ai.api.app:app", "--host", "0.0.0.0", "--port", "8000", "--no-access-log"]
     ports:
       - "127.0.0.1:${ALON_AI_API_PORT:-8000}:8000"
+    volumes:
+      - local_live_private:/app/.local:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -53,6 +59,23 @@ services:
       postgres:
         condition: service_healthy
 
+  live-provision:
+    build:
+      context: ../backend
+    stdin_open: true
+    tty: true
+    environment:
+      ALON_AI_DATABASE_URL: postgresql+psycopg://alon_ai:alon_ai@postgres:5432/alon_ai
+      ALON_AI_ENVIRONMENT: ${ALON_AI_ENVIRONMENT:-development}
+      ALON_AI_OUTREACH_ENABLED: "false"
+      ALON_AI_PROVIDER_MODE: disabled
+    volumes:
+      - local_live_private:/app/.local
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles: ["live-setup"]
+
   frontend:
     build:
       context: ../frontend
@@ -74,3 +97,4 @@ services:
 
 volumes:
   postgres_data:
+  local_live_private:

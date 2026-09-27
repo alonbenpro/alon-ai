@@ -908,6 +908,86 @@ Index(
     ),
 )
 
+idea_refinements = table(
+    "idea_refinements",
+    gov.col("run_id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("cycle_id", gov.U),
+    gov.col("seed_artifact_id", gov.U),
+    gov.col("operation_id", gov.U),
+    gov.col("state", String(32)),
+    gov.col("advice_source", String(16)),
+    gov.col("advice", JSONB, nullable=True),
+    gov.col("output_hash", String(64), nullable=True),
+    gov.col("created_at", gov.T),
+    gov.col("finished_at", gov.T, nullable=True),
+    ForeignKeyConstraint(["experiment_id"], ["record_experiments.id"]),
+    ForeignKeyConstraint(["cycle_id"], ["record_cycles.id"]),
+    ForeignKeyConstraint(["seed_artifact_id"], ["record_artifacts.id"]),
+    ForeignKeyConstraint(["operation_id"], ["gov_operations.id"]),
+    CheckConstraint(
+        "state IN ('RUNNING','SUCCEEDED','REFINEMENT_FAILED','REFINEMENT_BLOCKED')"
+    ),
+    CheckConstraint("advice_source IN ('RECORDED_FAKE','OPENAI')"),
+    CheckConstraint(
+        "(state='RUNNING' AND advice IS NULL AND output_hash IS NULL AND finished_at IS NULL) OR (state IN ('REFINEMENT_FAILED','REFINEMENT_BLOCKED') AND advice IS NULL AND output_hash IS NULL AND finished_at IS NOT NULL) OR (state='SUCCEEDED' AND advice IS NOT NULL AND output_hash ~ '^[0-9a-f]{64}$' AND finished_at IS NOT NULL)"
+    ),
+)
+idea_discoveries = table(
+    "idea_discoveries",
+    gov.col("run_id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("operation_id", gov.U),
+    gov.col("state", String(32)),
+    gov.col("advice_source", String(16)),
+    gov.col("advice", JSONB, nullable=True),
+    gov.col("output_hash", String(64), nullable=True),
+    gov.col("candidate_ids", JSONB, nullable=True),
+    gov.col("created_at", gov.T),
+    gov.col("finished_at", gov.T, nullable=True),
+    ForeignKeyConstraint(["experiment_id"], ["record_experiments.id"]),
+    ForeignKeyConstraint(["operation_id"], ["gov_operations.id"]),
+    CheckConstraint(
+        "state IN ('RUNNING','SUCCEEDED','DISCOVERY_FAILED','DISCOVERY_BLOCKED')"
+    ),
+    CheckConstraint("advice_source IN ('RECORDED_FAKE','OPENAI')"),
+    CheckConstraint(
+        "(state='RUNNING' AND candidate_ids IS NULL AND finished_at IS NULL) OR (state='SUCCEEDED' AND advice IS NOT NULL AND output_hash ~ '^[0-9a-f]{64}$' AND jsonb_array_length(candidate_ids) BETWEEN 3 AND 5 AND finished_at IS NOT NULL) OR (state IN ('DISCOVERY_FAILED','DISCOVERY_BLOCKED') AND candidate_ids IS NULL AND finished_at IS NOT NULL)"
+    ),
+)
+Index(
+    "ix_record_idea_discoveries_experiment",
+    idea_discoveries.c.experiment_id,
+    idea_discoveries.c.created_at.desc(),
+)
+idea_intent_reviews = table(
+    "idea_intent_reviews",
+    gov.col("run_id", gov.U, primary_key=True),
+    gov.col("experiment_id", gov.U),
+    gov.col("cycle_id", gov.U),
+    gov.col("source_artifact_id", gov.U),
+    gov.col("output_hash", String(64)),
+    gov.col("relationship", String(32)),
+    gov.col("rationale", String(4000)),
+    gov.col("confirmed_by", gov.U),
+    gov.col("command_key", gov.U, unique=True),
+    gov.col("created_at", gov.T),
+    ForeignKeyConstraint(["run_id"], ["record_idea_refinements.run_id"]),
+    ForeignKeyConstraint(["experiment_id"], ["record_experiments.id"]),
+    ForeignKeyConstraint(["cycle_id"], ["record_cycles.id"]),
+    ForeignKeyConstraint(["source_artifact_id"], ["record_artifacts.id"]),
+    CheckConstraint(
+        "relationship IN ('PRESERVES_CORE_INTENT','CLARIFIES_CORE_INTENT','NARROWS_CORE_INTENT')"
+    ),
+    CheckConstraint("length(btrim(rationale)) BETWEEN 1 AND 4000"),
+    CheckConstraint("output_hash ~ '^[0-9a-f]{64}$'"),
+)
+Index(
+    "ix_record_idea_refinements_cycle",
+    idea_refinements.c.cycle_id,
+    idea_refinements.c.created_at.desc(),
+)
+
 RECORD_TABLES = (
     operator_profiles,
     experiments,
@@ -923,6 +1003,9 @@ RECORD_TABLES = (
     cycles,
     pivot_decisions,
     idea_acceptances,
+    idea_refinements,
+    idea_discoveries,
+    idea_intent_reviews,
     research_attempts,
     cycle_transitions,
     cycle_states,

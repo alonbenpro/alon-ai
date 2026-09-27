@@ -77,6 +77,12 @@ _PAYLOAD_FIELDS: dict[ArtifactKind, dict[str, type]] = {
         "problem": str,
         "core_intent": str,
         "material_pivot": bool,
+        "buyer": object,
+        "service_hypothesis": str,
+        "value_hypothesis": str,
+        "assumptions": list,
+        "exclusions": list,
+        "research_questions": list,
     },
     ArtifactKind.RESEARCH_PLAN: {"questions": list, "method": str},
     ArtifactKind.RESEARCH_EVIDENCE: {"claim": str, "finding": str},
@@ -201,7 +207,12 @@ _PAYLOAD_FIELDS: dict[ArtifactKind, dict[str, type]] = {
     ArtifactKind.OPERATOR_ACTION_REQUIRED: {"action": str},
     ArtifactKind.MANUAL_OUTCOME_EVENT: {"outcome": str},
     ArtifactKind.OPERATOR_AUTHORED_MESSAGE: {"body": str},
-    ArtifactKind.RESEARCH_FEEDBACK_BRIEF: {"preserve": list, "change": list},
+    ArtifactKind.RESEARCH_FEEDBACK_BRIEF: {
+        "preserve": list,
+        "change": list,
+        "failed_dimensions": list,
+        "research_questions": list,
+    },
     ArtifactKind.VALIDATION_RESULT: {
         "validator": str,
         "disposition": str,
@@ -217,9 +228,45 @@ def _nonempty(value: object) -> bool:
 
 def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, Any]:
     expected = _PAYLOAD_FIELDS[kind]
-    if set(payload) != set(expected):
+    if kind is ArtifactKind.EXPERIMENT_BRIEF and set(payload) != {"objective"}:
+        expected = {
+            "objective": str,
+            "target_customer": str,
+            "problem": str,
+            "geographies": list,
+            "commercial_boundaries": str,
+            "budget_usd": str,
+            "evidence_definitions": list,
+            "launch_stage": str,
+        }
+    # Existing accepted briefs and feedback remain immutable and readable. New
+    # L07 records use the richer shapes below; accepting old shapes here keeps
+    # downstream consumers able to read their historical inputs.
+    legacy_brief = kind is ArtifactKind.IDEA_BRIEF and set(payload) == {
+        "title",
+        "customer",
+        "problem",
+        "core_intent",
+        "material_pivot",
+    }
+    legacy_feedback = kind is ArtifactKind.RESEARCH_FEEDBACK_BRIEF and set(payload) == {
+        "preserve",
+        "change",
+    }
+    if set(payload) != set(expected) and not legacy_brief and not legacy_feedback:
         raise ValueError("artifact payload fields do not match kind")
     for key, expected_type in expected.items():
+        if legacy_brief and key in {
+            "buyer",
+            "service_hypothesis",
+            "value_hypothesis",
+            "assumptions",
+            "exclusions",
+            "research_questions",
+        }:
+            continue
+        if legacy_feedback and key in {"failed_dimensions", "research_questions"}:
+            continue
         value = payload[key]
         if expected_type is int:
             if type(value) is not int or value < 0:
@@ -244,10 +291,37 @@ def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, A
             or not all(_nonempty(item) for item in value)
         ):
             raise ValueError("invalid artifact payload value")
+    if kind is ArtifactKind.IDEA_BRIEF and not legacy_brief:
+        buyer = payload["buyer"]
+        if (
+            not isinstance(buyer, dict)
+            or set(buyer) != {"segment", "role"}
+            or not all(_nonempty(value) for value in buyer.values())
+        ):
+            raise ValueError("invalid brief buyer")
+    if (
+        kind is ArtifactKind.RESEARCH_FEEDBACK_BRIEF
+        and not legacy_feedback
+        and (
+            len(payload["failed_dimensions"]) != len(set(payload["failed_dimensions"]))
+        )
+    ):
+        raise ValueError("duplicate feedback dimensions")
     if kind is ArtifactKind.IDEA_SEED and payload["origin"] not in {
         "USER_SUPPLIED",
     }:
         raise ValueError("invalid idea origin")
+    if kind is ArtifactKind.EXPERIMENT_BRIEF and set(payload) != {"objective"}:
+        try:
+            budget = Decimal(payload["budget_usd"])
+        except InvalidOperation as error:
+            raise ValueError("invalid experiment budget") from error
+        if (
+            budget <= 0
+            or payload["launch_stage"] != "SHADOW"
+            or len(payload["geographies"]) != len(set(payload["geographies"]))
+        ):
+            raise ValueError("invalid experiment bounds")
     if kind is ArtifactKind.MARKET_RESEARCH_RECOMMENDATION and payload[
         "recommendation"
     ] not in {
@@ -524,6 +598,17 @@ class CycleReceipt(CommandReceipt):
     id: UUID
     experiment_id: UUID
     ordinal: int
+
+
+class SameIntentReturnReceipt(CommandReceipt):
+    """A deterministic L07 return claim; it never accepts a new brief."""
+
+    id: UUID | None = None
+    experiment_id: UUID
+    verdict_id: UUID
+    outcome: Literal["STARTED", "REVIEW_REQUIRED"]
+    block_id: UUID | None = None
+    reason_code: str | None = None
 
 
 class IdeaAcceptanceReceipt(CommandReceipt):
