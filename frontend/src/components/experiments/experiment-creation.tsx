@@ -395,7 +395,7 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
   const editChanged = !!chosenDraft && revisionText !== chosenDraft.hypothesis;
 
   return <div className="experiment-workspace">
-    <header className="experiment-heading"><div><p className="eyebrow">Experiment studio / 01</p><h1>New experiment</h1><p>Bring an idea, or explore a few directions. You approve the final wording.</p></div>
+    <header className="experiment-heading"><div><p className="eyebrow">Experiment studio / 01</p><h1>{state === "AWAITING_REVIEW" ? "Review idea" : id ? "Experiment" : "New experiment"}</h1><p>{state === "AWAITING_REVIEW" ? "Review the proposed wording before accepting it." : "Bring an idea, or explore a few directions. You approve the final wording."}</p></div>
       {state !== "IDEA_ACCEPTED" && <div className={runtime?.provider_mode === "live" && runtime.ready ? "experiment-runtime experiment-runtime--live" : "experiment-runtime"} role="note">
         {runtime?.ready && runtime.provider_mode === "live" ? <><strong>Live OpenAI mode</strong><p>Idea calls may incur a cost.</p><label><input type="checkbox" checked={liveConfirmed} onChange={(event) => setLiveConfirmed(event.target.checked)} /> I understand this may incur a cost</label></> :
           runtime?.ready && runtime.provider_mode === "fake" ? <><strong>Recorded demo · example output</strong><p>Prewritten Idea agent responses. No live research or Offer agent runs here.</p></> :

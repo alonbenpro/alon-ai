@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
@@ -39,7 +38,7 @@ export default async function Home() {
       <main className="operator-main" id="main-content">
         <header className="topbar"><span className="breadcrumbs">Workspace <span aria-hidden="true">/</span> Overview</span><span className="private-session"><span aria-hidden="true" /> Private session</span></header>
         <div className="main-content">
-          <div className="hero-heading"><div><p className="eyebrow">Control desk / 01</p><h1>One clear view of<br /><em>the work in motion.</em></h1><p className="hero-subtitle">A live account of system readiness and server-confirmed activity. Commands stay deliberate; every status has a source.</p></div><div className="hero-insignia" aria-hidden="true"><Image src="/alon-ai-mark.png" alt="" width={220} height={220} loading="eager" /></div></div>
+          <div className="hero-heading"><div><p className="eyebrow">Operator desk / 01</p><h1>Overview</h1><p className="hero-subtitle">System health and current work, confirmed by the server.</p></div><Link className="overview-launch" href="/experiments/new"><span aria-hidden="true">◇</span><span>New experiment<small>Start from an idea</small></span><span aria-hidden="true">↗</span></Link></div>
           <div className="overview-grid"><StatusOverview initial={status} /><ActivityFeed initial={activity} /></div>
           <footer className="operator-footnote"><span>ALON AI / OPERATOR CONSOLE</span><span>All activity is read from the server</span></footer>
         </div>
