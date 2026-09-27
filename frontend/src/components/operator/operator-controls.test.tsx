@@ -7,6 +7,13 @@ import { OperatorControls } from "@/components/operator/operator-controls";
 afterEach(() => { vi.restoreAllMocks(); window.localStorage.clear(); });
 
 describe("operator keyboard access", () => {
+  it("points command destinations back to the overview from experiments", () => {
+    render(<OperatorControls onOverview={false} />);
+    fireEvent.click(screen.getByRole("button", { name: "Open command palette" }));
+    expect(screen.getByRole("link", { name: /System status/ })).toHaveAttribute("href", "/#system");
+    expect(screen.getByRole("link", { name: /Activity log/ })).toHaveAttribute("href", "/#activity");
+  });
+
   it("opens the labeled command dialog with Cmd+K and returns focus on Escape", async () => {
     render(<OperatorControls />);
     const trigger = screen.getByRole("button", { name: "Open command palette" });

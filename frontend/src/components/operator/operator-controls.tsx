@@ -9,7 +9,7 @@ const destinations = [
   { title: "Activity log", detail: "Server-confirmed activity", href: "#activity" },
 ];
 
-export function OperatorControls() {
+export function OperatorControls({ onOverview = true }: { onOverview?: boolean }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [motionOff, setMotionOff] = useState(false);
@@ -25,6 +25,10 @@ export function OperatorControls() {
 
   const navigate = (href: string) => {
     close();
+    if (!onOverview) {
+      window.location.assign(href);
+      return;
+    }
     window.history.pushState(null, "", href);
     document.getElementById(href.slice(1))?.scrollIntoView();
   };
@@ -75,7 +79,9 @@ export function OperatorControls() {
     } catch { setLogoutError(true); }
   };
 
-  const matches = destinations.filter((item) => `${item.title} ${item.detail}`.toLowerCase().includes(query.toLowerCase()));
+  const matches = destinations
+    .filter((item) => `${item.title} ${item.detail}`.toLowerCase().includes(query.toLowerCase()))
+    .map((item) => ({ ...item, href: onOverview ? item.href : `/${item.href}` }));
 
   return (
     <>
@@ -102,7 +108,7 @@ export function OperatorControls() {
             if (event.key === "Enter" && matches[0]) { event.preventDefault(); navigate(matches[0].href); }
           }} />
           <div className="palette-results">
-            {matches.length ? matches.map((item) => <a key={item.href} href={item.href} onClick={(event) => { event.preventDefault(); navigate(item.href); }}><span><strong>{item.title}</strong><small>{item.detail}</small></span><span aria-hidden="true">↗</span></a>) : <p>No matching views</p>}
+            {matches.length ? matches.map((item) => <a key={item.href} href={item.href} onClick={(event) => { if (onOverview) { event.preventDefault(); navigate(item.href); } else close(); }}><span><strong>{item.title}</strong><small>{item.detail}</small></span><span aria-hidden="true">↗</span></a>) : <p>No matching views</p>}
           </div>
           <div className="palette-hint">Esc to close · Enter to open first result</div>
         </div>

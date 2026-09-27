@@ -32,6 +32,10 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(
 describe("experiment creation checkpoint", () => {
   it("starts from one optional idea field without asking for a mission brief", () => {
     render(<ExperimentCreation runtime={runtime} />);
+    expect(screen.getByRole("heading", { name: "New experiment" })).toBeInTheDocument();
+    expect(screen.getByText(/Recorded demo · example output/i)).toBeInTheDocument();
+    expect(screen.queryByText(/One idea is enough/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Experiment preview")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Your idea" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generate an idea" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start experiment" })).toBeInTheDocument();
@@ -54,11 +58,11 @@ describe("experiment creation checkpoint", () => {
     const first = render(<ExperimentCreation runtime={runtime} />);
     fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "  Clinic idea\n" } });
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
-    expect(await screen.findByText(/Experiment ID: exp-1/)).toBeInTheDocument();
+    expect(await screen.findByText("Agent running")).toBeInTheDocument();
     expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ idea_seed: "  Clinic idea\n", command_key: expect.any(String) });
     first.unmount();
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    expect(await screen.findByText(/Agent running · Run run-1/)).toBeInTheDocument();
+    expect(await screen.findByText("Agent running")).toBeInTheDocument();
     expect(fetcher.mock.calls.filter(([url, init]) => String(url).includes("/experiments") && init?.method === "POST")).toHaveLength(1);
   });
 
@@ -79,8 +83,10 @@ describe("experiment creation checkpoint", () => {
     expect(fetcher.mock.calls[0][0]).toBe("/api/operator/ideas/generate");
     fireEvent.click(screen.getByRole("radio", { name: /queue visibility/i }));
     fireEvent.change(screen.getByRole("textbox", { name: "Refine this proposal" }), { target: { value: "  New wording\n" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save revision" }));
+    expect(screen.getByRole("button", { name: "Start experiment" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Keep edited version" }));
     expect(await screen.findByText("v4 · Your edit")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start experiment" })).toBeEnabled();
     expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/revisions");
     expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ candidate_artifact_id: "candidate-2", idea_seed: "  New wording\n" });
   });
@@ -96,12 +102,12 @@ describe("experiment creation checkpoint", () => {
     const first = render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("radio", { name: /queue visibility/i }));
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
-    expect(await screen.findByText(/Agent running · Run run-2/)).toBeInTheDocument();
+    expect(await screen.findByText("Agent running")).toBeInTheDocument();
     expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/start");
     expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ candidate_artifact_id: "candidate-2", command_key: expect.any(String) });
     first.unmount();
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    expect(await screen.findByText(/Run run-2/)).toBeInTheDocument();
+    expect(await screen.findByText("Agent running")).toBeInTheDocument();
     expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
   });
 
@@ -116,7 +122,9 @@ describe("experiment creation checkpoint", () => {
     vi.stubGlobal("fetch", fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     expect(await screen.findByText("v2 · Your edit")).toBeInTheDocument();
-    expect(screen.getByText(/Proposal session ID: exp-1/)).toBeInTheDocument();
+    expect(screen.getByText(/Earlier versions/).closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByRole("heading", { name: "Pick a direction" })).toBeInTheDocument();
+    expect(screen.queryByText(/Proposal session ID/)).not.toBeInTheDocument();
     expect(screen.getByText(/Exact operator edit/).textContent).toBe("  Exact operator edit\n");
     expect(fetcher).toHaveBeenCalledOnce();
   });
@@ -161,14 +169,25 @@ describe("experiment creation checkpoint", () => {
       stage: "IDEA_REFINEMENT", stage_status: "RUNNING", state: "REFINEMENT_IN_PROGRESS" }));
     vi.stubGlobal("fetch", fetcher);
     render(<ExperimentCreation runtime={{ provider_mode: "live", ready: true }} />);
+    expect(screen.getByText(/generate directions with the Idea agent/i)).toBeInTheDocument();
+    expect(screen.queryByText(/recorded example directions/i)).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "Clinic idea" } });
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/confirm the live call/i);
     expect(fetcher).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole("checkbox", { name: /may incur a cost/i }));
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
-    expect(await screen.findByText(/Experiment ID: exp-1/)).toBeInTheDocument();
+    expect(await screen.findByText("Agent running")).toBeInTheDocument();
     expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("labels live generated directions without calling them recorded examples", async () => {
+    const draft = { ...saved, draft: true, mode: "SYSTEM_DISCOVERY", idea_seed: null,
+      state: "AWAITING_SELECTION", stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT", candidates };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json(draft)));
+    render(<ExperimentCreation experimentId="exp-1" runtime={{ provider_mode: "live", ready: true }} />);
+    expect(await screen.findByText("Generated directions")).toBeInTheDocument();
+    expect(screen.queryByText("Recorded directions")).not.toBeInTheDocument();
   });
 
   it("regenerates from a chosen proposal and keeps previous versions", async () => {
@@ -183,7 +202,7 @@ describe("experiment creation checkpoint", () => {
     vi.stubGlobal("fetch", fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("radio", { name: /queue visibility/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Regenerate proposals" }));
+    fireEvent.click(screen.getByRole("button", { name: "Try more directions" }));
     expect(await screen.findByText("v2 · Generated")).toBeInTheDocument();
     expect(screen.getByText("v1 · Generated")).toBeInTheDocument();
     expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/generate");
@@ -197,7 +216,7 @@ describe("experiment creation checkpoint", () => {
     vi.stubGlobal("fetch", fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     expect(await screen.findByText(/Idea discovery in progress/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Regenerate proposals" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Try more directions" })).not.toBeInTheDocument();
     expect(fetcher).toHaveBeenCalledOnce();
   });
 
@@ -215,7 +234,7 @@ describe("experiment creation checkpoint", () => {
     expect(await screen.findByRole("heading", { name: advice.title })).toBeInTheDocument();
     expect(fetcher.mock.calls[1][0]).toBe("/api/operator/experiments/exp-1/refine");
     expect(JSON.parse(fetcher.mock.calls[1][1].body).idempotency_key).not.toBe("run-1");
-    expect(await screen.findByText(/Waiting for input · Run run-2/)).toBeInTheDocument();
+    expect(await screen.findByText("Waiting for input")).toBeInTheDocument();
     expect(fetcher).toHaveBeenCalledTimes(3);
   });
 
@@ -253,7 +272,7 @@ describe("experiment creation checkpoint", () => {
     first.unmount();
     render(<ExperimentCreation runtime={runtime} />);
     fireEvent.click(await screen.findByRole("button", { name: "Retry start" }));
-    expect(await screen.findByText(/Experiment ID: exp-1/)).toBeInTheDocument();
+    expect(await screen.findByText("Agent running")).toBeInTheDocument();
     expect(fetcher.mock.calls[1][1].body).toBe(fetcher.mock.calls[0][1].body);
   });
 
@@ -281,7 +300,7 @@ describe("experiment creation checkpoint", () => {
     vi.stubGlobal("fetch", fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     const accept = await screen.findByRole("button", { name: "Accept and save idea" });
-    expect(screen.getByText("Model suggestion: Clarifies core intent")).toBeInTheDocument();
+    expect(screen.getByText(/Suggested relationship: Clarifies core intent/)).toBeInTheDocument();
     expect(accept).toBeDisabled();
     fireEvent.change(screen.getByRole("combobox", { name: /intent relationship/i }), { target: { value: "NARROWS_CORE_INTENT" } });
     expect(accept).toBeDisabled();
@@ -294,6 +313,23 @@ describe("experiment creation checkpoint", () => {
       run_id: "run-1", intent_relationship: "NARROWS_CORE_INTENT", intent_confirmed: true,
       intent_rationale: "Same clinics, narrower workflow",
     });
+  });
+
+  it("marks recorded advice as an example rather than a live agent result", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ...saved, state: "AWAITING_REVIEW",
+      latest_run_id: "run-1", advice, advice_source: "RECORDED_FAKE" })));
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    expect(await screen.findByText("Recorded example · no live agent ran")).toBeInTheDocument();
+    expect(screen.getByText("Full suggested idea and open questions").closest("details")).not.toHaveAttribute("open");
+  });
+
+  it("shows the exact proposed title even when its selected direction had a shorter name", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ...saved, mode: "SYSTEM_DISCOVERY",
+      state: "AWAITING_REVIEW", candidates, selected_candidate_artifact_id: "candidate-1",
+      latest_run_id: "run-1", advice, advice_source: "RECORDED_FAKE" })));
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    expect(await screen.findByRole("heading", { name: advice.title })).toBeInTheDocument();
+    expect(screen.getByText(/Selected direction:/)).toHaveTextContent("Clinic intake");
   });
 
   it("retries the exact pending acceptance command after reload", async () => {
@@ -330,7 +366,7 @@ describe("experiment creation checkpoint", () => {
     const select = await screen.findByRole("combobox", { name: /intent relationship/i });
     fireEvent.change(select, { target: { value: category } });
     expect(screen.getByRole("button", { name: "Accept and save idea" })).toBeDisabled();
-    expect(within(screen.getByRole("region", { name: /idea review/i })).getByText(/cannot be accepted here/i)).toBeInTheDocument();
+    expect(within(screen.getByRole("region", { name: /review the proposed change/i })).getByText(/cannot be accepted here/i)).toBeInTheDocument();
     expect(fetcher).toHaveBeenCalledOnce();
   });
 
@@ -505,7 +541,7 @@ describe("experiment creation checkpoint", () => {
       latest_run_id: "run-return-1", advice: returnedAdvice, accepted_brief: prior, return_context: returnAvailable })));
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
 
-    expect(await screen.findByText("Proposed new version")).toBeInTheDocument();
+    fireEvent.click(await screen.findByText("Full suggested idea and open questions"));
     expect(screen.getByText("Intake-only workflow setup")).toBeInTheDocument();
     expect(screen.getAllByText("Independent clinics · Operations lead")).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Accept and save idea" })).toBeInTheDocument();
