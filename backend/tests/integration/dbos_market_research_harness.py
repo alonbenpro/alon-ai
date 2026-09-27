@@ -1,3 +1,9 @@
+from alon_ai.worker.config import configure_dbos
+from alon_ai.workflows.schemas.market_research import (
+    market_research_outcome_workflow_id,
+    market_research_workflow_id,
+)
+
 """Subprocess entry point for destructive DBOS recovery tests."""
 
 import argparse
@@ -10,16 +16,20 @@ from dbos import DBOS
 
 from alon_ai.config import get_settings
 from alon_ai.db.engine import create_engine
+from alon_ai.db.repositories.workflow_market_research import (
+    MarketResearchDecisionWorkflowRepository,
+    MarketResearchWorkflowRepository,
+)
 from alon_ai.workflows import market_research
 from alon_ai.workflows.market_research import (
-    MarketResearchDecisionWorkflowRepository,
-    MarketResearchOutcomeWorkflowRequest,
-    MarketResearchWorkflowRepository,
-    MarketResearchWorkflowRequest,
     finalize_market_research_outcome_workflow,
     finalize_market_research_workflow,
     recover_market_research_decision_workflows,
     recover_market_research_workflows,
+)
+from alon_ai.workflows.schemas.market_research import (
+    MarketResearchOutcomeWorkflowRequest,
+    MarketResearchWorkflowRequest,
 )
 
 
@@ -64,7 +74,7 @@ async def run(args: argparse.Namespace) -> None:
         await market_research.assert_compatible_application_version(
             engine, args.application_version
         )
-        market_research.configure_dbos(
+        configure_dbos(
             settings,
             application_version=args.application_version,
             executor_id=args.executor_id,
@@ -79,13 +89,13 @@ async def run(args: argparse.Namespace) -> None:
                 engine, request, application_version=args.application_version
             )
             result = await handle.get_result(polling_interval_sec=0.02)
-            workflow_id = market_research.market_research_workflow_id(
+            workflow_id = market_research_workflow_id(
                 request.cycle_id, request.request_hash
             )
             await finalize_market_research_workflow(engine, workflow_id, result)
         elif args.mode == "recover":
             assert isinstance(request, MarketResearchWorkflowRequest)
-            workflow_id = market_research.market_research_workflow_id(
+            workflow_id = market_research_workflow_id(
                 request.cycle_id, request.request_hash
             )
             recovered = await recover_market_research_workflows(
@@ -94,7 +104,7 @@ async def run(args: argparse.Namespace) -> None:
             result = recovered[workflow_id]
         elif args.mode == "cancel":
             assert isinstance(request, MarketResearchWorkflowRequest)
-            workflow_id = market_research.market_research_workflow_id(
+            workflow_id = market_research_workflow_id(
                 request.cycle_id, request.request_hash
             )
             await DBOS.cancel_workflow_async(workflow_id)
@@ -105,13 +115,13 @@ async def run(args: argparse.Namespace) -> None:
                 engine, request, application_version=args.application_version
             )
             result = await handle.get_result(polling_interval_sec=0.02)
-            workflow_id = market_research.market_research_outcome_workflow_id(
+            workflow_id = market_research_outcome_workflow_id(
                 request.attempt_id, request.command_key
             )
             await finalize_market_research_outcome_workflow(engine, workflow_id, result)
         elif args.mode == "recover-outcome":
             assert isinstance(request, MarketResearchOutcomeWorkflowRequest)
-            workflow_id = market_research.market_research_outcome_workflow_id(
+            workflow_id = market_research_outcome_workflow_id(
                 request.attempt_id, request.command_key
             )
             recovered = await recover_market_research_decision_workflows(
@@ -120,7 +130,7 @@ async def run(args: argparse.Namespace) -> None:
             result = recovered[workflow_id]
         elif args.mode == "cancel-outcome":
             assert isinstance(request, MarketResearchOutcomeWorkflowRequest)
-            workflow_id = market_research.market_research_outcome_workflow_id(
+            workflow_id = market_research_outcome_workflow_id(
                 request.attempt_id, request.command_key
             )
             await DBOS.cancel_workflow_async(workflow_id)

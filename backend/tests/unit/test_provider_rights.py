@@ -9,8 +9,13 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
-from alon_ai.providers.contracts import Capability, ContentField, Provider, Purpose
-from alon_ai.providers.rights import (
+from alon_ai.integrations.schemas.provider import (
+    Capability,
+    ContentField,
+    Provider,
+    Purpose,
+)
+from alon_ai.policies.provider_rights import (
     GrantEvent,
     GrantEventKind,
     IntendedUse,

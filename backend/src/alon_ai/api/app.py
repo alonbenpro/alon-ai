@@ -7,70 +7,36 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from alon_ai.accounting.models import AccountingDenied
-from alon_ai.api.auth import COOKIE_NAME, AuthService
 from alon_ai.api.auth import router as auth_router
-from alon_ai.api.live_idea_runtime import (
-    build_live_idea_runtime_provider,
-    load_live_idea_runtime_config,
-    load_live_secret_store,
-)
 from alon_ai.api.middleware.request_logging import RequestLoggingMiddleware
 from alon_ai.api.routes.experiments import router as experiments_router
 from alon_ai.api.routes.health import router as health_router
 from alon_ai.api.routes.operator import router as operator_router
+from alon_ai.bootstrap import api_resource_scope
 from alon_ai.config import Settings, get_settings
-from alon_ai.db.engine import DatabaseHealthChecker, create_engine
 from alon_ai.logging import configure_logging
-from alon_ai.security.secrets import SecretStoreError
+from alon_ai.services.auth import (
+    COOKIE_NAME,
+    AuthService,
+    InvalidCredentials,
+    LoginRateLimited,
+)
+from alon_ai.services.experiments import ExperimentError
+from alon_ai.services.health import ReadinessUnavailable
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    settings: Settings = app.state.settings
-    engine = create_engine(settings)
-    app.state.engine = engine
-    app.state.auth = AuthService(engine, settings)
-    if settings.environment == "production" and not app.state.auth.configured:
-        await engine.dispose()
-        raise RuntimeError("Operator authentication is not configured")
-    app.state.database_health = DatabaseHealthChecker(engine)
-    app.state.idea_runtime_provider = None
-    try:
-        if settings.provider_mode == "live":
-            config_path = settings.l07_live_config_path
-            secret_root = settings.l07_secret_root
-            key_file = settings.l07_secret_key_file
-            key_version = settings.l07_secret_key_version
-            if any(
-                value is not None
-                for value in (config_path, secret_root, key_file, key_version)
-            ):
-                if (
-                    config_path is None
-                    or secret_root is None
-                    or key_file is None
-                    or key_version != "v1"
-                    or config_path != key_file.parent / "live-idea.json"
-                    or secret_root != key_file.parent / "secrets"
-                ):
-                    raise RuntimeError("L07 live runtime configuration invalid")
-                try:
-                    config = load_live_idea_runtime_config(config_path)
-                    secrets = load_live_secret_store(
-                        key_file.parent, allowed_handle=config.secret_handle
-                    )
-                    secrets.get(config.secret_handle)
-                    app.state.idea_runtime_provider = build_live_idea_runtime_provider(
-                        config, secrets
-                    )
-                except (AccountingDenied, SecretStoreError):
-                    raise RuntimeError(
-                        "L07 live runtime configuration invalid"
-                    ) from None
+    async with api_resource_scope(app.state.settings) as resources:
+        app.state.engine = resources.engine
+        app.state.auth = resources.auth
+        app.state.database_health = resources.database_health
+        app.state.idea_runtime_provider = resources.idea_runtime_provider
+        app.state.operator_service = resources.operator_service
+        app.state.operator_stream_factory = resources.operator_stream_factory
+        app.state.experiment_service_factory = resources.experiment_service_factory
+        app.state.auth_use_case_factory = resources.auth_use_case_factory
         yield
-    finally:
-        await engine.dispose()
 
 
 def create_app(settings: Settings | None = None) -> FastAPI:
@@ -79,6 +45,31 @@ def create_app(settings: Settings | None = None) -> FastAPI:
 
     application = FastAPI(title="Alon AI API", lifespan=lifespan)
     application.add_middleware(RequestLoggingMiddleware)
+
+    @application.exception_handler(LoginRateLimited)
+    async def login_rate_limited(request: Request, error: LoginRateLimited):
+        return JSONResponse(
+            status_code=429, content={"detail": "Login temporarily unavailable"}
+        )
+
+    @application.exception_handler(InvalidCredentials)
+    async def invalid_credentials(request: Request, error: InvalidCredentials):
+        return JSONResponse(
+            status_code=401, content={"detail": "Invalid operator credentials"}
+        )
+
+    @application.exception_handler(ExperimentError)
+    async def experiment_error(request: Request, error: ExperimentError):
+        return JSONResponse(
+            status_code=error.status_code, content={"detail": error.detail}
+        )
+
+    @application.exception_handler(ReadinessUnavailable)
+    async def readiness_unavailable(request: Request, error: ReadinessUnavailable):
+        return JSONResponse(
+            status_code=503,
+            content={"status": "not_ready", "database": "down"},
+        )
 
     @application.exception_handler(RequestValidationError)
     async def redact_login_validation(request: Request, error: RequestValidationError):

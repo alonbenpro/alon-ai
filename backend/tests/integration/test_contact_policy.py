@@ -7,22 +7,15 @@ from uuid import UUID, uuid4
 import pytest
 from pydantic import SecretStr
 
-from alon_ai.accounting.models import (
-    CapabilityConfig,
-    ControlPolicy,
-    FxVersion,
-    PriceBound,
-    PriceVersion,
+from alon_ai.db.repositories.accounting import GovernanceProvisioner
+from alon_ai.integrations.fakes import (
+    FakeBraveProvider,
+    FakeContactDiscoveryProvider,
+    FakeEmailVerificationProvider,
+    FakeSession,
+    FixtureScenario,
 )
-from alon_ai.accounting.repository import GovernanceProvisioner
-from alon_ai.policies.campaign_supply import (
-    DiscoveryPlan,
-    Filter,
-    IdentityEvidence,
-    ReferenceEvidence,
-    SupplyFact,
-)
-from alon_ai.providers.contracts import (
+from alon_ai.integrations.schemas.provider import (
     BraveSearchRequest,
     CallAttribution,
     Capability,
@@ -40,19 +33,26 @@ from alon_ai.providers.contracts import (
     UsageComponent,
     VerificationStatus,
 )
-from alon_ai.providers.fakes import (
-    FakeBraveProvider,
-    FakeContactDiscoveryProvider,
-    FakeEmailVerificationProvider,
-    FakeSession,
-    FixtureScenario,
+from alon_ai.policies.campaign_supply import (
+    DiscoveryPlan,
+    Filter,
+    IdentityEvidence,
+    ReferenceEvidence,
+    SupplyFact,
 )
-from alon_ai.providers.rights import (
+from alon_ai.policies.provider_rights import (
     GrantEvent,
     GrantEventKind,
     IntendedUse,
     ProviderUsageGrant,
     RuntimeContent,
+)
+from alon_ai.provider_usage.schemas.accounting import (
+    CapabilityConfig,
+    ControlPolicy,
+    FxVersion,
+    PriceBound,
+    PriceVersion,
 )
 
 pytestmark = pytest.mark.integration
@@ -60,7 +60,7 @@ NOW = datetime(2026, 9, 12, 12, tzinfo=UTC)
 
 
 async def register(admin, id_, kind, now, call_id=None):
-    from alon_ai.accounting.models import EvidenceRecord
+    from alon_ai.provider_usage.schemas.accounting import EvidenceRecord
 
     await admin.evidence(
         EvidenceRecord(
@@ -77,8 +77,11 @@ async def register(admin, id_, kind, now, call_id=None):
 async def setup(engine):
     from sqlalchemy import insert
 
-    from alon_ai.accounting.schema import experiments
-    from alon_ai.supply.repository import CampaignSupplyRepository, SupplyEvidenceWriter
+    from alon_ai.db.repositories.supply import (
+        CampaignSupplyRepository,
+        SupplyEvidenceWriter,
+    )
+    from alon_ai.db.tables.accounting import experiments
 
     exp, rule, verifier = uuid4(), uuid4(), uuid4()
     async with engine.begin() as connection:
@@ -315,18 +318,24 @@ async def provision(
 async def test_brave_present_blocks_all_hunter_discovery_and_verifies_separately(
     governance_engine, revoke_before_resolve
 ):
-    from alon_ai.accounting.models import AccountingDenied, CallState, Reason
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.contact import (
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.repositories.contact import (
         ContactAdmissionHook,
-        ContactPolicyDenied,
         ContactPolicyRepository,
+    )
+    from alon_ai.db.repositories.supply import ComposedContactSupplyHook
+    from alon_ai.integrations.contact import ConfiguredContactAdapter
+    from alon_ai.policies.contact import (
+        ContactPolicyDenied,
         observe_email_presence,
         observe_verification_status,
     )
-    from alon_ai.providers.contact_adapters import ConfiguredContactAdapter
-    from alon_ai.providers.execution import GovernedExecutor
-    from alon_ai.supply.repository import ComposedContactSupplyHook
+    from alon_ai.provider_usage.schemas.accounting import (
+        AccountingDenied,
+        CallState,
+        Reason,
+    )
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     supply, writer, exp, plan = await setup(governance_engine)
     batch = await supply.begin_batch(exp, 1, plan, uuid4())
@@ -525,7 +534,7 @@ async def test_brave_present_blocks_all_hunter_discovery_and_verifies_separately
             await contact.resolve(candidate_id)
         from sqlalchemy import select
 
-        from alon_ai.supply import schema as contact_supply_schema
+        from alon_ai.db.tables import supply as contact_supply_schema
 
         async with governance_engine.connect() as connection:
             assert (
@@ -659,7 +668,7 @@ async def test_brave_present_blocks_all_hunter_discovery_and_verifies_separately
 
     from sqlalchemy import select
 
-    from alon_ai.accounting import schema as governance_schema
+    from alon_ai.db.tables import accounting as governance_schema
 
     sentinel = "synthetic@example.test"
     digest = hashlib.sha256(sentinel.encode()).hexdigest()
@@ -673,18 +682,20 @@ async def test_brave_present_blocks_all_hunter_discovery_and_verifies_separately
 async def test_evidenced_absence_allows_bounded_fallback_but_invalid_is_no_email(
     governance_engine, revoke_selected_before_resolve
 ):
-    from alon_ai.accounting.models import AccountingDenied, Reason
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.contact import (
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.repositories.contact import (
         ContactAdmissionHook,
-        ContactPolicyDenied,
         ContactPolicyRepository,
+    )
+    from alon_ai.db.repositories.supply import ComposedContactSupplyHook
+    from alon_ai.integrations.contact import ConfiguredContactAdapter
+    from alon_ai.policies.contact import (
+        ContactPolicyDenied,
         observe_email_presence,
         observe_verification_status,
     )
-    from alon_ai.providers.contact_adapters import ConfiguredContactAdapter
-    from alon_ai.providers.execution import GovernedExecutor
-    from alon_ai.supply.repository import ComposedContactSupplyHook
+    from alon_ai.provider_usage.schemas.accounting import AccountingDenied, Reason
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     supply, writer, exp, plan = await setup(governance_engine)
     batch = await supply.begin_batch(exp, 1, plan, uuid4())
@@ -900,7 +911,7 @@ async def test_evidenced_absence_allows_bounded_fallback_but_invalid_is_no_email
             await contact.resolve(candidate_id)
         from sqlalchemy import select
 
-        from alon_ai.supply import schema as contact_supply_schema
+        from alon_ai.db.tables import supply as contact_supply_schema
 
         async with governance_engine.connect() as connection:
             assert (
@@ -969,16 +980,16 @@ async def test_evidenced_absence_allows_bounded_fallback_but_invalid_is_no_email
 async def test_not_available_pauses_and_never_becomes_hunter_absence(
     governance_engine,
 ):
-    from alon_ai.accounting.models import AccountingDenied, Reason
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.contact import (
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.repositories.contact import (
         ContactAdmissionHook,
-        ContactPolicyDenied,
         ContactPolicyRepository,
     )
-    from alon_ai.providers.contact_adapters import ConfiguredContactAdapter
-    from alon_ai.providers.execution import GovernedExecutor
-    from alon_ai.supply.repository import ComposedContactSupplyHook
+    from alon_ai.db.repositories.supply import ComposedContactSupplyHook
+    from alon_ai.integrations.contact import ConfiguredContactAdapter
+    from alon_ai.policies.contact import ContactPolicyDenied
+    from alon_ai.provider_usage.schemas.accounting import AccountingDenied, Reason
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     supply, writer, exp, plan = await setup(governance_engine)
     batch = await supply.begin_batch(exp, 1, plan, uuid4())

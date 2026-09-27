@@ -23,24 +23,21 @@ from test_offer_records import (
 from test_product_record_guards import put
 from test_product_records import artifact
 
-from alon_ai.accounting import schema as gov
-from alon_ai.accounting.models import EvidenceRecord
-from alon_ai.accounting.repository import GovernanceProvisioner
-from alon_ai.records import (
+from alon_ai.db.repositories.accounting import GovernanceProvisioner
+from alon_ai.db.repositories.records_offers import OfferRecordsRepository
+from alon_ai.db.repositories.workflow_offer_design import OfferDesignWorkflowRepository
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables import records
+from alon_ai.db.tables import records_offer as offers
+from alon_ai.provider_usage.schemas.accounting import EvidenceRecord
+from alon_ai.services.schemas.records import (
     ArtifactInput,
     ArtifactKind,
-    OfferDesignDecisionRequest,
-    OfferDesignStartRequest,
-    OfferGapRequest,
-    OfferIdeaRefinementReturnRequest,
-    OfferTargetedResearchReturnRequest,
     ProductRecordsDenied,
     ResearchCycleBudgetInput,
     SourceReference,
 )
-from alon_ai.records import offer_schema as offers
-from alon_ai.records import schema as records
-from alon_ai.records.offer_models import (
+from alon_ai.services.schemas.records_offer import (
     INITIAL_OUTREACH_POLICY,
     OFFER_FIELD_EVIDENCE_ROLES,
     OPERATOR_FIELD_CONSTRAINTS,
@@ -48,20 +45,25 @@ from alon_ai.records.offer_models import (
     REQUIRED_QUALIFICATION_CATEGORIES,
     CommercialEnvelopeRequest,
     OfferAcceptanceRequest,
+    OfferDesignDecisionRequest,
+    OfferDesignStartRequest,
     OfferFieldSource,
+    OfferGapRequest,
+    OfferIdeaRefinementReturnRequest,
+    OfferTargetedResearchReturnRequest,
     QualificationCriterion,
 )
-from alon_ai.records.offers import OfferRecordsRepository
-from alon_ai.workflows.market_research import DBOS_APPLICATION_VERSION
 from alon_ai.workflows.offer_design import (
+    assert_offer_design_compatible_application_version,
+)
+from alon_ai.workflows.schemas.offer_design import (
     OfferDesignDecisionWorkflowRequest,
-    OfferDesignWorkflowRepository,
     OfferIdeaRefinementWorkflowRequest,
     OfferTargetedResearchWorkflowRequest,
-    assert_offer_design_compatible_application_version,
     offer_design_decision_workflow_id,
     offer_idea_refinement_workflow_id,
 )
+from alon_ai.workflows.schemas.runtime import DBOS_APPLICATION_VERSION
 
 pytestmark = pytest.mark.integration
 HARNESS = Path(__file__).with_name("dbos_offer_design_harness.py")

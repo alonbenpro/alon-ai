@@ -1,0 +1,1849 @@
+{
+  "approved_shims": [],
+  "base_sha": "ca957f1cf4aa9bb2c2ce680335d16c225c7939c1",
+  "entrypoints": [
+    {
+      "owner": "alon_ai.db.tables",
+      "path": "backend/alembic/env.py",
+      "test": "backend/tests/unit/test_alembic.py"
+    },
+    {
+      "owner": "alon_ai.worker.main",
+      "path": "backend/src/alon_ai/worker/main.py",
+      "test": "backend/tests/unit/test_worker.py"
+    },
+    {
+      "owner": "alon_ai.services.live_idea_provision",
+      "path": "scripts/local-dev.sh",
+      "test": "scripts/tests/test_local_dev.py"
+    },
+    {
+      "owner": "alon_ai.services.operator_provisioning",
+      "path": "scripts/provision_operator.py",
+      "test": "backend/tests/integration/test_operator_access.py"
+    },
+    {
+      "owner": "alon_ai.api.app",
+      "path": "scripts/export_openapi.py",
+      "test": "frontend/openapi.json"
+    },
+    {
+      "owner": "standalone validator",
+      "path": "scripts/validate_experiment_brief.py",
+      "test": "scripts/validate_experiment_brief.py"
+    },
+    {
+      "owner": "API/worker/frontend launch targets",
+      "path": "Makefile",
+      "test": ".github/workflows/ci.yml"
+    },
+    {
+      "owner": "API/worker/frontend containers",
+      "path": "infra/compose.yaml",
+      "test": ".github/workflows/ci.yml"
+    }
+  ],
+  "handlers": [
+    {
+      "delegation": {
+        "args": [
+          "body"
+        ],
+        "kwargs": {},
+        "method": "login"
+      },
+      "handler": "alon_ai.api.auth.login",
+      "method": "POST",
+      "owner": "alon_ai.services.auth",
+      "path": "/auth/login",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [],
+        "kwargs": {},
+        "method": "logout"
+      },
+      "handler": "alon_ai.api.auth.logout",
+      "method": "POST",
+      "owner": "alon_ai.services.auth",
+      "path": "/auth/logout",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [],
+        "kwargs": {},
+        "method": "session"
+      },
+      "handler": "alon_ai.api.auth.session",
+      "method": "GET",
+      "owner": "alon_ai.services.auth",
+      "path": "/auth/session",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [],
+        "kwargs": {},
+        "method": "live"
+      },
+      "handler": "alon_ai.api.routes.health.live",
+      "method": "GET",
+      "owner": "alon_ai.services.health",
+      "path": "/health/live",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [],
+        "kwargs": {},
+        "method": "ready"
+      },
+      "handler": "alon_ai.api.routes.health.ready",
+      "method": "GET",
+      "owner": "alon_ai.services.health",
+      "path": "/health/ready",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id"
+        ],
+        "kwargs": {},
+        "method": "activity"
+      },
+      "handler": "alon_ai.api.routes.operator.activity",
+      "method": "GET",
+      "owner": "alon_ai.services.operator",
+      "path": "/operator/activity",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id"
+        ],
+        "kwargs": {},
+        "method": "activity_events"
+      },
+      "handler": "alon_ai.api.routes.operator.activity_events",
+      "method": "GET",
+      "owner": "alon_ai.api.operator_stream",
+      "path": "/operator/activity/events",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "body"
+        ],
+        "kwargs": {},
+        "method": "create"
+      },
+      "handler": "alon_ai.api.routes.experiments.create_experiment",
+      "method": "POST",
+      "owner": "alon_ai.services.experiments",
+      "path": "/operator/experiments",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [],
+        "kwargs": {},
+        "method": "runtime_status"
+      },
+      "handler": "alon_ai.api.routes.experiments.experiment_runtime_status",
+      "method": "GET",
+      "owner": "alon_ai.services.experiments",
+      "path": "/operator/experiments/runtime",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id"
+        ],
+        "kwargs": {},
+        "method": "get"
+      },
+      "handler": "alon_ai.api.routes.experiments.get_experiment",
+      "method": "GET",
+      "owner": "alon_ai.services.experiments",
+      "path": "/operator/experiments/{experiment_id}",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "accept"
+      },
+      "handler": "alon_ai.api.routes.experiments.accept_experiment_idea",
+      "method": "POST",
+      "owner": "alon_ai.services.ideas",
+      "path": "/operator/experiments/{experiment_id}/accept",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "discover"
+      },
+      "handler": "alon_ai.api.routes.experiments.discover_experiment",
+      "method": "POST",
+      "owner": "alon_ai.services.ideas",
+      "path": "/operator/experiments/{experiment_id}/discover",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "refine"
+      },
+      "handler": "alon_ai.api.routes.experiments.refine_experiment",
+      "method": "POST",
+      "owner": "alon_ai.services.ideas",
+      "path": "/operator/experiments/{experiment_id}/refine",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "start_return_refinement"
+      },
+      "handler": "alon_ai.api.routes.experiments.start_return_refinement",
+      "method": "POST",
+      "owner": "alon_ai.services.research",
+      "path": "/operator/experiments/{experiment_id}/returns/refine",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "select"
+      },
+      "handler": "alon_ai.api.routes.experiments.select_experiment_candidate",
+      "method": "POST",
+      "owner": "alon_ai.services.ideas",
+      "path": "/operator/experiments/{experiment_id}/select",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [],
+        "kwargs": {},
+        "method": "status"
+      },
+      "handler": "alon_ai.api.routes.operator.status",
+      "method": "GET",
+      "owner": "alon_ai.services.operator",
+      "path": "/operator/status",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    }
+  ],
+  "modules": {
+    "alon_ai.__init__": {
+      "callers": [],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/__init__.py",
+      "owners": [
+        "alon_ai.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.accounting.__init__": {
+      "callers": [],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/accounting/__init__.py",
+      "owners": [
+        "alon_ai.provider_usage.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.accounting.models": {
+      "callers": [
+        "backend/src/alon_ai/accounting/repository.py",
+        "backend/src/alon_ai/api/app.py",
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/api/recorded_idea_runtime.py",
+        "backend/src/alon_ai/contact.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py",
+        "backend/src/alon_ai/providers/contact_adapters.py",
+        "backend/src/alon_ai/providers/execution.py",
+        "backend/src/alon_ai/records/readiness.py",
+        "backend/src/alon_ai/supply/repository.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/accounting/models.py",
+      "owners": [
+        "alon_ai.provider_usage.schemas.accounting"
+      ],
+      "tests": [
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_governance.py",
+        "backend/tests/integration/test_live_idea_runtime.py",
+        "backend/tests/integration/test_offer_design_workflow.py",
+        "backend/tests/integration/test_offer_records.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_runtime.py",
+        "backend/tests/integration/test_openai_runtime_recovery.py",
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/unit/test_accounting.py",
+        "backend/tests/unit/test_contact_adapters.py"
+      ]
+    },
+    "alon_ai.accounting.repository": {
+      "callers": [
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/api/recorded_idea_runtime.py",
+        "backend/src/alon_ai/contact.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py",
+        "backend/src/alon_ai/providers/execution.py",
+        "backend/src/alon_ai/records/calibration.py",
+        "backend/src/alon_ai/records/conversation.py",
+        "backend/src/alon_ai/records/learning.py",
+        "backend/src/alon_ai/records/offers.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/qualifications.py",
+        "backend/src/alon_ai/records/readiness.py",
+        "backend/src/alon_ai/records/repository.py",
+        "backend/src/alon_ai/supply/repository.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py",
+        "backend/src/alon_ai/workflows/market_research.py",
+        "backend/src/alon_ai/workflows/offer_design.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/accounting/repository.py",
+      "owners": [
+        "alon_ai.db.repositories.accounting"
+      ],
+      "tests": [
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_governance.py",
+        "backend/tests/integration/test_idea_experiment_api.py",
+        "backend/tests/integration/test_live_idea_runtime.py",
+        "backend/tests/integration/test_offer_design_workflow.py",
+        "backend/tests/integration/test_offer_records.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_runtime.py",
+        "backend/tests/integration/test_openai_runtime_recovery.py",
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_product_record_guards.py",
+        "backend/tests/integration/test_product_records.py",
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py",
+        "backend/tests/integration/test_strategy_learning_records.py"
+      ]
+    },
+    "alon_ai.accounting.schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/accounting/repository.py",
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/api/routes/experiments.py",
+        "backend/src/alon_ai/contact.py",
+        "backend/src/alon_ai/openai_runtime/authority.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py",
+        "backend/src/alon_ai/openai_runtime/schema.py",
+        "backend/src/alon_ai/openai_runtime/store.py",
+        "backend/src/alon_ai/records/calibration_schema.py",
+        "backend/src/alon_ai/records/offer_schema.py",
+        "backend/src/alon_ai/records/offers.py",
+        "backend/src/alon_ai/records/operators.py",
+        "backend/src/alon_ai/records/organization_schema.py",
+        "backend/src/alon_ai/records/organizations.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/outreach_schema.py",
+        "backend/src/alon_ai/records/qualification_schema.py",
+        "backend/src/alon_ai/records/readiness.py",
+        "backend/src/alon_ai/records/readiness_schema.py",
+        "backend/src/alon_ai/records/repository.py",
+        "backend/src/alon_ai/records/schema.py",
+        "backend/src/alon_ai/supply/repository.py",
+        "backend/src/alon_ai/supply/schema.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/accounting/schema.py",
+      "owners": [
+        "alon_ai.db.tables.accounting"
+      ],
+      "tests": [
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_dbos_campaign_supply_workflow.py",
+        "backend/tests/integration/test_governance.py",
+        "backend/tests/integration/test_live_idea_runtime.py",
+        "backend/tests/integration/test_market_research_outcomes.py",
+        "backend/tests/integration/test_offer_design_workflow.py",
+        "backend/tests/integration/test_offer_records.py",
+        "backend/tests/integration/test_openai_idea.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_runtime.py",
+        "backend/tests/integration/test_openai_runtime.py",
+        "backend/tests/integration/test_openai_runtime_recovery.py",
+        "backend/tests/integration/test_operator_records.py",
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_product_records.py",
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py",
+        "backend/tests/integration/test_strategy_learning_records.py"
+      ]
+    },
+    "alon_ai.api.__init__": {
+      "callers": [],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/api/__init__.py",
+      "owners": [
+        "alon_ai.api.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.api.app": {
+      "callers": [
+        "scripts/export_openapi.py"
+      ],
+      "disposition": "split",
+      "note": "HTTP adapter/use case split",
+      "old_path": "backend/src/alon_ai/api/app.py",
+      "owners": [
+        "alon_ai.api.app",
+        "alon_ai.bootstrap"
+      ],
+      "tests": [
+        "backend/tests/integration/test_operator_access.py",
+        "backend/tests/unit/test_liveness.py",
+        "backend/tests/unit/test_logging.py",
+        "backend/tests/unit/test_operator_auth.py",
+        "backend/tests/unit/test_readiness.py"
+      ]
+    },
+    "alon_ai.api.auth": {
+      "callers": [
+        "backend/src/alon_ai/api/app.py",
+        "backend/src/alon_ai/api/routes/operator.py"
+      ],
+      "disposition": "split",
+      "note": "HTTP adapter/use case split",
+      "old_path": "backend/src/alon_ai/api/auth.py",
+      "owners": [
+        "alon_ai.api.auth",
+        "alon_ai.api.auth_adapters",
+        "alon_ai.services.auth",
+        "alon_ai.db.repositories.auth"
+      ],
+      "tests": [
+        "backend/tests/integration/test_idea_experiment_api.py",
+        "backend/tests/integration/test_operator_access.py",
+        "backend/tests/unit/test_logging.py",
+        "backend/tests/unit/test_operator_auth.py"
+      ]
+    },
+    "alon_ai.api.live_idea_provision": {
+      "callers": [],
+      "disposition": "split",
+      "old_path": "backend/src/alon_ai/api/live_idea_provision.py",
+      "owners": [
+        "alon_ai.services.live_idea_provision",
+        "alon_ai.db.repositories.live_idea_provision"
+      ],
+      "tests": [
+        "backend/tests/integration/test_live_idea_runtime.py",
+        "backend/tests/unit/test_live_idea_provision.py"
+      ]
+    },
+    "alon_ai.api.live_idea_runtime": {
+      "callers": [
+        "backend/src/alon_ai/api/app.py",
+        "backend/src/alon_ai/api/live_idea_provision.py"
+      ],
+      "disposition": "split",
+      "note": "HTTP adapter/use case split",
+      "old_path": "backend/src/alon_ai/api/live_idea_runtime.py",
+      "owners": [
+        "alon_ai.integrations.live_idea",
+        "alon_ai.provider_usage.live_idea",
+        "alon_ai.bootstrap"
+      ],
+      "tests": [
+        "backend/tests/integration/test_live_idea_runtime.py"
+      ]
+    },
+    "alon_ai.api.middleware.__init__": {
+      "callers": [],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/api/middleware/__init__.py",
+      "owners": [
+        "alon_ai.api.middleware.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.api.middleware.request_logging": {
+      "callers": [
+        "backend/src/alon_ai/api/app.py"
+      ],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/api/middleware/request_logging.py",
+      "owners": [
+        "alon_ai.api.middleware.request_logging"
+      ],
+      "tests": []
+    },
+    "alon_ai.api.recorded_idea_runtime": {
+      "callers": [
+        "backend/src/alon_ai/api/routes/experiments.py"
+      ],
+      "disposition": "split",
+      "old_path": "backend/src/alon_ai/api/recorded_idea_runtime.py",
+      "owners": [
+        "alon_ai.integrations.recorded_idea",
+        "alon_ai.provider_usage.recorded_idea"
+      ],
+      "tests": [
+        "backend/tests/integration/test_idea_experiment_api.py"
+      ]
+    },
+    "alon_ai.api.routes.__init__": {
+      "callers": [],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/api/routes/__init__.py",
+      "owners": [
+        "alon_ai.api.routes.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.api.routes.experiments": {
+      "callers": [
+        "backend/src/alon_ai/api/app.py"
+      ],
+      "disposition": "split",
+      "note": "HTTP adapter/use case split",
+      "old_path": "backend/src/alon_ai/api/routes/experiments.py",
+      "owners": [
+        "alon_ai.api.routes.experiments",
+        "alon_ai.api.schemas.experiments",
+        "alon_ai.services.experiments",
+        "alon_ai.services.ideas",
+        "alon_ai.services.research",
+        "alon_ai.db.repositories.experiments"
+      ],
+      "tests": []
+    },
+    "alon_ai.api.routes.health": {
+      "callers": [
+        "backend/src/alon_ai/api/app.py"
+      ],
+      "disposition": "split",
+      "note": "HTTP adapter/use case split",
+      "old_path": "backend/src/alon_ai/api/routes/health.py",
+      "owners": [
+        "alon_ai.api.routes.health",
+        "alon_ai.services.health"
+      ],
+      "tests": []
+    },
+    "alon_ai.api.routes.operator": {
+      "callers": [
+        "backend/src/alon_ai/api/app.py"
+      ],
+      "disposition": "split",
+      "note": "HTTP adapter/use case split",
+      "old_path": "backend/src/alon_ai/api/routes/operator.py",
+      "owners": [
+        "alon_ai.api.routes.operator",
+        "alon_ai.api.operator_stream",
+        "alon_ai.services.operator"
+      ],
+      "tests": [
+        "backend/tests/integration/test_operator_access.py",
+        "backend/tests/unit/test_operator_auth.py"
+      ]
+    },
+    "alon_ai.config": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/api/app.py",
+        "backend/src/alon_ai/api/auth.py",
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/db/engine.py",
+        "backend/src/alon_ai/db/schema_manifest.py",
+        "backend/src/alon_ai/logging.py",
+        "backend/src/alon_ai/worker/main.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py",
+        "backend/src/alon_ai/workflows/market_research.py",
+        "backend/src/alon_ai/workflows/offer_design.py",
+        "scripts/provision_operator.py"
+      ],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/config.py",
+      "owners": [
+        "alon_ai.config"
+      ],
+      "tests": [
+        "backend/tests/integration/dbos_campaign_supply_harness.py",
+        "backend/tests/integration/dbos_market_research_harness.py",
+        "backend/tests/integration/dbos_offer_design_harness.py",
+        "backend/tests/integration/test_database_readiness.py",
+        "backend/tests/integration/test_operator_access.py",
+        "backend/tests/unit/test_config.py",
+        "backend/tests/unit/test_dbos_runtime.py",
+        "backend/tests/unit/test_liveness.py",
+        "backend/tests/unit/test_logging.py",
+        "backend/tests/unit/test_operator_auth.py",
+        "backend/tests/unit/test_readiness.py",
+        "backend/tests/unit/test_worker.py"
+      ]
+    },
+    "alon_ai.contact": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/records/readiness.py"
+      ],
+      "disposition": "split",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/contact.py",
+      "owners": [
+        "alon_ai.policies.contact",
+        "alon_ai.db.tables.contact",
+        "alon_ai.db.repositories.contact"
+      ],
+      "tests": [
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py",
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py",
+        "backend/tests/unit/test_contact_adapters.py"
+      ]
+    },
+    "alon_ai.db.__init__": {
+      "callers": [],
+      "disposition": "retained",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/db/__init__.py",
+      "owners": [
+        "alon_ai.db.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.db.engine": {
+      "callers": [
+        "backend/src/alon_ai/api/app.py",
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/worker/main.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py",
+        "backend/src/alon_ai/workflows/market_research.py",
+        "backend/src/alon_ai/workflows/offer_design.py",
+        "scripts/provision_operator.py"
+      ],
+      "disposition": "retained",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/db/engine.py",
+      "owners": [
+        "alon_ai.db.engine"
+      ],
+      "tests": [
+        "backend/tests/integration/dbos_campaign_supply_harness.py",
+        "backend/tests/integration/dbos_market_research_harness.py",
+        "backend/tests/integration/dbos_offer_design_harness.py",
+        "backend/tests/integration/test_database_readiness.py",
+        "backend/tests/unit/test_config.py",
+        "backend/tests/unit/test_logging.py"
+      ]
+    },
+    "alon_ai.db.schema_manifest": {
+      "callers": [],
+      "disposition": "retained",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/db/schema_manifest.py",
+      "owners": [
+        "alon_ai.db.schema_manifest"
+      ],
+      "tests": [
+        "backend/tests/integration/test_migration_roundtrip.py",
+        "backend/tests/integration/test_schema_manifest.py"
+      ]
+    },
+    "alon_ai.domain.__init__": {
+      "callers": [],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/domain/__init__.py",
+      "owners": [
+        "alon_ai.provider_usage.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.domain.sending": {
+      "callers": [],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/domain/sending.py",
+      "owners": [
+        "alon_ai.provider_usage.sending"
+      ],
+      "tests": [
+        "backend/tests/unit/test_send_gateway.py"
+      ]
+    },
+    "alon_ai.logging": {
+      "callers": [
+        "backend/src/alon_ai/api/app.py",
+        "backend/src/alon_ai/worker/main.py"
+      ],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/logging.py",
+      "owners": [
+        "alon_ai.logging"
+      ],
+      "tests": [
+        "backend/tests/unit/test_logging.py"
+      ]
+    },
+    "alon_ai.openai_runtime.__init__": {
+      "callers": [],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/openai_runtime/__init__.py",
+      "owners": [
+        "alon_ai.agents.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.openai_runtime.authority": {
+      "callers": [
+        "backend/src/alon_ai/openai_runtime/runtime.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/openai_runtime/authority.py",
+      "owners": [
+        "alon_ai.db.repositories.openai_authority"
+      ],
+      "tests": [
+        "backend/tests/integration/test_openai_authority.py"
+      ]
+    },
+    "alon_ai.openai_runtime.contract": {
+      "callers": [
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/api/recorded_idea_runtime.py",
+        "backend/src/alon_ai/api/routes/experiments.py",
+        "backend/src/alon_ai/openai_runtime/authority.py",
+        "backend/src/alon_ai/openai_runtime/idea.py",
+        "backend/src/alon_ai/openai_runtime/market.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py",
+        "backend/src/alon_ai/openai_runtime/transport.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/openai_runtime/contract.py",
+      "owners": [
+        "alon_ai.agents.schemas.openai"
+      ],
+      "tests": [
+        "backend/tests/integration/test_idea_experiment_api.py",
+        "backend/tests/integration/test_openai_authority.py",
+        "backend/tests/integration/test_openai_idea.py",
+        "backend/tests/integration/test_openai_idea_eval.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_profile.py",
+        "backend/tests/integration/test_openai_market_runtime.py",
+        "backend/tests/integration/test_openai_runtime.py",
+        "backend/tests/integration/test_openai_runtime_recovery.py",
+        "backend/tests/unit/test_openai_runtime_contract.py"
+      ]
+    },
+    "alon_ai.openai_runtime.idea": {
+      "callers": [
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/api/recorded_idea_runtime.py",
+        "backend/src/alon_ai/api/routes/experiments.py",
+        "backend/src/alon_ai/openai_runtime/idea_eval.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/openai_runtime/idea.py",
+      "owners": [
+        "alon_ai.agents.idea_discovery"
+      ],
+      "tests": [
+        "backend/tests/integration/test_idea_experiment_api.py",
+        "backend/tests/integration/test_live_idea_runtime.py",
+        "backend/tests/integration/test_openai_idea.py",
+        "backend/tests/integration/test_openai_idea_eval.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_runtime.py"
+      ]
+    },
+    "alon_ai.openai_runtime.idea_eval": {
+      "callers": [],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/openai_runtime/idea_eval.py",
+      "owners": [
+        "alon_ai.agents.evaluations.idea"
+      ],
+      "tests": [
+        "backend/tests/integration/test_openai_idea_eval.py"
+      ]
+    },
+    "alon_ai.openai_runtime.market": {
+      "callers": [
+        "backend/src/alon_ai/openai_runtime/market_eval.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/openai_runtime/market.py",
+      "owners": [
+        "alon_ai.agents.market_research"
+      ],
+      "tests": [
+        "backend/tests/integration/test_openai_market_eval.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_profile.py",
+        "backend/tests/integration/test_openai_market_runtime.py"
+      ]
+    },
+    "alon_ai.openai_runtime.market_eval": {
+      "callers": [],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/openai_runtime/market_eval.py",
+      "owners": [
+        "alon_ai.agents.evaluations.market"
+      ],
+      "tests": [
+        "backend/tests/integration/test_openai_market_eval.py",
+        "backend/tests/integration/test_openai_market_runtime.py"
+      ]
+    },
+    "alon_ai.openai_runtime.runtime": {
+      "callers": [
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/api/recorded_idea_runtime.py",
+        "backend/src/alon_ai/openai_runtime/idea.py"
+      ],
+      "disposition": "split",
+      "old_path": "backend/src/alon_ai/openai_runtime/runtime.py",
+      "owners": [
+        "alon_ai.agents.runtime",
+        "alon_ai.services.agent_runs",
+        "alon_ai.provider_usage.openai",
+        "alon_ai.db.repositories.openai_inputs",
+        "alon_ai.policies.openai_inputs",
+        "alon_ai.policies.openai_pricing"
+      ],
+      "tests": [
+        "backend/tests/integration/test_openai_idea.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_runtime.py",
+        "backend/tests/integration/test_openai_runtime.py",
+        "backend/tests/integration/test_openai_runtime_recovery.py"
+      ]
+    },
+    "alon_ai.openai_runtime.schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/api/routes/experiments.py",
+        "backend/src/alon_ai/openai_runtime/authority.py",
+        "backend/src/alon_ai/openai_runtime/store.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/openai_runtime/schema.py",
+      "owners": [
+        "alon_ai.db.tables.openai"
+      ],
+      "tests": [
+        "backend/tests/integration/test_openai_authority.py",
+        "backend/tests/integration/test_openai_runtime_recovery.py"
+      ]
+    },
+    "alon_ai.openai_runtime.store": {
+      "callers": [
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/api/recorded_idea_runtime.py",
+        "backend/src/alon_ai/api/routes/experiments.py",
+        "backend/src/alon_ai/openai_runtime/authority.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py"
+      ],
+      "disposition": "split",
+      "old_path": "backend/src/alon_ai/openai_runtime/store.py",
+      "owners": [
+        "alon_ai.agents.schemas.run",
+        "alon_ai.db.repositories.openai_run"
+      ],
+      "tests": [
+        "backend/tests/integration/test_openai_authority.py",
+        "backend/tests/integration/test_openai_idea.py",
+        "backend/tests/integration/test_openai_idea_eval.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_runtime.py",
+        "backend/tests/integration/test_openai_run_store.py",
+        "backend/tests/integration/test_openai_runtime.py",
+        "backend/tests/integration/test_openai_runtime_recovery.py"
+      ]
+    },
+    "alon_ai.openai_runtime.transport": {
+      "callers": [
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/openai_runtime/transport.py",
+      "owners": [
+        "alon_ai.integrations.openai"
+      ],
+      "tests": [
+        "backend/tests/unit/test_openai_runtime_contract.py"
+      ]
+    },
+    "alon_ai.policies.__init__": {
+      "callers": [],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/policies/__init__.py",
+      "owners": [
+        "alon_ai.policies.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.policies.campaign_supply": {
+      "callers": [
+        "backend/src/alon_ai/contact.py",
+        "backend/src/alon_ai/supply/repository.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py"
+      ],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/policies/campaign_supply.py",
+      "owners": [
+        "alon_ai.policies.campaign_supply"
+      ],
+      "tests": [
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_dbos_campaign_supply_workflow.py",
+        "backend/tests/unit/test_campaign_supply_policy.py"
+      ]
+    },
+    "alon_ai.policies.sending": {
+      "callers": [
+        "backend/src/alon_ai/domain/sending.py"
+      ],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/policies/sending.py",
+      "owners": [
+        "alon_ai.policies.sending"
+      ],
+      "tests": [
+        "backend/tests/unit/test_send_gateway.py"
+      ]
+    },
+    "alon_ai.providers.__init__": {
+      "callers": [],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/providers/__init__.py",
+      "owners": [
+        "alon_ai.integrations.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.providers.contact_adapters": {
+      "callers": [],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/providers/contact_adapters.py",
+      "owners": [
+        "alon_ai.integrations.contact"
+      ],
+      "tests": [
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_readiness_records.py",
+        "backend/tests/unit/test_contact_adapters.py"
+      ]
+    },
+    "alon_ai.providers.contracts": {
+      "callers": [
+        "backend/src/alon_ai/accounting/models.py",
+        "backend/src/alon_ai/accounting/repository.py",
+        "backend/src/alon_ai/accounting/schema.py",
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/api/recorded_idea_runtime.py",
+        "backend/src/alon_ai/contact.py",
+        "backend/src/alon_ai/openai_runtime/authority.py",
+        "backend/src/alon_ai/openai_runtime/contract.py",
+        "backend/src/alon_ai/openai_runtime/idea.py",
+        "backend/src/alon_ai/openai_runtime/market.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py",
+        "backend/src/alon_ai/policies/campaign_supply.py",
+        "backend/src/alon_ai/providers/contact_adapters.py",
+        "backend/src/alon_ai/providers/execution.py",
+        "backend/src/alon_ai/providers/fakes.py",
+        "backend/src/alon_ai/providers/rights.py",
+        "backend/src/alon_ai/records/calibration_models.py",
+        "backend/src/alon_ai/records/conversation_models.py",
+        "backend/src/alon_ai/records/learning_models.py",
+        "backend/src/alon_ai/records/models.py",
+        "backend/src/alon_ai/records/offer_models.py",
+        "backend/src/alon_ai/records/operator_models.py",
+        "backend/src/alon_ai/records/organization_models.py",
+        "backend/src/alon_ai/records/outreach_models.py",
+        "backend/src/alon_ai/records/qualification_models.py",
+        "backend/src/alon_ai/records/readiness.py",
+        "backend/src/alon_ai/records/readiness_models.py",
+        "backend/src/alon_ai/supply/repository.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py",
+        "backend/src/alon_ai/workflows/market_research.py",
+        "backend/src/alon_ai/workflows/offer_design.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/providers/contracts.py",
+      "owners": [
+        "alon_ai.integrations.schemas.provider"
+      ],
+      "tests": [
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_conversation_records.py",
+        "backend/tests/integration/test_governance.py",
+        "backend/tests/integration/test_idea_experiment_api.py",
+        "backend/tests/integration/test_live_idea_runtime.py",
+        "backend/tests/integration/test_market_research_outcomes.py",
+        "backend/tests/integration/test_openai_authority.py",
+        "backend/tests/integration/test_openai_idea.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_runtime.py",
+        "backend/tests/integration/test_openai_runtime.py",
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_product_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py",
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py",
+        "backend/tests/integration/test_strategy_learning_records.py",
+        "backend/tests/unit/test_accounting.py",
+        "backend/tests/unit/test_contact_adapters.py",
+        "backend/tests/unit/test_live_idea_provision.py",
+        "backend/tests/unit/test_provider_contracts.py",
+        "backend/tests/unit/test_provider_rights.py"
+      ]
+    },
+    "alon_ai.providers.execution": {
+      "callers": [
+        "backend/src/alon_ai/contact.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/providers/execution.py",
+      "owners": [
+        "alon_ai.provider_usage.service"
+      ],
+      "tests": [
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_governance.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py",
+        "backend/tests/integration/test_readiness_records.py"
+      ]
+    },
+    "alon_ai.providers.fakes": {
+      "callers": [],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/providers/fakes.py",
+      "owners": [
+        "alon_ai.integrations.fakes"
+      ],
+      "tests": [
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_readiness_records.py",
+        "backend/tests/unit/test_contact_adapters.py",
+        "backend/tests/unit/test_provider_contracts.py"
+      ]
+    },
+    "alon_ai.providers.gmail": {
+      "callers": [
+        "backend/src/alon_ai/domain/sending.py",
+        "backend/src/alon_ai/policies/sending.py",
+        "backend/src/alon_ai/providers/fakes.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/providers/gmail.py",
+      "owners": [
+        "alon_ai.integrations.gmail"
+      ],
+      "tests": [
+        "backend/tests/unit/test_provider_contracts.py",
+        "backend/tests/unit/test_send_gateway.py"
+      ]
+    },
+    "alon_ai.providers.rights": {
+      "callers": [
+        "backend/src/alon_ai/accounting/models.py",
+        "backend/src/alon_ai/accounting/repository.py",
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/api/recorded_idea_runtime.py",
+        "backend/src/alon_ai/contact.py",
+        "backend/src/alon_ai/openai_runtime/authority.py",
+        "backend/src/alon_ai/openai_runtime/market.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py",
+        "backend/src/alon_ai/providers/contact_adapters.py",
+        "backend/src/alon_ai/providers/contracts.py",
+        "backend/src/alon_ai/providers/execution.py",
+        "backend/src/alon_ai/providers/fakes.py",
+        "backend/src/alon_ai/records/readiness.py"
+      ],
+      "disposition": "moved",
+      "old_path": "backend/src/alon_ai/providers/rights.py",
+      "owners": [
+        "alon_ai.policies.provider_rights"
+      ],
+      "tests": [
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_governance.py",
+        "backend/tests/integration/test_live_idea_runtime.py",
+        "backend/tests/integration/test_openai_authority.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_runtime.py",
+        "backend/tests/integration/test_openai_runtime.py",
+        "backend/tests/integration/test_openai_runtime_recovery.py",
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_product_records.py",
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py",
+        "backend/tests/unit/test_contact_adapters.py",
+        "backend/tests/unit/test_provider_contracts.py",
+        "backend/tests/unit/test_provider_rights.py"
+      ]
+    },
+    "alon_ai.records.__init__": {
+      "callers": [],
+      "disposition": "split",
+      "note": "Retired old aggregate exports; callers import each canonical owner directly.",
+      "old_path": "backend/src/alon_ai/records/__init__.py",
+      "owners": [
+        "alon_ai.db.repositories.records",
+        "alon_ai.db.repositories.records_calibration",
+        "alon_ai.db.repositories.records_conversation",
+        "alon_ai.db.repositories.records_learning",
+        "alon_ai.db.repositories.records_offers",
+        "alon_ai.db.repositories.records_operators",
+        "alon_ai.db.repositories.records_outreach",
+        "alon_ai.db.repositories.records_qualifications",
+        "alon_ai.db.repositories.records_readiness",
+        "alon_ai.services.schemas.records",
+        "alon_ai.services.schemas.records_calibration",
+        "alon_ai.services.schemas.records_conversation",
+        "alon_ai.services.schemas.records_learning",
+        "alon_ai.services.schemas.records_offer",
+        "alon_ai.services.schemas.records_operator",
+        "alon_ai.services.schemas.records_outreach",
+        "alon_ai.services.schemas.records_qualification",
+        "alon_ai.services.schemas.records_readiness"
+      ],
+      "tests": []
+    },
+    "alon_ai.records.calibration": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/qualifications.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/calibration.py",
+      "owners": [
+        "alon_ai.db.repositories.records_calibration"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py"
+      ]
+    },
+    "alon_ai.records.calibration_models": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/calibration.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/calibration_models.py",
+      "owners": [
+        "alon_ai.services.schemas.records_calibration"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py"
+      ]
+    },
+    "alon_ai.records.calibration_schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/records/calibration.py",
+        "backend/src/alon_ai/records/offers.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/calibration_schema.py",
+      "owners": [
+        "alon_ai.db.tables.records_calibration"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py"
+      ]
+    },
+    "alon_ai.records.conversation": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/conversation.py",
+      "owners": [
+        "alon_ai.db.repositories.records_conversation"
+      ],
+      "tests": []
+    },
+    "alon_ai.records.conversation_models": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/conversation.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/conversation_models.py",
+      "owners": [
+        "alon_ai.services.schemas.records_conversation"
+      ],
+      "tests": []
+    },
+    "alon_ai.records.learning": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/learning.py",
+      "owners": [
+        "alon_ai.db.repositories.records_learning"
+      ],
+      "tests": []
+    },
+    "alon_ai.records.learning_models": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/learning.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/learning_models.py",
+      "owners": [
+        "alon_ai.services.schemas.records_learning"
+      ],
+      "tests": [
+        "backend/tests/integration/test_learning_records.py",
+        "backend/tests/integration/test_strategy_learning_records.py"
+      ]
+    },
+    "alon_ai.records.models": {
+      "callers": [
+        "backend/src/alon_ai/openai_runtime/runtime.py",
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/calibration.py",
+        "backend/src/alon_ai/records/calibration_models.py",
+        "backend/src/alon_ai/records/conversation.py",
+        "backend/src/alon_ai/records/learning.py",
+        "backend/src/alon_ai/records/learning_models.py",
+        "backend/src/alon_ai/records/offer_models.py",
+        "backend/src/alon_ai/records/offers.py",
+        "backend/src/alon_ai/records/operators.py",
+        "backend/src/alon_ai/records/organizations.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/outreach_models.py",
+        "backend/src/alon_ai/records/qualifications.py",
+        "backend/src/alon_ai/records/readiness.py",
+        "backend/src/alon_ai/records/readiness_models.py",
+        "backend/src/alon_ai/records/repository.py",
+        "backend/src/alon_ai/records/schema.py",
+        "backend/src/alon_ai/workflows/market_research.py",
+        "backend/src/alon_ai/workflows/offer_design.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/models.py",
+      "owners": [
+        "alon_ai.services.schemas.records"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py",
+        "backend/tests/integration/test_operator_records.py"
+      ]
+    },
+    "alon_ai.records.offer_models": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/offers.py",
+        "backend/src/alon_ai/workflows/offer_design.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/offer_models.py",
+      "owners": [
+        "alon_ai.services.schemas.records_offer"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py",
+        "backend/tests/integration/test_offer_design_workflow.py",
+        "backend/tests/integration/test_offer_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py"
+      ]
+    },
+    "alon_ai.records.offer_schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/records/calibration.py",
+        "backend/src/alon_ai/records/offers.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/qualifications.py",
+        "backend/src/alon_ai/records/readiness.py",
+        "backend/src/alon_ai/workflows/offer_design.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/offer_schema.py",
+      "owners": [
+        "alon_ai.db.tables.records_offer"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py",
+        "backend/tests/integration/test_offer_design_workflow.py",
+        "backend/tests/integration/test_offer_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py",
+        "backend/tests/integration/test_readiness_lineage.py"
+      ]
+    },
+    "alon_ai.records.offers": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/workflows/offer_design.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/offers.py",
+      "owners": [
+        "alon_ai.db.repositories.records_offers"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py",
+        "backend/tests/integration/test_offer_design_workflow.py",
+        "backend/tests/integration/test_offer_records.py"
+      ]
+    },
+    "alon_ai.records.operator_models": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/models.py",
+        "backend/src/alon_ai/records/operators.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/operator_models.py",
+      "owners": [
+        "alon_ai.services.schemas.records_operator"
+      ],
+      "tests": [
+        "backend/tests/integration/test_operator_records.py"
+      ]
+    },
+    "alon_ai.records.operators": {
+      "callers": [
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/api/routes/experiments.py",
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/repository.py"
+      ],
+      "disposition": "split",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/operators.py",
+      "owners": [
+        "alon_ai.db.repositories.records_operators",
+        "alon_ai.db.tables.records_operator"
+      ],
+      "tests": [
+        "backend/tests/integration/test_live_idea_runtime.py",
+        "backend/tests/integration/test_operator_records.py"
+      ]
+    },
+    "alon_ai.records.organization_models": {
+      "callers": [
+        "backend/src/alon_ai/records/organizations.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/organization_models.py",
+      "owners": [
+        "alon_ai.services.schemas.records_organization"
+      ],
+      "tests": [
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py"
+      ]
+    },
+    "alon_ai.records.organization_schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/records/organizations.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/qualifications.py",
+        "backend/src/alon_ai/records/readiness.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/organization_schema.py",
+      "owners": [
+        "alon_ai.db.tables.records_organization"
+      ],
+      "tests": [
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py"
+      ]
+    },
+    "alon_ai.records.organizations": {
+      "callers": [
+        "backend/src/alon_ai/records/calibration.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/qualifications.py",
+        "backend/src/alon_ai/records/readiness.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/organizations.py",
+      "owners": [
+        "alon_ai.db.repositories.records_organizations"
+      ],
+      "tests": [
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py"
+      ]
+    },
+    "alon_ai.records.outreach": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/outreach.py",
+      "owners": [
+        "alon_ai.db.repositories.records_outreach"
+      ],
+      "tests": []
+    },
+    "alon_ai.records.outreach_models": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/outreach.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/outreach_models.py",
+      "owners": [
+        "alon_ai.services.schemas.records_outreach"
+      ],
+      "tests": []
+    },
+    "alon_ai.records.outreach_schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/records/outreach.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/outreach_schema.py",
+      "owners": [
+        "alon_ai.db.tables.records_outreach"
+      ],
+      "tests": [
+        "backend/tests/integration/test_qualification_cohorts.py"
+      ]
+    },
+    "alon_ai.records.qualification_models": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/qualifications.py",
+        "backend/src/alon_ai/records/readiness.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/qualification_models.py",
+      "owners": [
+        "alon_ai.services.schemas.records_qualification"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py"
+      ]
+    },
+    "alon_ai.records.qualification_schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/records/calibration.py",
+        "backend/src/alon_ai/records/offers.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/qualifications.py",
+        "backend/src/alon_ai/records/readiness.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/qualification_schema.py",
+      "owners": [
+        "alon_ai.db.tables.records_qualification"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py",
+        "backend/tests/integration/test_readiness_eligibility.py",
+        "backend/tests/integration/test_readiness_lineage.py"
+      ]
+    },
+    "alon_ai.records.qualifications": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/calibration.py",
+        "backend/src/alon_ai/records/outreach.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/qualifications.py",
+      "owners": [
+        "alon_ai.db.repositories.records_qualifications"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py",
+        "backend/tests/integration/test_readiness_eligibility.py",
+        "backend/tests/integration/test_readiness_lineage.py"
+      ]
+    },
+    "alon_ai.records.readiness": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/qualifications.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/readiness.py",
+      "owners": [
+        "alon_ai.db.repositories.records_readiness"
+      ],
+      "tests": [
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py"
+      ]
+    },
+    "alon_ai.records.readiness_models": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/readiness.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/readiness_models.py",
+      "owners": [
+        "alon_ai.services.schemas.records_readiness"
+      ],
+      "tests": [
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py"
+      ]
+    },
+    "alon_ai.records.readiness_schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/records/readiness.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/readiness_schema.py",
+      "owners": [
+        "alon_ai.db.tables.records_readiness"
+      ],
+      "tests": [
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py"
+      ]
+    },
+    "alon_ai.records.repository": {
+      "callers": [
+        "backend/src/alon_ai/records/__init__.py",
+        "backend/src/alon_ai/records/calibration.py",
+        "backend/src/alon_ai/records/conversation.py",
+        "backend/src/alon_ai/records/learning.py",
+        "backend/src/alon_ai/records/offers.py",
+        "backend/src/alon_ai/records/operators.py",
+        "backend/src/alon_ai/records/organizations.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/qualifications.py",
+        "backend/src/alon_ai/records/readiness.py",
+        "backend/src/alon_ai/supply/repository.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py",
+        "backend/src/alon_ai/workflows/market_research.py",
+        "backend/src/alon_ai/workflows/offer_design.py"
+      ],
+      "disposition": "split",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/repository.py",
+      "owners": [
+        "alon_ai.db.repositories.records",
+        "alon_ai.policies.records_requests"
+      ],
+      "tests": [
+        "backend/tests/integration/test_calibration_records.py",
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py"
+      ]
+    },
+    "alon_ai.records.schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/api/routes/experiments.py",
+        "backend/src/alon_ai/openai_runtime/idea.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py",
+        "backend/src/alon_ai/records/offer_schema.py",
+        "backend/src/alon_ai/records/offers.py",
+        "backend/src/alon_ai/records/operators.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/readiness.py",
+        "backend/src/alon_ai/records/repository.py",
+        "backend/src/alon_ai/supply/repository.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py",
+        "backend/src/alon_ai/workflows/market_research.py",
+        "backend/src/alon_ai/workflows/offer_design.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/records/schema.py",
+      "owners": [
+        "alon_ai.db.tables.records"
+      ],
+      "tests": [
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_dbos_campaign_supply_workflow.py",
+        "backend/tests/integration/test_dbos_market_research_workflow.py",
+        "backend/tests/integration/test_idea_experiment_api.py",
+        "backend/tests/integration/test_market_research_outcomes.py",
+        "backend/tests/integration/test_offer_design_workflow.py",
+        "backend/tests/integration/test_offer_records.py",
+        "backend/tests/integration/test_openai_idea.py",
+        "backend/tests/integration/test_openai_idea_eval.py",
+        "backend/tests/integration/test_openai_market_evidence_policy.py",
+        "backend/tests/integration/test_openai_market_runtime.py",
+        "backend/tests/integration/test_operator_records.py",
+        "backend/tests/integration/test_product_record_guards.py",
+        "backend/tests/integration/test_product_records.py",
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_research_origins.py",
+        "backend/tests/integration/test_strategy_learning_records.py",
+        "backend/tests/integration/test_workflow_state_transitions.py"
+      ]
+    },
+    "alon_ai.security.__init__": {
+      "callers": [],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/security/__init__.py",
+      "owners": [
+        "alon_ai.security.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.security.secrets": {
+      "callers": [
+        "backend/src/alon_ai/api/app.py",
+        "backend/src/alon_ai/api/live_idea_provision.py",
+        "backend/src/alon_ai/api/live_idea_runtime.py",
+        "backend/src/alon_ai/openai_runtime/runtime.py",
+        "backend/src/alon_ai/providers/execution.py"
+      ],
+      "disposition": "retained",
+      "old_path": "backend/src/alon_ai/security/secrets.py",
+      "owners": [
+        "alon_ai.security.secrets"
+      ],
+      "tests": [
+        "backend/tests/integration/test_live_idea_runtime.py",
+        "backend/tests/unit/test_secrets.py"
+      ]
+    },
+    "alon_ai.supply.__init__": {
+      "callers": [],
+      "disposition": "split",
+      "note": "Retired empty legacy package namespace.",
+      "old_path": "backend/src/alon_ai/supply/__init__.py",
+      "owners": [
+        "alon_ai.db.tables.supply",
+        "alon_ai.db.repositories.supply",
+        "alon_ai.policies.supply_records"
+      ],
+      "tests": []
+    },
+    "alon_ai.supply.repository": {
+      "callers": [
+        "backend/src/alon_ai/contact.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py"
+      ],
+      "disposition": "split",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/supply/repository.py",
+      "owners": [
+        "alon_ai.db.repositories.supply",
+        "alon_ai.policies.supply_records"
+      ],
+      "tests": [
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_readiness_records.py"
+      ]
+    },
+    "alon_ai.supply.schema": {
+      "callers": [
+        "backend/alembic/env.py",
+        "backend/src/alon_ai/contact.py",
+        "backend/src/alon_ai/records/outreach.py",
+        "backend/src/alon_ai/records/qualifications.py",
+        "backend/src/alon_ai/records/readiness.py",
+        "backend/src/alon_ai/supply/repository.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py"
+      ],
+      "disposition": "moved",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/supply/schema.py",
+      "owners": [
+        "alon_ai.db.tables.supply"
+      ],
+      "tests": [
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_contact_policy.py",
+        "backend/tests/integration/test_dbos_campaign_supply_workflow.py",
+        "backend/tests/integration/test_organization_records.py",
+        "backend/tests/integration/test_qualification_cohorts.py",
+        "backend/tests/integration/test_readiness_eligibility.py",
+        "backend/tests/integration/test_readiness_lineage.py",
+        "backend/tests/integration/test_readiness_records.py"
+      ]
+    },
+    "alon_ai.worker.__init__": {
+      "callers": [],
+      "disposition": "retained",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/worker/__init__.py",
+      "owners": [
+        "alon_ai.worker.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.worker.main": {
+      "callers": [],
+      "disposition": "retained",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/worker/main.py",
+      "owners": [
+        "alon_ai.worker.main"
+      ],
+      "tests": [
+        "backend/tests/unit/test_worker.py"
+      ]
+    },
+    "alon_ai.workflows.__init__": {
+      "callers": [],
+      "disposition": "retained",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/workflows/__init__.py",
+      "owners": [
+        "alon_ai.workflows.__init__"
+      ],
+      "tests": []
+    },
+    "alon_ai.workflows.campaign_supply": {
+      "callers": [
+        "backend/src/alon_ai/worker/main.py"
+      ],
+      "disposition": "split",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/workflows/campaign_supply.py",
+      "owners": [
+        "alon_ai.workflows.schemas.campaign_supply",
+        "alon_ai.db.repositories.workflow_campaign_supply",
+        "alon_ai.services.workflow_campaign_supply",
+        "alon_ai.workflows.campaign_supply"
+      ],
+      "tests": [
+        "backend/tests/integration/dbos_campaign_supply_harness.py",
+        "backend/tests/integration/test_campaign_supply.py",
+        "backend/tests/integration/test_dbos_campaign_supply_workflow.py",
+        "backend/tests/integration/test_qualification_cohorts.py"
+      ]
+    },
+    "alon_ai.workflows.market_research": {
+      "callers": [
+        "backend/src/alon_ai/worker/main.py",
+        "backend/src/alon_ai/workflows/campaign_supply.py",
+        "backend/src/alon_ai/workflows/offer_design.py"
+      ],
+      "disposition": "split",
+      "note": "DBOS decorated names and workflow/step identities retained in original implementation module; config moved to worker.",
+      "old_path": "backend/src/alon_ai/workflows/market_research.py",
+      "owners": [
+        "alon_ai.workflows.schemas.market_research",
+        "alon_ai.db.repositories.workflow_market_research",
+        "alon_ai.services.workflow_market_research",
+        "alon_ai.workflows.market_research",
+        "alon_ai.worker.config",
+        "alon_ai.workflows.schemas.runtime"
+      ],
+      "tests": [
+        "backend/tests/integration/dbos_campaign_supply_harness.py",
+        "backend/tests/integration/dbos_market_research_harness.py",
+        "backend/tests/integration/dbos_offer_design_harness.py",
+        "backend/tests/integration/test_dbos_market_research_workflow.py",
+        "backend/tests/integration/test_market_research_outcomes.py",
+        "backend/tests/integration/test_offer_design_workflow.py",
+        "backend/tests/unit/test_dbos_runtime.py"
+      ]
+    },
+    "alon_ai.workflows.offer_design": {
+      "callers": [
+        "backend/src/alon_ai/worker/main.py"
+      ],
+      "disposition": "split",
+      "note": "Preserved behavior and canonical ownership.",
+      "old_path": "backend/src/alon_ai/workflows/offer_design.py",
+      "owners": [
+        "alon_ai.workflows.schemas.offer_design",
+        "alon_ai.db.repositories.workflow_offer_design",
+        "alon_ai.services.workflow_offer_design",
+        "alon_ai.workflows.offer_design"
+      ],
+      "tests": [
+        "backend/tests/integration/dbos_offer_design_harness.py",
+        "backend/tests/integration/test_offer_design_workflow.py"
+      ]
+    }
+  }
+}

@@ -27,8 +27,11 @@ async def setup(
     supply_command_key=None,
     create_plan=True,
 ):
-    from alon_ai.accounting.schema import experiments
-    from alon_ai.supply.repository import CampaignSupplyRepository, SupplyEvidenceWriter
+    from alon_ai.db.repositories.supply import (
+        CampaignSupplyRepository,
+        SupplyEvidenceWriter,
+    )
+    from alon_ai.db.tables.accounting import experiments
 
     exp, rule, verifier = existing_exp or uuid4(), uuid4(), uuid4()
     if existing_exp is None:
@@ -136,7 +139,7 @@ async def candidate(
 
 
 async def test_begin_and_admission_are_durable_unique_and_capped(governance_engine):
-    from alon_ai.supply.repository import CampaignSupplyRepository
+    from alon_ai.db.repositories.supply import CampaignSupplyRepository
 
     repo, writer, exp, plan, _filters = await setup(governance_engine)
     command = uuid4()
@@ -160,7 +163,7 @@ async def test_begin_and_admission_are_durable_unique_and_capped(governance_engi
 async def test_batch_transition_commits_product_receipt_audit_and_outbox(
     governance_engine,
 ):
-    from alon_ai.records import schema as records
+    from alon_ai.db.tables import records
 
     repo, _, exp, plan, _ = await setup(governance_engine)
     command_key = uuid4()
@@ -200,8 +203,8 @@ async def test_batch_transition_commits_product_receipt_audit_and_outbox(
 async def test_candidate_admission_uses_its_existing_command_identity(
     governance_engine,
 ):
-    from alon_ai.records import schema as records
-    from alon_ai.supply import schema as supply_schema
+    from alon_ai.db.tables import records
+    from alon_ai.db.tables import supply as supply_schema
 
     repo, writer, exp, plan, _ = await setup(governance_engine)
     batch = await repo.begin_batch(exp, 1, plan, uuid4())
@@ -227,7 +230,7 @@ async def test_candidate_admission_uses_its_existing_command_identity(
 async def test_supply_plan_and_contact_resolution_can_commit_product_receipts(
     governance_engine,
 ):
-    from alon_ai.records import schema as records
+    from alon_ai.db.tables import records
 
     plan_key = uuid4()
     repo, writer, exp, plan, _ = await setup(
@@ -259,8 +262,8 @@ async def test_supply_plan_and_contact_resolution_can_commit_product_receipts(
 async def test_email_shortage_requires_feedback_change_then_hard_stops(
     governance_engine,
 ):
-    from alon_ai.records import schema as records
-    from alon_ai.supply import schema as supply_schema
+    from alon_ai.db.tables import records
+    from alon_ai.db.tables import supply as supply_schema
 
     repo, writer, exp, plan, filters = await setup(governance_engine)
     first = await repo.begin_batch(exp, 1, plan, uuid4())
@@ -311,7 +314,7 @@ async def test_email_shortage_requires_feedback_change_then_hard_stops(
 async def test_source_failure_stays_unresolved_and_independent_candidate_continues(
     governance_engine,
 ):
-    from alon_ai.supply import schema as s
+    from alon_ai.db.tables import supply as s
 
     repo, writer, exp, plan, _ = await setup(governance_engine)
     batch = await repo.begin_batch(exp, 1, plan, uuid4())
@@ -334,7 +337,7 @@ async def test_source_failure_stays_unresolved_and_independent_candidate_continu
 
 
 async def qualify(repo, engine, candidate_id, fact, rule, outcome="QUALIFIED"):
-    from alon_ai.supply import schema as s
+    from alon_ai.db.tables import supply as s
 
     # Synthetic fixture supplies the already-dispatched projection. Separate
     # governed-executor tests below prove the only application writer is its hook.
@@ -353,8 +356,10 @@ async def qualify(repo, engine, candidate_id, fact, rule, outcome="QUALIFIED"):
 async def test_logical_paths_reach_exactly_fifty_without_reset(
     governance_engine, slots
 ):
-    from alon_ai.supply.repository import CampaignSupplyRepository
-    from alon_ai.workflows.campaign_supply import CampaignSupplyWorkflowRepository
+    from alon_ai.db.repositories.supply import CampaignSupplyRepository
+    from alon_ai.db.repositories.workflow_campaign_supply import (
+        CampaignSupplyWorkflowRepository,
+    )
 
     repo, writer, exp, plan, filters = await setup(governance_engine)
     coordinator = CampaignSupplyWorkflowRepository(governance_engine, clock=lambda: NOW)
@@ -411,7 +416,7 @@ async def test_logical_paths_reach_exactly_fifty_without_reset(
 
 
 async def test_competing_fiftieth_acceptances_have_one_winner(governance_engine):
-    from alon_ai.supply import schema as s
+    from alon_ai.db.tables import supply as s
 
     repo, writer, exp, plan, _ = await setup(governance_engine)
     batch = await repo.begin_batch(exp, 1, plan, uuid4())
@@ -445,16 +450,16 @@ async def test_final_acceptance_fences_governed_dispatch_and_preserves_unrelated
 ):
     from test_governance import another, reserve, seed
 
-    from alon_ai.accounting.models import AccountingDenied
-    from alon_ai.accounting.repository import (
+    from alon_ai.db.repositories.accounting import (
         GovernanceProvisioner,
         GovernanceRepository,
         lock_experiment,
     )
-    from alon_ai.providers.contracts import SafeRequestMetadata
-    from alon_ai.providers.execution import GovernedExecutor
-    from alon_ai.supply import schema as s
-    from alon_ai.supply.repository import SupplyAdmissionHook
+    from alon_ai.db.repositories.supply import SupplyAdmissionHook
+    from alon_ai.db.tables import supply as s
+    from alon_ai.integrations.schemas.provider import SafeRequestMetadata
+    from alon_ai.provider_usage.schemas.accounting import AccountingDenied
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     accounting, _, attr, config, _, _ = await seed(governance_engine, gate="SUPPLY")
     repo, writer, exp, plan, _ = await setup(governance_engine, attr.experiment_id)
@@ -487,7 +492,9 @@ async def test_final_acceptance_fences_governed_dispatch_and_preserves_unrelated
         await release.wait()
         return result
 
-    monkeypatch.setattr("alon_ai.supply.repository.lock_experiment", pause_after_fence)
+    monkeypatch.setattr(
+        "alon_ai.db.repositories.supply.lock_experiment", pause_after_fence
+    )
     acceptance = asyncio.ensure_future(repo.accept_qualification(last, proof))
     await asyncio.wait_for(entered.wait(), 2)
 
@@ -551,11 +558,11 @@ async def test_late_budget_wait_obeys_attenuated_evidence_deadline(
     from sqlalchemy import text
     from test_governance import reserve, seed
 
-    from alon_ai.accounting import schema as g
-    from alon_ai.accounting.models import AccountingDenied
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.supply import schema as s
-    from alon_ai.supply.repository import SupplyAdmissionHook
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.repositories.supply import SupplyAdmissionHook
+    from alon_ai.db.tables import accounting as g
+    from alon_ai.db.tables import supply as s
+    from alon_ai.provider_usage.schemas.accounting import AccountingDenied
 
     _, _, attr, config, _, _ = await seed(governance_engine, gate="SUPPLY")
     repo, writer, exp, plan, _ = await setup(
@@ -673,7 +680,7 @@ async def test_sql_rejects_malformed_cross_scope_and_immutable_supply_facts(
 ):
     from sqlalchemy.exc import DBAPIError
 
-    from alon_ai.supply import schema as s
+    from alon_ai.db.tables import supply as s
 
     repo, writer, exp, plan, filters = await setup(governance_engine)
     foreign_exp = None
@@ -807,8 +814,8 @@ async def test_sql_rejects_malformed_cross_scope_and_immutable_supply_facts(
 async def test_explicit_early_stop_is_unsuccessful_and_replayable(
     governance_engine, reason
 ):
-    from alon_ai.records import schema as records
-    from alon_ai.supply import schema as supply_schema
+    from alon_ai.db.tables import records
+    from alon_ai.db.tables import supply as supply_schema
 
     repo, writer, exp, plan, _ = await setup(governance_engine)
     batch = await repo.begin_batch(exp, 1, plan, uuid4())
@@ -848,9 +855,9 @@ async def test_deep_work_before_fifty_or_without_email_and_missing_owned_binding
 ):
     from test_governance import reserve, seed
 
-    from alon_ai.accounting.models import AccountingDenied
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.supply.repository import SupplyAdmissionHook
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.repositories.supply import SupplyAdmissionHook
+    from alon_ai.provider_usage.schemas.accounting import AccountingDenied
 
     _, _, attr, config, _, _ = await seed(governance_engine, gate="SUPPLY")
     repo, writer, exp, plan, _ = await setup(governance_engine, attr.experiment_id)
@@ -878,8 +885,8 @@ async def test_deep_work_before_fifty_or_without_email_and_missing_owned_binding
 async def test_evidence_backed_empty_or_low_yield_can_retry_without_fake_email_failures(
     governance_engine, yield_count
 ):
+    from alon_ai.db.tables import supply as s
     from alon_ai.policies.campaign_supply import DiscoveryCompletionEvidence
-    from alon_ai.supply import schema as s
 
     repo, writer, exp, plan, filters = await setup(governance_engine)
     batch = await repo.begin_batch(exp, 1, plan, uuid4())
@@ -953,7 +960,7 @@ async def test_missing_or_foreign_completion_cannot_invent_yield_failure(
 async def test_expired_prior_acceptance_cannot_fabricate_current_fiftieth(
     governance_engine,
 ):
-    from alon_ai.supply import schema as s
+    from alon_ai.db.tables import supply as s
 
     repo, writer, exp, plan, _ = await setup(governance_engine)
     batch = await repo.begin_batch(exp, 1, plan, uuid4())
@@ -1056,9 +1063,11 @@ async def test_third_qualification_shortfall_closes_at_three_hundred_unique_cand
 async def test_previously_dispatched_call_can_reconcile_after_target(governance_engine):
     from test_governance import observation, proof, reserve, seed
 
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.supply.repository import SupplyAdmissionHook
-    from alon_ai.workflows.campaign_supply import CampaignSupplyWorkflowRepository
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.repositories.supply import SupplyAdmissionHook
+    from alon_ai.db.repositories.workflow_campaign_supply import (
+        CampaignSupplyWorkflowRepository,
+    )
 
     _, _, attr, config, _, _ = await seed(governance_engine, gate="SUPPLY")
     repo, writer, exp, plan, _ = await setup(governance_engine, attr.experiment_id)
@@ -1093,7 +1102,7 @@ async def test_previously_dispatched_call_can_reconcile_after_target(governance_
 async def test_candidate_replay_and_foreign_feedback_cannot_reset_lineage(
     governance_engine,
 ):
-    from alon_ai.supply import schema as s
+    from alon_ai.db.tables import supply as s
 
     repo, writer, exp, plan, filters = await setup(governance_engine)
     batch = await repo.begin_batch(exp, 1, plan, uuid4())
@@ -1156,9 +1165,9 @@ async def test_expired_accepted_contact_cannot_hide_behind_fifty_fresh_supports(
 ):
     from test_governance import seed
 
-    from alon_ai.accounting.models import AccountingDenied
-    from alon_ai.accounting.repository import lock_experiment
-    from alon_ai.supply.repository import SupplyAdmissionHook
+    from alon_ai.db.repositories.accounting import lock_experiment
+    from alon_ai.db.repositories.supply import SupplyAdmissionHook
+    from alon_ai.provider_usage.schemas.accounting import AccountingDenied
 
     _, _, attr, config, _, _ = await seed(governance_engine, gate="SUPPLY")
     repo, writer, exp, plan, _ = await setup(governance_engine, attr.experiment_id)
@@ -1221,8 +1230,8 @@ async def test_supply_work_kind_requires_exact_gate_owner(
     from sqlalchemy.exc import DBAPIError
     from test_governance import seed
 
-    from alon_ai.providers.contracts import Capability
-    from alon_ai.supply import schema as s
+    from alon_ai.db.tables import supply as s
+    from alon_ai.integrations.schemas.provider import Capability
 
     _, _, attr, config, _, _ = await seed(
         governance_engine,
@@ -1266,10 +1275,10 @@ async def test_standalone_supply_hook_cannot_admit_contact_owned_work(
 ):
     from test_governance import reserve, seed
 
-    from alon_ai.accounting.models import AccountingDenied
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.providers.contracts import Capability
-    from alon_ai.supply.repository import SupplyAdmissionHook
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.repositories.supply import SupplyAdmissionHook
+    from alon_ai.integrations.schemas.provider import Capability
+    from alon_ai.provider_usage.schemas.accounting import AccountingDenied
 
     _, _, attr, config, _, _ = await seed(
         governance_engine, gate="CONTACT", capability=Capability.FIRECRAWL_PAGE_CAPTURE
@@ -1294,11 +1303,11 @@ async def test_contact_supply_composition_requires_owner_and_rolls_back_denial(
     from sqlalchemy import text
     from test_governance import reserve, seed
 
-    from alon_ai.accounting.models import AccountingDenied
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.providers.contracts import Capability
-    from alon_ai.supply import schema as s
-    from alon_ai.supply.repository import ComposedContactSupplyHook
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.repositories.supply import ComposedContactSupplyHook
+    from alon_ai.db.tables import supply as s
+    from alon_ai.integrations.schemas.provider import Capability
+    from alon_ai.provider_usage.schemas.accounting import AccountingDenied
 
     _, _, attr, config, _, _ = await seed(
         governance_engine, gate="CONTACT", capability=Capability.FIRECRAWL_PAGE_CAPTURE
@@ -1354,7 +1363,7 @@ async def test_contact_supply_composition_requires_owner_and_rolls_back_denial(
 
 
 def test_contact_supply_composition_cannot_omit_required_owner():
-    from alon_ai.supply.repository import ComposedContactSupplyHook
+    from alon_ai.db.repositories.supply import ComposedContactSupplyHook
 
     with pytest.raises(TypeError):
         ComposedContactSupplyHook(None)  # pyright: ignore[reportCallIssue,reportArgumentType]
@@ -1368,12 +1377,15 @@ async def test_excluded_identity_replays_and_never_reaches_provider(
 ):
     from test_governance import seed
 
-    from alon_ai.accounting.models import AccountingDenied
-    from alon_ai.accounting.repository import GovernanceRepository
-    from alon_ai.providers.contracts import Capability, SafeRequestMetadata
-    from alon_ai.providers.execution import GovernedExecutor
-    from alon_ai.supply import schema as s
-    from alon_ai.supply.repository import ComposedContactSupplyHook, SupplyAdmissionHook
+    from alon_ai.db.repositories.accounting import GovernanceRepository
+    from alon_ai.db.repositories.supply import (
+        ComposedContactSupplyHook,
+        SupplyAdmissionHook,
+    )
+    from alon_ai.db.tables import supply as s
+    from alon_ai.integrations.schemas.provider import Capability, SafeRequestMetadata
+    from alon_ai.provider_usage.schemas.accounting import AccountingDenied
+    from alon_ai.provider_usage.service import GovernedExecutor
 
     _, _, attr, config, _, _ = await seed(
         governance_engine,

@@ -151,13 +151,13 @@ class LocalDevTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stderr)
         commands = self.log.read_text()
         self.assertIn("live-provision sh -c chown 10001:10001", commands)
-        self.assertIn("python -m alon_ai.api.live_idea_provision", commands)
+        self.assertIn("python -m alon_ai.services.live_idea_provision", commands)
         self.assertNotIn("OPENAI_API_KEY", commands)
         self.log.unlink()
         result = self.run_script("up", extra_env=common)
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertNotIn(
-            "python -m alon_ai.api.live_idea_provision", self.log.read_text()
+            "python -m alon_ai.services.live_idea_provision", self.log.read_text()
         )
 
     def test_live_manifest_mount_must_be_a_regular_file(self):
@@ -180,7 +180,7 @@ class LocalDevTests(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("not a regular file inside Docker", result.stderr)
         self.assertNotIn(
-            "python -m alon_ai.api.live_idea_provision", self.log.read_text()
+            "python -m alon_ai.services.live_idea_provision", self.log.read_text()
         )
 
     def test_down_preserves_database_volume(self):

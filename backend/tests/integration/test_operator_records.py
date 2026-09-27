@@ -14,16 +14,16 @@ from pydantic import ValidationError
 from sqlalchemy import insert, select, text, update
 from sqlalchemy.exc import DBAPIError
 
-from alon_ai.accounting import schema as gov
-from alon_ai.records import schema as records
-from alon_ai.records.models import ProductRecordsDenied
-from alon_ai.records.operator_models import (
+from alon_ai.db.repositories.records_operators import OperatorRepository, operators
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables import records
+from alon_ai.services.schemas.records import ProductRecordsDenied
+from alon_ai.services.schemas.records_operator import (
     CommercialConstraints,
     DeliveryConstraints,
     OperatorIdentity,
     OperatorProfileVersion,
 )
-from alon_ai.records.operators import OperatorRepository, operators
 
 NOW = datetime(2026, 9, 13, 0, tzinfo=UTC)
 

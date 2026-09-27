@@ -7,7 +7,7 @@ from uuid import uuid4
 import pytest
 from pydantic import SecretStr
 
-from alon_ai.openai_runtime.contract import (
+from alon_ai.agents.schemas.openai import (
     AdvisoryAnswer,
     OpenAIProfile,
     PremiumAuthorization,
@@ -16,7 +16,7 @@ from alon_ai.openai_runtime.contract import (
     RoutingPolicy,
     classify_response,
 )
-from alon_ai.openai_runtime.transport import SDKResponsesTransport, build_request
+from alon_ai.integrations.openai import SDKResponsesTransport, build_request
 
 SCHEMA = {
     "type": "object",
@@ -297,7 +297,7 @@ async def test_sdk_transport_has_no_hidden_retry_or_live_network(monkeypatch):
         async def __aexit__(self, *args):
             return None
 
-    monkeypatch.setattr("alon_ai.openai_runtime.transport.AsyncOpenAI", StubClient)
+    monkeypatch.setattr("alon_ai.integrations.openai.AsyncOpenAI", StubClient)
     await SDKResponsesTransport().create(
         profile=profile(),
         input_json='{"sources":[]}',

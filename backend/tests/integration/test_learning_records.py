@@ -8,9 +8,10 @@ from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from test_product_records import NOW, artifact, roots
 
-from alon_ai import records
-from alon_ai.records import (
-    ArtifactKind,
+import alon_ai.db.repositories.records_learning as learning_repository
+import alon_ai.services.schemas.records_learning as learning_contracts
+from alon_ai.services.schemas.records import ArtifactKind, ProductRecordsDenied
+from alon_ai.services.schemas.records_learning import (
     EngineeringCapabilityRequestInput,
     LearningArtifactReference,
     LearningCandidateInput,
@@ -20,9 +21,9 @@ from alon_ai.records import (
     LearningProposalRequest,
     LearningReviewControlRequest,
     LearningScopeInput,
-    ProductRecordsDenied,
+    ProposalClass,
+    TargetSubsystem,
 )
-from alon_ai.records.learning_models import ProposalClass, TargetSubsystem
 
 pytestmark = pytest.mark.integration
 
@@ -33,8 +34,8 @@ def digest(value: str) -> str:
 
 def test_offline_learning_ledger_is_a_public_record_contract():
     """The learning ledger must remain distinct from runtime strategy execution."""
-    assert hasattr(records, "LearningRecordsRepository")
-    assert hasattr(records, "LearningProposalRequest")
+    assert hasattr(learning_repository, "LearningRecordsRepository")
+    assert hasattr(learning_contracts, "LearningProposalRequest")
 
 
 async def proposal_request(
@@ -135,7 +136,9 @@ async def proposal_request(
         proposed_by=UUID(int=1),
         content_hash=digest("proposal"),
     )
-    return records.LearningRecordsRepository(engine, clock=lambda: NOW), request
+    return learning_repository.LearningRecordsRepository(
+        engine, clock=lambda: NOW
+    ), request
 
 
 async def test_learning_proposal_replays_and_retains_exact_offline_lineage(

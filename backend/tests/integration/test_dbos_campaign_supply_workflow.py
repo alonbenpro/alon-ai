@@ -16,7 +16,11 @@ from sqlalchemy import func, insert, select, text
 from sqlalchemy.exc import DBAPIError
 from test_campaign_supply import NOW, candidate, qualify, setup
 
-from alon_ai.accounting import schema as gov
+from alon_ai.db.repositories.workflow_campaign_supply import (
+    CampaignSupplyWorkflowRepository,
+)
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables import records, supply
 from alon_ai.policies.campaign_supply import (
     DiscoveryCompletionEvidence,
     DiscoveryPlan,
@@ -25,10 +29,7 @@ from alon_ai.policies.campaign_supply import (
     SupplyDenied,
     SupplyFact,
 )
-from alon_ai.records import schema as records
-from alon_ai.supply import schema as supply
-from alon_ai.workflows.campaign_supply import (
-    CampaignSupplyWorkflowRepository,
+from alon_ai.workflows.schemas.campaign_supply import (
     CampaignSupplyWorkflowRequest,
     OperationKind,
     campaign_supply_workflow_id,

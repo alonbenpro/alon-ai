@@ -19,33 +19,37 @@ from test_qualification_cohorts import (
     qualified_pool,
 )
 
-from alon_ai.providers.contracts import Capability, ContentField
-from alon_ai.records import (
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.repositories.records_conversation import ConversationRecordsRepository
+from alon_ai.db.repositories.records_operators import OperatorRepository
+from alon_ai.db.repositories.records_outreach import OutreachRecordsRepository
+from alon_ai.db.repositories.records_qualifications import QualificationCohortRepository
+from alon_ai.integrations.schemas.provider import Capability, ContentField
+from alon_ai.services.schemas.records import (
     ArtifactInput,
     ArtifactKind,
+    ProductRecordsDenied,
+)
+from alon_ai.services.schemas.records_conversation import (
     BookingConfirmationRequest,
     BookingIntentRequest,
     BookingObservationRequest,
     ConversationDocumentInput,
-    ConversationRecordsRepository,
-    EvidenceCoverageInput,
     EvidenceSpanReference,
     FollowUpRequest,
-    FreezeCohortRequest,
-    FreezeOutreachContextRequest,
     HandoffRequest,
     ManualOutcomeRequest,
-    OperatorIdentity,
     OperatorMessageRequest,
-    OperatorRepository,
-    OutreachRecordsRepository,
-    ProductRecordsDenied,
-    ProductRecordsRepository,
-    QualificationCohortRepository,
     RecordConversationDocumentsRequest,
     ReferralRequest,
     ReplyEvidenceSpan,
 )
+from alon_ai.services.schemas.records_operator import OperatorIdentity
+from alon_ai.services.schemas.records_outreach import (
+    EvidenceCoverageInput,
+    FreezeOutreachContextRequest,
+)
+from alon_ai.services.schemas.records_qualification import FreezeCohortRequest
 
 pytestmark = pytest.mark.integration
 

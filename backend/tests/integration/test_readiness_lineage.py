@@ -19,19 +19,25 @@ from test_qualification_cohorts import (
     qualified_pool,
 )
 
-from alon_ai.accounting import schema as g
-from alon_ai.accounting.repository import GovernanceProvisioner
-from alon_ai.contact import cases
-from alon_ai.providers.contracts import Capability, ContentField
-from alon_ai.providers.rights import GrantEvent, GrantEventKind
-from alon_ai.records import ArtifactInput, ArtifactKind, ProductRecordsDenied
-from alon_ai.records import offer_schema as offers
-from alon_ai.records import qualification_schema as q
-from alon_ai.records import readiness_schema as r
-from alon_ai.records import schema as artifacts
-from alon_ai.records.qualifications import QualificationCohortRepository
-from alon_ai.records.readiness import ReadinessRepository
-from alon_ai.records.readiness_models import (
+from alon_ai.db.repositories.accounting import GovernanceProvisioner
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.repositories.records_qualifications import QualificationCohortRepository
+from alon_ai.db.repositories.records_readiness import ReadinessRepository
+from alon_ai.db.tables import accounting as g
+from alon_ai.db.tables import records as artifacts
+from alon_ai.db.tables import records_offer as offers
+from alon_ai.db.tables import records_qualification as q
+from alon_ai.db.tables import records_readiness as r
+from alon_ai.db.tables import supply
+from alon_ai.db.tables.contact import cases
+from alon_ai.integrations.schemas.provider import Capability, ContentField
+from alon_ai.policies.provider_rights import GrantEvent, GrantEventKind
+from alon_ai.services.schemas.records import (
+    ArtifactInput,
+    ArtifactKind,
+    ProductRecordsDenied,
+)
+from alon_ai.services.schemas.records_readiness import (
     ContactabilityDecisionRequest,
     DiscoveryPlanRequest,
     ProviderResultRequest,
@@ -39,8 +45,6 @@ from alon_ai.records.readiness_models import (
     ResearchPlanRequest,
     ResearchRunRequest,
 )
-from alon_ai.records.repository import ProductRecordsRepository
-from alon_ai.supply import schema as supply
 
 pytestmark = pytest.mark.integration
 

@@ -13,13 +13,13 @@ import pytest
 from sqlalchemy import func, select, text
 from test_product_record_guards import cycle_fixture
 
-from alon_ai.records import ArtifactInput, ProductRecordsDenied
-from alon_ai.records import schema as records
-from alon_ai.workflows.market_research import (
-    DBOS_APPLICATION_VERSION,
+from alon_ai.db.repositories.workflow_market_research import (
     MarketResearchWorkflowRepository,
-    MarketResearchWorkflowRequest,
 )
+from alon_ai.db.tables import records
+from alon_ai.services.schemas.records import ArtifactInput, ProductRecordsDenied
+from alon_ai.workflows.schemas.market_research import MarketResearchWorkflowRequest
+from alon_ai.workflows.schemas.runtime import DBOS_APPLICATION_VERSION
 
 pytestmark = pytest.mark.integration
 

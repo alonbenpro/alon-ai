@@ -21,28 +21,32 @@ from test_governance import seed as governance_seed
 from test_product_record_guards import cycle_fixture, put
 from test_product_records import NOW, artifact, register_test_operator
 
-from alon_ai.accounting import schema as governance
-from alon_ai.providers.contracts import CallAttribution
-from alon_ai.records import (
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.repositories.workflow_market_research import (
+    MarketResearchDecisionWorkflowRepository,
+)
+from alon_ai.db.tables import accounting as governance
+from alon_ai.db.tables import records
+from alon_ai.integrations.schemas.provider import CallAttribution
+from alon_ai.services.schemas.records import (
     ArtifactInput,
     ArtifactKind,
-    CommercialConstraints,
-    DeliveryConstraints,
     OperatorCapabilityProfile,
     ProductAgent,
     ProductExperiment,
     ProductRecordsDenied,
-    ProductRecordsRepository,
     ProductWorkflow,
     ResearchCycleBudgetInput,
 )
-from alon_ai.records import schema as records
-from alon_ai.workflows.market_research import (
-    DBOS_APPLICATION_VERSION,
-    MarketResearchDecisionWorkflowRepository,
+from alon_ai.services.schemas.records_operator import (
+    CommercialConstraints,
+    DeliveryConstraints,
+)
+from alon_ai.workflows.schemas.market_research import (
     MarketResearchOutcomeWorkflowRequest,
     market_research_outcome_workflow_id,
 )
+from alon_ai.workflows.schemas.runtime import DBOS_APPLICATION_VERSION
 
 pytestmark = pytest.mark.integration
 

@@ -9,8 +9,26 @@ from uuid import UUID, uuid4
 import pytest
 from sqlalchemy import func, insert, select, text, update
 
-from alon_ai.accounting import schema as gov
-from alon_ai.accounting.models import (
+from alon_ai.agents.idea_discovery import IdeaStage
+from alon_ai.db.repositories.accounting import GovernanceProvisioner
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables.records_operator import operators
+from alon_ai.integrations.live_idea import (
+    LiveIdeaRuntimeConfig,
+    load_live_idea_runtime_config,
+    load_live_secret_store,
+)
+from alon_ai.integrations.schemas.provider import (
+    Capability,
+    ContentField,
+    Provider,
+    Purpose,
+    SafeRequestMetadata,
+    UsageComponent,
+)
+from alon_ai.policies.provider_rights import IntendedUse
+from alon_ai.provider_usage.live_idea import build_live_idea_runtime_provider
+from alon_ai.provider_usage.schemas.accounting import (
     AccountingDenied,
     ControlPolicy,
     EvidenceRecord,
@@ -19,32 +37,14 @@ from alon_ai.accounting.models import (
     PriceVersion,
     Reason,
 )
-from alon_ai.accounting.repository import GovernanceProvisioner
-from alon_ai.api.live_idea_provision import (
+from alon_ai.security.secrets import SecretStoreError
+from alon_ai.services.live_idea_provision import (
     LiveIdeaSetupManifest,
     LivePriceSpec,
     make_authority_bundle,
     provision_from_manifest,
     register_authority,
 )
-from alon_ai.api.live_idea_runtime import (
-    LiveIdeaRuntimeConfig,
-    build_live_idea_runtime_provider,
-    load_live_idea_runtime_config,
-    load_live_secret_store,
-)
-from alon_ai.openai_runtime.idea import IdeaStage
-from alon_ai.providers.contracts import (
-    Capability,
-    ContentField,
-    Provider,
-    Purpose,
-    SafeRequestMetadata,
-    UsageComponent,
-)
-from alon_ai.providers.rights import IntendedUse
-from alon_ai.records.operators import operators
-from alon_ai.security.secrets import SecretStoreError
 
 
 class RecordingTransport:
@@ -391,7 +391,7 @@ async def test_reviewed_manifest_provisions_private_store_and_governed_authority
 ):
     from pydantic import SecretStr
 
-    from alon_ai.api import live_idea_provision as setup
+    from alon_ai.services import live_idea_provision as setup
 
     now = datetime.now(UTC)
     operator_id = uuid4()
@@ -474,7 +474,7 @@ async def test_config_write_failure_can_retry_exact_authority(
 ):
     from pydantic import SecretStr
 
-    from alon_ai.api import live_idea_provision as setup
+    from alon_ai.services import live_idea_provision as setup
 
     now = datetime.now(UTC)
     operator_id = uuid4()

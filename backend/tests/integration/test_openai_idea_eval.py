@@ -12,18 +12,18 @@ from test_governance import another
 from test_openai_idea import setup_idea
 from test_product_records import artifact
 
-from alon_ai.openai_runtime.contract import RoutingFacts
-from alon_ai.openai_runtime.idea import (
+from alon_ai.agents.evaluations.idea import score_recorded_idea
+from alon_ai.agents.idea_discovery import (
     IdeaCandidateAdvice,
     IdeaCandidateSetAdvice,
     IdeaStage,
     SeededIdeaBriefAdvice,
     SelectedCandidateIdeaBriefAdvice,
 )
-from alon_ai.openai_runtime.idea_eval import score_recorded_idea
-from alon_ai.openai_runtime.store import OpenAIRunOutcome
-from alon_ai.records import ArtifactInput, ArtifactKind
-from alon_ai.records import schema as records
+from alon_ai.agents.schemas.openai import RoutingFacts
+from alon_ai.db.repositories.openai_run import OpenAIRunOutcome
+from alon_ai.db.tables import records
+from alon_ai.services.schemas.records import ArtifactInput, ArtifactKind
 
 FIXTURES = Path(__file__).parents[1] / "fixtures" / "openai_idea"
 MODES = (

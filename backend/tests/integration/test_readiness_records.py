@@ -12,12 +12,17 @@ from test_product_record_guards import put
 from test_product_records import NOW
 from test_qualification_cohorts import KEY, OWNER, qualified_pool
 
-from alon_ai.accounting import schema as governance
-from alon_ai.accounting.repository import GovernanceRepository
-from alon_ai.contact import ContactAdmissionHook
-from alon_ai.contact import cases as contact_cases
-from alon_ai.providers.contact_adapters import ConfiguredContactAdapter
-from alon_ai.providers.contracts import (
+from alon_ai.db.repositories.accounting import GovernanceRepository
+from alon_ai.db.repositories.contact import ContactAdmissionHook
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.repositories.records_readiness import ReadinessRepository
+from alon_ai.db.repositories.supply import ComposedContactSupplyHook
+from alon_ai.db.tables import accounting as governance
+from alon_ai.db.tables import supply
+from alon_ai.db.tables.contact import cases as contact_cases
+from alon_ai.integrations.contact import ConfiguredContactAdapter
+from alon_ai.integrations.fakes import FakeEmailVerificationProvider, FakeSession
+from alon_ai.integrations.schemas.provider import (
     Capability,
     ContentField,
     EmailVerificationRequest,
@@ -25,19 +30,18 @@ from alon_ai.providers.contracts import (
     SafeRequestMetadata,
     UsageComponent,
 )
-from alon_ai.providers.execution import GovernedExecutor
-from alon_ai.providers.fakes import FakeEmailVerificationProvider, FakeSession
-from alon_ai.providers.rights import RuntimeContent
-from alon_ai.records import ArtifactInput, ArtifactKind, ProductRecordsDenied
-from alon_ai.records.readiness import ReadinessRepository
-from alon_ai.records.readiness_models import (
+from alon_ai.policies.provider_rights import RuntimeContent
+from alon_ai.provider_usage.service import GovernedExecutor
+from alon_ai.services.schemas.records import (
+    ArtifactInput,
+    ArtifactKind,
+    ProductRecordsDenied,
+)
+from alon_ai.services.schemas.records_readiness import (
     ContactabilityDecisionRequest,
     ProviderResultRequest,
     ResearchPlanRequest,
 )
-from alon_ai.records.repository import ProductRecordsRepository
-from alon_ai.supply import schema as supply
-from alon_ai.supply.repository import ComposedContactSupplyHook
 
 pytestmark = pytest.mark.integration
 
@@ -281,7 +285,7 @@ async def test_observed_email_with_rejected_verification_persists_no_email(
     decision = await repo.decide_contactability(request, command_key=key)
     assert decision.outcome == "EMAIL_NOT_FOUND"
     assert await repo.decide_contactability(request, command_key=key) == decision
-    from alon_ai.records import readiness_schema
+    from alon_ai.db.tables import records_readiness as readiness_schema
 
     async with governance_engine.connect() as c:
         row = (

@@ -3,9 +3,9 @@ from fastapi.testclient import TestClient
 from pydantic import SecretStr
 
 from alon_ai.api.app import create_app
-from alon_ai.api.auth import _password_matches, hash_password
-from alon_ai.api.routes.operator import _STATES
 from alon_ai.config import Settings
+from alon_ai.services.auth import _password_matches, hash_password
+from alon_ai.services.operator import _STATES
 
 
 def test_scrypt_verifier_is_salted_and_rejects_changes() -> None:

@@ -11,15 +11,16 @@ from sqlalchemy import select
 from test_governance import add_event, register
 from test_openai_runtime import recorded, setup
 
-from alon_ai.accounting import schema as gov
-from alon_ai.accounting.models import ControlPolicy
-from alon_ai.accounting.repository import GovernanceProvisioner
-from alon_ai.openai_runtime import runtime as runtime_module
-from alon_ai.openai_runtime.contract import PremiumAuthorization, RoutingFacts
-from alon_ai.openai_runtime.runtime import AcceptedSource
-from alon_ai.openai_runtime.schema import premium_approvals, route_decisions
-from alon_ai.openai_runtime.store import OpenAIRunConflict
-from alon_ai.providers.rights import GrantEvent, GrantEventKind, RuntimeContent
+from alon_ai.agents.runtime import AcceptedSource
+from alon_ai.agents.schemas.openai import PremiumAuthorization, RoutingFacts
+from alon_ai.db.repositories.accounting import GovernanceProvisioner
+from alon_ai.db.repositories.openai_run import OpenAIRunConflict
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables.openai import premium_approvals, route_decisions
+from alon_ai.policies.provider_rights import GrantEvent, GrantEventKind, RuntimeContent
+from alon_ai.provider_usage import openai as runtime_module
+from alon_ai.provider_usage.schemas.accounting import ControlPolicy
+from alon_ai.services import agent_runs as run_module
 
 pytestmark = pytest.mark.integration
 
@@ -635,6 +636,7 @@ async def test_expiry_during_accepted_input_wait_blocks_transport(
             await release.wait()
         return result
 
+    monkeypatch.setattr(run_module, "_accepted_input", paused_input)
     monkeypatch.setattr(runtime_module, "_accepted_input", paused_input)
     task = asyncio.create_task(
         runtime.run(

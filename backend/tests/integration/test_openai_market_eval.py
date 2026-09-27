@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-from alon_ai.openai_runtime.market import MarketResearchAdvice
-from alon_ai.openai_runtime.market_eval import score_recorded_market
+from alon_ai.agents.evaluations.market import score_recorded_market
+from alon_ai.agents.market_research import MarketResearchAdvice
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "openai_market" / "synthesis.json"
 

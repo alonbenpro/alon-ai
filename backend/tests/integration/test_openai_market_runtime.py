@@ -15,33 +15,32 @@ from test_openai_market_evidence_policy import governed_market_inputs
 from test_openai_runtime import FakeSecrets, RecordedResponses, recorded
 from test_product_records import NOW, artifact
 
-import alon_ai.openai_runtime.runtime as runtime_module
-from alon_ai.accounting import schema as gov
-from alon_ai.accounting.repository import GovernanceProvisioner
-from alon_ai.openai_runtime.contract import RoutingFacts, RoutingPolicy
-from alon_ai.openai_runtime.idea import IdeaStage
-from alon_ai.openai_runtime.market import MarketResearchAdvice, market_profile
-from alon_ai.openai_runtime.market_eval import score_recorded_market
-from alon_ai.openai_runtime.runtime import (
-    AcceptedArtifact,
-    AcceptedRetainedEvidence,
-    OpenAIRuntime,
-)
-from alon_ai.openai_runtime.store import OpenAIRunOutcome, OpenAIRunStore
-from alon_ai.providers.contracts import ContentField
-from alon_ai.providers.rights import (
+import alon_ai.services.agent_runs as runtime_module
+from alon_ai.agents.evaluations.market import score_recorded_market
+from alon_ai.agents.idea_discovery import IdeaStage
+from alon_ai.agents.market_research import MarketResearchAdvice, market_profile
+from alon_ai.agents.runtime import AcceptedArtifact, AcceptedRetainedEvidence
+from alon_ai.agents.schemas.openai import RoutingFacts, RoutingPolicy
+from alon_ai.db.repositories.accounting import GovernanceProvisioner
+from alon_ai.db.repositories.openai_run import OpenAIRunOutcome, OpenAIRunStore
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables import records
+from alon_ai.integrations.schemas.provider import ContentField
+from alon_ai.policies.provider_rights import (
     GrantEvent,
     GrantEventKind,
     ProviderUsageGrant,
     RuntimeContent,
 )
-from alon_ai.records import (
+from alon_ai.provider_usage import openai as dispatch_module
+from alon_ai.provider_usage.openai import ConfiguredResponsesAdapter
+from alon_ai.services.agent_runs import OpenAIRuntime
+from alon_ai.services.schemas.records import (
     ArtifactInput,
     ArtifactKind,
-    ProductRecordsRepository,
     SourceReference,
 )
-from alon_ai.records import schema as records
 
 pytestmark = pytest.mark.integration
 
@@ -422,6 +421,7 @@ async def test_retained_evidence_expiring_during_dispatch_read_denies_transport(
         return result
 
     monkeypatch.setattr(runtime_module, "_accepted_input", paused_input)
+    monkeypatch.setattr(dispatch_module, "_accepted_input", paused_input)
     task = asyncio.create_task(
         runtime.run(
             attribution,
@@ -605,6 +605,7 @@ async def test_newer_brief_cannot_commit_during_final_market_validation(
         return result
 
     monkeypatch.setattr(runtime_module, "_accepted_input", paused_input)
+    monkeypatch.setattr(dispatch_module, "_accepted_input", paused_input)
     run_task = asyncio.create_task(
         runtime.run(
             attribution,
@@ -692,6 +693,7 @@ async def test_future_revocation_effective_during_input_wait_denies_transport(
         return result
 
     monkeypatch.setattr(runtime_module, "_accepted_input", paused_input)
+    monkeypatch.setattr(dispatch_module, "_accepted_input", paused_input)
     task = asyncio.create_task(
         runtime.run(
             attribution,
@@ -761,6 +763,7 @@ async def test_future_superseding_grant_during_input_wait_denies_transport(
         return result
 
     monkeypatch.setattr(runtime_module, "_accepted_input", paused_input)
+    monkeypatch.setattr(dispatch_module, "_accepted_input", paused_input)
     task = asyncio.create_task(
         runtime.run(
             attribution,
@@ -827,7 +830,7 @@ async def test_disabled_experiment_after_governance_dispatch_denies_transport(
         prior_runtime,
         recorded(text=json.dumps(market_advice(reference.retained_id))),
     )
-    original = runtime_module._ConfiguredResponsesAdapter.invoke
+    original = ConfiguredResponsesAdapter.invoke
     entered, release = asyncio.Event(), asyncio.Event()
 
     async def paused_invoke(self, *args):
@@ -835,9 +838,7 @@ async def test_disabled_experiment_after_governance_dispatch_denies_transport(
         await release.wait()
         return await original(self, *args)
 
-    monkeypatch.setattr(
-        runtime_module._ConfiguredResponsesAdapter, "invoke", paused_invoke
-    )
+    monkeypatch.setattr(ConfiguredResponsesAdapter, "invoke", paused_invoke)
     task = asyncio.create_task(
         runtime.run(
             attribution,

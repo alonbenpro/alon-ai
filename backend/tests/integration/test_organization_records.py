@@ -6,7 +6,7 @@ pytestmark = pytest.mark.integration
 
 
 def test_identity_snapshot_has_fixed_normalization_and_no_exclusive_domain():
-    from alon_ai.records.organization_models import OrganizationSnapshot
+    from alon_ai.services.schemas.records_organization import OrganizationSnapshot
 
     snapshot = OrganizationSnapshot(
         canonical_name="Fixture",
@@ -42,20 +42,24 @@ from test_contact_policy import NOW, candidate, setup
 from test_governance import register
 from test_product_records import roots
 
-from alon_ai.accounting import schema as gov
-from alon_ai.accounting.models import (
-    CapabilityConfig,
-    ControlPolicy,
-    FxVersion,
-    PriceBound,
-    PriceVersion,
+from alon_ai.db.repositories.accounting import (
+    GovernanceProvisioner,
+    GovernanceRepository,
 )
-from alon_ai.accounting.repository import GovernanceProvisioner, GovernanceRepository
-from alon_ai.contact import (
+from alon_ai.db.repositories.contact import (
     ContactAdmissionHook,
     ContactPolicyRepository,
 )
-from alon_ai.providers.contracts import (
+from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.repositories.records_organizations import OrganizationRepository
+from alon_ai.db.repositories.supply import (
+    ComposedContactSupplyHook,
+    SupplyAdmissionHook,
+)
+from alon_ai.db.tables import accounting as gov
+from alon_ai.db.tables import records_organization as org
+from alon_ai.db.tables import supply as supply_schema
+from alon_ai.integrations.schemas.provider import (
     CAPABILITIES,
     CallAttribution,
     Capability,
@@ -70,24 +74,30 @@ from alon_ai.providers.contracts import (
     UsageComponent,
     UsageObservation,
 )
-from alon_ai.providers.execution import ExecutionResult
-from alon_ai.providers.rights import IntendedUse, ProviderUsageGrant, RuntimeContent
-from alon_ai.records import (
+from alon_ai.policies.provider_rights import (
+    IntendedUse,
+    ProviderUsageGrant,
+    RuntimeContent,
+)
+from alon_ai.provider_usage.schemas.accounting import (
+    CapabilityConfig,
+    ControlPolicy,
+    FxVersion,
+    PriceBound,
+    PriceVersion,
+)
+from alon_ai.provider_usage.service import ExecutionResult
+from alon_ai.services.schemas.records import (
     ProductAgent,
     ProductExperiment,
     ProductRecordsDenied,
-    ProductRecordsRepository,
     ProductWorkflow,
 )
-from alon_ai.records import organization_schema as org
-from alon_ai.records.organization_models import (
+from alon_ai.services.schemas.records_organization import (
     GatewayEffectObservation,
     OrganizationSnapshot,
     RetainedOrganizationSource,
 )
-from alon_ai.records.organizations import OrganizationRepository
-from alon_ai.supply import schema as supply_schema
-from alon_ai.supply.repository import ComposedContactSupplyHook, SupplyAdmissionHook
 
 KEY = SecretStr("0123456789abcdef" * 2)
 OWNER = UUID(int=1)
@@ -656,7 +666,7 @@ async def test_exact_gateway_outcome_quarantines_then_confirms_permanent_contact
     await repo.ingest_gateway_observation(ambiguous, command_key=uuid4())
     assert await repo.working_candidates(data[2]) == ()
     evidence_id = uuid4()
-    from alon_ai.accounting.models import EvidenceRecord
+    from alon_ai.provider_usage.schemas.accounting import EvidenceRecord
 
     metadata = ProviderResultMetadata(
         capability=Capability.GMAIL_SEND,

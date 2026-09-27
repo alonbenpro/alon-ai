@@ -6,13 +6,13 @@ from uuid import uuid4
 
 import pytest
 
-from alon_ai.openai_runtime.contract import classify_response
-from alon_ai.openai_runtime.market import (
+from alon_ai.agents.market_research import (
     MarketFinding,
     MarketResearchAdvice,
     market_profile,
     validate_market_references,
 )
+from alon_ai.agents.schemas.openai import classify_response
 
 FIXTURE = Path(__file__).parents[1] / "fixtures" / "openai_market" / "synthesis.json"
 

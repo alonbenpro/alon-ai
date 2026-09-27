@@ -7,8 +7,12 @@ from sqlalchemy import select
 from test_product_record_guards import put
 from test_product_records import artifact, roots
 
-from alon_ai.records import ArtifactInput, ArtifactKind, ProductRecordsDenied
-from alon_ai.records import schema as records
+from alon_ai.db.tables import records
+from alon_ai.services.schemas.records import (
+    ArtifactInput,
+    ArtifactKind,
+    ProductRecordsDenied,
+)
 
 pytestmark = pytest.mark.integration
 
