@@ -209,7 +209,11 @@ class IdeaRuntime:
 
 
 async def discover_experiment(
-    request: ExperimentContext, experiment_id: UUID, body: RefineRequest
+    request: ExperimentContext,
+    experiment_id: UUID,
+    body: RefineRequest,
+    *,
+    allow_regeneration: bool = False,
 ) -> dict:
     detail = await _read_experiment(request, experiment_id)
     if detail is None:
@@ -224,7 +228,9 @@ async def discover_experiment(
     )
     if prior is not None:
         if prior["run_id"] != body.idempotency_key:
-            if prior["state"] != "DISCOVERY_FAILED" or not detail["retry_safe"]:
+            if not (allow_regeneration and prior["state"] == "SUCCEEDED") and (
+                prior["state"] != "DISCOVERY_FAILED" or not detail["retry_safe"]
+            ):
                 raise ExperimentError(
                     409,
                     "CANDIDATE_REVIEW_PENDING"
@@ -380,9 +386,12 @@ async def select_experiment_candidate(
         raise ExperimentError(404, "EXPERIMENT_NOT_FOUND")
     if detail["mode"] != "SYSTEM_DISCOVERY":
         raise ExperimentError(409, "DISCOVERY_MODE_REQUIRED")
+    from alon_ai.db.repositories.intake import IntakeRepository
+
+    revisions = await IntakeRepository(request.engine).history(experiment_id)
     if str(body.candidate_artifact_id) not in {
         str(candidate["artifact_id"]) for candidate in detail["candidates"]
-    }:
+    } | {str(row["id"]) for row in revisions}:
         raise ExperimentError(409, "CANDIDATE_NOT_IN_DISCOVERY")
     (
         candidate,
@@ -461,7 +470,11 @@ async def _claim_refinement(
 
 
 async def refine_experiment(
-    request: ExperimentContext, experiment_id: UUID, body: RefineRequest
+    request: ExperimentContext,
+    experiment_id: UUID,
+    body: RefineRequest,
+    *,
+    allow_regeneration: bool = False,
 ) -> dict:
     detail = await _read_experiment(request, experiment_id)
     if detail is None:

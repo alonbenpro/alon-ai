@@ -27,167 +27,234 @@ const candidates = [
   { artifact_id: "candidate-2", title: "Queue visibility", hypothesis: "Reduce missed appointments", demand_status: "UNVERIFIED", uncertainties: ["Workflow fit"] },
   { artifact_id: "candidate-3", title: "Follow-up reminders", hypothesis: "Reduce no-shows", demand_status: "UNVERIFIED", uncertainties: ["Consent"] },
 ];
-function fillRequiredFields() {
-  const values: Record<string, string> = {
-    "Experiment name": "Clinic scheduling", "Your idea": "  Original seed  ", "Objective": "Test demand",
-    "Target customer": "Clinics", "Problem hypothesis": "Manual scheduling", "Geographies": "Israel",
-    "Commercial boundaries": "No guarantees", "Research budget (USD)": "25",
-    "Evidence definitions": "Buyer interviews", "Capabilities": "Web applications",
-    "Constraints": "No regulated data", "Maximum project hours": "120", "Hours per week": "20",
-    "Concurrent projects": "1", "Hourly cost": "75", "Minimum project price": "3000",
-    "Minimum margin rate": "0.30", "Maximum discount rate": "0.10", "Minimum deposit rate": "0.25",
-  };
-  for (const [label, value] of Object.entries(values)) {
-    fireEvent.change(screen.getByRole("textbox", { name: label }), { target: { value } });
-  }
-  fireEvent.change(screen.getByRole("combobox", { name: "Currency" }), { target: { value: "USD" } });
-}
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); sessionStorage.clear(); });
 
 describe("experiment creation checkpoint", () => {
-  it("preserves the exact seed and requires complete bounds", async () => {
-    const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+  it("starts from one optional idea field without asking for a mission brief", () => {
     render(<ExperimentCreation runtime={runtime} />);
+    expect(screen.getByRole("textbox", { name: "Your idea" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate an idea" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Start experiment" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Objective" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Target customer" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("textbox", { name: "Research budget (USD)" })).not.toBeInTheDocument();
+  });
+
+  it("does not discard typed idea text through the generate action", () => {
+    render(<ExperimentCreation runtime={runtime} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "My exact idea" } });
+    expect(screen.getByRole("button", { name: "Generate an idea" })).toBeDisabled();
+  });
+
+  it("starts a supplied idea with only exact text and one command, then restores its run with GET", async () => {
+    const started = { ...saved, idea_seed: "  Clinic idea\n", state: "REFINEMENT_IN_PROGRESS",
+      draft: false, stage: "IDEA_REFINEMENT", stage_status: "RUNNING", latest_run_id: "run-1" };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(started)).mockResolvedValue(Response.json(started));
+    vi.stubGlobal("fetch", fetcher);
+    const first = render(<ExperimentCreation runtime={runtime} />);
     fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "  Clinic idea\n" } });
-    expect(screen.getByTestId("seed-preview").textContent).toBe("  Clinic idea\n");
-    fireEvent.click(screen.getByRole("button", { name: "Create experiment" }));
-    expect(await screen.findByRole("alert")).toHaveTextContent(/complete the experiment bounds/i);
-    expect(fetcher).not.toHaveBeenCalled();
-  });
-
-  it("reuses an ambiguous create command without changing its payload", async () => {
-    const fetcher = vi.fn().mockRejectedValueOnce(new Error("connection lost"))
-      .mockResolvedValueOnce(Response.json({ experiment_id: "exp-1", state: "AWAITING_REFINEMENT" }));
-    vi.stubGlobal("fetch", fetcher);
-    render(<ExperimentCreation runtime={runtime} />); fillRequiredFields();
-    fireEvent.click(screen.getByRole("button", { name: "Create experiment" }));
-    fireEvent.click(await screen.findByRole("button", { name: "Retry creation" }));
+    fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
     expect(await screen.findByText(/Experiment ID: exp-1/)).toBeInTheDocument();
-    expect(fetcher.mock.calls[1][1].body).toBe(fetcher.mock.calls[0][1].body);
-    expect(JSON.parse(fetcher.mock.calls[0][1].body).idea_seed).toBe("  Original seed  ");
-  });
-
-  it("creates system discovery without a seed, shows three candidates and requires an explicit selection", async () => {
-    const fetcher = vi.fn()
-      .mockResolvedValueOnce(Response.json({ experiment_id: "exp-1", state: "AWAITING_DISCOVERY" }))
-      .mockResolvedValueOnce(Response.json({ experiment_id: "exp-1", state: "AWAITING_SELECTION", candidates }));
-    vi.stubGlobal("fetch", fetcher);
-    render(<ExperimentCreation runtime={runtime} />); fillRequiredFields();
-    fireEvent.click(screen.getByRole("radio", { name: /system discovery/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Create experiment" }));
-    expect(await screen.findByRole("button", { name: "Discover directions" })).toBeInTheDocument();
-    expect(JSON.parse(fetcher.mock.calls[0][1].body)).not.toHaveProperty("idea_seed");
-    fireEvent.click(screen.getByRole("button", { name: "Discover directions" }));
-    expect(await screen.findByText("Clinic intake")).toBeInTheDocument();
-    expect(screen.getByText("Queue visibility")).toBeInTheDocument();
-    expect(screen.getByText("Follow-up reminders")).toBeInTheDocument();
-    expect(screen.getAllByText(/demand is unverified/i)).toHaveLength(2);
-    expect(screen.getAllByText(/unverified demand/i)).toHaveLength(3);
-    expect(screen.queryByRole("button", { name: "Refine selected direction" })).not.toBeInTheDocument();
-    expect(fetcher.mock.calls[1][0]).toBe("/api/operator/experiments/exp-1/discover");
-  });
-
-  it("waits for the selection receipt before enabling refinement", async () => {
-    let finish!: (value: Response) => void;
-    const selection = new Promise<Response>((resolve) => { finish = resolve; });
-    const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ ...saved, mode: "SYSTEM_DISCOVERY",
-      idea_seed: null, state: "AWAITING_SELECTION", candidates }))
-      .mockReturnValueOnce(selection);
-    vi.stubGlobal("fetch", fetcher);
+    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({ idea_seed: "  Clinic idea\n", command_key: expect.any(String) });
+    first.unmount();
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    fireEvent.click(await screen.findByRole("radio", { name: /queue visibility/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /reason for selection/i }), { target: { value: "Fits current delivery capacity" } });
-    fireEvent.click(screen.getByRole("button", { name: "Select direction" }));
-    expect(screen.queryByRole("button", { name: "Refine selected direction" })).not.toBeInTheDocument();
-    expect(JSON.parse(fetcher.mock.calls[1][1].body).candidate_artifact_id).toBe("candidate-2");
-    finish(Response.json({ experiment_id: "exp-1", cycle_id: "cycle-1", selection_id: "selection-1", state: "AWAITING_REFINEMENT" }));
-    expect(await screen.findByRole("button", { name: "Refine selected direction" })).toBeEnabled();
+    expect(await screen.findByText(/Agent running · Run run-1/)).toBeInTheDocument();
+    expect(fetcher.mock.calls.filter(([url, init]) => String(url).includes("/experiments") && init?.method === "POST")).toHaveLength(1);
   });
 
-  it("retries the exact pending selection command after reload", async () => {
-    const selectionState = { ...saved, mode: "SYSTEM_DISCOVERY", idea_seed: null,
-      state: "AWAITING_SELECTION", candidates };
-    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(selectionState))
-      .mockRejectedValueOnce(new Error("lost selection response"))
-      .mockResolvedValueOnce(Response.json(selectionState))
-      .mockResolvedValueOnce(Response.json(selectionState))
-      .mockResolvedValueOnce(Response.json({ experiment_id: "exp-1", cycle_id: "cycle-1",
-        selection_id: "selection-1", state: "AWAITING_REFINEMENT" }));
+  it("generates proposals without creating a canonical experiment and preserves edited lineage", async () => {
+    const draft = { ...saved, draft: true, mode: "SYSTEM_DISCOVERY", idea_seed: null, state: "AWAITING_SELECTION",
+      stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT", candidates,
+      proposal_history: candidates.map((item, index) => ({ artifact_id: item.artifact_id, version: index + 1,
+        parent_artifact_id: null, title: item.title, hypothesis: item.hypothesis, origin: "GENERATED", run_id: "run-generate" })) };
+    const edited = { ...draft, candidates: [...candidates, { ...candidates[1], artifact_id: "revision-1", hypothesis: "  New wording\n" }],
+      proposal_history: [...draft.proposal_history, { artifact_id: "revision-1", version: 4,
+        parent_artifact_id: "candidate-2", title: "Queue visibility", hypothesis: "  New wording\n",
+        idea_seed: "  New wording\n", origin: "OPERATOR_EDIT", run_id: null }] };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(draft)).mockResolvedValueOnce(Response.json(edited));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation runtime={runtime} />);
+    fireEvent.click(screen.getByRole("button", { name: "Generate an idea" }));
+    expect(await screen.findByText("Clinic intake")).toBeInTheDocument();
+    expect(fetcher.mock.calls[0][0]).toBe("/api/operator/ideas/generate");
+    fireEvent.click(screen.getByRole("radio", { name: /queue visibility/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Refine this proposal" }), { target: { value: "  New wording\n" } });
+    fireEvent.click(screen.getByRole("button", { name: "Save revision" }));
+    expect(await screen.findByText("v4 · Your edit")).toBeInTheDocument();
+    expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/revisions");
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ candidate_artifact_id: "candidate-2", idea_seed: "  New wording\n" });
+  });
+
+  it("starts the chosen revision through one server command and restores the same run", async () => {
+    const draft = { ...saved, draft: true, mode: "SYSTEM_DISCOVERY", idea_seed: null,
+      state: "AWAITING_SELECTION", stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT", candidates };
+    const started = { ...draft, draft: false, idea_seed: "Queue visibility", state: "REFINEMENT_IN_PROGRESS",
+      stage: "IDEA_REFINEMENT", stage_status: "RUNNING", latest_run_id: "run-2" };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(draft)).mockResolvedValueOnce(Response.json(started))
+      .mockResolvedValue(Response.json(started));
     vi.stubGlobal("fetch", fetcher);
     const first = render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("radio", { name: /queue visibility/i }));
-    fireEvent.change(screen.getByRole("textbox", { name: /reason for selection/i }),
-      { target: { value: "Fits current delivery capacity" } });
-    fireEvent.click(screen.getByRole("button", { name: "Select direction" }));
-    expect(await screen.findByRole("button", { name: "Retry selection" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
+    expect(await screen.findByText(/Agent running · Run run-2/)).toBeInTheDocument();
+    expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/start");
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ candidate_artifact_id: "candidate-2", command_key: expect.any(String) });
     first.unmount();
-
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Retry selection" }));
-    expect(await screen.findByRole("button", { name: "Refine selected direction" })).toBeEnabled();
-    expect(fetcher.mock.calls[4][1].body).toBe(fetcher.mock.calls[1][1].body);
-    expect(sessionStorage.length).toBe(0);
+    expect(await screen.findByText(/Run run-2/)).toBeInTheDocument();
+    expect(fetcher.mock.calls.filter(([, init]) => init?.method === "POST")).toHaveLength(1);
   });
 
-  it("recovers selected discovery and advice from GET after refresh", async () => {
-    const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, mode: "SYSTEM_DISCOVERY", idea_seed: null,
-      state: "AWAITING_REVIEW", candidates, selected_candidate_artifact_id: "candidate-2",
-      latest_run_id: "run-1", advice, advice_source: "RECORDED_FAKE" }));
+  it("keeps generation and revision history visible after reopening a draft", async () => {
+    const history = [{ artifact_id: "candidate-2", version: 1, parent_artifact_id: null, title: "Queue visibility",
+      hypothesis: "Reduce missed appointments", origin: "GENERATED", run_id: "run-generate" },
+      { artifact_id: "revision-1", version: 2, parent_artifact_id: "candidate-2", title: "Queue visibility",
+        hypothesis: "  Exact operator edit\n", idea_seed: "  Exact operator edit\n", origin: "OPERATOR_EDIT", run_id: null }];
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, draft: true, mode: "SYSTEM_DISCOVERY",
+      idea_seed: null, state: "AWAITING_SELECTION", candidates, proposal_history: history,
+      stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT" }));
     vi.stubGlobal("fetch", fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    expect(await screen.findByRole("heading", { name: advice.title })).toBeInTheDocument();
-    expect(screen.getByText(/selected direction/i)).toBeInTheDocument();
-    expect(screen.getByText("Queue visibility")).toBeInTheDocument();
+    expect(await screen.findByText("v2 · Your edit")).toBeInTheDocument();
+    expect(screen.getByText(/Proposal session ID: exp-1/)).toBeInTheDocument();
+    expect(screen.getByText(/Exact operator edit/).textContent).toBe("  Exact operator edit\n");
     expect(fetcher).toHaveBeenCalledOnce();
   });
 
-  it("offers a fresh refinement key only after GET confirms a safe terminal retry", async () => {
-    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(saved))
-      .mockRejectedValueOnce(new Error("lost response"))
-      .mockResolvedValueOnce(Response.json({ ...saved, state: "REFINEMENT_IN_PROGRESS", retry_safe: false }))
-      .mockResolvedValueOnce(Response.json({ ...saved, state: "REFINEMENT_FAILED", retry_safe: true }))
-      .mockResolvedValueOnce(Response.json({ run_id: "run-2", state: "AWAITING_REVIEW", advice }));
+  it("keeps proposal provenance visible after starting the selected revision", async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, draft: false,
+      state: "AWAITING_REVIEW", latest_run_id: "run-2", advice,
+      stage: "IDEA_REFINEMENT", stage_status: "WAITING_FOR_INPUT",
+      proposal_history: [{ artifact_id: "revision-1", version: 2, parent_artifact_id: "candidate-2",
+        title: "Queue visibility", hypothesis: "  Exact operator edit\n", idea_seed: "  Exact operator edit\n",
+        origin: "OPERATOR_EDIT", run_id: null }] }));
     vi.stubGlobal("fetch", fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Refine idea" }));
-    expect(await screen.findByText(/refinement in progress/i)).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Retry refinement" })).not.toBeInTheDocument();
-    fireEvent.click(screen.getByRole("button", { name: "Check status" }));
+    expect(await screen.findByText("v2 · Your edit")).toBeInTheDocument();
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("shows a targeted profile block instead of inventing setup values", async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ detail: "OPERATOR_PROFILE_REQUIRED" }, { status: 409 }));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation runtime={runtime} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "Clinic idea" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/operator profile/i);
+    expect(screen.getByRole("button", { name: "Start experiment" })).toBeEnabled();
+    expect(screen.queryByRole("textbox", { name: "Objective" })).not.toBeInTheDocument();
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("keeps disabled live mode blocked and never switches to recorded mode", () => {
+    const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation runtime={{ provider_mode: "disabled", ready: false }} />);
+    expect(screen.getByText("Runtime blocked")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Generate an idea" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Start experiment" })).toBeDisabled();
+    expect(screen.queryByText("Recorded demo mode")).not.toBeInTheDocument();
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("requires explicit confirmation before a live idea launch", async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, draft: false,
+      stage: "IDEA_REFINEMENT", stage_status: "RUNNING", state: "REFINEMENT_IN_PROGRESS" }));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation runtime={{ provider_mode: "live", ready: true }} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "Clinic idea" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/confirm the live call/i);
+    expect(fetcher).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("checkbox", { name: /may incur a cost/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
+    expect(await screen.findByText(/Experiment ID: exp-1/)).toBeInTheDocument();
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("regenerates from a chosen proposal and keeps previous versions", async () => {
+    const draft = { ...saved, draft: true, mode: "SYSTEM_DISCOVERY", idea_seed: null,
+      state: "AWAITING_SELECTION", stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT", candidates,
+      proposal_history: [{ artifact_id: "candidate-2", version: 1, parent_artifact_id: null,
+        title: "Queue visibility", hypothesis: "Reduce missed appointments", origin: "GENERATED", run_id: "run-1" }] };
+    const regenerated = { ...draft, proposal_history: [...draft.proposal_history,
+      { artifact_id: "candidate-3", version: 2, parent_artifact_id: "candidate-2",
+        title: "Follow-up reminders", hypothesis: "Reduce no-shows", origin: "GENERATED", run_id: "run-2" }] };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(draft)).mockResolvedValueOnce(Response.json(regenerated));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    fireEvent.click(await screen.findByRole("radio", { name: /queue visibility/i }));
+    fireEvent.click(screen.getByRole("button", { name: "Regenerate proposals" }));
+    expect(await screen.findByText("v2 · Generated")).toBeInTheDocument();
+    expect(screen.getByText("v1 · Generated")).toBeInTheDocument();
+    expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/generate");
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ candidate_artifact_id: "candidate-2" });
+  });
+
+  it("does not offer another generation while saved discovery is running", async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, draft: true,
+      mode: "SYSTEM_DISCOVERY", idea_seed: null, state: "DISCOVERY_IN_PROGRESS",
+      stage: "IDEA_DISCOVERY", stage_status: "RUNNING", candidates: [] }));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    expect(await screen.findByText(/Idea discovery in progress/i)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Regenerate proposals" })).not.toBeInTheDocument();
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it("retries a safely failed supplied first run without a research return", async () => {
+    const failed = { ...saved, draft: false, state: "REFINEMENT_FAILED", retry_safe: true,
+      stage: "IDEA_REFINEMENT", stage_status: "BLOCKED", blocked_reason: "REFINEMENT_FAILED", latest_run_id: "run-1" };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(failed))
+      .mockResolvedValueOnce(Response.json({ run_id: "run-2", state: "AWAITING_REVIEW", advice, advice_source: "RECORDED_FAKE" }))
+      .mockResolvedValueOnce(Response.json({ ...failed, state: "AWAITING_REVIEW", retry_safe: false,
+        stage_status: "WAITING_FOR_INPUT", blocked_reason: null, latest_run_id: "run-2", advice,
+        advice_source: "RECORDED_FAKE" }));
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("button", { name: "Retry refinement" }));
     expect(await screen.findByRole("heading", { name: advice.title })).toBeInTheDocument();
-    const first = JSON.parse(fetcher.mock.calls[1][1].body).idempotency_key;
-    const second = JSON.parse(fetcher.mock.calls[4][1].body).idempotency_key;
-    expect(second).not.toBe(first);
+    expect(fetcher.mock.calls[1][0]).toBe("/api/operator/experiments/exp-1/refine");
+    expect(JSON.parse(fetcher.mock.calls[1][1].body).idempotency_key).not.toBe("run-1");
+    expect(await screen.findByText(/Waiting for input · Run run-2/)).toBeInTheDocument();
+    expect(fetcher).toHaveBeenCalledTimes(3);
   });
 
-  it("does not offer a new run while saved status is unavailable", async () => {
-    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(saved))
-      .mockRejectedValueOnce(new Error("lost response"))
-      .mockRejectedValueOnce(new Error("status offline"));
+  it("retries a safely failed draft discovery through the draft generation command", async () => {
+    const failed = { ...saved, draft: true, mode: "SYSTEM_DISCOVERY", idea_seed: null,
+      state: "DISCOVERY_FAILED", retry_safe: true, stage: "IDEA_DISCOVERY",
+      stage_status: "BLOCKED", blocked_reason: "DISCOVERY_FAILED", candidates: [] };
+    const ready = { ...failed, state: "AWAITING_SELECTION", retry_safe: false,
+      stage_status: "WAITING_FOR_INPUT", blocked_reason: null, candidates };
+    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(failed)).mockResolvedValueOnce(Response.json(ready));
     vi.stubGlobal("fetch", fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Refine idea" }));
-    expect(await screen.findByRole("button", { name: "Check status" })).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Refine idea" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Retry refinement" })).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByRole("button", { name: "Retry discovery" }));
+    expect(await screen.findByText("Clinic intake")).toBeInTheDocument();
+    expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/generate");
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ command_key: expect.any(String) });
   });
 
-  it("reuses the same refinement key after refresh while the attempt is ambiguous", async () => {
-    const fetcher = vi.fn().mockResolvedValueOnce(Response.json(saved))
-      .mockRejectedValueOnce(new Error("lost response"))
-      .mockResolvedValueOnce(Response.json(saved))
-      .mockResolvedValueOnce(Response.json(saved))
-      .mockResolvedValueOnce(Response.json({ state: "AWAITING_REVIEW", run_id: "run-1", advice }));
+  it("continues a historical experiment that is awaiting its first refinement", async () => {
+    const fetcher = vi.fn().mockResolvedValue(Response.json(saved));
     vi.stubGlobal("fetch", fetcher);
-    const first = render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Refine idea" }));
-    await screen.findByRole("button", { name: "Refine idea" });
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    expect(await screen.findByRole("button", { name: "Refine idea" })).toBeEnabled();
+  });
+
+  it("retries an ambiguous initial command with the same body after reload", async () => {
+    const fetcher = vi.fn().mockRejectedValueOnce(new Error("connection lost"))
+      .mockResolvedValueOnce(Response.json({ ...saved, draft: false, state: "REFINEMENT_IN_PROGRESS",
+        stage: "IDEA_REFINEMENT", stage_status: "RUNNING" }));
+    vi.stubGlobal("fetch", fetcher);
+    const first = render(<ExperimentCreation runtime={runtime} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "  Clinic idea\n" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
+    expect(await screen.findByRole("button", { name: "Retry start" })).toBeInTheDocument();
     first.unmount();
-    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    fireEvent.click(await screen.findByRole("button", { name: "Refine idea" }));
-    expect(await screen.findByRole("heading", { name: advice.title })).toBeInTheDocument();
-    expect(JSON.parse(fetcher.mock.calls[4][1].body).idempotency_key)
-      .toBe(JSON.parse(fetcher.mock.calls[1][1].body).idempotency_key);
+    render(<ExperimentCreation runtime={runtime} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Retry start" }));
+    expect(await screen.findByText(/Experiment ID: exp-1/)).toBeInTheDocument();
+    expect(fetcher.mock.calls[1][1].body).toBe(fetcher.mock.calls[0][1].body);
   });
 
   it("keeps polling a saved in-progress run until the server confirms completion", async () => {

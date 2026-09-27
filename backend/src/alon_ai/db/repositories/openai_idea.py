@@ -53,6 +53,7 @@ class OpenAIIdeaInputRepository:
             content_hash=profile["content_hash"],
             experiment_id=experiment_id,
             profile_schema_version=2,
+            projection="IDEA_V1",
         )
 
     async def experiment_brief(self, experiment_id: UUID):
@@ -60,10 +61,16 @@ class OpenAIIdeaInputRepository:
             brief = (
                 (
                     await connection.execute(
-                        select(records.artifacts).where(
+                        select(records.artifacts)
+                        .where(
                             records.artifacts.c.experiment_id == experiment_id,
                             records.artifacts.c.kind == ArtifactKind.EXPERIMENT_BRIEF,
                         )
+                        .order_by(
+                            records.artifacts.c.created_at.desc(),
+                            records.artifacts.c.id.desc(),
+                        )
+                        .limit(1)
                     )
                 )
                 .mappings()

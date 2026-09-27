@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Literal
 from uuid import UUID
 
 from pydantic import SecretStr
@@ -59,6 +59,7 @@ class AcceptedOperatorProfile:
     content_hash: str
     experiment_id: UUID
     profile_schema_version: int = 2
+    projection: Literal["FULL", "IDEA_V1"] = "FULL"
 
 
 @dataclass(frozen=True)

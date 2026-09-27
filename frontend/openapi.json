@@ -115,100 +115,9 @@
         "title": "ActivityResponse",
         "type": "object"
       },
-      "CommercialInput": {
-        "additionalProperties": false,
-        "properties": {
-          "currency": {
-            "pattern": "^[A-Z]{3}$",
-            "title": "Currency",
-            "type": "string"
-          },
-          "hourly_cost": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
-                "type": "string"
-              }
-            ],
-            "title": "Hourly Cost"
-          },
-          "maximum_discount_rate": {
-            "anyOf": [
-              {
-                "maximum": 1.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
-                "type": "string"
-              }
-            ],
-            "title": "Maximum Discount Rate"
-          },
-          "minimum_deposit_rate": {
-            "anyOf": [
-              {
-                "maximum": 1.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
-                "type": "string"
-              }
-            ],
-            "title": "Minimum Deposit Rate"
-          },
-          "minimum_margin_rate": {
-            "anyOf": [
-              {
-                "maximum": 1.0,
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
-                "type": "string"
-              }
-            ],
-            "title": "Minimum Margin Rate"
-          },
-          "minimum_project_price": {
-            "anyOf": [
-              {
-                "minimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
-                "type": "string"
-              }
-            ],
-            "title": "Minimum Project Price"
-          }
-        },
-        "required": [
-          "currency",
-          "hourly_cost",
-          "minimum_project_price",
-          "minimum_margin_rate",
-          "maximum_discount_rate",
-          "minimum_deposit_rate"
-        ],
-        "title": "CommercialInput",
-        "type": "object"
-      },
       "CreateExperimentRequest": {
         "additionalProperties": false,
         "properties": {
-          "brief": {
-            "$ref": "#/components/schemas/ExperimentBriefInput"
-          },
           "command_key": {
             "format": "uuid",
             "title": "Command Key",
@@ -226,203 +135,12 @@
               }
             ],
             "title": "Idea Seed"
-          },
-          "name": {
-            "maxLength": 120,
-            "minLength": 1,
-            "title": "Name",
-            "type": "string"
-          },
-          "operator_profile": {
-            "$ref": "#/components/schemas/OperatorProfileInput"
           }
         },
         "required": [
-          "name",
-          "brief",
-          "operator_profile",
           "command_key"
         ],
         "title": "CreateExperimentRequest",
-        "type": "object"
-      },
-      "CreateExperimentResponse": {
-        "additionalProperties": false,
-        "properties": {
-          "brief_artifact_id": {
-            "format": "uuid",
-            "title": "Brief Artifact Id",
-            "type": "string"
-          },
-          "cycle_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Cycle Id"
-          },
-          "experiment_id": {
-            "format": "uuid",
-            "title": "Experiment Id",
-            "type": "string"
-          },
-          "seed_artifact_id": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Seed Artifact Id"
-          },
-          "state": {
-            "enum": [
-              "AWAITING_REFINEMENT",
-              "AWAITING_DISCOVERY"
-            ],
-            "title": "State",
-            "type": "string"
-          }
-        },
-        "required": [
-          "experiment_id",
-          "cycle_id",
-          "brief_artifact_id",
-          "seed_artifact_id",
-          "state"
-        ],
-        "title": "CreateExperimentResponse",
-        "type": "object"
-      },
-      "DeliveryInput": {
-        "additionalProperties": false,
-        "properties": {
-          "concurrent_projects": {
-            "maximum": 100.0,
-            "minimum": 1.0,
-            "title": "Concurrent Projects",
-            "type": "integer"
-          },
-          "hours_per_week": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "maximum": 168.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
-                "type": "string"
-              }
-            ],
-            "title": "Hours Per Week"
-          },
-          "max_project_hours": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "maximum": 100000.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
-                "type": "string"
-              }
-            ],
-            "title": "Max Project Hours"
-          }
-        },
-        "required": [
-          "max_project_hours",
-          "hours_per_week",
-          "concurrent_projects"
-        ],
-        "title": "DeliveryInput",
-        "type": "object"
-      },
-      "ExperimentBriefInput": {
-        "additionalProperties": false,
-        "properties": {
-          "budget_usd": {
-            "anyOf": [
-              {
-                "exclusiveMinimum": 0.0,
-                "type": "number"
-              },
-              {
-                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
-                "type": "string"
-              }
-            ],
-            "title": "Budget Usd"
-          },
-          "commercial_boundaries": {
-            "maxLength": 4000,
-            "minLength": 1,
-            "title": "Commercial Boundaries",
-            "type": "string"
-          },
-          "evidence_definitions": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 20,
-            "minItems": 1,
-            "title": "Evidence Definitions",
-            "type": "array"
-          },
-          "geographies": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 20,
-            "minItems": 1,
-            "title": "Geographies",
-            "type": "array"
-          },
-          "launch_stage": {
-            "const": "SHADOW",
-            "title": "Launch Stage",
-            "type": "string"
-          },
-          "objective": {
-            "maxLength": 4000,
-            "minLength": 1,
-            "title": "Objective",
-            "type": "string"
-          },
-          "problem": {
-            "maxLength": 4000,
-            "minLength": 1,
-            "title": "Problem",
-            "type": "string"
-          },
-          "target_customer": {
-            "maxLength": 4000,
-            "minLength": 1,
-            "title": "Target Customer",
-            "type": "string"
-          }
-        },
-        "required": [
-          "objective",
-          "target_customer",
-          "problem",
-          "geographies",
-          "commercial_boundaries",
-          "budget_usd",
-          "evidence_definitions",
-          "launch_stage"
-        ],
-        "title": "ExperimentBriefInput",
         "type": "object"
       },
       "ExperimentRuntimeStatus": {
@@ -447,6 +165,230 @@
           "ready"
         ],
         "title": "ExperimentRuntimeStatus",
+        "type": "object"
+      },
+      "ExperimentSnapshot": {
+        "additionalProperties": true,
+        "properties": {
+          "accepted_brief": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Brief"
+          },
+          "advice": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice"
+          },
+          "advice_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Source"
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "brief": {
+            "additionalProperties": true,
+            "title": "Brief",
+            "type": "object"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalSnapshot"
+            },
+            "title": "Candidates",
+            "type": "array"
+          },
+          "cycle_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cycle Id"
+          },
+          "draft": {
+            "title": "Draft",
+            "type": "boolean"
+          },
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "idea_seed": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Idea Seed"
+          },
+          "latest_outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Outcome"
+          },
+          "latest_run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Latest Run Id"
+          },
+          "mode": {
+            "enum": [
+              "USER_SEEDED_REFINEMENT",
+              "SYSTEM_DISCOVERY"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "proposal_history": {
+            "items": {
+              "$ref": "#/components/schemas/ProposalRevisionSnapshot"
+            },
+            "title": "Proposal History",
+            "type": "array"
+          },
+          "provider_mode": {
+            "enum": [
+              "disabled",
+              "fake",
+              "live"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "retry_safe": {
+            "title": "Retry Safe",
+            "type": "boolean"
+          },
+          "selected_candidate_artifact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Candidate Artifact Id"
+          },
+          "stage": {
+            "enum": [
+              "IDEA_DISCOVERY",
+              "IDEA_REFINEMENT"
+            ],
+            "title": "Stage",
+            "type": "string"
+          },
+          "stage_status": {
+            "enum": [
+              "RUNNING",
+              "WAITING_FOR_INPUT",
+              "BLOCKED",
+              "COMPLETE"
+            ],
+            "title": "Stage Status",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "name",
+          "mode",
+          "state",
+          "brief",
+          "idea_seed",
+          "cycle_id",
+          "latest_run_id",
+          "latest_outcome",
+          "advice_source",
+          "advice",
+          "accepted_brief",
+          "candidates",
+          "selected_candidate_artifact_id",
+          "retry_safe",
+          "draft",
+          "provider_mode",
+          "stage",
+          "stage_status",
+          "blocked_reason",
+          "proposal_history"
+        ],
+        "title": "ExperimentSnapshot",
+        "type": "object"
+      },
+      "GenerateIdeaRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key"
+        ],
+        "title": "GenerateIdeaRequest",
         "type": "object"
       },
       "HTTPValidationError": {
@@ -497,42 +439,6 @@
         "title": "LoginRequest",
         "type": "object"
       },
-      "OperatorProfileInput": {
-        "additionalProperties": false,
-        "properties": {
-          "capabilities": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 100,
-            "minItems": 1,
-            "title": "Capabilities",
-            "type": "array"
-          },
-          "commercial": {
-            "$ref": "#/components/schemas/CommercialInput"
-          },
-          "constraints": {
-            "items": {
-              "type": "string"
-            },
-            "maxItems": 100,
-            "title": "Constraints",
-            "type": "array"
-          },
-          "delivery": {
-            "$ref": "#/components/schemas/DeliveryInput"
-          }
-        },
-        "required": [
-          "capabilities",
-          "constraints",
-          "delivery",
-          "commercial"
-        ],
-        "title": "OperatorProfileInput",
-        "type": "object"
-      },
       "OperatorSession": {
         "properties": {
           "display_name": {
@@ -550,6 +456,113 @@
           "display_name"
         ],
         "title": "OperatorSession",
+        "type": "object"
+      },
+      "ProposalRevisionSnapshot": {
+        "properties": {
+          "artifact_id": {
+            "format": "uuid",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "hypothesis": {
+            "title": "Hypothesis",
+            "type": "string"
+          },
+          "idea_seed": {
+            "title": "Idea Seed",
+            "type": "string"
+          },
+          "origin": {
+            "enum": [
+              "GENERATED",
+              "OPERATOR_EDIT"
+            ],
+            "title": "Origin",
+            "type": "string"
+          },
+          "parent_artifact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Artifact Id"
+          },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "version",
+          "parent_artifact_id",
+          "title",
+          "hypothesis",
+          "idea_seed",
+          "origin",
+          "run_id"
+        ],
+        "title": "ProposalRevisionSnapshot",
+        "type": "object"
+      },
+      "ProposalSnapshot": {
+        "properties": {
+          "artifact_id": {
+            "format": "uuid",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "demand_status": {
+            "const": "UNVERIFIED",
+            "title": "Demand Status",
+            "type": "string"
+          },
+          "hypothesis": {
+            "title": "Hypothesis",
+            "type": "string"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          },
+          "uncertainties": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Uncertainties",
+            "type": "array"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "title",
+          "hypothesis",
+          "demand_status",
+          "uncertainties"
+        ],
+        "title": "ProposalSnapshot",
         "type": "object"
       },
       "ReadinessResponse": {
@@ -607,6 +620,33 @@
         "title": "RefineRequest",
         "type": "object"
       },
+      "RegenerateIdeaRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_artifact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Artifact Id"
+          },
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key"
+        ],
+        "title": "RegenerateIdeaRequest",
+        "type": "object"
+      },
       "ReturnFeedbackInput": {
         "additionalProperties": false,
         "properties": {
@@ -644,6 +684,34 @@
           "role"
         ],
         "title": "ReturnFeedbackInput",
+        "type": "object"
+      },
+      "ReviseProposalRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_artifact_id": {
+            "format": "uuid",
+            "title": "Candidate Artifact Id",
+            "type": "string"
+          },
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "idea_seed": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Idea Seed",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key",
+          "candidate_artifact_id",
+          "idea_seed"
+        ],
+        "title": "ReviseProposalRequest",
         "type": "object"
       },
       "SelectCandidateRequest": {
@@ -689,6 +757,27 @@
           "operator"
         ],
         "title": "SessionResponse",
+        "type": "object"
+      },
+      "StartProposalRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "candidate_artifact_id": {
+            "format": "uuid",
+            "title": "Candidate Artifact Id",
+            "type": "string"
+          },
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key",
+          "candidate_artifact_id"
+        ],
+        "title": "StartProposalRequest",
         "type": "object"
       },
       "StartReturnRefinementRequest": {
@@ -1032,7 +1121,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CreateExperimentResponse"
+                  "$ref": "#/components/schemas/ExperimentSnapshot"
                 }
               }
             },
@@ -1090,9 +1179,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Experiment Operator Experiments  Experiment Id  Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/ExperimentSnapshot"
                 }
               }
             },
@@ -1371,6 +1458,194 @@
           }
         },
         "summary": "Select Experiment Candidate"
+      }
+    },
+    "/operator/ideas/generate": {
+      "post": {
+        "operationId": "generate_idea_operator_ideas_generate_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GenerateIdeaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Generate Idea"
+      }
+    },
+    "/operator/ideas/{experiment_id}/generate": {
+      "post": {
+        "operationId": "regenerate_idea_operator_ideas__experiment_id__generate_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegenerateIdeaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Regenerate Idea"
+      }
+    },
+    "/operator/ideas/{experiment_id}/revisions": {
+      "post": {
+        "operationId": "revise_idea_operator_ideas__experiment_id__revisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReviseProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revise Idea"
+      }
+    },
+    "/operator/ideas/{experiment_id}/start": {
+      "post": {
+        "operationId": "start_proposal_operator_ideas__experiment_id__start_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartProposalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExperimentSnapshot"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Start Proposal"
       }
     },
     "/operator/status": {

@@ -217,6 +217,8 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .experiment-action-row > span { color: var(--muted); font: 10px var(--font-geist-mono), monospace; }
 .experiment-action-row button, .experiment-review button, .experiment-success a { display: inline-flex; justify-content: center; align-items: center; gap: 14px; min-height: 43px; padding: 0 17px; border: 1px solid #7c9bff; border-radius: 9px; color: #fff; background: #355bbb; font-size: 12px; font-weight: 600; transition: background var(--motion-fast), transform var(--motion-fast); }
 .experiment-action-row button:hover:not(:disabled), .experiment-review button:hover:not(:disabled), .experiment-success a:hover { background: #4770d9; transform: translateY(-2px); }
+.experiment-action-row .experiment-secondary-action { border-color: var(--line-strong); background: #172944; }
+.experiment-action-row .experiment-secondary-action:hover:not(:disabled) { background: #254064; }
 .experiment-action-row button:disabled, .experiment-review button:disabled { opacity: .55; cursor: wait; }
 .experiment-preview dl, .experiment-advice dl { display: grid; gap: 0; margin: 14px 0 0; }
 .experiment-preview dl div, .experiment-advice dl div { display: flex; justify-content: space-between; gap: 16px; padding: 15px 0; border-bottom: 1px solid var(--line); }
@@ -242,6 +244,13 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .experiment-candidate span span { color: var(--muted); font-size: 12px; }
 .experiment-candidate small { color: var(--subtle); font-size: 11px; }
 .experiment-selected { color: var(--mint); font-size: 12px; }
+.experiment-history { margin-top: 8px; padding: 18px; border: 1px solid var(--line-strong); border-radius: 10px; background: #0d1c31; }
+.experiment-history h3 { margin: 0 0 12px; color: var(--ink); font-size: 13px; }
+.experiment-history ol { display: grid; gap: 10px; margin: 0; padding-left: 20px; }
+.experiment-history li { color: var(--muted); font-size: 12px; line-height: 1.5; overflow-wrap: anywhere; }
+.experiment-history li strong, .experiment-history li span, .experiment-history li small { display: block; }
+.experiment-history li strong { color: var(--ink); }
+.experiment-history li small { color: var(--subtle); }
 .experiment-return { display: grid; gap: 17px; margin: 24px 0; padding: 21px; border: 1px solid #5d7fba; border-radius: 12px; background: #122744; }
 .experiment-return .experiment-section-heading { padding-bottom: 14px; }.experiment-return .experiment-section-heading h3 { margin: 0; font-size: 18px; font-weight: 560; letter-spacing: -.025em; }
 .experiment-return > p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }.experiment-return > p strong { color: var(--blue-soft); }

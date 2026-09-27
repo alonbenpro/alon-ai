@@ -8,6 +8,7 @@ from alon_ai.services.auth import COOKIE_NAME, AuthUseCases
 from alon_ai.services.experiments import ExperimentService
 from alon_ai.services.health import HealthService
 from alon_ai.services.ideas import IdeaService
+from alon_ai.services.intake import IntakeService
 from alon_ai.services.operator import OperatorService
 from alon_ai.services.research import ResearchService
 
@@ -30,6 +31,12 @@ def get_operator_stream_service(request: Request) -> OperatorStreamAdapter:
 
 def get_experiment_service(request: Request) -> ExperimentService:
     return request.app.state.experiment_service_factory.for_operator(
+        request.state.operator.id
+    )
+
+
+def get_intake_service(request: Request) -> IntakeService:
+    return request.app.state.experiment_service_factory.intake_for_operator(
         request.state.operator.id
     )
 

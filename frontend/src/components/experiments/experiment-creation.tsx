@@ -2,17 +2,10 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 
+import type { components } from "@/lib/api/schema";
+
 type Mode = "USER_SEEDED_REFINEMENT" | "SYSTEM_DISCOVERY";
 type Relationship = "PRESERVES_CORE_INTENT" | "CLARIFIES_CORE_INTENT" | "NARROWS_CORE_INTENT" | "MATERIAL_PIVOT" | "UNRELATED";
-type Values = {
-  name: string; ideaSeed: string; objective: string; targetCustomer: string;
-  problem: string; geographies: string; commercialBoundaries: string;
-  budgetUsd: string; evidenceDefinitions: string; capabilities: string;
-  constraints: string; maxProjectHours: string; hoursPerWeek: string;
-  concurrentProjects: string; currency: string; hourlyCost: string;
-  minimumProjectPrice: string; minimumMarginRate: string;
-  maximumDiscountRate: string; minimumDepositRate: string;
-};
 type Brief = {
   title: string; customer: string; problem: string; core_intent: string;
   material_pivot: boolean;
@@ -31,7 +24,8 @@ const relationshipLabels: Record<Relationship, string> = {
   MATERIAL_PIVOT: "Material pivot",
   UNRELATED: "Unrelated",
 };
-type Candidate = { artifact_id: string; title: string; hypothesis: string; demand_status: "UNVERIFIED"; uncertainties: string[] };
+type Candidate = components["schemas"]["ProposalSnapshot"];
+type ProposalRevision = components["schemas"]["ProposalRevisionSnapshot"];
 type SelectionCommand = { candidate_artifact_id: string; reason: string; command_key: string };
 type AcceptanceCommand = { run_id: string; command_key: string; intent_relationship: Relationship;
   intent_rationale: string; intent_confirmed: true };
@@ -51,69 +45,26 @@ type ReturnReview = { reason_code: "REPEATED_BLOCKER" | "SAME_INTENT_LIMIT_REACH
 type ServerState = "AWAITING_DISCOVERY" | "DISCOVERY_IN_PROGRESS" | "DISCOVERY_FAILED" | "DISCOVERY_BLOCKED" |
   "AWAITING_SELECTION" | "AWAITING_REFINEMENT" | "REFINEMENT_IN_PROGRESS" | "REFINEMENT_FAILED" |
   "REFINEMENT_BLOCKED" | "AWAITING_REVIEW" | "RETURN_REVIEW_REQUIRED" | "IDEA_ACCEPTED";
-type Snapshot = {
-  experiment_id: string; name: string; mode: Mode; idea_seed: string | null; state: ServerState;
-  brief: { objective: string; target_customer: string; problem: string; geographies: string[];
-    commercial_boundaries: string; budget_usd: string; evidence_definitions: string[] };
-  candidates: Candidate[]; selected_candidate_artifact_id: string | null; retry_safe: boolean;
+type Snapshot = components["schemas"]["ExperimentSnapshot"] & {
+  state: ServerState;
   cycle_purpose?: string | null;
-  latest_run_id: string | null; advice: Advice | null;
-  advice_source: "RECORDED_FAKE" | "OPENAI" | null;
-  accepted_brief: Brief | null;
+  advice: Advice | null; advice_source: "RECORDED_FAKE" | "OPENAI" | null; accepted_brief: Brief | null;
   return_available?: ReturnAvailable | null;
   return_context?: ReturnAvailable | null;
   return_review?: ReturnReview | null;
 };
-export type RuntimeReadiness = { provider_mode: "disabled" | "fake" | "live"; ready: boolean };
+export type RuntimeReadiness = components["schemas"]["ExperimentRuntimeStatus"];
 
 const draftKey = "experiment-create-pending";
 const runKey = (experiment: string, action: "discover" | "refine") => `experiment-${experiment}-${action}-key`;
 const commandKey = (experiment: string, action: "select" | "accept" | "return") => `experiment-${experiment}-${action}-pending`;
+const draftCommandKey = (experiment: string) => `experiment-${experiment}-draft-command`;
 function pendingCommand<T>(experiment: string, action: "select" | "accept" | "return"): T | null {
   try { return JSON.parse(sessionStorage.getItem(commandKey(experiment, action)) ?? "null") as T | null; }
   catch { return null; }
 }
-const empty: Values = {
-  name: "", ideaSeed: "", objective: "", targetCustomer: "", problem: "", geographies: "",
-  commercialBoundaries: "", budgetUsd: "", evidenceDefinitions: "", capabilities: "",
-  constraints: "", maxProjectHours: "", hoursPerWeek: "", concurrentProjects: "",
-  currency: "", hourlyCost: "", minimumProjectPrice: "", minimumMarginRate: "",
-  maximumDiscountRate: "", minimumDepositRate: "",
-};
-const fields: { key: keyof Values; label: string; hint?: string; tall?: boolean }[] = [
-  { key: "name", label: "Experiment name" },
-  { key: "ideaSeed", label: "Your idea", hint: "Your text is preserved exactly.", tall: true },
-  { key: "objective", label: "Objective", tall: true },
-  { key: "targetCustomer", label: "Target customer" },
-  { key: "problem", label: "Problem hypothesis", tall: true },
-  { key: "geographies", label: "Geographies", hint: "One per line." },
-  { key: "commercialBoundaries", label: "Commercial boundaries", tall: true },
-  { key: "budgetUsd", label: "Research budget (USD)" },
-  { key: "evidenceDefinitions", label: "Evidence definitions", hint: "One signal per line.", tall: true },
-  { key: "capabilities", label: "Capabilities", hint: "One per line.", tall: true },
-  { key: "constraints", label: "Constraints", hint: "One per line.", tall: true },
-  { key: "maxProjectHours", label: "Maximum project hours" },
-  { key: "hoursPerWeek", label: "Hours per week" },
-  { key: "concurrentProjects", label: "Concurrent projects" },
-  { key: "hourlyCost", label: "Hourly cost" },
-  { key: "minimumProjectPrice", label: "Minimum project price" },
-  { key: "minimumMarginRate", label: "Minimum margin rate", hint: "Use a decimal such as 0.30." },
-  { key: "maximumDiscountRate", label: "Maximum discount rate", hint: "Use a decimal such as 0.10." },
-  { key: "minimumDepositRate", label: "Minimum deposit rate", hint: "Use a decimal such as 0.25." },
-];
-const positive = ["budgetUsd", "maxProjectHours", "hoursPerWeek", "concurrentProjects", "hourlyCost", "minimumProjectPrice"] as const;
-const rates = ["minimumMarginRate", "maximumDiscountRate", "minimumDepositRate"] as const;
-const split = (value: string) => value.split(/\n|,/).map((part) => part.trim()).filter(Boolean);
 const running = (state: ServerState | null) => state === "DISCOVERY_IN_PROGRESS" || state === "REFINEMENT_IN_PROGRESS";
 const failed = (state: ServerState | null) => state === "DISCOVERY_FAILED" || state === "REFINEMENT_FAILED";
-
-function complete(values: Values, mode: Mode) {
-  return Object.entries(values).every(([key, value]) => key === "ideaSeed" && mode === "SYSTEM_DISCOVERY" || value.trim()) &&
-    ["geographies", "evidenceDefinitions", "capabilities", "constraints"].every((key) => split(values[key as keyof Values]).length > 0) &&
-    positive.every((key) => Number.isFinite(Number(values[key])) && Number(values[key]) > 0) &&
-    Number.isInteger(Number(values.concurrentProjects)) &&
-    rates.every((key) => Number.isFinite(Number(values[key])) && Number(values[key]) >= 0 && Number(values[key]) <= 1);
-}
 
 async function post(path: string, payload: object) {
   const response = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" },
@@ -133,26 +84,15 @@ function failure(error: unknown, action: string) {
   const code = error instanceof Error ? error.message : "";
   if (code.startsWith("FIELD:")) return `Review ${code.slice(6)}: the server rejected this value.`;
   if (code === "SESSION_EXPIRED") return "Your session expired. Sign in again to continue.";
+  if (code.includes("OPERATOR_PROFILE_REQUIRED")) return "Save your operator profile before starting an experiment.";
+  if (code.includes("INTAKE_BUDGET_REQUIRED")) return "Set the research budget in workspace policy before starting an experiment.";
+  if (code.includes("LIVE_CONFIG_REQUIRED")) return "Live mode is blocked until its provider is configured and authorized.";
   if (code.includes("UNRELATED")) return "An unrelated direction cannot be accepted here.";
   if (code.includes("MATERIAL_PIVOT")) return "A material pivot needs a separate approval decision.";
   return `${action} could not finish. Check the saved status before starting a new attempt.`;
 }
-function createBody(values: Values, mode: Mode, commandKey: string) {
-  return {
-    name: values.name.trim(), ...(mode === "USER_SEEDED_REFINEMENT" ? { idea_seed: values.ideaSeed } : {}),
-    brief: { objective: values.objective.trim(), target_customer: values.targetCustomer.trim(),
-      problem: values.problem.trim(), geographies: split(values.geographies),
-      commercial_boundaries: values.commercialBoundaries.trim(), budget_usd: values.budgetUsd.trim(),
-      evidence_definitions: split(values.evidenceDefinitions), launch_stage: "SHADOW" },
-    operator_profile: { capabilities: split(values.capabilities), constraints: split(values.constraints),
-      delivery: { max_project_hours: values.maxProjectHours.trim(), hours_per_week: values.hoursPerWeek.trim(),
-        concurrent_projects: Number(values.concurrentProjects) },
-      commercial: { currency: values.currency, hourly_cost: values.hourlyCost.trim(),
-        minimum_project_price: values.minimumProjectPrice.trim(), minimum_margin_rate: values.minimumMarginRate.trim(),
-        maximum_discount_rate: values.maximumDiscountRate.trim(), minimum_deposit_rate: values.minimumDepositRate.trim() } },
-    command_key: commandKey,
-  };
-}
+const createBody = (ideaSeed: string, commandKey: string): components["schemas"]["CreateExperimentRequest"] =>
+  ({ idea_seed: ideaSeed, command_key: commandKey });
 
 function BriefDetails({ brief }: { brief: Brief }) {
   return <dl className="experiment-brief-details">
@@ -182,7 +122,13 @@ function returnReviewMessage(reason: ReturnReview["reason_code"]) {
 }
 
 export function ExperimentCreation({ experimentId, runtime }: { experimentId?: string; runtime: RuntimeReadiness | null }) {
-  const [values, setValues] = useState<Values>(empty);
+  const [ideaSeed, setIdeaSeed] = useState("");
+  const [revisionText, setRevisionText] = useState("");
+  const [draft, setDraft] = useState(false);
+  const [stage, setStage] = useState<Snapshot["stage"]>();
+  const [stageStatus, setStageStatus] = useState<Snapshot["stage_status"]>();
+  const [blockedReason, setBlockedReason] = useState<string | null>(null);
+  const [proposalHistory, setProposalHistory] = useState<ProposalRevision[]>([]);
   const [mode, setMode] = useState<Mode>("USER_SEEDED_REFINEMENT");
   const [id, setId] = useState(experimentId ?? "");
   const [state, setState] = useState<ServerState | null>(null);
@@ -197,6 +143,7 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
   const [selectionReason, setSelectionReason] = useState("");
   const [selectedCandidateId, setSelectedCandidateId] = useState("");
   const [pendingSelection, setPendingSelection] = useState<SelectionCommand | null>(null);
+  const [pendingDraft, setPendingDraft] = useState<{ path: string; payload: object; action: "revise" | "regenerate" | "start" } | null>(null);
   const [runId, setRunId] = useState("");
   const [advice, setAdvice] = useState<Advice | null>(null);
   const [adviceSource, setAdviceSource] = useState<Snapshot["advice_source"]>(null);
@@ -209,18 +156,22 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
   const [pendingReturn, setPendingReturn] = useState<ReturnCommand | null>(null);
   const [returnReview, setReturnReview] = useState<ReturnReview | null>(null);
   const [liveConfirmed, setLiveConfirmed] = useState(false);
-  const createPayload = useRef<ReturnType<typeof createBody> | null>(null);
+  const createPayload = useRef<components["schemas"]["CreateExperimentRequest"] | null>(null);
+  const pendingIdeaCommand = useRef<{ path: string; payload: object } | null>(null);
   const discoverKey = useRef("");
   const refineKey = useRef("");
 
   const apply = useCallback((saved: Snapshot) => {
     setId(saved.experiment_id); setMode(saved.mode); setState(saved.state);
-    setValues((current) => ({ ...current, name: saved.name, ideaSeed: saved.idea_seed ?? "",
-      objective: saved.brief.objective, targetCustomer: saved.brief.target_customer,
-      problem: saved.brief.problem, geographies: saved.brief.geographies.join("\n"),
-      commercialBoundaries: saved.brief.commercial_boundaries, budgetUsd: saved.brief.budget_usd,
-      evidenceDefinitions: saved.brief.evidence_definitions.join("\n") }));
+    setIdeaSeed(saved.idea_seed ?? ""); setDraft(saved.draft === true);
+    setStage(saved.stage); setStageStatus(saved.stage_status); setBlockedReason(saved.blocked_reason ?? null);
+    setProposalHistory(saved.proposal_history ?? []);
     setCandidates(saved.candidates ?? []); setSelectedCandidateId(saved.selected_candidate_artifact_id ?? "");
+    if (saved.draft !== true) { sessionStorage.removeItem(draftCommandKey(saved.experiment_id)); setPendingDraft(null); }
+    else {
+      try { setPendingDraft(JSON.parse(sessionStorage.getItem(draftCommandKey(saved.experiment_id)) ?? "null")); }
+      catch { sessionStorage.removeItem(draftCommandKey(saved.experiment_id)); setPendingDraft(null); }
+    }
     const selection = pendingCommand<SelectionCommand>(saved.experiment_id, "select");
     if (selection && saved.selected_candidate_artifact_id === selection.candidate_artifact_id && saved.state !== "AWAITING_SELECTION") {
       sessionStorage.removeItem(commandKey(saved.experiment_id, "select")); setPendingSelection(null);
@@ -249,7 +200,7 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
         setIntentConfirmed(true);
       }
     }
-    if (running(saved.state)) setPollRevision((revision) => revision + 1);
+    if (saved.stage_status === "RUNNING" || running(saved.state)) setPollRevision((revision) => revision + 1);
     setBusy(""); setStatusUnavailable(false);
     if (saved.retry_safe && failed(saved.state)) {
       const action = saved.state === "DISCOVERY_FAILED" ? "discover" : "refine";
@@ -281,8 +232,9 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       try {
         const draft = sessionStorage.getItem(draftKey);
         if (draft) {
-          const pending = JSON.parse(draft) as { values: Values; mode: Mode; payload: ReturnType<typeof createBody> };
-          setValues(pending.values); setMode(pending.mode); createPayload.current = pending.payload;
+          const pending = JSON.parse(draft) as { ideaSeed: string; payload: components["schemas"]["CreateExperimentRequest"]; path: string };
+          setIdeaSeed(pending.ideaSeed); createPayload.current = pending.payload;
+          pendingIdeaCommand.current = { path: pending.path, payload: pending.payload };
           setCreateUncertain(true); setMessage("Creation status is unknown. Retry the same command to recover it.");
         }
       } catch { sessionStorage.removeItem(draftKey); }
@@ -290,38 +242,69 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
     return () => { active = false; };
   }, [experimentId, load]);
   useEffect(() => {
-    if (!id || !running(state)) return;
+    if (!id || !(stageStatus === "RUNNING" || running(state))) return;
     const timer = window.setTimeout(() => void load(id), 3000);
     return () => window.clearTimeout(timer);
-  }, [id, state, pollRevision, load]);
+  }, [id, state, stageStatus, pollRevision, load]);
 
-  const change = (key: keyof Values, value: string) => {
-    setValues((current) => ({ ...current, [key]: value })); setMessage("");
-  };
-  const create = async (event?: FormEvent<HTMLFormElement>) => {
+  const start = async (event?: FormEvent<HTMLFormElement>, generate = false) => {
     event?.preventDefault();
-    if (!createPayload.current && !complete(values, mode)) {
-      setMessage("Complete the experiment bounds with valid amounts and rates before continuing."); return;
-    }
+    if (!generate && !ideaSeed.trim() && !createPayload.current) { setMessage("Enter an idea or generate one first."); return; }
     if (!runtime?.ready) { setMessage("The runtime is unavailable. Refresh after it is configured."); return; }
+    if (runtime.provider_mode === "live" && !liveConfirmed) { setMessage("Confirm the live call before continuing."); return; }
+    const path = generate ? "/api/operator/ideas/generate" : "/api/operator/experiments";
     if (!createPayload.current) {
-      createPayload.current = createBody(values, mode, crypto.randomUUID());
-      sessionStorage.setItem(draftKey, JSON.stringify({ values, mode, payload: createPayload.current }));
+      const payload = generate ? { command_key: crypto.randomUUID() } : createBody(ideaSeed, crypto.randomUUID());
+      createPayload.current = payload;
+      pendingIdeaCommand.current = { path, payload };
+      sessionStorage.setItem(draftKey, JSON.stringify({ ideaSeed, path, payload }));
     }
-    setBusy("Creating experiment…"); setMessage("");
+    setBusy(generate ? "Generating ideas…" : "Starting experiment…"); setMessage("");
     try {
-      const result = await post("/api/operator/experiments", createPayload.current);
-      if (typeof result.experiment_id !== "string" || !["AWAITING_DISCOVERY", "AWAITING_REFINEMENT"].includes(result.state)) throw new Error("CREATE_UNCONFIRMED");
-      sessionStorage.removeItem(draftKey); createPayload.current = null; setCreateUncertain(false);
-      setId(result.experiment_id); setState(result.state); setBusy("");
+      const command = pendingIdeaCommand.current;
+      if (!command) throw new Error("COMMAND_UNAVAILABLE");
+      const result = await post(command.path, command.payload) as Snapshot;
+      if (typeof result.experiment_id !== "string" || !result.state) throw new Error("CREATE_UNCONFIRMED");
+      sessionStorage.removeItem(draftKey); createPayload.current = null; pendingIdeaCommand.current = null; setCreateUncertain(false);
+      apply(result);
       window.history.replaceState(null, "", `/experiments/${encodeURIComponent(result.experiment_id)}`);
     } catch (error) {
       setBusy("");
-      if (error instanceof Error && error.message.startsWith("FIELD:")) {
-        createPayload.current = null; sessionStorage.removeItem(draftKey); setCreateUncertain(false);
+      if (error instanceof Error && /^(FIELD:|OPERATOR_PROFILE_REQUIRED|INTAKE_BUDGET_REQUIRED|LIVE_CONFIG_REQUIRED|IDEA_REQUIRED)/.test(error.message)) {
+        createPayload.current = null; pendingIdeaCommand.current = null; sessionStorage.removeItem(draftKey); setCreateUncertain(false);
       } else setCreateUncertain(true);
-      setMessage(failure(error, "Creation"));
+      setMessage(failure(error, generate ? "Idea generation" : "Experiment start"));
     }
+  };
+  const sendDraft = async (action: "revise" | "regenerate" | "start") => {
+    const safeDiscoveryRetry = action === "regenerate" && state === "DISCOVERY_FAILED" && retrySafe;
+    if (!id || !draft || !(stageStatus === "WAITING_FOR_INPUT" || safeDiscoveryRetry || pendingDraft) ||
+      statusUnavailable || !runtime?.ready) return;
+    if (runtime.provider_mode === "live" && !liveConfirmed) { setMessage("Confirm the live call before continuing."); return; }
+    const text = revisionText;
+    const command = pendingDraft ?? (() => {
+      const key = crypto.randomUUID();
+      if (action === "revise") return { action, path: `/api/operator/ideas/${encodeURIComponent(id)}/revisions`,
+        payload: { candidate_artifact_id: candidateChoice, idea_seed: text, command_key: key } };
+      if (action === "regenerate") return { action, path: `/api/operator/ideas/${encodeURIComponent(id)}/generate`,
+        payload: { candidate_artifact_id: candidateChoice || undefined, command_key: key } };
+      return { action, path: `/api/operator/ideas/${encodeURIComponent(id)}/start`,
+        payload: { candidate_artifact_id: candidateChoice, command_key: key } };
+    })();
+    if (!pendingDraft && ((action !== "regenerate" && !candidateChoice) || (action === "revise" && !text.trim()))) return;
+    sessionStorage.setItem(draftCommandKey(id), JSON.stringify(command)); setPendingDraft(command);
+    setBusy(action === "revise" ? "Saving revision…" : action === "regenerate" ? "Generating new proposals…" : "Starting experiment…");
+    setMessage("");
+    try {
+      const result = await post(command.path, command.payload) as Snapshot;
+      if (result.experiment_id !== id || !result.state) throw new Error("COMMAND_UNCONFIRMED");
+      sessionStorage.removeItem(draftCommandKey(id)); setPendingDraft(null);
+      apply(result);
+      if (action === "revise") {
+        const revision = result.proposal_history?.at(-1);
+        if (revision?.origin === "OPERATOR_EDIT") setCandidateChoice(revision.artifact_id);
+      } else if (action === "regenerate") { setCandidateChoice(""); setRevisionText(""); }
+    } catch (error) { setBusy(""); setMessage(failure(error, "Idea command")); await load(id, true); }
   };
   const run = async (action: "discover" | "refine") => {
     if (!id || !runtime?.ready) return;
@@ -340,6 +323,7 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
         setRunId(result.run_id); setAdvice(result.advice); setAdviceSource(result.advice_source ?? null); setState("AWAITING_REVIEW");
       }
       setBusy(""); setRetrySafe(false);
+      await load(id);
     } catch (error) {
       setMessage(failure(error, action === "discover" ? "Discovery" : "Refinement"));
       await load(id);
@@ -406,39 +390,40 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
   const selectedCandidate = candidates.find((candidate) => candidate.artifact_id === selectedCandidateId);
   const blockedIntent = relationship === "MATERIAL_PIVOT" || relationship === "UNRELATED" || advice?.material_pivot || advice?.intent_relationship === "MATERIAL_PIVOT" || advice?.intent_relationship === "UNRELATED";
   const canRetry = retrySafe && failed(state) && !statusUnavailable;
-  const canRefine = !statusUnavailable && state === "AWAITING_REFINEMENT" && (mode === "USER_SEEDED_REFINEMENT" || !!selectedCandidateId);
+  const canRefine = !draft && !statusUnavailable && !blockedReason && state === "AWAITING_REFINEMENT";
 
   return <div className="experiment-workspace">
-    <div className="experiment-heading"><p className="eyebrow">Experiment / idea origin</p><h1>Start with a direction.<br /><em>Make it testable.</em></h1><p>Define the boundaries, review the proposed direction, and explicitly accept the result.</p></div>
-    <div className="experiment-step-track" aria-label="Creation stages"><span className={!id ? "current" : "done"}>01 · Define</span><span className={state === "AWAITING_REVIEW" || state === "IDEA_ACCEPTED" ? "done" : id ? "current" : ""}>02 · Discover / refine</span><span className={state === "AWAITING_REVIEW" ? "current" : state === "IDEA_ACCEPTED" ? "done" : ""}>03 · Review</span></div>
+    <div className="experiment-heading"><p className="eyebrow">Experiment / idea origin</p><h1>One idea is enough.<br /><em>Agents take it from there.</em></h1><p>Start with your own idea or generate one. You review any proposed change before it becomes the current idea.</p></div>
+    <div className="experiment-step-track" aria-label="Creation stages"><span className={!id || draft ? "current" : "done"}>01 · Idea</span><span className={!draft && id && state !== "AWAITING_REVIEW" && state !== "IDEA_ACCEPTED" ? "current" : state === "AWAITING_REVIEW" || state === "IDEA_ACCEPTED" ? "done" : ""}>02 · Agent</span><span className={state === "AWAITING_REVIEW" ? "current" : state === "IDEA_ACCEPTED" ? "done" : ""}>03 · Review</span></div>
     {state !== "IDEA_ACCEPTED" && <div className={runtime?.provider_mode === "live" && runtime.ready ? "experiment-runtime experiment-runtime--live" : "experiment-runtime"} role="note">
-      {runtime?.ready && runtime.provider_mode === "live" ? <><strong>Live OpenAI calls</strong><p>Discovery or refinement may incur a cost under the research budget. Confirm before starting either call.</p><label><input type="checkbox" checked={liveConfirmed} onChange={(event) => setLiveConfirmed(event.target.checked)} /> I understand this may incur a cost</label></> :
-        runtime?.ready && runtime.provider_mode === "fake" ? <><strong>Recorded demo mode</strong><p>Discovery and refinement use synthetic recorded results. No live OpenAI call is made.</p></> :
-          <><strong>Runtime unavailable</strong><p>The server has not confirmed an available runtime.</p></>}
+      {runtime?.ready && runtime.provider_mode === "live" ? <><strong>Live OpenAI mode</strong><p>Idea generation or refinement may incur a cost under the research budget. Confirm before starting a call.</p><label><input type="checkbox" checked={liveConfirmed} onChange={(event) => setLiveConfirmed(event.target.checked)} /> I understand this may incur a cost</label></> :
+        runtime?.ready && runtime.provider_mode === "fake" ? <><strong>Recorded demo mode</strong><p>Agents use synthetic recorded results. No live provider call is made.</p></> :
+          <><strong>Runtime blocked</strong><p>The server has not confirmed an available runtime. No agent will start.</p></>}
     </div>}
     <div className="experiment-columns"><section className="experiment-form-panel" aria-labelledby="setup-heading">
-      <div className="experiment-section-heading"><span>01 / Setup</span><h2 id="setup-heading">Your starting point</h2></div>
-      {id ? <div className="experiment-saved-seed"><span className="eyebrow">{mode === "SYSTEM_DISCOVERY" ? "System discovery" : "Original idea · saved exactly"}</span>{mode === "USER_SEEDED_REFINEMENT" && <pre>{values.ideaSeed}</pre>}<p>Experiment ID: {id}</p></div> :
-        <form onSubmit={(event) => void create(event)} noValidate><fieldset className="experiment-fieldset" disabled={!!busy || createUncertain}>
-          <legend className="experiment-mode-label">Idea origin</legend><div className="experiment-mode-options"><label><input type="radio" name="mode" checked={mode === "USER_SEEDED_REFINEMENT"} onChange={() => setMode("USER_SEEDED_REFINEMENT")} /> Refine my idea</label><label><input type="radio" name="mode" checked={mode === "SYSTEM_DISCOVERY"} onChange={() => setMode("SYSTEM_DISCOVERY")} /> System discovery</label></div>
-          <div className="experiment-fields">{fields.filter(({ key }) => key !== "ideaSeed" || mode === "USER_SEEDED_REFINEMENT").map(({ key, label, hint, tall }) => <label className={tall ? "experiment-field experiment-field--wide" : "experiment-field"} key={key}><span>{label}</span>
-            {tall ? <textarea aria-label={label} name={key} value={values[key]} onChange={(event) => change(key, event.target.value)} rows={key === "ideaSeed" ? 4 : 2} /> :
-              <input aria-label={label} name={key} type="text" inputMode={positive.includes(key as typeof positive[number]) || rates.includes(key as typeof rates[number]) ? "decimal" : "text"} value={values[key]} onChange={(event) => change(key, event.target.value)} />}{hint && <small>{hint}</small>}</label>)}
-            <label className="experiment-field"><span>Currency</span><select name="currency" value={values.currency} onChange={(event) => change("currency", event.target.value)}><option value="">Select currency</option><option value="ILS">ILS</option><option value="USD">USD</option></select></label>
-          </div></fieldset>{message && <p className="experiment-error" role="alert">{message}</p>}<div className="experiment-action-row"><button type={createUncertain ? "button" : "submit"} disabled={!runtime?.ready || !!busy} onClick={createUncertain ? () => void create() : undefined}>{createUncertain ? "Retry creation" : "Create experiment"} <span aria-hidden="true">↗</span></button><span>First stage: SHADOW</span></div></form>}
-    </section><aside className="experiment-preview" aria-label="Experiment preview"><div className="experiment-section-heading"><span>Live preview</span><h2>Mission brief</h2></div>
-      <dl><div><dt>Customer</dt><dd>{values.targetCustomer || "Awaiting target"}</dd></div><div><dt>Problem</dt><dd>{values.problem || "Awaiting hypothesis"}</dd></div><div><dt>Geography</dt><dd>{values.geographies || "Awaiting location"}</dd></div><div><dt>Research budget</dt><dd>{values.budgetUsd ? `$${values.budgetUsd}` : "Awaiting budget"}</dd></div><div><dt>First stage</dt><dd>SHADOW</dd></div></dl>
-      {mode === "USER_SEEDED_REFINEMENT" && <div className="experiment-seed-preview"><span className="eyebrow">Original text</span><pre data-testid="seed-preview">{values.ideaSeed}</pre></div>}
-      <p className="experiment-preview-note">{mode === "SYSTEM_DISCOVERY" ? "Discovery suggestions are hypotheses. Demand is unverified until research tests it." : "A refined idea becomes current only after explicit operator acceptance."}</p>
+      <div className="experiment-section-heading"><span>01 / Starting point</span><h2 id="setup-heading">Your idea</h2></div>
+      {id ? <div className="experiment-saved-seed"><span className="eyebrow">{draft ? "Generated proposals · review before starting" : mode === "SYSTEM_DISCOVERY" ? "Selected direction" : "Original idea · saved exactly"}</span>{ideaSeed && <pre>{ideaSeed}</pre>}<p>{draft ? "Proposal session ID" : "Experiment ID"}: {id}</p></div> :
+        <form onSubmit={(event) => void start(event)} noValidate><label className="experiment-field experiment-field--wide"><span>Your idea <small>(optional)</small></span><textarea aria-label="Your idea" name="ideaSeed" value={ideaSeed} onChange={(event) => { setIdeaSeed(event.target.value); setMessage(""); }} rows={5} disabled={!!busy || createUncertain} /><small>Your exact words are kept. Have no idea yet? Generate a few directions.</small></label>
+          {message && <p className="experiment-error" role="alert">{message}</p>}<div className="experiment-action-row"><button type="submit" disabled={!runtime?.ready || !!busy}>{createUncertain ? "Retry start" : "Start experiment"} <span aria-hidden="true">↗</span></button><button type="button" className="experiment-secondary-action" disabled={!runtime?.ready || !!busy || createUncertain || !!ideaSeed.trim()} onClick={() => void start(undefined, true)}>Generate an idea</button></div></form>}
+    </section><aside className="experiment-preview" aria-label="Experiment preview"><div className="experiment-section-heading"><span>Server status</span><h2>{id ? stage === "IDEA_DISCOVERY" ? "Idea discovery" : "Idea refinement" : "Ready to begin"}</h2></div>
+      <p className="experiment-preview-note">{id ? `${stageStatus === "RUNNING" ? "Agent running" : stageStatus === "BLOCKED" ? "Blocked" : stageStatus === "COMPLETE" ? "Complete" : "Waiting for input"}${runId ? ` · Run ${runId}` : ""}` : "One idea starts the first available agent. Generated directions can be edited before starting."}</p>
+      {blockedReason && <p className="experiment-error" role="status">{blockedReason.replaceAll("_", " ")}</p>}
+      <div className="experiment-seed-preview"><span className="eyebrow">Exact idea text</span><pre data-testid="seed-preview">{ideaSeed}</pre></div>
     </aside></div>
     {id && <section className="experiment-review" aria-live="polite" aria-labelledby="refinement-heading"><div className="experiment-section-heading"><span>02 / Decision</span><h2 id="refinement-heading">Idea review</h2></div>
       {busy && <p role="status">{busy}</p>}
       {statusUnavailable && <button type="button" onClick={() => void load(id)}>Check status</button>}
-      {!busy && running(state) && <div role="status"><p>{state === "DISCOVERY_IN_PROGRESS" ? "Discovery in progress." : "Refinement in progress."} Checking server status before another attempt.</p><button type="button" onClick={() => void load(id)}>Check status</button></div>}
-      {!busy && !statusUnavailable && state === "AWAITING_DISCOVERY" && <button type="button" disabled={!runtime?.ready} onClick={() => void run("discover")}>Discover directions</button>}
-      {!busy && canRetry && <button type="button" disabled={!runtime?.ready} onClick={() => void run(state === "DISCOVERY_FAILED" ? "discover" : "refine")}>Retry {state === "DISCOVERY_FAILED" ? "discovery" : "refinement"}</button>}
+      {!busy && (stageStatus === "RUNNING" || running(state)) && <div role="status"><p>{stage === "IDEA_DISCOVERY" ? "Idea discovery" : "Idea refinement"} in progress. Checking saved status.</p><button type="button" onClick={() => void load(id)}>Check status</button></div>}
+      {!busy && canRetry && !draft && <button type="button" disabled={!runtime?.ready} onClick={() => void run(state === "DISCOVERY_FAILED" ? "discover" : "refine")}>Retry {state === "DISCOVERY_FAILED" ? "discovery" : "refinement"}</button>}
+      {!busy && canRetry && draft && state === "DISCOVERY_FAILED" && <button type="button" disabled={!runtime?.ready} onClick={() => void sendDraft("regenerate")}>Retry discovery</button>}
       {!busy && !statusUnavailable && (state === "DISCOVERY_BLOCKED" || state === "REFINEMENT_BLOCKED" || failed(state) && !retrySafe) && <div role="status"><p>This attempt needs server resolution before another run can start.</p><button type="button" onClick={() => void load(id)}>Check status</button></div>}
       {message && <p className="experiment-error" role="alert">{message}</p>}
+      {draft && stageStatus === "WAITING_FOR_INPUT" && !statusUnavailable && <div className="experiment-candidates"><p>Generated proposals are hypotheses. Demand is unverified. Choose, edit, or regenerate before starting.</p>
+        <fieldset disabled={!!busy || !!pendingDraft}><legend>Choose a proposal</legend>{candidates.map((candidate) => <label key={candidate.artifact_id} className="experiment-candidate"><input type="radio" name="candidate" checked={candidateChoice === candidate.artifact_id} onChange={() => { setCandidateChoice(candidate.artifact_id); setRevisionText(candidate.hypothesis); }} /><span><strong>{candidate.title}</strong><span>{candidate.hypothesis}</span><small>Unverified demand · Unknowns: {candidate.uncertainties.join(" · ")}</small></span></label>)}</fieldset>
+        {candidateChoice && <label className="experiment-field"><span>Refine this proposal</span><textarea aria-label="Refine this proposal" value={revisionText} disabled={!!busy || !!pendingDraft} onChange={(event) => setRevisionText(event.target.value)} rows={3} /><small>Saving creates a new immutable revision. Your exact wording is retained.</small></label>}
+        {pendingDraft ? <><p>Confirmation is pending. Check saved status, then retry this exact command.</p><button type="button" disabled={!!busy} onClick={() => void sendDraft(pendingDraft.action)}>Retry {pendingDraft.action}</button></> : <div className="experiment-action-row"><button type="button" disabled={!candidateChoice || !revisionText.trim() || !!busy} onClick={() => void sendDraft("revise")}>Save revision</button><button type="button" className="experiment-secondary-action" disabled={!!busy} onClick={() => void sendDraft("regenerate")}>Regenerate proposals</button><button type="button" disabled={!candidateChoice || !!busy} onClick={() => void sendDraft("start")}>Start experiment</button></div>}
+      </div>}
+      {proposalHistory.length > 0 && <section className="experiment-history" aria-label="Proposal history"><h3>Proposal history</h3><ol>{proposalHistory.map((revision) => <li key={revision.artifact_id}><strong>v{revision.version} · {revision.origin === "OPERATOR_EDIT" ? "Your edit" : "Generated"}</strong><span>{revision.idea_seed ?? revision.hypothesis}</span>{revision.parent_artifact_id && <small>From {revision.parent_artifact_id}</small>}</li>)}</ol></section>}
       {returnAvailable && <section className="experiment-return" aria-labelledby="return-heading"><div className="experiment-section-heading"><span>Research return</span><h3 id="return-heading">Research feedback return</h3></div>
         <p>Committed verdict: <strong>REFINE_SAME_IDEA</strong> · Research cycle: {returnAvailable.research_cycle_id}</p>
         <div className="experiment-return__grid"><div><h4>Committed feedback</h4><dl><div><dt>Feedback artifact</dt><dd>{returnAvailable.feedback.artifact_id} · v{returnAvailable.feedback.version}</dd></div><div><dt>Evidence</dt><dd>{returnAvailable.evidence.report_artifact_id} · {returnAvailable.evidence.recommendation_artifact_id}</dd></div></dl>
@@ -447,11 +432,11 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
           <div><h4>Prior accepted version</h4><BriefDetails brief={returnAvailable.prior_brief.payload} /><h4>Return lineage</h4><ol>{returnAvailable.return_lineage.map((lineage) => <li key={lineage.return_id}>Return {lineage.ordinal}: {lineage.from_cycle_id} → {lineage.to_cycle_id}</li>)}</ol></div></div>
         {state === "RETURN_REVIEW_REQUIRED" && !returnReview && (pendingReturn ? <><p>Return confirmation is pending. Retry the exact saved command after checking server status.</p><button type="button" disabled={!!busy || statusUnavailable} onClick={() => void startReturn()}>Retry return refinement</button></> : <button type="button" disabled={!!busy || statusUnavailable || !runtime?.ready} onClick={() => void startReturn()}>Start refinement from committed feedback</button>)}</section>}
       {state === "RETURN_REVIEW_REQUIRED" && returnReview && <section className="experiment-return experiment-return--review" aria-labelledby="return-review-heading" role="status"><div className="experiment-section-heading"><span>Operator decision</span><h3 id="return-review-heading">Operator review required</h3></div><p>{returnReviewMessage(returnReview.reason_code)}</p><p>Research cycle: {returnReview.research_cycle_id} · Reason: {returnReview.reason_code}</p></section>}
-      {mode === "SYSTEM_DISCOVERY" && candidates.length >= 3 && candidates.length <= 5 && <div className="experiment-candidates"><p>These are grounded hypotheses; demand is unverified.</p>
+      {!draft && mode === "SYSTEM_DISCOVERY" && candidates.length >= 3 && candidates.length <= 5 && <div className="experiment-candidates"><p>These are grounded hypotheses; demand is unverified.</p>
         {state === "AWAITING_SELECTION" ? <><fieldset disabled={!!busy || !!pendingSelection}><legend>Choose one direction to refine</legend>{candidates.map((candidate) => <label key={candidate.artifact_id} className="experiment-candidate"><input type="radio" name="candidate" checked={candidateChoice === candidate.artifact_id} onChange={() => setCandidateChoice(candidate.artifact_id)} /><span><strong>{candidate.title}</strong><span>{candidate.hypothesis}</span><small>{candidate.demand_status === "UNVERIFIED" ? "Unverified demand" : "Demand status unknown"} · Grounded in your operator profile · Unknowns: {candidate.uncertainties.join(" · ")}</small></span></label>)}</fieldset>{pendingSelection ? <><p>Selection confirmation is pending. Retry the saved choice and reason with the same command.</p><p>Reason: {pendingSelection.reason}</p><button type="button" disabled={!!busy || statusUnavailable} onClick={() => void select()}>Retry selection</button></> : <><label className="experiment-field"><span>Reason for selection</span><textarea aria-label="Reason for selection" value={selectionReason} onChange={(event) => setSelectionReason(event.target.value)} rows={2} /></label><button type="button" disabled={!candidateChoice || !selectionReason.trim() || !!busy || statusUnavailable} onClick={() => void select()}>Select direction</button></>}</> :
           selectedCandidate && <p className="experiment-selected">Selected direction: <strong>{selectedCandidate.title}</strong></p>}</div>}
       {!busy && canRefine && <button type="button" disabled={!runtime?.ready} onClick={() => void run("refine")}>{returnAvailable ? "Refine returned idea" : mode === "SYSTEM_DISCOVERY" ? "Refine selected direction" : "Refine idea"}</button>}
-      {advice && state === "AWAITING_REVIEW" && <div className="experiment-advice"><div className="experiment-advice__lead"><span className="eyebrow">{returnAvailable ? "Returned proposal · unaccepted advice" : adviceSource === "RECORDED_FAKE" ? "Recorded demo advice" : "Proposed direction · unaccepted advice"}</span><h3>{advice.title}</h3><p>{advice.core_intent}</p></div><dl><div><dt>Customer</dt><dd>{advice.customer}</dd></div><div><dt>Problem</dt><dd>{advice.problem}</dd></div><div><dt>Grounded in</dt><dd>{advice.grounding_refs.join(" · ")}</dd></div></dl><div className="experiment-uncertainties"><h4>Starting assumptions <small>supplied by you</small></h4><ul aria-label="Starting assumptions"><li>Customer: <span>{values.targetCustomer}</span></li><li>Problem: <span>{values.problem}</span></li><li>Objective: <span>{values.objective}</span></li></ul><h4>Unknowns to test <small>from refinement advice</small></h4><ul aria-label="Unknowns to test">{advice.uncertainties.map((item) => <li key={item}>{item}</li>)}</ul></div>
+      {advice && state === "AWAITING_REVIEW" && <div className="experiment-advice"><div className="experiment-advice__lead"><span className="eyebrow">{returnAvailable ? "Returned proposal · unaccepted advice" : adviceSource === "RECORDED_FAKE" ? "Recorded demo advice" : "Proposed direction · unaccepted advice"}</span><h3>{advice.title}</h3><p>{advice.core_intent}</p></div><dl><div><dt>Customer</dt><dd>{advice.customer}</dd></div><div><dt>Problem</dt><dd>{advice.problem}</dd></div><div><dt>Grounded in</dt><dd>{advice.grounding_refs.join(" · ")}</dd></div></dl><div className="experiment-uncertainties"><h4>Unknowns to test</h4><ul aria-label="Unknowns to test">{advice.uncertainties.map((item) => <li key={item}>{item}</li>)}</ul></div>
         <div className="experiment-proposed-brief"><h4>Proposed new version</h4><BriefDetails brief={advice} /></div>
         <div className="experiment-intent"><p>Model suggestion: {relationshipLabels[advice.intent_relationship]}</p>{pendingAcceptance ? <><p>Acceptance confirmation is pending. Retry the exact saved review command.</p><p>Operator classification: {relationshipLabels[pendingAcceptance.intent_relationship]}</p><p>Reason: {pendingAcceptance.intent_rationale}</p><button type="button" disabled={!!busy || statusUnavailable || !!blockedIntent || pendingAcceptance.run_id !== runId} onClick={() => void accept()}>Retry acceptance</button></> : <><label className="experiment-field"><span>Intent relationship</span><select aria-label="Intent relationship" value={relationship} onChange={(event) => { setRelationship(event.target.value as Relationship); setIntentConfirmed(false); }}><option value="">Classify the proposal</option><option value="PRESERVES_CORE_INTENT">Preserves core intent</option><option value="CLARIFIES_CORE_INTENT">Clarifies core intent</option><option value="NARROWS_CORE_INTENT">Narrows core intent</option><option value="MATERIAL_PIVOT">Material pivot</option><option value="UNRELATED">Unrelated</option></select></label><p>Compare the proposal with the original seed or selected discovery direction. The model suggestion is advisory; your classification and confirmation control acceptance.</p><label className="experiment-field"><span>Reason for classification</span><textarea aria-label="Reason for classification" value={intentRationale} onChange={(event) => setIntentRationale(event.target.value)} rows={2} /></label><label><input type="checkbox" checked={intentConfirmed} disabled={!relationship || !!blockedIntent} onChange={(event) => setIntentConfirmed(event.target.checked)} /> I confirm this classification and approve accepting this idea</label></>}
         {blockedIntent && <p className="experiment-error">{relationship === "UNRELATED" || advice.intent_relationship === "UNRELATED" ? "An unrelated proposal cannot be accepted here." : "A material pivot cannot be accepted here; it requires a separate approval decision."}</p>}</div>

@@ -8,7 +8,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from fastapi.testclient import TestClient
-from test_idea_experiment_api import creation_body
+from test_idea_experiment_api import create_historical, creation_body
 from test_operator_access import ORIGIN, _app
 
 from alon_ai.db.schema_manifest import collect_schema
@@ -68,9 +68,7 @@ async def test_l07_return_downgrade_rejects_rich_immutable_evidence(
             ).status_code
             == 200
         )
-        created = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
-        )
+        created = create_historical(client, json=creation_body(), headers=ORIGIN)
         assert created.status_code == 201, created.text
         experiment_id = created.json()["experiment_id"]
         refined = client.post(

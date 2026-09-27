@@ -9,8 +9,9 @@ from types import SimpleNamespace
 from uuid import UUID, uuid4
 
 import pytest
+from fastapi.encoders import jsonable_encoder
 from fastapi.testclient import TestClient
-from httpx import ASGITransport, AsyncClient
+from httpx import ASGITransport, AsyncClient, Response
 from pydantic import ValidationError
 from sqlalchemy import func, select
 from test_operator_access import ORIGIN, _app
@@ -96,6 +97,30 @@ def creation_body():
     }
 
 
+def create_historical(client, *, json, headers):
+    """Seed pre-intake records without retaining an obsolete production endpoint."""
+    from alon_ai.db.repositories.experiments import ExperimentError
+    from alon_ai.services.experiments import (
+        HistoricalExperimentInput,
+        create_experiment,
+    )
+
+    async def seed():
+        operator = await client.app.state.auth.resolve(client.cookies.get(COOKIE_NAME))
+        if operator is None:
+            return Response(401, json={"detail": "Operator session required"})
+        context = client.app.state.experiment_service_factory._context(operator.id)
+        try:
+            result = await create_experiment(
+                context, HistoricalExperimentInput.model_validate(json)
+            )
+            return Response(201, json=jsonable_encoder(result))
+        except ExperimentError as error:
+            return Response(error.status_code, json={"detail": error.detail})
+
+    return client.portal.call(seed)
+
+
 async def test_runtime_readiness_is_private_and_never_exposes_credentials(
     governance_engine,
 ):
@@ -136,8 +161,8 @@ async def test_runtime_readiness_is_private_and_never_exposes_credentials(
             "provider_mode": "live",
             "ready": False,
         }
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         denied = client.post(
             f"/operator/experiments/{experiment_id}/refine",
@@ -195,8 +220,8 @@ async def test_live_mode_uses_only_explicit_startup_provider_with_recorded_test_
             "provider_mode": "live",
             "ready": True,
         }
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         refined = client.post(
             f"/operator/experiments/{experiment_id}/refine",
@@ -219,17 +244,14 @@ async def test_create_seeded_experiment_requires_session_and_retains_exact_seed(
     body = creation_body()
     body["brief"]["budget_usd"] = "150.00"
     with TestClient(app) as client:
-        assert (
-            client.post("/operator/experiments", json=body, headers=ORIGIN).status_code
-            == 401
-        )
+        assert create_historical(client, json=body, headers=ORIGIN).status_code == 401
         assert (
             client.post(
                 "/auth/login", json={"password": "test-password"}, headers=ORIGIN
             ).status_code
             == 200
         )
-        created = client.post("/operator/experiments", json=body, headers=ORIGIN)
+        created = create_historical(client, json=body, headers=ORIGIN)
         assert created.status_code == 201, created.text
         ids = created.json()
         assert ids["state"] == "AWAITING_REFINEMENT"
@@ -239,7 +261,7 @@ async def test_create_seeded_experiment_requires_session_and_retains_exact_seed(
         assert detail.json()["brief"] == body["brief"]
         assert detail.json()["accepted_brief"] is None
         assert detail.json()["advice"] is None
-        replay = client.post("/operator/experiments", json=body, headers=ORIGIN)
+        replay = create_historical(client, json=body, headers=ORIGIN)
         assert replay.status_code == 201
         assert replay.json() == ids
     async with governance_engine.connect() as connection:
@@ -309,7 +331,7 @@ async def test_recorded_refinement_is_reviewed_and_accepted_only_by_operator_com
             ).status_code
             == 200
         )
-        created = client.post("/operator/experiments", json=body, headers=ORIGIN).json()
+        created = create_historical(client, json=body, headers=ORIGIN).json()
         experiment_id = UUID(created["experiment_id"])
         run_id = str(uuid4())
         refined = client.post(
@@ -387,8 +409,8 @@ async def test_disabled_runtime_cannot_create_advice_or_acceptance(governance_en
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         run_id = str(uuid4())
         response = client.post(
@@ -425,9 +447,7 @@ async def test_refresh_reports_pending_run_without_suggesting_fresh_refinement(
             ).status_code
             == 200
         )
-        created = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
-        ).json()
+        created = create_historical(client, json=creation_body(), headers=ORIGIN).json()
         experiment_id = UUID(created["experiment_id"])
         async with governance_engine.connect() as connection:
             roots = (
@@ -532,8 +552,8 @@ async def test_concurrent_refinement_claim_dispatches_only_one_run(
             ).status_code
             == 200
         )
-        experiment_id = setup.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            setup, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         token = setup.cookies.get(COOKIE_NAME)
         assert token
@@ -584,9 +604,7 @@ async def test_same_key_claim_loser_does_not_block_winning_run(
             ).status_code
             == 200
         )
-        created = setup.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
-        ).json()
+        created = create_historical(setup, json=creation_body(), headers=ORIGIN).json()
         async with governance_engine.connect() as connection:
             roots = (
                 (
@@ -690,9 +708,7 @@ async def test_stale_refinement_uses_ledger_to_decide_safe_retry(governance_engi
             ).status_code
             == 200
         )
-        first = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
-        ).json()
+        first = create_historical(client, json=creation_body(), headers=ORIGIN).json()
         first_roots = await roots_for(first["experiment_id"])
         uncalled = uuid4()
         first_runtime, attribution = await provision_recorded_seeded_runtime(
@@ -741,9 +757,7 @@ async def test_stale_refinement_uses_ledger_to_decide_safe_retry(governance_engi
             == "REFINEMENT_BLOCKED"
         )
 
-        second = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
-        ).json()
+        second = create_historical(client, json=creation_body(), headers=ORIGIN).json()
         second_roots = await roots_for(second["experiment_id"])
         called = uuid4()
         runtime, second_attr = await provision_recorded_seeded_runtime(
@@ -798,7 +812,7 @@ async def test_stale_discovery_with_live_owner_remains_blocked(governance_engine
             ).status_code
             == 200
         )
-        created = client.post("/operator/experiments", json=body, headers=ORIGIN).json()
+        created = create_historical(client, json=body, headers=ORIGIN).json()
         experiment_id = UUID(created["experiment_id"])
         async with governance_engine.connect() as connection:
             roots = (
@@ -878,10 +892,8 @@ async def test_other_experiment_same_discovery_key_cannot_block_existing_owner(
             ).status_code
             == 200
         )
-        first = client.post("/operator/experiments", json=body_a, headers=ORIGIN).json()
-        second = client.post(
-            "/operator/experiments", json=body_b, headers=ORIGIN
-        ).json()
+        first = create_historical(client, json=body_a, headers=ORIGIN).json()
+        second = create_historical(client, json=body_b, headers=ORIGIN).json()
         first_id, second_id = (
             UUID(first["experiment_id"]),
             UUID(second["experiment_id"]),
@@ -956,16 +968,13 @@ async def test_create_key_rejects_changed_operator_profile(governance_engine):
             ).status_code
             == 200
         )
-        assert (
-            client.post("/operator/experiments", json=body, headers=ORIGIN).status_code
-            == 201
-        )
+        assert create_historical(client, json=body, headers=ORIGIN).status_code == 201
         changed = creation_body()
         changed["command_key"] = body["command_key"]
         changed["operator_profile"]["capabilities"] = [
             "Unapproved different capability"
         ]
-        response = client.post("/operator/experiments", json=changed, headers=ORIGIN)
+        response = create_historical(client, json=changed, headers=ORIGIN)
         assert response.status_code == 409
         assert response.json() == {"detail": "COMMAND_CONFLICT"}
 
@@ -993,9 +1002,9 @@ async def test_create_retry_resumes_after_roots_are_recorded(
             ).status_code
             == 200
         )
-        first = client.post("/operator/experiments", json=body, headers=ORIGIN)
+        first = create_historical(client, json=body, headers=ORIGIN)
         assert first.status_code == 409
-        second = client.post("/operator/experiments", json=body, headers=ORIGIN)
+        second = create_historical(client, json=body, headers=ORIGIN)
         assert second.status_code == 201, second.text
         assert (
             client.get(
@@ -1026,8 +1035,8 @@ async def test_accept_retry_reuses_committed_idea_brief(governance_engine, monke
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         run_id = str(uuid4())
         assert (
@@ -1083,8 +1092,8 @@ async def test_recorded_transport_failure_never_leaks_or_accepts_advice(
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         run_id = str(uuid4())
         response = client.post(
@@ -1152,8 +1161,8 @@ async def test_material_pivot_advice_cannot_be_accepted(governance_engine, monke
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         run_id = str(uuid4())
         refined = client.post(
@@ -1206,9 +1215,7 @@ async def test_seed_preserving_narrowing_can_be_accepted(
             ).status_code
             == 200
         )
-        created = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
-        ).json()
+        created = create_historical(client, json=creation_body(), headers=ORIGIN).json()
         run_id = str(uuid4())
         refined = client.post(
             f"/operator/experiments/{created['experiment_id']}/refine",
@@ -1242,8 +1249,8 @@ async def test_operator_review_rejects_unrelated_and_requires_confirmation(
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         run_id = str(uuid4())
         assert (
@@ -1308,8 +1315,8 @@ async def test_semantic_operator_review_accepts_paraphrase_without_prefix(
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         run_id = str(uuid4())
         assert (
@@ -1370,8 +1377,8 @@ async def test_model_unrelated_continuation_cannot_be_confirmed_as_preserved(
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         run_id = str(uuid4())
         refined = client.post(
@@ -1416,7 +1423,7 @@ async def test_system_discovery_persists_reviewable_batch_before_selection(
             ).status_code
             == 200
         )
-        created = client.post("/operator/experiments", json=body, headers=ORIGIN)
+        created = create_historical(client, json=body, headers=ORIGIN)
         assert created.status_code == 201, created.text
         experiment_id = created.json()["experiment_id"]
         assert created.json()["state"] == "AWAITING_DISCOVERY"
@@ -1521,8 +1528,8 @@ async def test_settled_schema_failure_confirms_safe_retry_and_new_run(
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=creation_body(), headers=ORIGIN
+        experiment_id = create_historical(
+            client, json=creation_body(), headers=ORIGIN
         ).json()["experiment_id"]
         first_id = str(uuid4())
         first = client.post(
@@ -1575,9 +1582,9 @@ async def test_settled_discovery_failure_allows_new_key(governance_engine, monke
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=body, headers=ORIGIN
-        ).json()["experiment_id"]
+        experiment_id = create_historical(client, json=body, headers=ORIGIN).json()[
+            "experiment_id"
+        ]
         path = f"/operator/experiments/{experiment_id}/discover"
         first_id = str(uuid4())
         first = client.post(path, json={"idempotency_key": first_id}, headers=ORIGIN)
@@ -1630,9 +1637,9 @@ async def test_interrupted_candidate_batch_cannot_be_selected(
             ).status_code
             == 200
         )
-        experiment_id = client.post(
-            "/operator/experiments", json=body, headers=ORIGIN
-        ).json()["experiment_id"]
+        experiment_id = create_historical(client, json=body, headers=ORIGIN).json()[
+            "experiment_id"
+        ]
         first = client.post(
             f"/operator/experiments/{experiment_id}/discover",
             json={"idempotency_key": str(uuid4())},
@@ -1665,7 +1672,7 @@ async def test_interrupted_candidate_batch_cannot_be_selected(
 async def _seeded_return_fixture(client, engine, operator_id):
     """Create only durable local records needed to exercise the L07 return UI."""
     body = creation_body()
-    created = client.post("/operator/experiments", json=body, headers=ORIGIN).json()
+    created = create_historical(client, json=body, headers=ORIGIN).json()
     experiment_id = UUID(created["experiment_id"])
     run_id = str(uuid4())
     refined = client.post(

@@ -13,7 +13,6 @@ from alon_ai.api.dependencies import (
 from alon_ai.api.schemas.experiments import (
     AcceptRequest,
     CreateExperimentRequest,
-    CreateExperimentResponse,
     ExperimentRuntimeStatus,
     RefineRequest,
     SelectCandidateRequest,
@@ -22,6 +21,7 @@ from alon_ai.api.schemas.experiments import (
 from alon_ai.services.experiments import ExperimentService
 from alon_ai.services.ideas import IdeaService
 from alon_ai.services.research import ResearchService
+from alon_ai.services.schemas.intake import ExperimentSnapshot
 
 router = APIRouter()
 ExperimentServiceDependency = Annotated[
@@ -31,10 +31,10 @@ IdeaServiceDependency = Annotated[IdeaService, Depends(get_idea_service)]
 ResearchServiceDependency = Annotated[ResearchService, Depends(get_research_service)]
 
 
-@router.post("/experiments", response_model=CreateExperimentResponse, status_code=201)
+@router.post("/experiments", response_model=ExperimentSnapshot, status_code=201)
 async def create_experiment(
     body: CreateExperimentRequest, service: ExperimentServiceDependency
-) -> CreateExperimentResponse:
+) -> dict:
     return await service.create(body)
 
 
@@ -45,7 +45,7 @@ async def experiment_runtime_status(
     return await service.runtime_status()
 
 
-@router.get("/experiments/{experiment_id}")
+@router.get("/experiments/{experiment_id}", response_model=ExperimentSnapshot)
 async def get_experiment(
     experiment_id: UUID, service: ExperimentServiceDependency
 ) -> dict:

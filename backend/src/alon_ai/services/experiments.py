@@ -131,7 +131,7 @@ class OperatorProfileInput(StrictRequest):
     commercial: CommercialInput
 
 
-class CreateExperimentRequest(StrictRequest):
+class HistoricalExperimentInput(StrictRequest):
     name: str = Field(min_length=1, max_length=120)
     idea_seed: str | None = Field(default=None, min_length=1, max_length=4000)
     brief: ExperimentBriefInput
@@ -143,6 +143,18 @@ class CreateExperimentRequest(StrictRequest):
     def not_blank(cls, value: str | None) -> str | None:
         if value is not None and not value.strip():
             raise ValueError("required text is blank")
+        return value
+
+
+class CreateExperimentRequest(StrictRequest):
+    idea_seed: str | None = Field(default=None, min_length=1, max_length=4000)
+    command_key: UUID
+
+    @field_validator("idea_seed")
+    @classmethod
+    def meaningful_idea(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("idea is blank")
         return value
 
 
@@ -195,7 +207,7 @@ async def _artifact_row(request: ExperimentContext, artifact_id: UUID):
 
 
 async def create_experiment(
-    request: ExperimentContext, body: CreateExperimentRequest
+    request: ExperimentContext, body: HistoricalExperimentInput
 ) -> CreateExperimentResponse:
     operator_id: UUID = request.operator_id
     repository = ProductRecordsRepository(request.engine)
@@ -737,11 +749,15 @@ class ExperimentService:
     def __init__(self, context: ExperimentContext) -> None:
         self.context = context
 
-    async def create(self, body: CreateExperimentRequest) -> CreateExperimentResponse:
-        return await create_experiment(self.context, body)
+    async def create(self, body: CreateExperimentRequest) -> dict:
+        from alon_ai.services.intake import IntakeService
+
+        return await IntakeService(self.context).create(body)
 
     async def runtime_status(self) -> ExperimentRuntimeStatus:
         return await experiment_runtime_status(self.context)
 
     async def get(self, experiment_id: UUID) -> dict:
-        return await get_experiment(self.context, experiment_id)
+        from alon_ai.services.intake import IntakeService
+
+        return await IntakeService(self.context).snapshot(experiment_id)

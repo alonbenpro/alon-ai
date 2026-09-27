@@ -251,6 +251,65 @@
     },
     {
       "delegation": {
+        "args": [
+          "body"
+        ],
+        "kwargs": {},
+        "method": "generate"
+      },
+      "handler": "alon_ai.api.routes.intake.generate_idea",
+      "method": "POST",
+      "owner": "alon_ai.services.intake",
+      "path": "/operator/ideas/generate",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "regenerate"
+      },
+      "handler": "alon_ai.api.routes.intake.regenerate_idea",
+      "method": "POST",
+      "owner": "alon_ai.services.intake",
+      "path": "/operator/ideas/{experiment_id}/generate",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "revise"
+      },
+      "handler": "alon_ai.api.routes.intake.revise_idea",
+      "method": "POST",
+      "owner": "alon_ai.services.intake",
+      "path": "/operator/ideas/{experiment_id}/revisions",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "start"
+      },
+      "handler": "alon_ai.api.routes.intake.start_proposal",
+      "method": "POST",
+      "owner": "alon_ai.services.intake",
+      "path": "/operator/ideas/{experiment_id}/start",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
         "args": [],
         "kwargs": {},
         "method": "status"

@@ -108,7 +108,7 @@ def test_every_registered_handler_delegates_once() -> None:
     handlers = _application_handlers()
     assert len(handlers) >= 15, "route discovery must not pass vacuously"
     expected = _expected_delegations()
-    assert len(expected) == len(handlers) == 16
+    assert len(expected) == len(handlers) == 20
     failures = []
     for handler in handlers:
         tree = ast.parse(textwrap.dedent(inspect.getsource(handler)))
@@ -213,7 +213,7 @@ async def test_registered_handlers_forward_arguments_once_to_fake_services() -> 
         assert calls == [(expected_args, expected_kwargs)], handler.__qualname__
 
 
-def test_public_method_and_path_set_matches_l07() -> None:
+def test_public_method_and_path_set_matches_minimal_intake() -> None:
     paths = create_app().openapi()["paths"]
     actual = {(method.upper(), path) for path, item in paths.items() for method in item}
     assert actual == {
@@ -233,4 +233,8 @@ def test_public_method_and_path_set_matches_l07() -> None:
         ("POST", "/operator/experiments/{experiment_id}/returns/refine"),
         ("POST", "/operator/experiments/{experiment_id}/select"),
         ("GET", "/operator/status"),
+        ("POST", "/operator/ideas/generate"),
+        ("POST", "/operator/ideas/{experiment_id}/generate"),
+        ("POST", "/operator/ideas/{experiment_id}/revisions"),
+        ("POST", "/operator/ideas/{experiment_id}/start"),
     }
