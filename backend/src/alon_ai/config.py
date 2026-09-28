@@ -1,4 +1,5 @@
 import re
+from decimal import Decimal
 from functools import lru_cache
 from pathlib import Path
 from typing import TYPE_CHECKING, Annotated, Any, Literal, Self
@@ -6,6 +7,7 @@ from urllib.parse import urlsplit
 
 from pydantic import (
     EmailStr,
+    Field,
     ModelWrapValidatorHandler,
     SecretStr,
     StringConstraints,
@@ -62,6 +64,10 @@ class Settings(BaseSettings):
     session_signing_key: SecretStr | None = None
     # Configuration selects an execution mode; it never grants call/effect authority.
     provider_mode: Literal["disabled", "fake", "live"] = "disabled"
+    # Explicit workspace admission bound; never inferred from the idea/profile.
+    idea_intake_budget_usd: Annotated[Decimal, Field(gt=0, decimal_places=2)] | None = (
+        None
+    )
     l07_live_config_path: Path | None = None
     l07_secret_root: Path | None = None
     l07_secret_key_file: Path | None = None
@@ -87,6 +93,11 @@ class Settings(BaseSettings):
     if TYPE_CHECKING:
 
         def __init__(self, _env_file: str | None = None, **values: Any) -> None: ...
+
+    @field_validator("idea_intake_budget_usd", mode="before")
+    @classmethod
+    def unset_empty_intake_budget(cls, value):
+        return None if value == "" else value
 
     @field_validator("database_url", "dbos_system_database_url")
     @classmethod

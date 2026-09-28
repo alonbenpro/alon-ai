@@ -59,13 +59,17 @@ For an isolated, disposable verification run, set `COMPOSE_PROJECT_NAME=l05_disp
 
 Do not paste login cookies, verifier, signing key, or passwords into bug reports or logs. This local stack uses example database credentials and HTTP on loopback. It is not a public deployment.
 
-## Manual L07 seeded experiment check
+## Manual R01A-UX experiment intake check
 
-The API keeps provider execution disabled by default. For a local walkthrough of the first L07 slice, start the same Compose stack with `ALON_AI_PROVIDER_MODE=fake` exported in the terminal running `./scripts/local-dev.sh up`. The API then uses recorded synthetic responses through the governed Idea runtime and ledger; the worker and outreach remain disabled. Recorded advice is labeled in the browser and is not evidence of actual customer demand or a live OpenAI result.
+Provider execution stays disabled by default. For an isolated recorded run, use a separate Compose project and private auth file as described above. Set `ALON_AI_PROVIDER_MODE=fake` and an explicit positive `ALON_AI_IDEA_INTAKE_BUDGET_USD` in the terminal running `./scripts/local-dev.sh up`. The budget is trusted workspace policy for intake, not a form field or permission for a paid call. The API uses recorded synthetic responses through the governed Idea runtime and ledger; the worker and outreach remain disabled. Recorded advice is labeled in the browser and is not evidence of actual customer demand or a live OpenAI result.
 
-After signing in, open **New experiment** from the operator desk. Enter a user-supplied idea, the experiment bounds, and an operator-approved capability profile. The seed preview shows the exact submitted text. Submit to create the immutable experiment and seed, then wait for typed refinement advice. Before pressing **Accept and save idea**, refresh the experiment page: the advice should recover, while no IdeaBrief is accepted yet. Accept explicitly, refresh again, and confirm the server reports the accepted brief. A failed refinement must leave the experiment saved without an accepted brief, with a retry path.
+The operator needs a previously saved, approved profile. A fresh operator without one receives `OPERATOR_PROFILE_REQUIRED`; the app does not invent capabilities, delivery limits, or commercial settings. For a disposable acceptance stack, seed an explicitly approved synthetic profile in that stack before this check. Keep the profile fixture separate from production data.
 
-Unset `ALON_AI_PROVIDER_MODE` and run `./scripts/local-dev.sh up` again to return the API to its default disabled mode. Keep the same Compose project and port overrides when doing so. The local login material and PostgreSQL volume are retained by ordinary `down`.
+After signing in, open **New experiment**. Confirm the setup has one optional idea field. Enter a short idea and select **Start experiment**. The server saves the exact seed and starts one governed Idea refinement run. Refresh before accepting: the same run and advice should return, with no accepted idea yet. Use **Accept and save idea** only after reviewing the proposal, then refresh again to confirm the accepted version.
+
+For the second path, open **New experiment** with an empty idea and select **Generate an idea**. Review the labeled proposals, edit one into a new immutable revision, regenerate from it, then choose a revision and select **Start experiment**. Refresh at each stage to confirm proposal lineage and the same run persist. A blocked or unavailable live provider must remain visibly blocked; it must not switch to recorded mode.
+
+Unset `ALON_AI_PROVIDER_MODE` and `ALON_AI_IDEA_INTAKE_BUDGET_USD` before returning the stack to its default disabled configuration. Keep the same Compose project and port overrides for its lifecycle commands.
 
 ### Explicit live OpenAI setup
 

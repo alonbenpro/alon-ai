@@ -227,6 +227,11 @@ def _nonempty(value: object) -> bool:
 
 
 def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, Any]:
+    if kind is ArtifactKind.EXPERIMENT_BRIEF and "intake_policy" in payload:
+        from alon_ai.services.schemas.intake import IntakePolicySnapshot
+
+        IntakePolicySnapshot.model_validate(payload)
+        return payload
     expected = _PAYLOAD_FIELDS[kind]
     if kind is ArtifactKind.EXPERIMENT_BRIEF and set(payload) != {"objective"}:
         expected = {

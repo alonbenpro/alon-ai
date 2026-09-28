@@ -95,18 +95,21 @@ async def accepted_input(
             )
             if profile is None:
                 raise PermissionError("accepted operator profile changed")
-            profiles.append(
-                {
-                    "ref": str(accepted_profile.profile_id),
-                    "version": accepted_profile.version,
-                    "schema_version": accepted_profile.profile_schema_version,
-                    "hash": accepted_profile.content_hash,
-                    "capabilities": profile["capabilities"],
-                    "constraints": profile["constraints"],
-                    "delivery": profile["delivery"],
-                    "commercial": profile["commercial"],
-                }
-            )
+            from alon_ai.services.schemas.intake import IdeaOperatorContext
+
+            profile_input = IdeaOperatorContext(
+                ref=accepted_profile.profile_id,
+                version=accepted_profile.version,
+                schema_version=accepted_profile.profile_schema_version,
+                hash=accepted_profile.content_hash,
+                capabilities=profile["capabilities"],
+                constraints=profile["constraints"],
+            ).model_dump(mode="json")
+            if accepted_profile.projection == "FULL":
+                profile_input.update(
+                    delivery=profile["delivery"], commercial=profile["commercial"]
+                )
+            profiles.append(profile_input)
         for accepted in artifacts:
             ref = accepted.artifact
             if accepted.experiment_id != experiment_id or ref.kind not in {
@@ -168,7 +171,10 @@ async def accepted_input(
                     )
                 )
             ):
-                raise PermissionError("artifact has external or linked inputs")
+                from alon_ai.db.repositories.intake import verified_intake_links
+
+                if not await verified_intake_links(connection, row):
+                    raise PermissionError("artifact has external or linked inputs")
             if ref.kind is ArtifactKind.IDEA_BRIEF and accepted.return_id is not None:
                 if accepted.cycle_id is None:
                     raise PermissionError("returned brief lacks a cycle")

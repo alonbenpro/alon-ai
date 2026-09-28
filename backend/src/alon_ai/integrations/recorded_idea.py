@@ -32,6 +32,30 @@ class _RecordedResponses:
         if kind == "EXPERIMENT_BRIEF":
             brief = artifacts[0]["payload"]
             capability = bound["operator_profiles"][0]["capabilities"][0]
+            if "intake_policy" in brief:
+                guidance = brief["guidance"]
+                hypotheses = (
+                    ("Request intake", "Explore a request intake service"),
+                    ("Work tracking", "Explore a work tracking service"),
+                    ("Document preparation", "Explore a document preparation service"),
+                )
+                advice = {
+                    "candidates": [
+                        {
+                            "title": title,
+                            "hypothesis": f"{guidance} — {hypothesis}"
+                            if guidance
+                            else f"{hypothesis} using {capability}; buyer, problem and demand remain unverified",
+                            "demand_status": "UNVERIFIED",
+                            "grounding_refs": ["OPERATOR_PROFILE"],
+                            "uncertainties": [
+                                "Recorded proposal; buyer, geography, budget fit and demand require evidence"
+                            ],
+                        }
+                        for title, hypothesis in hypotheses
+                    ]
+                }
+                return self._response(advice)
             approaches = (
                 ("self-service form", "a self-service form to collect requests"),
                 ("staff triage queue", "a staff queue to prioritize requests"),
@@ -91,6 +115,10 @@ class _RecordedResponses:
             }
         else:
             raise ValueError("recorded transport requires exact Idea origin")
+        return self._response(advice)
+
+    @staticmethod
+    def _response(advice):
         return {
             "id": "resp_l07_recorded",
             "status": "completed",

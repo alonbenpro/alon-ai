@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useRouter } from "next/navigation";
 
 const destinations = [
   { title: "Overview", detail: "Top of the control desk", href: "#overview" },
@@ -9,7 +10,8 @@ const destinations = [
   { title: "Activity log", detail: "Server-confirmed activity", href: "#activity" },
 ];
 
-export function OperatorControls() {
+export function OperatorControls({ onOverview = true }: { onOverview?: boolean }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [motionOff, setMotionOff] = useState(false);
@@ -25,6 +27,10 @@ export function OperatorControls() {
 
   const navigate = (href: string) => {
     close();
+    if (!onOverview) {
+      router.push(href);
+      return;
+    }
     window.history.pushState(null, "", href);
     document.getElementById(href.slice(1))?.scrollIntoView();
   };
@@ -75,7 +81,9 @@ export function OperatorControls() {
     } catch { setLogoutError(true); }
   };
 
-  const matches = destinations.filter((item) => `${item.title} ${item.detail}`.toLowerCase().includes(query.toLowerCase()));
+  const matches = destinations
+    .filter((item) => `${item.title} ${item.detail}`.toLowerCase().includes(query.toLowerCase()))
+    .map((item) => ({ ...item, href: onOverview ? item.href : `/${item.href}` }));
 
   return (
     <>

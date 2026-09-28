@@ -11,6 +11,7 @@ from alon_ai.api.auth import router as auth_router
 from alon_ai.api.middleware.request_logging import RequestLoggingMiddleware
 from alon_ai.api.routes.experiments import router as experiments_router
 from alon_ai.api.routes.health import router as health_router
+from alon_ai.api.routes.intake import router as intake_router
 from alon_ai.api.routes.operator import router as operator_router
 from alon_ai.bootstrap import api_resource_scope
 from alon_ai.config import Settings, get_settings
@@ -126,6 +127,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     application.include_router(auth_router, prefix="/auth")
     application.include_router(operator_router, prefix="/operator")
     application.include_router(experiments_router, prefix="/operator")
+    application.include_router(intake_router, prefix="/operator")
     application.state.settings = configured_settings
     return application
 

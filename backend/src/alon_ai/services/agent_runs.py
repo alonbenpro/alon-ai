@@ -127,6 +127,11 @@ class OpenAIRuntime:
                             "hash": item.content_hash,
                             "experiment": str(item.experiment_id),
                             "schema_version": item.profile_schema_version,
+                            **(
+                                {"projection": item.projection}
+                                if item.projection != "FULL"
+                                else {}
+                            ),
                         }
                         for item in operator_profiles
                     ],

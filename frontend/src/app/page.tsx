@@ -1,9 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { ActivityFeed } from "@/components/operator/activity-feed";
-import { OperatorControls } from "@/components/operator/operator-controls";
+import { OperatorSidebar } from "@/components/operator/operator-sidebar";
 import { StatusOverview } from "@/components/operator/status-overview";
 import { backendFetch, getSession } from "@/lib/operator/server";
 import { parseActivity, parseStatus } from "@/lib/operator/types";
@@ -34,20 +33,12 @@ export default async function Home() {
   return (
     <div className="operator-app" id="overview">
       <a className="skip-link" href="#main-content">Skip to content</a>
-      <aside className="operator-sidebar" aria-label="Primary navigation">
-        <a className="operator-brand" href="#overview" aria-label="Alon AI overview"><Image src="/alon-ai-mark.png" alt="" width={42} height={42} priority /><span>ALON <b>AI</b><small>OPERATOR DESK</small></span></a>
-        <div className="sidebar-divider" />
-        <p className="sidebar-label">Workspace</p>
-        <nav className="operator-nav" aria-label="Workspace"><a className="operator-nav__active" href="#overview" aria-current="page"><span aria-hidden="true">◫</span> Overview</a><Link href="/experiments/new"><span aria-hidden="true">◇</span> New experiment</Link><a href="#system"><span aria-hidden="true">◈</span> System status</a><a href="#activity"><span aria-hidden="true">≡</span> Activity log</a></nav>
-        <p className="sidebar-label sidebar-label--tools">Navigate</p>
-        <OperatorControls />
-        <div className="sidebar-identity"><span className="identity-avatar" aria-hidden="true">{session.session.operator.display_name.slice(0, 1).toUpperCase()}</span><span><strong>{session.session.operator.display_name}</strong><small>Private operator</small></span></div>
-      </aside>
+      <OperatorSidebar active="overview" displayName={session.session.operator.display_name} />
 
       <main className="operator-main" id="main-content">
         <header className="topbar"><span className="breadcrumbs">Workspace <span aria-hidden="true">/</span> Overview</span><span className="private-session"><span aria-hidden="true" /> Private session</span></header>
         <div className="main-content">
-          <div className="hero-heading"><div><p className="eyebrow">Control desk / 01</p><h1>One clear view of<br /><em>the work in motion.</em></h1><p className="hero-subtitle">A live account of system readiness and server-confirmed activity. Commands stay deliberate; every status has a source.</p></div><div className="hero-insignia" aria-hidden="true"><Image src="/alon-ai-mark.png" alt="" width={220} height={220} loading="eager" /></div></div>
+          <div className="hero-heading"><div><p className="eyebrow">Operator desk / 01</p><h1>Overview</h1><p className="hero-subtitle">System health and current work, confirmed by the server.</p></div><Link className="overview-launch" href="/experiments/new" aria-label="Start an experiment from an idea"><span aria-hidden="true">◇</span><span>New experiment<small>Start from an idea</small></span><span aria-hidden="true">↗</span></Link></div>
           <div className="overview-grid"><StatusOverview initial={status} /><ActivityFeed initial={activity} /></div>
           <footer className="operator-footnote"><span>ALON AI / OPERATOR CONSOLE</span><span>All activity is read from the server</span></footer>
         </div>

@@ -65,6 +65,11 @@ class ExperimentServiceFactory:
     def for_operator(self, operator_id: UUID) -> ExperimentService:
         return ExperimentService(self._context(operator_id))
 
+    def intake_for_operator(self, operator_id: UUID):
+        from alon_ai.services.intake import IntakeService
+
+        return IntakeService(self._context(operator_id))
+
     def idea_for_operator(self, operator_id: UUID) -> IdeaService:
         return IdeaService(self._context(operator_id))
 

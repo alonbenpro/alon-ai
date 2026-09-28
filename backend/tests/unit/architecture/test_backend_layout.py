@@ -90,8 +90,11 @@ def test_no_production_imports_obsolete_paths() -> None:
 def test_canonical_table_metadata_and_worker_startup() -> None:
     table_package = importlib.import_module("alon_ai.db.tables")
     metadata = table_package.metadata
-    assert len(metadata.tables) == 140, "exact L07 table count must remain"
-    table_names = "\n".join(sorted(metadata.tables))
+    intake_tables = {"record_intakes", "record_intake_commands"}
+    assert intake_tables <= metadata.tables.keys()
+    assert len(metadata.tables) == 142, "L07 tables plus the two intake tables"
+    # Preserve the accepted R00B/L07 baseline digest; enumerate additions explicitly.
+    table_names = "\n".join(sorted(metadata.tables.keys() - intake_tables))
     assert (
         hashlib.sha256(table_names.encode()).hexdigest()
         == "8d37e1f6691858972b1a9b9b50fa3910cc2b37670a829169c07e108b506defd0"
@@ -189,7 +192,7 @@ def test_all_registered_handlers_have_checked_owner_dispositions() -> None:
         {key: value for key, value in row.items() if key != "delegation"}
         for row in json.loads(FIXTURE.read_text(encoding="utf-8"))["handlers"]
     ]
-    assert len(expected) == 16
+    assert len(expected) == 20
     actual = []
     for included in create_app().routes:
         router = getattr(included, "original_router", None)

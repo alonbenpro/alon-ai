@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260926_27"
+    "20260927_28"
   ],
   "columns": [
     {
@@ -6446,6 +6446,168 @@
       "not_null": true,
       "table_name": "record_initial_outreach_policies",
       "type": "character varying(40)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "action",
+      "not_null": true,
+      "table_name": "record_intake_commands",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_key",
+      "not_null": true,
+      "table_name": "record_intake_commands",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_intake_commands",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_intake_commands",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "payload",
+      "not_null": true,
+      "table_name": "record_intake_commands",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "request_hash",
+      "not_null": true,
+      "table_name": "record_intake_commands",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "result",
+      "not_null": false,
+      "table_name": "record_intake_commands",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "state",
+      "not_null": true,
+      "table_name": "record_intake_commands",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "blocked_reason",
+      "not_null": false,
+      "table_name": "record_intakes",
+      "type": "character varying(100)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "budget_usd",
+      "not_null": true,
+      "table_name": "record_intakes",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_key",
+      "not_null": true,
+      "table_name": "record_intakes",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_intakes",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "draft",
+      "not_null": true,
+      "table_name": "record_intakes",
+      "type": "boolean"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_intakes",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "idea_seed",
+      "not_null": false,
+      "table_name": "record_intakes",
+      "type": "character varying(4000)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operator_id",
+      "not_null": true,
+      "table_name": "record_intakes",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_id",
+      "not_null": true,
+      "table_name": "record_intakes",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_version",
+      "not_null": true,
+      "table_name": "record_intakes",
+      "type": "integer"
     },
     {
       "default_expression": null,
@@ -18854,6 +19016,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (state::text = ANY (ARRAY['RUNNING'::character varying, 'COMPLETE'::character varying, 'BLOCKED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_intake_commands_state_check",
+      "table_name": "record_intake_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (state::text = ANY (ARRAY['RUNNING'::character varying, 'SUCCEEDED'::character varying, 'DISCOVERY_FAILED'::character varying, 'DISCOVERY_BLOCKED'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -21688,6 +21860,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_intake_commands_experiment_id_fkey",
+      "table_name": "record_intake_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES record_experiments(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_learning_input_bundles_experiment_id_fkey",
       "table_name": "record_learning_input_bundles",
       "validated": true
@@ -22688,6 +22870,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_intakes_operator_id_fkey",
+      "table_name": "record_intakes",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (operator_id) REFERENCES record_operators(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_learning_review_controls_operator_id_fkey",
       "table_name": "record_learning_review_controls",
       "validated": true
@@ -23130,6 +23322,16 @@
       "kind": "f",
       "name": "record_candidate_selections_profile_id_profile_version_fkey",
       "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (profile_id, profile_version) REFERENCES record_operator_profiles(id, version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_intakes_profile_id_profile_version_fkey",
+      "table_name": "record_intakes",
       "validated": true
     },
     {
@@ -24590,6 +24792,16 @@
       "kind": "n",
       "name": "record_conversation_operator_actions_action_not_null",
       "table_name": "record_conversation_operator_actions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL action",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intake_commands_action_not_null",
+      "table_name": "record_intake_commands",
       "validated": true
     },
     {
@@ -26064,6 +26276,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL budget_usd",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intakes_budget_usd_not_null",
+      "table_name": "record_intakes",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL bundle_id",
       "enforced": true,
       "initially_deferred": false,
@@ -26950,6 +27172,26 @@
       "kind": "n",
       "name": "record_idea_intent_reviews_command_key_not_null",
       "table_name": "record_idea_intent_reviews",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL command_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intake_commands_command_key_not_null",
+      "table_name": "record_intake_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL command_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intakes_command_key_not_null",
+      "table_name": "record_intakes",
       "validated": true
     },
     {
@@ -28608,6 +28850,26 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_intake_commands_created_at_not_null",
+      "table_name": "record_intake_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intakes_created_at_not_null",
+      "table_name": "record_intakes",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_learning_candidate_versions_created_at_not_null",
       "table_name": "record_learning_candidate_versions",
       "validated": true
@@ -30034,6 +30296,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL draft",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intakes_draft_not_null",
+      "table_name": "record_intakes",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL draft_artifact_id",
       "enforced": true,
       "initially_deferred": false,
@@ -30930,6 +31202,26 @@
       "kind": "n",
       "name": "record_initial_outreach_policies_experiment_id_not_null",
       "table_name": "record_initial_outreach_policies",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intake_commands_experiment_id_not_null",
+      "table_name": "record_intake_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intakes_experiment_id_not_null",
+      "table_name": "record_intakes",
       "validated": true
     },
     {
@@ -35408,6 +35700,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_intakes_operator_id_not_null",
+      "table_name": "record_intakes",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operator_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_learning_review_controls_operator_id_not_null",
       "table_name": "record_learning_review_controls",
       "validated": true
@@ -36028,6 +36330,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_intake_commands_payload_not_null",
+      "table_name": "record_intake_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL payload",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "supply_feedback_payload_not_null",
       "table_name": "supply_feedback",
       "validated": true
@@ -36578,6 +36890,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_intakes_profile_id_not_null",
+      "table_name": "record_intakes",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_offer_acceptances_profile_id_not_null",
       "table_name": "record_offer_acceptances",
       "validated": true
@@ -36690,6 +37012,16 @@
       "kind": "n",
       "name": "record_candidate_selections_profile_version_not_null",
       "table_name": "record_candidate_selections",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intakes_profile_version_not_null",
+      "table_name": "record_intakes",
       "validated": true
     },
     {
@@ -37870,6 +38202,16 @@
       "kind": "n",
       "name": "record_commands_request_hash_not_null",
       "table_name": "record_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL request_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_intake_commands_request_hash_not_null",
+      "table_name": "record_intake_commands",
       "validated": true
     },
     {
@@ -39278,6 +39620,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_intake_commands_state_not_null",
+      "table_name": "record_intake_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL state",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "supply_plans_state_not_null",
       "table_name": "supply_plans",
       "validated": true
@@ -40448,6 +40800,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "p",
+      "name": "record_intake_commands_pkey",
+      "table_name": "record_intake_commands",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (command_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
       "name": "supply_closures_pkey",
       "table_name": "supply_closures",
       "validated": true
@@ -40580,6 +40942,16 @@
       "kind": "p",
       "name": "record_experiment_strategy_bindings_pkey",
       "table_name": "record_experiment_strategy_bindings",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (experiment_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
+      "name": "record_intakes_pkey",
+      "table_name": "record_intakes",
       "validated": true
     },
     {
@@ -44823,6 +45195,16 @@
     },
     {
       "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_intake_command_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$ BEGIN\n IF TG_OP='DELETE' OR (TG_OP='UPDATE' AND (\n   (to_jsonb(OLD)-ARRAY['state','result']) IS DISTINCT FROM (to_jsonb(NEW)-ARRAY['state','result'])\n   OR (OLD.state='RUNNING' AND NEW.state='RUNNING')\n   OR (OLD.state<>'RUNNING' AND (NEW.state<>OLD.state OR OLD.result IS NOT NULL OR NEW.result IS NULL))))\n THEN RAISE EXCEPTION 'intake command identity and terminal outcome are immutable'; END IF;\n RETURN NEW; END $function$\n",
+      "name": "record_intake_command_guard"
+    },
+    {
+      "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_intake_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$ BEGIN\n IF TG_OP='DELETE' OR (TG_OP='UPDATE' AND ((to_jsonb(OLD)-ARRAY['draft','blocked_reason']) IS DISTINCT FROM (to_jsonb(NEW)-ARRAY['draft','blocked_reason']) OR (NOT OLD.draft AND NEW.draft)))\n THEN RAISE EXCEPTION 'intake context is immutable'; END IF; RETURN NEW; END $function$\n",
+      "name": "record_intake_guard"
+    },
+    {
+      "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_lead_readiness_immutable()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$ BEGIN RAISE EXCEPTION 'immutable lead readiness record'; END $function$\n",
       "name": "record_lead_readiness_immutable"
     },
@@ -45323,8 +45705,13 @@
     },
     {
       "arguments": "kind text, value jsonb",
-      "definition": "CREATE OR REPLACE FUNCTION public.record_payload_valid(kind text, value jsonb)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\nAS $function$\n SELECT CASE kind\n  WHEN 'IDEA_BRIEF' THEN\n   (record_json_exact(value,ARRAY['title','customer','problem','core_intent','material_pivot'])\n    AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'customer')\n    AND record_nonempty_text(value->'problem') AND record_nonempty_text(value->'core_intent')\n    AND jsonb_typeof(value->'material_pivot')='boolean')\n   OR\n   (record_json_exact(value,ARRAY['title','customer','problem','core_intent','material_pivot','buyer','service_hypothesis','value_hypothesis','assumptions','exclusions','research_questions'])\n    AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'customer')\n    AND record_nonempty_text(value->'problem') AND record_nonempty_text(value->'core_intent')\n    AND jsonb_typeof(value->'material_pivot')='boolean'\n    AND jsonb_typeof(value->'buyer')='object'\n    AND record_json_exact(value->'buyer',ARRAY['segment','role'])\n    AND record_nonempty_text(value->'buyer'->'segment') AND record_nonempty_text(value->'buyer'->'role')\n    AND record_nonempty_text(value->'service_hypothesis') AND record_nonempty_text(value->'value_hypothesis')\n    AND record_nonempty_text_array(value->'assumptions') AND record_nonempty_text_array(value->'exclusions')\n    AND record_nonempty_text_array(value->'research_questions'))\n  WHEN 'RESEARCH_FEEDBACK_BRIEF' THEN\n   (record_json_exact(value,ARRAY['preserve','change']) AND record_nonempty_text_array(value->'preserve') AND record_nonempty_text_array(value->'change'))\n   OR\n   (record_json_exact(value,ARRAY['preserve','change','failed_dimensions','research_questions'])\n    AND record_nonempty_text_array(value->'preserve') AND record_nonempty_text_array(value->'change')\n    AND record_nonempty_text_array(value->'failed_dimensions') AND record_nonempty_text_array(value->'research_questions')\n    AND jsonb_array_length(value->'failed_dimensions')=(SELECT count(DISTINCT x) FROM jsonb_array_elements_text(value->'failed_dimensions') x))\n  WHEN 'EXPERIMENT_BRIEF' THEN\n   (record_json_exact(value,ARRAY['objective']) AND record_nonempty_text(value->'objective'))\n   OR (record_json_exact(value,ARRAY['objective','target_customer','problem','geographies','commercial_boundaries','budget_usd','evidence_definitions','launch_stage'])\n       AND record_nonempty_text(value->'objective') AND record_nonempty_text(value->'target_customer') AND record_nonempty_text(value->'problem')\n       AND record_nonempty_text_array(value->'geographies') AND record_nonempty_text(value->'commercial_boundaries')\n       AND value->>'budget_usd' ~ '^[0-9]+(\\.[0-9]{1,2})?$' AND (value->>'budget_usd')::numeric>0\n       AND record_nonempty_text_array(value->'evidence_definitions') AND value->>'launch_stage'='SHADOW')\n  WHEN 'IDEA_SEED' THEN record_json_exact(value,ARRAY['origin','statement']) AND value->>'origin'='USER_SUPPLIED' AND record_nonempty_text(value->'statement')\n  WHEN 'IDEA_CANDIDATE' THEN record_json_exact(value,ARRAY['title','hypothesis']) AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'hypothesis')\n  WHEN 'RESEARCH_PLAN' THEN record_json_exact(value,ARRAY['questions','method']) AND record_nonempty_text_array(value->'questions') AND record_nonempty_text(value->'method')\n  WHEN 'RESEARCH_EVIDENCE' THEN record_json_exact(value,ARRAY['claim','finding']) AND record_nonempty_text(value->'claim') AND record_nonempty_text(value->'finding')\n  WHEN 'COMPETITOR_PROFILE' THEN record_json_exact(value,ARRAY['name','positioning']) AND record_nonempty_text(value->'name') AND record_nonempty_text(value->'positioning')\n  WHEN 'SERVICE_PROFILE' THEN record_json_exact(value,ARRAY['name','scope']) AND record_nonempty_text(value->'name') AND record_nonempty_text(value->'scope')\n  WHEN 'PRICE_OBSERVATION' THEN record_json_exact(value,ARRAY['status','currency','amount','unit','source_note']) AND record_nonempty_text(value->'unit') AND record_nonempty_text(value->'source_note')\n  WHEN 'MARKET_RESEARCH_REPORT' THEN record_json_exact(value,ARRAY['finding','limitations']) AND record_nonempty_text(value->'finding') AND record_nonempty_text_array(value->'limitations')\n  WHEN 'MARKET_RESEARCH_RECOMMENDATION' THEN record_json_exact(value,ARRAY['recommendation','rationale']) AND value->>'recommendation' IN ('PROCEED_TO_OFFER','REFINE_SAME_IDEA','MATERIAL_PIVOT_RECOMMENDED','KILL_IDEA','INCONCLUSIVE') AND record_nonempty_text(value->'rationale')\n  WHEN 'OFFER_RESEARCH_GAP_BRIEF' THEN record_json_exact(value,ARRAY['required_evidence','justification']) AND record_nonempty_text_array(value->'required_evidence') AND record_nonempty_text(value->'justification')\n  WHEN 'VALIDATION_RESULT' THEN record_json_exact(value,ARRAY['validator','disposition','reason']) AND record_nonempty_text(value->'validator') AND value->>'disposition' IN ('PASS','FAIL') AND record_nonempty_text(value->'reason')\n  WHEN 'ACCEPTANCE_RECEIPT' THEN record_json_exact(value,ARRAY['disposition','reason']) AND value->>'disposition' IN ('ACCEPTED','REJECTED','SUPERSEDED') AND record_nonempty_text(value->'reason')\n  ELSE record_payload_valid_before_l07(kind,value)\n END\n$function$\n",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_payload_valid(kind text, value jsonb)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\nAS $function$\n SELECT CASE WHEN kind='EXPERIMENT_BRIEF' AND value ? 'intake_policy' THEN\n   record_json_exact(value,ARRAY['intake_policy','budget_usd','launch_stage','guidance'])\n   AND value->>'intake_policy'='R01A_UX_V1' AND value->>'launch_stage'='SHADOW'\n   AND jsonb_typeof(value->'guidance')='string' AND length(value->>'guidance')<=4000\n   AND value->>'budget_usd' ~ '^[0-9]+(\\.[0-9]{1,2})?$' AND (value->>'budget_usd')::numeric>0\n ELSE record_payload_valid_before_intake(kind,value) END $function$\n",
       "name": "record_payload_valid"
+    },
+    {
+      "arguments": "kind text, value jsonb",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_payload_valid_before_intake(kind text, value jsonb)\n RETURNS boolean\n LANGUAGE sql\n IMMUTABLE\nAS $function$\n SELECT CASE kind\n  WHEN 'IDEA_BRIEF' THEN\n   (record_json_exact(value,ARRAY['title','customer','problem','core_intent','material_pivot'])\n    AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'customer')\n    AND record_nonempty_text(value->'problem') AND record_nonempty_text(value->'core_intent')\n    AND jsonb_typeof(value->'material_pivot')='boolean')\n   OR\n   (record_json_exact(value,ARRAY['title','customer','problem','core_intent','material_pivot','buyer','service_hypothesis','value_hypothesis','assumptions','exclusions','research_questions'])\n    AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'customer')\n    AND record_nonempty_text(value->'problem') AND record_nonempty_text(value->'core_intent')\n    AND jsonb_typeof(value->'material_pivot')='boolean'\n    AND jsonb_typeof(value->'buyer')='object'\n    AND record_json_exact(value->'buyer',ARRAY['segment','role'])\n    AND record_nonempty_text(value->'buyer'->'segment') AND record_nonempty_text(value->'buyer'->'role')\n    AND record_nonempty_text(value->'service_hypothesis') AND record_nonempty_text(value->'value_hypothesis')\n    AND record_nonempty_text_array(value->'assumptions') AND record_nonempty_text_array(value->'exclusions')\n    AND record_nonempty_text_array(value->'research_questions'))\n  WHEN 'RESEARCH_FEEDBACK_BRIEF' THEN\n   (record_json_exact(value,ARRAY['preserve','change']) AND record_nonempty_text_array(value->'preserve') AND record_nonempty_text_array(value->'change'))\n   OR\n   (record_json_exact(value,ARRAY['preserve','change','failed_dimensions','research_questions'])\n    AND record_nonempty_text_array(value->'preserve') AND record_nonempty_text_array(value->'change')\n    AND record_nonempty_text_array(value->'failed_dimensions') AND record_nonempty_text_array(value->'research_questions')\n    AND jsonb_array_length(value->'failed_dimensions')=(SELECT count(DISTINCT x) FROM jsonb_array_elements_text(value->'failed_dimensions') x))\n  WHEN 'EXPERIMENT_BRIEF' THEN\n   (record_json_exact(value,ARRAY['objective']) AND record_nonempty_text(value->'objective'))\n   OR (record_json_exact(value,ARRAY['objective','target_customer','problem','geographies','commercial_boundaries','budget_usd','evidence_definitions','launch_stage'])\n       AND record_nonempty_text(value->'objective') AND record_nonempty_text(value->'target_customer') AND record_nonempty_text(value->'problem')\n       AND record_nonempty_text_array(value->'geographies') AND record_nonempty_text(value->'commercial_boundaries')\n       AND value->>'budget_usd' ~ '^[0-9]+(\\.[0-9]{1,2})?$' AND (value->>'budget_usd')::numeric>0\n       AND record_nonempty_text_array(value->'evidence_definitions') AND value->>'launch_stage'='SHADOW')\n  WHEN 'IDEA_SEED' THEN record_json_exact(value,ARRAY['origin','statement']) AND value->>'origin'='USER_SUPPLIED' AND record_nonempty_text(value->'statement')\n  WHEN 'IDEA_CANDIDATE' THEN record_json_exact(value,ARRAY['title','hypothesis']) AND record_nonempty_text(value->'title') AND record_nonempty_text(value->'hypothesis')\n  WHEN 'RESEARCH_PLAN' THEN record_json_exact(value,ARRAY['questions','method']) AND record_nonempty_text_array(value->'questions') AND record_nonempty_text(value->'method')\n  WHEN 'RESEARCH_EVIDENCE' THEN record_json_exact(value,ARRAY['claim','finding']) AND record_nonempty_text(value->'claim') AND record_nonempty_text(value->'finding')\n  WHEN 'COMPETITOR_PROFILE' THEN record_json_exact(value,ARRAY['name','positioning']) AND record_nonempty_text(value->'name') AND record_nonempty_text(value->'positioning')\n  WHEN 'SERVICE_PROFILE' THEN record_json_exact(value,ARRAY['name','scope']) AND record_nonempty_text(value->'name') AND record_nonempty_text(value->'scope')\n  WHEN 'PRICE_OBSERVATION' THEN record_json_exact(value,ARRAY['status','currency','amount','unit','source_note']) AND record_nonempty_text(value->'unit') AND record_nonempty_text(value->'source_note')\n  WHEN 'MARKET_RESEARCH_REPORT' THEN record_json_exact(value,ARRAY['finding','limitations']) AND record_nonempty_text(value->'finding') AND record_nonempty_text_array(value->'limitations')\n  WHEN 'MARKET_RESEARCH_RECOMMENDATION' THEN record_json_exact(value,ARRAY['recommendation','rationale']) AND value->>'recommendation' IN ('PROCEED_TO_OFFER','REFINE_SAME_IDEA','MATERIAL_PIVOT_RECOMMENDED','KILL_IDEA','INCONCLUSIVE') AND record_nonempty_text(value->'rationale')\n  WHEN 'OFFER_RESEARCH_GAP_BRIEF' THEN record_json_exact(value,ARRAY['required_evidence','justification']) AND record_nonempty_text_array(value->'required_evidence') AND record_nonempty_text(value->'justification')\n  WHEN 'VALIDATION_RESULT' THEN record_json_exact(value,ARRAY['validator','disposition','reason']) AND record_nonempty_text(value->'validator') AND value->>'disposition' IN ('PASS','FAIL') AND record_nonempty_text(value->'reason')\n  WHEN 'ACCEPTANCE_RECEIPT' THEN record_json_exact(value,ARRAY['disposition','reason']) AND value->>'disposition' IN ('ACCEPTED','REJECTED','SUPERSEDED') AND record_nonempty_text(value->'reason')\n  ELSE record_payload_valid_before_l07(kind,value)\n END\n$function$\n",
+      "name": "record_payload_valid_before_intake"
     },
     {
       "arguments": "kind text, value jsonb",
@@ -48410,6 +48797,24 @@
       "valid": true
     },
     {
+      "definition": "CREATE UNIQUE INDEX record_intake_commands_pkey ON public.record_intake_commands USING btree (command_key)",
+      "name": "record_intake_commands_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_intake_commands",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_intakes_pkey ON public.record_intakes USING btree (experiment_id)",
+      "name": "record_intakes_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_intakes",
+      "unique_index": true,
+      "valid": true
+    },
+    {
       "definition": "CREATE UNIQUE INDEX record_learning_candidate_versions_logical_id_version_key ON public.record_learning_candidate_versions USING btree (logical_id, version)",
       "name": "record_learning_candidate_versions_logical_id_version_key",
       "primary_index": false,
@@ -51336,6 +51741,18 @@
       "force_row_security": false,
       "kind": "r",
       "name": "record_initial_outreach_policies",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_intake_commands",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_intakes",
       "row_security": false
     },
     {
@@ -63194,6 +63611,162 @@
       "internal": true,
       "name": null,
       "table_name": "record_offer_packages"
+    },
+    {
+      "constraint_name": "record_intake_commands_experiment_id_fkey",
+      "constraint_table": "record_intake_commands",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_intake_commands"
+    },
+    {
+      "constraint_name": "record_intake_commands_experiment_id_fkey",
+      "constraint_table": "record_intake_commands",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_intake_commands_experiment_id_fkey",
+      "constraint_table": "record_intake_commands",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_intake_commands"
+    },
+    {
+      "constraint_name": "record_intake_commands_experiment_id_fkey",
+      "constraint_table": "record_intake_commands",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_intakes_operator_id_fkey",
+      "constraint_table": "record_intakes",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_intakes"
+    },
+    {
+      "constraint_name": "record_intakes_operator_id_fkey",
+      "constraint_table": "record_intakes",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_intakes_operator_id_fkey",
+      "constraint_table": "record_intakes",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_intakes"
+    },
+    {
+      "constraint_name": "record_intakes_operator_id_fkey",
+      "constraint_table": "record_intakes",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_intakes_profile_id_profile_version_fkey",
+      "constraint_table": "record_intakes",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_intakes"
+    },
+    {
+      "constraint_name": "record_intakes_profile_id_profile_version_fkey",
+      "constraint_table": "record_intakes",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
+    },
+    {
+      "constraint_name": "record_intakes_profile_id_profile_version_fkey",
+      "constraint_table": "record_intakes",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_intakes"
+    },
+    {
+      "constraint_name": "record_intakes_profile_id_profile_version_fkey",
+      "constraint_table": "record_intakes",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
     },
     {
       "constraint_name": "record_learning_assessment_negative_complete",
@@ -80835,6 +81408,32 @@
       "internal": false,
       "name": "record_initial_outreach_policies_guard",
       "table_name": "record_initial_outreach_policies"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_intake_command_guard BEFORE DELETE OR UPDATE ON record_intake_commands FOR EACH ROW EXECUTE FUNCTION record_intake_command_guard()",
+      "enabled": "O",
+      "events": 27,
+      "function_name": "public.record_intake_command_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_intake_command_guard",
+      "table_name": "record_intake_commands"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_intake_guard BEFORE DELETE OR UPDATE ON record_intakes FOR EACH ROW EXECUTE FUNCTION record_intake_guard()",
+      "enabled": "O",
+      "events": 27,
+      "function_name": "public.record_intake_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_intake_guard",
+      "table_name": "record_intakes"
     },
     {
       "constraint_name": null,

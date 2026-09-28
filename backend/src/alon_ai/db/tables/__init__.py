@@ -2,6 +2,7 @@
 
 from alon_ai.db.tables import accounting as accounting
 from alon_ai.db.tables import contact as contact
+from alon_ai.db.tables import intake as intake
 from alon_ai.db.tables import openai as openai
 from alon_ai.db.tables import records as records
 from alon_ai.db.tables import records_calibration as records_calibration
