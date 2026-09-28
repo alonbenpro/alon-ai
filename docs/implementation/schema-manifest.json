@@ -1,6 +1,6 @@
 {
   "alembic_heads": [
-    "20260927_28"
+    "20260928_29"
   ],
   "columns": [
     {
@@ -2225,6 +2225,240 @@
       "not_null": false,
       "table_name": "operator_sessions",
       "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "application_version",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "character varying(100)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "blocked_reason",
+      "not_null": false,
+      "table_name": "record_agent_runs",
+      "type": "character varying(100)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cancel_confirmed",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "boolean"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cancel_key",
+      "not_null": false,
+      "table_name": "record_agent_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "cancel_requested_at",
+      "not_null": false,
+      "table_name": "record_agent_runs",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "command_key",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "created_at",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "dbos_workflow_id",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "character varying(200)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "events",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "experiment_id",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "finished_at",
+      "not_null": false,
+      "table_name": "record_agent_runs",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "input_refs",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "jsonb"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "operator_id",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "outcome",
+      "not_null": false,
+      "table_name": "record_agent_runs",
+      "type": "character varying(40)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_hash",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_id",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "profile_version",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "integer"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "provider_mode",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "request_hash",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "character varying(64)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "review_key",
+      "not_null": false,
+      "table_name": "record_agent_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "review_reason",
+      "not_null": false,
+      "table_name": "record_agent_runs",
+      "type": "character varying(4000)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "review_status",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "character varying(16)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "run_id",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "uuid"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "started_at",
+      "not_null": false,
+      "table_name": "record_agent_runs",
+      "type": "timestamp with time zone"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "status",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "character varying(24)"
+    },
+    {
+      "default_expression": null,
+      "generated": "",
+      "identity": "",
+      "name": "task_kind",
+      "not_null": true,
+      "table_name": "record_agent_runs",
+      "type": "character varying(32)"
     },
     {
       "default_expression": null,
@@ -18376,6 +18610,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (profile_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_agent_runs_profile_hash_check",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (profile_schema_version = 1 OR profile_schema_version = 2 AND delivery IS NOT NULL AND commercial IS NOT NULL AND approved_by IS NOT NULL AND approved_by = operator_id)",
       "enforced": true,
       "initially_deferred": false,
@@ -18432,6 +18676,16 @@
       "kind": "c",
       "name": "record_conversation_booking_observations_check",
       "table_name": "record_conversation_booking_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (provider_mode::text = ANY (ARRAY['live'::character varying, 'fake'::character varying, 'disabled'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_agent_runs_provider_mode_check",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -18650,6 +18904,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "c",
+      "name": "record_agent_runs_request_hash_check",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (request_hash::text ~ '^[0-9a-f]{64}$'::text)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
       "name": "record_market_research_workflow_bindings_request_hash_check",
       "table_name": "record_market_research_workflow_bindings",
       "validated": true
@@ -18712,6 +18976,16 @@
       "kind": "c",
       "name": "record_research_return_blocks_return_kind_check",
       "table_name": "record_research_return_blocks",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (review_status::text = ANY (ARRAY['PENDING'::character varying, 'ACCEPTED'::character varying, 'REJECTED'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_agent_runs_review_status_check",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -19076,6 +19350,16 @@
     },
     {
       "deferrable": false,
+      "definition": "CHECK (status::text = ANY (ARRAY['QUEUED'::character varying, 'RUNNING'::character varying, 'SUCCEEDED'::character varying, 'BLOCKED'::character varying, 'FAILED'::character varying, 'CANCELLED'::character varying, 'OUTCOME_UNKNOWN'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_agent_runs_status_check",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "CHECK (status::text = ANY (ARRAY['READY'::character varying, 'IMPOSSIBLE_ECONOMICS'::character varying, 'CURRENCY_MISMATCH'::character varying, 'DELIVERY_CAPACITY_EXCEEDED'::character varying]::text[]))",
       "enforced": true,
       "initially_deferred": false,
@@ -19112,6 +19396,16 @@
       "kind": "c",
       "name": "record_qualification_cohorts_target_size_check",
       "table_name": "record_qualification_cohorts",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "CHECK (task_kind::text = ANY (ARRAY['IDEA_DISCOVERY'::character varying, 'IDEA_REFINEMENT'::character varying]::text[]))",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "c",
+      "name": "record_agent_runs_task_kind_check",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -21800,6 +22094,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_agent_runs_experiment_id_fkey",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (experiment_id) REFERENCES record_experiments(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_artifacts_experiment_id_fkey",
       "table_name": "record_artifacts",
       "validated": true
@@ -22850,6 +23154,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "f",
+      "name": "record_agent_runs_operator_id_fkey",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (operator_id) REFERENCES record_operators(id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
       "name": "record_conversation_manual_outcomes_operator_id_fkey",
       "table_name": "record_conversation_manual_outcomes",
       "validated": true
@@ -23312,6 +23626,16 @@
       "kind": "f",
       "name": "record_qualification_criterion_r_profile_id_criterion_code_fkey",
       "table_name": "record_qualification_criterion_results",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "FOREIGN KEY (profile_id, profile_version) REFERENCES record_operator_profiles(id, version)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "f",
+      "name": "record_agent_runs_profile_id_profile_version_fkey",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -25040,6 +25364,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_agent_runs_application_version_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL application_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_decision_wo_application_version_not_null",
       "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
@@ -26636,6 +26970,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL cancel_confirmed",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_cancel_confirmed_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL candidate_batch_size",
       "enforced": true,
       "initially_deferred": false,
@@ -27152,6 +27496,16 @@
       "kind": "n",
       "name": "gov_settlements_command_key_not_null",
       "table_name": "gov_settlements",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL command_key",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_command_key_not_null",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -28560,6 +28914,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_agent_runs_created_at_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL created_at",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_agents_created_at_not_null",
       "table_name": "record_agents",
       "validated": true
@@ -29740,6 +30104,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_agent_runs_dbos_workflow_id_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL dbos_workflow_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_market_research_decision_workf_dbos_workflow_id_not_null",
       "table_name": "record_market_research_decision_workflow_bindings",
       "validated": true
@@ -30546,6 +30920,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL events",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_events_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL evidence_hash",
       "enforced": true,
       "initially_deferred": false,
@@ -30882,6 +31266,16 @@
       "kind": "n",
       "name": "openai_run_intents_experiment_id_not_null",
       "table_name": "openai_run_intents",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL experiment_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_experiment_id_not_null",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -34036,6 +34430,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL input_refs",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_input_refs_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL intent_hash",
       "enforced": true,
       "initially_deferred": false,
@@ -35680,6 +36084,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_agent_runs_operator_id_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL operator_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_conversation_manual_outcomes_operator_id_not_null",
       "table_name": "record_conversation_manual_outcomes",
       "validated": true
@@ -36816,6 +37230,26 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL profile_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_profile_hash_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_profile_id_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL profile_id",
       "enforced": true,
       "initially_deferred": false,
@@ -37002,6 +37436,16 @@
       "kind": "n",
       "name": "record_operator_profiles_profile_schema_version_not_null",
       "table_name": "record_operator_profiles",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL profile_version",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_profile_version_not_null",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -37362,6 +37806,16 @@
       "kind": "n",
       "name": "record_conversation_booking_obser_provider_evidence_id_not_null",
       "table_name": "record_conversation_booking_observations",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL provider_mode",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_provider_mode_not_null",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -38200,6 +38654,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_agent_runs_request_hash_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL request_hash",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_commands_request_hash_not_null",
       "table_name": "record_commands",
       "validated": true
@@ -38576,6 +39040,16 @@
     },
     {
       "deferrable": false,
+      "definition": "NOT NULL review_status",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_review_status_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
       "definition": "NOT NULL rfc_message_id",
       "enforced": true,
       "initially_deferred": false,
@@ -38862,6 +39336,16 @@
       "kind": "n",
       "name": "record_calibration_decisions_rule_version_not_null",
       "table_name": "record_calibration_decisions",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL run_id",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_run_id_not_null",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -39640,6 +40124,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "n",
+      "name": "record_agent_runs_status_not_null",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL status",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
       "name": "record_commercial_envelopes_status_not_null",
       "table_name": "record_commercial_envelopes",
       "validated": true
@@ -39812,6 +40306,16 @@
       "kind": "n",
       "name": "record_offer_gap_briefs_targeted_questions_not_null",
       "table_name": "record_offer_gap_briefs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "NOT NULL task_kind",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "n",
+      "name": "record_agent_runs_task_kind_not_null",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -42450,6 +42954,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "p",
+      "name": "record_agent_runs_pkey",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "PRIMARY KEY (run_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "p",
       "name": "record_idea_discoveries_pkey",
       "table_name": "record_idea_discoveries",
       "validated": true
@@ -43060,6 +43574,16 @@
       "enforced": true,
       "initially_deferred": false,
       "kind": "u",
+      "name": "record_agent_runs_command_key_key",
+      "table_name": "record_agent_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (command_key)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
       "name": "record_commands_command_key_key",
       "table_name": "record_commands",
       "validated": true
@@ -43332,6 +43856,16 @@
       "kind": "u",
       "name": "record_offer_design_runs_cycle_id_verdict_id_bundle_id_enve_key",
       "table_name": "record_offer_design_runs",
+      "validated": true
+    },
+    {
+      "deferrable": false,
+      "definition": "UNIQUE (dbos_workflow_id)",
+      "enforced": true,
+      "initially_deferred": false,
+      "kind": "u",
+      "name": "record_agent_runs_dbos_workflow_id_key",
+      "table_name": "record_agent_runs",
       "validated": true
     },
     {
@@ -45070,6 +45604,11 @@
     },
     {
       "arguments": "",
+      "definition": "CREATE OR REPLACE FUNCTION public.record_agent_run_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$ BEGIN\n IF TG_OP='DELETE' OR (TG_OP='UPDATE' AND\n   (to_jsonb(OLD)-ARRAY['status','outcome','blocked_reason','events','cancel_key','cancel_requested_at','cancel_confirmed','review_key','review_status','review_reason','started_at','finished_at'])\n   IS DISTINCT FROM\n   (to_jsonb(NEW)-ARRAY['status','outcome','blocked_reason','events','cancel_key','cancel_requested_at','cancel_confirmed','review_key','review_status','review_reason','started_at','finished_at']))\n THEN RAISE EXCEPTION 'agent run identity is immutable'; END IF;\n RETURN NEW; END $function$\n",
+      "name": "record_agent_run_guard"
+    },
+    {
+      "arguments": "",
       "definition": "CREATE OR REPLACE FUNCTION public.record_artifact_version_guard()\n RETURNS trigger\n LANGUAGE plpgsql\nAS $function$\nBEGIN\n IF NEW.version=1 THEN\n  IF EXISTS(SELECT 1 FROM record_artifacts WHERE logical_id=NEW.logical_id AND version<>1)\n  THEN RAISE EXCEPTION 'invalid initial artifact version'; END IF;\n ELSIF NOT EXISTS(\n   SELECT 1 FROM record_artifact_links link\n   JOIN record_artifacts prior ON prior.id=link.producer_id\n   WHERE link.consumer_id=NEW.id AND link.role='SUPERSEDES'\n     AND prior.logical_id=NEW.logical_id AND prior.version=NEW.version-1\n     AND prior.experiment_id=NEW.experiment_id)\n THEN RAISE EXCEPTION 'missing exact artifact predecessor';\n END IF;\n RETURN NULL;\nEND $function$\n",
       "name": "record_artifact_version_guard"
     },
@@ -46273,6 +46812,24 @@
       "primary_index": false,
       "ready": true,
       "table_name": "operator_sessions",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_agent_runs_experiment ON public.record_agent_runs USING btree (experiment_id, created_at DESC)",
+      "name": "ix_record_agent_runs_experiment",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_agent_runs",
+      "unique_index": false,
+      "valid": true
+    },
+    {
+      "definition": "CREATE INDEX ix_record_agent_runs_pending ON public.record_agent_runs USING btree (status, created_at)",
+      "name": "ix_record_agent_runs_pending",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_agent_runs",
       "unique_index": false,
       "valid": true
     },
@@ -47875,6 +48432,33 @@
       "primary_index": true,
       "ready": true,
       "table_name": "operator_sessions",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_agent_runs_command_key_key ON public.record_agent_runs USING btree (command_key)",
+      "name": "record_agent_runs_command_key_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_agent_runs",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_agent_runs_dbos_workflow_id_key ON public.record_agent_runs USING btree (dbos_workflow_id)",
+      "name": "record_agent_runs_dbos_workflow_id_key",
+      "primary_index": false,
+      "ready": true,
+      "table_name": "record_agent_runs",
+      "unique_index": true,
+      "valid": true
+    },
+    {
+      "definition": "CREATE UNIQUE INDEX record_agent_runs_pkey ON public.record_agent_runs USING btree (run_id)",
+      "name": "record_agent_runs_pkey",
+      "primary_index": true,
+      "ready": true,
+      "table_name": "record_agent_runs",
       "unique_index": true,
       "valid": true
     },
@@ -51465,6 +52049,12 @@
       "force_row_security": false,
       "kind": "r",
       "name": "operator_sessions",
+      "row_security": false
+    },
+    {
+      "force_row_security": false,
+      "kind": "r",
+      "name": "record_agent_runs",
       "row_security": false
     },
     {
@@ -56162,6 +56752,162 @@
       "internal": true,
       "name": null,
       "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_agent_runs_experiment_id_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_agent_runs"
+    },
+    {
+      "constraint_name": "record_agent_runs_experiment_id_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_agent_runs_experiment_id_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_agent_runs"
+    },
+    {
+      "constraint_name": "record_agent_runs_experiment_id_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_experiments"
+    },
+    {
+      "constraint_name": "record_agent_runs_operator_id_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_agent_runs"
+    },
+    {
+      "constraint_name": "record_agent_runs_operator_id_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_agent_runs_operator_id_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_agent_runs"
+    },
+    {
+      "constraint_name": "record_agent_runs_operator_id_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operators"
+    },
+    {
+      "constraint_name": "record_agent_runs_profile_id_profile_version_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_check_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_agent_runs"
+    },
+    {
+      "constraint_name": "record_agent_runs_profile_id_profile_version_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 17,
+      "function_name": "pg_catalog.RI_FKey_noaction_upd",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
+    },
+    {
+      "constraint_name": "record_agent_runs_profile_id_profile_version_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 5,
+      "function_name": "pg_catalog.RI_FKey_check_ins",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_agent_runs"
+    },
+    {
+      "constraint_name": "record_agent_runs_profile_id_profile_version_fkey",
+      "constraint_table": "record_agent_runs",
+      "deferrable": false,
+      "definition": null,
+      "enabled": "O",
+      "events": 9,
+      "function_name": "pg_catalog.RI_FKey_noaction_del",
+      "initially_deferred": false,
+      "internal": true,
+      "name": null,
+      "table_name": "record_operator_profiles"
     },
     {
       "constraint_name": "record_agents_id_workflow_id_fkey",
@@ -80641,6 +81387,19 @@
       "internal": false,
       "name": "proof_binding",
       "table_name": "gov_settlements"
+    },
+    {
+      "constraint_name": null,
+      "constraint_table": null,
+      "deferrable": false,
+      "definition": "CREATE TRIGGER record_agent_run_guard BEFORE DELETE OR UPDATE ON record_agent_runs FOR EACH ROW EXECUTE FUNCTION record_agent_run_guard()",
+      "enabled": "O",
+      "events": 27,
+      "function_name": "public.record_agent_run_guard",
+      "initially_deferred": false,
+      "internal": false,
+      "name": "record_agent_run_guard",
+      "table_name": "record_agent_runs"
     },
     {
       "constraint_name": null,

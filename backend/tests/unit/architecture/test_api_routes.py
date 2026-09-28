@@ -108,7 +108,7 @@ def test_every_registered_handler_delegates_once() -> None:
     handlers = _application_handlers()
     assert len(handlers) >= 15, "route discovery must not pass vacuously"
     expected = _expected_delegations()
-    assert len(expected) == len(handlers) == 20
+    assert len(expected) == len(handlers) == 27
     failures = []
     for handler in handlers:
         tree = ast.parse(textwrap.dedent(inspect.getsource(handler)))
@@ -237,4 +237,11 @@ def test_public_method_and_path_set_matches_minimal_intake() -> None:
         ("POST", "/operator/ideas/{experiment_id}/generate"),
         ("POST", "/operator/ideas/{experiment_id}/revisions"),
         ("POST", "/operator/ideas/{experiment_id}/start"),
+        ("POST", "/operator/idea-profile"),
+        ("POST", "/operator/experiments/{experiment_id}/agent-runs"),
+        ("GET", "/operator/agent-runs/{run_id}"),
+        ("GET", "/operator/agent-runs/{run_id}/result"),
+        ("GET", "/operator/agent-runs/{run_id}/events"),
+        ("POST", "/operator/agent-runs/{run_id}/cancel"),
+        ("POST", "/operator/agent-runs/{run_id}/reject"),
     }

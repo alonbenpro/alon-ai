@@ -137,6 +137,78 @@
     {
       "delegation": {
         "args": [
+          "run_id"
+        ],
+        "kwargs": {},
+        "method": "get"
+      },
+      "handler": "alon_ai.api.routes.agent_runs.get_run",
+      "method": "GET",
+      "owner": "alon_ai.services.agent_run_service",
+      "path": "/operator/agent-runs/{run_id}",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "run_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "cancel"
+      },
+      "handler": "alon_ai.api.routes.agent_runs.cancel_run",
+      "method": "POST",
+      "owner": "alon_ai.services.agent_run_service",
+      "path": "/operator/agent-runs/{run_id}/cancel",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "run_id"
+        ],
+        "kwargs": {},
+        "method": "events"
+      },
+      "handler": "alon_ai.api.routes.agent_runs.get_run_events",
+      "method": "GET",
+      "owner": "alon_ai.services.agent_run_service",
+      "path": "/operator/agent-runs/{run_id}/events",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "run_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "reject"
+      },
+      "handler": "alon_ai.api.routes.agent_runs.reject_run",
+      "method": "POST",
+      "owner": "alon_ai.services.agent_run_service",
+      "path": "/operator/agent-runs/{run_id}/reject",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "run_id"
+        ],
+        "kwargs": {},
+        "method": "result"
+      },
+      "handler": "alon_ai.api.routes.agent_runs.get_run_result",
+      "method": "GET",
+      "owner": "alon_ai.services.agent_run_service",
+      "path": "/operator/agent-runs/{run_id}/result",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
           "body"
         ],
         "kwargs": {},
@@ -187,6 +259,21 @@
       "method": "POST",
       "owner": "alon_ai.services.ideas",
       "path": "/operator/experiments/{experiment_id}/accept",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
+        "method": "admit"
+      },
+      "handler": "alon_ai.api.routes.agent_runs.admit_run",
+      "method": "POST",
+      "owner": "alon_ai.services.agent_run_service",
+      "path": "/operator/experiments/{experiment_id}/agent-runs",
       "test": "backend/tests/unit/architecture/test_api_routes.py"
     },
     {
@@ -247,6 +334,20 @@
       "method": "POST",
       "owner": "alon_ai.services.ideas",
       "path": "/operator/experiments/{experiment_id}/select",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "body"
+        ],
+        "kwargs": {},
+        "method": "setup_profile"
+      },
+      "handler": "alon_ai.api.routes.experiments.setup_idea_profile",
+      "method": "POST",
+      "owner": "alon_ai.services.experiments",
+      "path": "/operator/idea-profile",
       "test": "backend/tests/unit/architecture/test_api_routes.py"
     },
     {

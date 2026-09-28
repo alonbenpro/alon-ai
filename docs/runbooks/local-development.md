@@ -61,15 +61,25 @@ Do not paste login cookies, verifier, signing key, or passwords into bug reports
 
 ## Manual R01A-UX experiment intake check
 
-Provider execution stays disabled by default. For an isolated recorded run, use a separate Compose project and private auth file as described above. Set `ALON_AI_PROVIDER_MODE=fake` and an explicit positive `ALON_AI_IDEA_INTAKE_BUDGET_USD` in the terminal running `./scripts/local-dev.sh up`. The budget is trusted workspace policy for intake, not a form field or permission for a paid call. The API uses recorded synthetic responses through the governed Idea runtime and ledger; the worker and outreach remain disabled. Recorded advice is labeled in the browser and is not evidence of actual customer demand or a live OpenAI result.
+Provider execution stays disabled by default. For an isolated recorded run, use a separate Compose project and private auth file as described above. Set `ALON_AI_PROVIDER_MODE=fake` and an explicit positive `ALON_AI_IDEA_INTAKE_BUDGET_USD` in the terminal running `./scripts/local-dev.sh up`. The budget is trusted workspace policy for intake, not a form field or permission for a paid call. The API and worker use recorded synthetic responses through the governed Idea runtime and ledger; outreach remains disabled. Recorded advice is labeled in the browser and is not evidence of actual customer demand or a live OpenAI result.
 
-The operator needs a previously saved, approved profile. A fresh operator without one receives `OPERATOR_PROFILE_REQUIRED`; the app does not invent capabilities, delivery limits, or commercial settings. For a disposable acceptance stack, seed an explicitly approved synthetic profile in that stack before this check. Keep the profile fixture separate from production data.
+The operator needs a previously saved, approved profile. A fresh operator without one receives `OPERATOR_PROFILE_REQUIRED`; the app does not invent capabilities, delivery limits, or commercial settings. Use the authenticated `POST /api/operator/idea-profile` setup command described below to save an explicitly approved profile before this check.
 
 After signing in, open **New experiment**. Confirm the setup has one optional idea field. Enter a short idea and select **Start experiment**. The server saves the exact seed and starts one governed Idea refinement run. Refresh before accepting: the same run and advice should return, with no accepted idea yet. Use **Accept and save idea** only after reviewing the proposal, then refresh again to confirm the accepted version.
 
 For the second path, open **New experiment** with an empty idea and select **Generate an idea**. Review the labeled proposals, edit one into a new immutable revision, regenerate from it, then choose a revision and select **Start experiment**. Refresh at each stage to confirm proposal lineage and the same run persist. A blocked or unavailable live provider must remain visibly blocked; it must not switch to recorded mode.
 
 Unset `ALON_AI_PROVIDER_MODE` and `ALON_AI_IDEA_INTAKE_BUDGET_USD` before returning the stack to its default disabled configuration. Keep the same Compose project and port overrides for its lifecycle commands.
+
+## R01A profile setup and saved run inspection
+
+Set a positive `ALON_AI_IDEA_INTAKE_BUDGET_USD` for the API and worker before starting the local stack. This is a trusted admission limit, not a field in New experiment and not approval for a paid call. The worker must use the same provider mode and runtime configuration as the API. Recorded mode (`ALON_AI_PROVIDER_MODE=fake`) can be used for deterministic checks without a paid call.
+
+After signing in, submit an approved operator profile once through the private browser proxy `POST /api/operator/idea-profile` (backend: `POST /operator/idea-profile`). Its JSON body is `{"profile":{"capabilities":[...],"constraints":[...],"delivery":{"max_project_hours":"...","hours_per_week":"...","concurrent_projects":1},"commercial":{"currency":"USD","hourly_cost":"...","minimum_project_price":"...","minimum_margin_rate":"...","maximum_discount_rate":"...","minimum_deposit_rate":"..."}}}`. Supply real reviewed values for the operator or explicitly labeled synthetic values in an isolated recorded test stack. The response gives `profile_id`, `profile_version`, and the configured `budget_usd`. Do not put credentials in this request.
+
+Start an experiment from its multiline idea or generate, revise, and select a proposal. The service saves a run reference before returning. Open the experiment's saved URL and inspect the Agent run panel for the pinned inputs, retained output, status events, review state, receipt, and actual or pending cost. Refresh or reopen that URL to recover the same run. Rejecting the output and accepting its exact reviewed version are separate commands. A queued cancellation can be confirmed; a request made after dispatch may require reconciliation and cannot undo a provider effect. Do not retry an uncertain paid request with a new command key.
+
+Live mode requires the separate reviewed model, rights, price, credential, and finite spend setup below, plus Alon's authorization for the actual paid call. A configured credential or a recorded run is not proof of live execution.
 
 ### Explicit live OpenAI setup
 

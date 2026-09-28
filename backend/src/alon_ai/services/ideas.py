@@ -23,6 +23,7 @@ from alon_ai.agents.runtime import (
 )
 from alon_ai.agents.schemas.openai import RoutingFacts, canonical_json, sha256
 from alon_ai.db.repositories import experiments as experiment_repository
+from alon_ai.db.repositories.agent_runs import AgentRunRepository
 from alon_ai.db.repositories.experiments import ExperimentError
 from alon_ai.db.repositories.openai_idea import OpenAIIdeaInputRepository
 from alon_ai.db.repositories.openai_run import OpenAIRunOutcome, OpenAIRunStore
@@ -40,6 +41,7 @@ from alon_ai.services.experiments import (
     _read_experiment,
     _read_persisted_advice,
 )
+from alon_ai.services.idea_safety import IdeaSafetyError, validate_idea_advice
 from alon_ai.services.schemas.records import (
     ArtifactDraft,
     ArtifactInput,
@@ -386,6 +388,16 @@ async def select_experiment_candidate(
         raise ExperimentError(404, "EXPERIMENT_NOT_FOUND")
     if detail["mode"] != "SYSTEM_DISCOVERY":
         raise ExperimentError(409, "DISCOVERY_MODE_REQUIRED")
+    discovery_run_id = detail["latest_run_id"]
+    if discovery_run_id is not None:
+        discovery_run = await AgentRunRepository(request.engine).get(discovery_run_id)
+        if (
+            discovery_run is not None
+            and discovery_run["experiment_id"] == experiment_id
+            and discovery_run["task_kind"] == "IDEA_DISCOVERY"
+            and discovery_run["review_status"] == "REJECTED"
+        ):
+            raise ExperimentError(409, "DISCOVERY_RUN_REJECTED")
     from alon_ai.db.repositories.intake import IntakeRepository
 
     revisions = await IntakeRepository(request.engine).history(experiment_id)
@@ -397,6 +409,7 @@ async def select_experiment_candidate(
         candidate,
         selection,
         selection_command,
+        candidate_discovery_run_id,
     ) = await experiment_repository.candidate_selection_rows(
         request.engine,
         experiment_id,
@@ -405,6 +418,12 @@ async def select_experiment_candidate(
     )
     if candidate is None:
         raise ExperimentError(409, "CANDIDATE_NOT_IN_DISCOVERY")
+    if candidate_discovery_run_id is not None:
+        source_run = await AgentRunRepository(request.engine).get(
+            candidate_discovery_run_id
+        )
+        if source_run is not None and source_run["review_status"] == "REJECTED":
+            raise ExperimentError(409, "DISCOVERY_RUN_REJECTED")
     if selection is None and detail["state"] != "AWAITING_SELECTION":
         raise ExperimentError(409, "CANDIDATE_SELECTION_UNAVAILABLE")
     if selection and (
@@ -633,6 +652,9 @@ async def accept_experiment_idea(
     if detail is None:
         raise ExperimentError(404, "EXPERIMENT_NOT_FOUND")
     engine = request.engine
+    operator_run = await AgentRunRepository(engine).get(body.run_id)
+    if operator_run is not None and operator_run["review_status"] == "REJECTED":
+        raise ExperimentError(409, "IDEA_RUN_REJECTED")
     (
         reviewed,
         seed,
@@ -675,6 +697,25 @@ async def accept_experiment_idea(
         or body.intent_relationship == "MATERIAL_PIVOT"
     ):
         raise ExperimentError(409, "MATERIAL_PIVOT_REQUIRES_APPROVAL")
+    if operator_run is not None:
+        profile_row = await AgentRunRepository(engine).profile_projection(operator_run)
+        if profile_row is None:
+            raise ExperimentError(409, "IDEA_INPUT_STALE")
+        origin = seed["payload"]
+        source_text = (
+            origin.get("statement")
+            or origin.get("hypothesis")
+            or origin.get("core_intent")
+            or ""
+        )
+        try:
+            validate_idea_advice(
+                advice.model_dump(mode="json"),
+                seed=source_text,
+                capabilities=profile_row["capabilities"],
+            )
+        except IdeaSafetyError as error:
+            raise ExperimentError(409, str(error)) from None
     repository = ProductRecordsRepository(engine)
     brief_id = _id(body.command_key, "accepted-idea-brief")
     advice_payload = advice.model_dump(mode="json")
@@ -720,6 +761,10 @@ async def accept_experiment_idea(
         "confirmed_by": request.operator_id,
         "command_key": body.command_key,
     }
+    if operator_run is not None:
+        await AgentRunRepository(engine).claim_acceptance(
+            body.run_id, experiment_id, request.operator_id, body.command_key
+        )
     await experiment_repository.save_intent_review(
         engine, experiment_id, body.run_id, expected_review
     )
@@ -730,6 +775,10 @@ async def accept_experiment_idea(
             and accepted["artifact_id"] == brief_id
             and accepted["accepted_by"] == request.operator_id
         ):
+            if operator_run is not None:
+                await AgentRunRepository(engine).complete_acceptance(
+                    body.run_id, body.command_key
+                )
             return {
                 "experiment_id": experiment_id,
                 "idea_brief_artifact_id": brief_id,
@@ -798,6 +847,10 @@ async def accept_experiment_idea(
         )
     except ProductRecordsDenied as error:
         raise ExperimentError(409, error.reason) from None
+    if operator_run is not None:
+        await AgentRunRepository(engine).complete_acceptance(
+            body.run_id, body.command_key
+        )
     return {
         "experiment_id": experiment_id,
         "idea_brief_artifact_id": artifact.artifact_id,

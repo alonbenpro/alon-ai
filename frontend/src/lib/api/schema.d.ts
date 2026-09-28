@@ -123,6 +123,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operator/agent-runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_operator_agent_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/agent-runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Run */
+        post: operations["cancel_run_operator_agent_runs__run_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/agent-runs/{run_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run Events */
+        get: operations["get_run_events_operator_agent_runs__run_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/agent-runs/{run_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Run */
+        post: operations["reject_run_operator_agent_runs__run_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/agent-runs/{run_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run Result */
+        get: operations["get_run_result_operator_agent_runs__run_id__result_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operator/experiments": {
         parameters: {
             query?: never;
@@ -185,6 +270,23 @@ export interface paths {
         put?: never;
         /** Accept Experiment Idea */
         post: operations["accept_experiment_idea_operator_experiments__experiment_id__accept_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/experiments/{experiment_id}/agent-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admit Run */
+        post: operations["admit_run_operator_experiments__experiment_id__agent_runs_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -256,6 +358,23 @@ export interface paths {
         put?: never;
         /** Select Experiment Candidate */
         post: operations["select_experiment_candidate_operator_experiments__experiment_id__select_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/idea-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Setup Idea Profile */
+        post: operations["setup_idea_profile_operator_idea_profile_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -402,6 +521,59 @@ export interface components {
             /** Items */
             items: components["schemas"]["ActivityItem"][];
         };
+        /** AgentRunRequest */
+        AgentRunRequest: {
+            /**
+             * Command Key
+             * Format: uuid
+             */
+            command_key: string;
+            /**
+             * Task Kind
+             * @enum {string}
+             */
+            task_kind: "IDEA_DISCOVERY" | "IDEA_REFINEMENT";
+        };
+        /** CancelRunRequest */
+        CancelRunRequest: {
+            /**
+             * Command Key
+             * Format: uuid
+             */
+            command_key: string;
+        };
+        /** CancelRunResult */
+        CancelRunResult: {
+            /** Confirmed */
+            confirmed: boolean;
+            /** Requested */
+            requested: boolean;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+        };
+        /** CommercialInput */
+        CommercialInput: {
+            /** Currency */
+            currency: string;
+            /** Hourly Cost */
+            hourly_cost: number | string;
+            /** Maximum Discount Rate */
+            maximum_discount_rate: number | string;
+            /** Minimum Deposit Rate */
+            minimum_deposit_rate: number | string;
+            /** Minimum Margin Rate */
+            minimum_margin_rate: number | string;
+            /** Minimum Project Price */
+            minimum_project_price: number | string;
+        };
         /** CreateExperimentRequest */
         CreateExperimentRequest: {
             /**
@@ -411,6 +583,15 @@ export interface components {
             command_key: string;
             /** Idea Seed */
             idea_seed?: string | null;
+        };
+        /** DeliveryInput */
+        DeliveryInput: {
+            /** Concurrent Projects */
+            concurrent_projects: number;
+            /** Hours Per Week */
+            hours_per_week: number | string;
+            /** Max Project Hours */
+            max_project_hours: number | string;
         };
         /** ExperimentRuntimeStatus */
         ExperimentRuntimeStatus: {
@@ -521,6 +702,31 @@ export interface components {
             /** Password */
             password: string;
         };
+        /** OperatorProfileInput */
+        OperatorProfileInput: {
+            /** Capabilities */
+            capabilities: string[];
+            commercial: components["schemas"]["CommercialInput"];
+            /** Constraints */
+            constraints: string[];
+            delivery: components["schemas"]["DeliveryInput"];
+        };
+        /** OperatorProfileProjection */
+        OperatorProfileProjection: {
+            /** Capabilities */
+            capabilities: string[];
+            /** Constraints */
+            constraints: string[];
+            /** Content Hash */
+            content_hash: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Version */
+            version: number;
+        };
         /** OperatorSession */
         OperatorSession: {
             /** Display Name */
@@ -619,6 +825,36 @@ export interface components {
              */
             command_key: string;
         };
+        /** RejectRunRequest */
+        RejectRunRequest: {
+            /**
+             * Command Key
+             * Format: uuid
+             */
+            command_key: string;
+            /** Reason */
+            reason: string;
+        };
+        /** ResolvedInput */
+        ResolvedInput: {
+            /**
+             * Artifact Id
+             * Format: uuid
+             */
+            artifact_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Kind */
+            kind: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            } | null;
+            /** Role */
+            role: string;
+            /** Version */
+            version: number;
+        };
         /** ReturnFeedbackInput */
         ReturnFeedbackInput: {
             /**
@@ -656,6 +892,173 @@ export interface components {
             /** Idea Seed */
             idea_seed: string;
         };
+        /** RunEvent */
+        RunEvent: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Detail */
+            detail?: string | null;
+            /** Sequence */
+            sequence: number;
+            /** Type */
+            type: string;
+        };
+        /** RunEvents */
+        RunEvents: {
+            /** Events */
+            events: components["schemas"]["RunEvent"][];
+        };
+        /** RunRef */
+        RunRef: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Experiment Id
+             * Format: uuid
+             */
+            experiment_id: string;
+            /**
+             * Provider Mode
+             * @enum {string}
+             */
+            provider_mode: "live" | "fake" | "disabled";
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /**
+             * Task Kind
+             * @enum {string}
+             */
+            task_kind: "IDEA_DISCOVERY" | "IDEA_REFINEMENT";
+        };
+        /** RunResult */
+        RunResult: {
+            /** Actual Cost Usd */
+            actual_cost_usd?: string | null;
+            /** Advice Source */
+            advice_source?: string | null;
+            /** Output */
+            output?: {
+                [key: string]: unknown;
+            } | null;
+            /** Receipt Id */
+            receipt_id?: string | null;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /** Usage */
+            usage?: components["schemas"]["UsageItem"][];
+        };
+        /** RunView */
+        RunView: {
+            /** Actual Cost Usd */
+            actual_cost_usd?: string | null;
+            /** Advice Source */
+            advice_source?: string | null;
+            /** Blocked Reason */
+            blocked_reason?: string | null;
+            /**
+             * Cancel Confirmed
+             * @default false
+             */
+            cancel_confirmed: boolean;
+            /**
+             * Cancel Requested
+             * @default false
+             */
+            cancel_requested: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Experiment Id
+             * Format: uuid
+             */
+            experiment_id: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Input Refs */
+            input_refs?: components["schemas"]["ResolvedInput"][];
+            /** Model Identifier */
+            model_identifier?: string | null;
+            operator_profile: components["schemas"]["OperatorProfileProjection"];
+            /** Outcome */
+            outcome?: string | null;
+            /** Output */
+            output?: {
+                [key: string]: unknown;
+            } | null;
+            /** Pending Cost Usd */
+            pending_cost_usd?: string | null;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "ADMITTED" | "EXECUTING" | "WAITING_FOR_OPERATOR" | "ACCEPTED" | "REJECTED" | "BLOCKED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Profile Version */
+            profile_version: number;
+            /**
+             * Provider Mode
+             * @enum {string}
+             */
+            provider_mode: "live" | "fake" | "disabled";
+            /** Receipt Id */
+            receipt_id?: string | null;
+            /** Resolved Inputs */
+            resolved_inputs?: components["schemas"]["ResolvedInput"][];
+            /**
+             * Review Status
+             * @default PENDING
+             * @enum {string}
+             */
+            review_status: "PENDING" | "ACCEPTED" | "REJECTED";
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /**
+             * Task Kind
+             * @enum {string}
+             */
+            task_kind: "IDEA_DISCOVERY" | "IDEA_REFINEMENT";
+            /** Usage */
+            usage?: components["schemas"]["UsageItem"][];
+        };
         /** SelectCandidateRequest */
         SelectCandidateRequest: {
             /**
@@ -679,6 +1082,22 @@ export interface components {
              */
             authenticated: boolean;
             operator: components["schemas"]["OperatorSession"];
+        };
+        /** SetupIdeaProfileRequest */
+        SetupIdeaProfileRequest: {
+            profile: components["schemas"]["OperatorProfileInput"];
+        };
+        /** SetupIdeaProfileResult */
+        SetupIdeaProfileResult: {
+            /** Budget Usd */
+            budget_usd: string | null;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Profile Version */
+            profile_version: number;
         };
         /** StartProposalRequest */
         StartProposalRequest: {
@@ -721,6 +1140,22 @@ export interface components {
             readiness: {
                 [key: string]: "ready" | "not_ready";
             };
+        };
+        /** UsageItem */
+        UsageItem: {
+            /** Component */
+            component: string;
+            /** Cost */
+            cost: string | null;
+            /** Currency */
+            currency: string;
+            /**
+             * Knowledge
+             * @enum {string}
+             */
+            knowledge: "ESTIMATE" | "FINAL" | "UNAVAILABLE";
+            /** Quantity */
+            quantity: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -926,6 +1361,169 @@ export interface operations {
             };
         };
     };
+    get_run_operator_agent_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_run_operator_agent_runs__run_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CancelRunResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_events_operator_agent_runs__run_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunEvents"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_run_operator_agent_runs__run_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_result_operator_agent_runs__run_id__result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_experiment_operator_experiments_post: {
         parameters: {
             query?: never;
@@ -1034,6 +1632,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    admit_run_operator_experiments__experiment_id__agent_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunRef"];
                 };
             };
             /** @description Validation Error */
@@ -1182,6 +1815,39 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    setup_idea_profile_operator_idea_profile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupIdeaProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupIdeaProfileResult"];
                 };
             };
             /** @description Validation Error */

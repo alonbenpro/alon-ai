@@ -279,7 +279,10 @@ async def test_unconfigured_live_mode_is_visible_and_never_falls_back(
         assert snapshot["stage_status"] == "BLOCKED"
         assert snapshot["blocked_reason"] == "LIVE_CONFIG_REQUIRED"
         assert snapshot["provider_mode"] == "live"
-        assert snapshot["latest_run_id"] is None
+        assert snapshot["latest_run_id"] is not None
+        inspected = client.get(f"/operator/agent-runs/{snapshot['latest_run_id']}")
+        assert inspected.status_code == 200
+        assert inspected.json()["status"] == "BLOCKED"
         assert (
             client.post("/operator/experiments", json=body, headers=ORIGIN).json()
             == snapshot

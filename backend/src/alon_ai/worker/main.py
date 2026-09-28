@@ -8,11 +8,13 @@ from dbos import DBOS
 from alon_ai.config import Settings, get_settings
 from alon_ai.db.engine import create_engine
 from alon_ai.logging import configure_logging
+from alon_ai.services.agent_run_service import reconcile_incomplete_idea_runs
 from alon_ai.worker.config import configure_dbos
 from alon_ai.workflows.campaign_supply import (
     assert_campaign_supply_compatible_application_version,
     recover_campaign_supply_workflows,
 )
+from alon_ai.workflows.idea_runs import dispatch_queued_idea_runs
 from alon_ai.workflows.market_research import (
     assert_compatible_application_version,
     recover_market_research_decision_workflows,
@@ -71,6 +73,7 @@ async def run_worker(settings: Settings) -> None:
             )
             await recover_offer_design_workflows(engine, DBOS_APPLICATION_VERSION)
             await recover_campaign_supply_workflows(engine, DBOS_APPLICATION_VERSION)
+            await reconcile_incomplete_idea_runs(engine)
             startup_event = build_worker_startup_event(settings)
             structlog.get_logger().info(
                 cast(str, startup_event["event"]),
@@ -82,7 +85,18 @@ async def run_worker(settings: Settings) -> None:
                 ),
                 dbos_executor_id=cast(str, startup_event["dbos_executor_id"]),
             )
-            await wait_for_termination()
+            stop = asyncio.create_task(wait_for_termination())
+            try:
+                while not stop.done():
+                    await dispatch_queued_idea_runs(engine)
+                    await reconcile_incomplete_idea_runs(engine, mark_running=False)
+                    try:
+                        await asyncio.wait_for(asyncio.shield(stop), timeout=1.0)
+                    except TimeoutError:
+                        pass
+            finally:
+                if not stop.done():
+                    stop.cancel()
         finally:
             DBOS.destroy(workflow_completion_timeout_sec=5)
     finally:

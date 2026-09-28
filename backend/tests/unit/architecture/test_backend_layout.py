@@ -90,9 +90,9 @@ def test_no_production_imports_obsolete_paths() -> None:
 def test_canonical_table_metadata_and_worker_startup() -> None:
     table_package = importlib.import_module("alon_ai.db.tables")
     metadata = table_package.metadata
-    intake_tables = {"record_intakes", "record_intake_commands"}
+    intake_tables = {"record_intakes", "record_intake_commands", "record_agent_runs"}
     assert intake_tables <= metadata.tables.keys()
-    assert len(metadata.tables) == 142, "L07 tables plus the two intake tables"
+    assert len(metadata.tables) == 143, "L07 tables plus intake and Idea run tables"
     # Preserve the accepted R00B/L07 baseline digest; enumerate additions explicitly.
     table_names = "\n".join(sorted(metadata.tables.keys() - intake_tables))
     assert (
@@ -192,7 +192,7 @@ def test_all_registered_handlers_have_checked_owner_dispositions() -> None:
         {key: value for key, value in row.items() if key != "delegation"}
         for row in json.loads(FIXTURE.read_text(encoding="utf-8"))["handlers"]
     ]
-    assert len(expected) == 20
+    assert len(expected) == 27
     actual = []
     for included in create_app().routes:
         router = getattr(included, "original_router", None)

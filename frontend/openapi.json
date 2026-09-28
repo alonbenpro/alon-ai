@@ -115,6 +115,172 @@
         "title": "ActivityResponse",
         "type": "object"
       },
+      "AgentRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "task_kind": {
+            "enum": [
+              "IDEA_DISCOVERY",
+              "IDEA_REFINEMENT"
+            ],
+            "title": "Task Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_kind",
+          "command_key"
+        ],
+        "title": "AgentRunRequest",
+        "type": "object"
+      },
+      "CancelRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key"
+        ],
+        "title": "CancelRunRequest",
+        "type": "object"
+      },
+      "CancelRunResult": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "requested": {
+            "title": "Requested",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "requested",
+          "confirmed",
+          "status"
+        ],
+        "title": "CancelRunResult",
+        "type": "object"
+      },
+      "CommercialInput": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "hourly_cost": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Hourly Cost"
+          },
+          "maximum_discount_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Maximum Discount Rate"
+          },
+          "minimum_deposit_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Minimum Deposit Rate"
+          },
+          "minimum_margin_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Minimum Margin Rate"
+          },
+          "minimum_project_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Minimum Project Price"
+          }
+        },
+        "required": [
+          "currency",
+          "hourly_cost",
+          "minimum_project_price",
+          "minimum_margin_rate",
+          "maximum_discount_rate",
+          "minimum_deposit_rate"
+        ],
+        "title": "CommercialInput",
+        "type": "object"
+      },
       "CreateExperimentRequest": {
         "additionalProperties": false,
         "properties": {
@@ -141,6 +307,52 @@
           "command_key"
         ],
         "title": "CreateExperimentRequest",
+        "type": "object"
+      },
+      "DeliveryInput": {
+        "additionalProperties": false,
+        "properties": {
+          "concurrent_projects": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Concurrent Projects",
+            "type": "integer"
+          },
+          "hours_per_week": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 168.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Hours Per Week"
+          },
+          "max_project_hours": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Max Project Hours"
+          }
+        },
+        "required": [
+          "max_project_hours",
+          "hours_per_week",
+          "concurrent_projects"
+        ],
+        "title": "DeliveryInput",
         "type": "object"
       },
       "ExperimentRuntimeStatus": {
@@ -439,6 +651,83 @@
         "title": "LoginRequest",
         "type": "object"
       },
+      "OperatorProfileInput": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "commercial": {
+            "$ref": "#/components/schemas/CommercialInput"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Constraints",
+            "type": "array"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryInput"
+          }
+        },
+        "required": [
+          "capabilities",
+          "constraints",
+          "delivery",
+          "commercial"
+        ],
+        "title": "OperatorProfileInput",
+        "type": "object"
+      },
+      "OperatorProfileProjection": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "profile_id": {
+            "format": "uuid",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile_id",
+          "version",
+          "content_hash",
+          "capabilities",
+          "constraints"
+        ],
+        "title": "OperatorProfileProjection",
+        "type": "object"
+      },
       "OperatorSession": {
         "properties": {
           "display_name": {
@@ -647,6 +936,76 @@
         "title": "RegenerateIdeaRequest",
         "type": "object"
       },
+      "RejectRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key",
+          "reason"
+        ],
+        "title": "RejectRunRequest",
+        "type": "object"
+      },
+      "ResolvedInput": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "format": "uuid",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "kind",
+          "version",
+          "content_hash",
+          "role",
+          "payload"
+        ],
+        "title": "ResolvedInput",
+        "type": "object"
+      },
       "ReturnFeedbackInput": {
         "additionalProperties": false,
         "properties": {
@@ -714,6 +1073,446 @@
         "title": "ReviseProposalRequest",
         "type": "object"
       },
+      "RunEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence",
+          "at",
+          "type"
+        ],
+        "title": "RunEvent",
+        "type": "object"
+      },
+      "RunEvents": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/RunEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "RunEvents",
+        "type": "object"
+      },
+      "RunRef": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "provider_mode": {
+            "enum": [
+              "live",
+              "fake",
+              "disabled"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_kind": {
+            "enum": [
+              "IDEA_DISCOVERY",
+              "IDEA_REFINEMENT"
+            ],
+            "title": "Task Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "experiment_id",
+          "task_kind",
+          "status",
+          "provider_mode",
+          "created_at"
+        ],
+        "title": "RunRef",
+        "type": "object"
+      },
+      "RunResult": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Cost Usd"
+          },
+          "advice_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Source"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "receipt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Id"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageItem"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "title": "RunResult",
+        "type": "object"
+      },
+      "RunView": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Cost Usd"
+          },
+          "advice_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Source"
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "cancel_confirmed": {
+            "default": false,
+            "title": "Cancel Confirmed",
+            "type": "boolean"
+          },
+          "cancel_requested": {
+            "default": false,
+            "title": "Cancel Requested",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "input_refs": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedInput"
+            },
+            "title": "Input Refs",
+            "type": "array"
+          },
+          "model_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Identifier"
+          },
+          "operator_profile": {
+            "$ref": "#/components/schemas/OperatorProfileProjection"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "pending_cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Cost Usd"
+          },
+          "phase": {
+            "enum": [
+              "ADMITTED",
+              "EXECUTING",
+              "WAITING_FOR_OPERATOR",
+              "ACCEPTED",
+              "REJECTED",
+              "BLOCKED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "profile_id": {
+            "format": "uuid",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          },
+          "provider_mode": {
+            "enum": [
+              "live",
+              "fake",
+              "disabled"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "receipt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Id"
+          },
+          "resolved_inputs": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedInput"
+            },
+            "title": "Resolved Inputs",
+            "type": "array"
+          },
+          "review_status": {
+            "default": "PENDING",
+            "enum": [
+              "PENDING",
+              "ACCEPTED",
+              "REJECTED"
+            ],
+            "title": "Review Status",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_kind": {
+            "enum": [
+              "IDEA_DISCOVERY",
+              "IDEA_REFINEMENT"
+            ],
+            "title": "Task Kind",
+            "type": "string"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageItem"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "experiment_id",
+          "task_kind",
+          "status",
+          "provider_mode",
+          "created_at",
+          "phase",
+          "profile_id",
+          "profile_version",
+          "operator_profile"
+        ],
+        "title": "RunView",
+        "type": "object"
+      },
       "SelectCandidateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -757,6 +1556,51 @@
           "operator"
         ],
         "title": "SessionResponse",
+        "type": "object"
+      },
+      "SetupIdeaProfileRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/OperatorProfileInput"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "title": "SetupIdeaProfileRequest",
+        "type": "object"
+      },
+      "SetupIdeaProfileResult": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "profile_id": {
+            "format": "uuid",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile_id",
+          "profile_version",
+          "budget_usd"
+        ],
+        "title": "SetupIdeaProfileResult",
         "type": "object"
       },
       "StartProposalRequest": {
@@ -848,6 +1692,59 @@
           "counts"
         ],
         "title": "SystemStatus",
+        "type": "object"
+      },
+      "UsageItem": {
+        "additionalProperties": false,
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "knowledge": {
+            "enum": [
+              "ESTIMATE",
+              "FINAL",
+              "UNAVAILABLE"
+            ],
+            "title": "Knowledge",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "component",
+          "quantity",
+          "cost",
+          "currency",
+          "knowledge"
+        ],
+        "title": "UsageItem",
         "type": "object"
       },
       "ValidationError": {
@@ -1103,6 +2000,226 @@
         "summary": "Activity Events"
       }
     },
+    "/operator/agent-runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_operator_agent_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run"
+      }
+    },
+    "/operator/agent-runs/{run_id}/cancel": {
+      "post": {
+        "operationId": "cancel_run_operator_agent_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelRunResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Run"
+      }
+    },
+    "/operator/agent-runs/{run_id}/events": {
+      "get": {
+        "operationId": "get_run_events_operator_agent_runs__run_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunEvents"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run Events"
+      }
+    },
+    "/operator/agent-runs/{run_id}/reject": {
+      "post": {
+        "operationId": "reject_run_operator_agent_runs__run_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Run"
+      }
+    },
+    "/operator/agent-runs/{run_id}/result": {
+      "get": {
+        "operationId": "get_run_result_operator_agent_runs__run_id__result_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run Result"
+      }
+    },
     "/operator/experiments": {
       "post": {
         "operationId": "create_experiment_operator_experiments_post",
@@ -1249,6 +2366,56 @@
           }
         },
         "summary": "Accept Experiment Idea"
+      }
+    },
+    "/operator/experiments/{experiment_id}/agent-runs": {
+      "post": {
+        "operationId": "admit_run_operator_experiments__experiment_id__agent_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRef"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admit Run"
       }
     },
     "/operator/experiments/{experiment_id}/discover": {
@@ -1458,6 +2625,44 @@
           }
         },
         "summary": "Select Experiment Candidate"
+      }
+    },
+    "/operator/idea-profile": {
+      "post": {
+        "operationId": "setup_idea_profile_operator_idea_profile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupIdeaProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupIdeaProfileResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Setup Idea Profile"
       }
     },
     "/operator/ideas/generate": {

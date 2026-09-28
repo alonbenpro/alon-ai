@@ -4,6 +4,7 @@ from fastapi import Request, Response
 
 from alon_ai.api.auth_adapters import AuthCookieAdapter
 from alon_ai.api.operator_stream import OperatorStreamAdapter
+from alon_ai.services.agent_run_service import AgentRunService
 from alon_ai.services.auth import COOKIE_NAME, AuthUseCases
 from alon_ai.services.experiments import ExperimentService
 from alon_ai.services.health import HealthService
@@ -37,6 +38,12 @@ def get_experiment_service(request: Request) -> ExperimentService:
 
 def get_intake_service(request: Request) -> IntakeService:
     return request.app.state.experiment_service_factory.intake_for_operator(
+        request.state.operator.id
+    )
+
+
+def get_agent_run_service(request: Request) -> AgentRunService:
+    return request.app.state.experiment_service_factory.agent_runs_for_operator(
         request.state.operator.id
     )
 

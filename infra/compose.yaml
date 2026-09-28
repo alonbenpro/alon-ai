@@ -54,8 +54,15 @@ services:
       ALON_AI_DBOS_SYSTEM_DATABASE_URL: postgresql://alon_ai:alon_ai@postgres:5432/alon_ai
       ALON_AI_ENVIRONMENT: ${ALON_AI_ENVIRONMENT:-development}
       ALON_AI_OUTREACH_ENABLED: "false"
-      ALON_AI_PROVIDER_MODE: disabled
+      ALON_AI_PROVIDER_MODE: ${ALON_AI_PROVIDER_MODE:-disabled}
+      ALON_AI_IDEA_INTAKE_BUDGET_USD: ${ALON_AI_IDEA_INTAKE_BUDGET_USD:-}
+      ALON_AI_L07_LIVE_CONFIG_PATH: /app/.local/live/live-idea.json
+      ALON_AI_L07_SECRET_ROOT: /app/.local/live/secrets
+      ALON_AI_L07_SECRET_KEY_FILE: /app/.local/live/live-secret.key
+      ALON_AI_L07_SECRET_KEY_VERSION: v1
     command: ["python", "-m", "alon_ai.worker.main"]
+    volumes:
+      - local_live_private:/app/.local:ro
     depends_on:
       postgres:
         condition: service_healthy

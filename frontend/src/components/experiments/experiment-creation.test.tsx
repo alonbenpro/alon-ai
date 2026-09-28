@@ -2,6 +2,7 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExperimentCreation } from "@/components/experiments/experiment-creation";
+import type { components } from "@/lib/api/schema";
 
 const runtime = { provider_mode: "fake", ready: true } as const;
 const advice = {
@@ -27,6 +28,32 @@ const candidates = [
   { artifact_id: "candidate-2", title: "Queue visibility", hypothesis: "Reduce missed appointments", demand_status: "UNVERIFIED", uncertainties: ["Workflow fit"] },
   { artifact_id: "candidate-3", title: "Follow-up reminders", hypothesis: "Reduce no-shows", demand_status: "UNVERIFIED", uncertainties: ["Consent"] },
 ];
+type FetchHandler = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+function stubExperimentFetch(fetcher: FetchHandler) {
+  const fallbackRun = (runId: string): components["schemas"]["RunView"] => ({
+    run_id: runId, experiment_id: "exp-1", task_kind: "IDEA_REFINEMENT", status: "SUCCEEDED", phase: "WAITING_FOR_OPERATOR",
+    provider_mode: "fake", created_at: "2026-09-28T08:00:00Z", profile_id: "profile-1", profile_version: 1,
+    operator_profile: { profile_id: "profile-1", version: 1, content_hash: "profile-hash", capabilities: [], constraints: [] },
+    review_status: "PENDING", cancel_requested: false, cancel_confirmed: false,
+  });
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const path = String(input);
+    const match = path.match(/^\/api\/operator\/agent-runs\/([^/]+)(?:\/(events|result))?$/);
+    if (match && init?.method !== "POST") {
+      const [, runId, suffix] = match;
+      if (suffix === "events") return Response.json({ events: [] });
+      if (suffix === "result") return Response.json({ run_id: runId, status: "SUCCEEDED", output: null, usage: [] });
+      return Response.json(fallbackRun(runId));
+    }
+    return fetcher(input, init);
+  }));
+}
+function stubSavedSnapshot(snapshot: unknown) {
+  stubExperimentFetch(async (input) => {
+    if (String(input) === "/api/operator/experiments/exp-1") return Response.json(snapshot);
+    throw new Error(`Unexpected request: ${String(input)}`);
+  });
+}
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); sessionStorage.clear(); });
 
 describe("experiment creation checkpoint", () => {
@@ -54,7 +81,7 @@ describe("experiment creation checkpoint", () => {
     const started = { ...saved, idea_seed: "  Clinic idea\n", state: "REFINEMENT_IN_PROGRESS",
       draft: false, stage: "IDEA_REFINEMENT", stage_status: "RUNNING", latest_run_id: "run-1" };
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json(started)).mockResolvedValue(Response.json(started));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     const first = render(<ExperimentCreation runtime={runtime} />);
     fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "  Clinic idea\n" } });
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
@@ -76,7 +103,7 @@ describe("experiment creation checkpoint", () => {
         parent_artifact_id: "candidate-2", title: "Queue visibility", hypothesis: "  New wording\n",
         idea_seed: "  New wording\n", origin: "OPERATOR_EDIT", run_id: null }] };
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json(draft)).mockResolvedValueOnce(Response.json(edited));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation runtime={runtime} />);
     fireEvent.click(screen.getByRole("button", { name: "Generate an idea" }));
     expect(await screen.findByText("Clinic intake")).toBeInTheDocument();
@@ -98,7 +125,7 @@ describe("experiment creation checkpoint", () => {
       stage: "IDEA_REFINEMENT", stage_status: "RUNNING", latest_run_id: "run-2" };
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json(draft)).mockResolvedValueOnce(Response.json(started))
       .mockResolvedValue(Response.json(started));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     const first = render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("radio", { name: /queue visibility/i }));
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
@@ -119,7 +146,7 @@ describe("experiment creation checkpoint", () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, draft: true, mode: "SYSTEM_DISCOVERY",
       idea_seed: null, state: "AWAITING_SELECTION", candidates, proposal_history: history,
       stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT" }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     expect(await screen.findByText("v2 · Your edit")).toBeInTheDocument();
     expect(screen.getByText(/Earlier versions/).closest("details")).not.toHaveAttribute("open");
@@ -136,7 +163,7 @@ describe("experiment creation checkpoint", () => {
       proposal_history: [{ artifact_id: "revision-1", version: 2, parent_artifact_id: "candidate-2",
         title: "Queue visibility", hypothesis: "  Exact operator edit\n", idea_seed: "  Exact operator edit\n",
         origin: "OPERATOR_EDIT", run_id: null }] }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     expect(await screen.findByText("v2 · Your edit")).toBeInTheDocument();
     expect(fetcher).toHaveBeenCalledOnce();
@@ -144,7 +171,7 @@ describe("experiment creation checkpoint", () => {
 
   it("shows a targeted profile block instead of inventing setup values", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ detail: "OPERATOR_PROFILE_REQUIRED" }, { status: 409 }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation runtime={runtime} />);
     fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "Clinic idea" } });
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
@@ -155,7 +182,7 @@ describe("experiment creation checkpoint", () => {
   });
 
   it("keeps disabled live mode blocked and never switches to recorded mode", () => {
-    const fetcher = vi.fn(); vi.stubGlobal("fetch", fetcher);
+    const fetcher = vi.fn(); stubExperimentFetch(fetcher);
     render(<ExperimentCreation runtime={{ provider_mode: "disabled", ready: false }} />);
     expect(screen.getByText("Runtime blocked")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Generate an idea" })).toBeDisabled();
@@ -167,7 +194,7 @@ describe("experiment creation checkpoint", () => {
   it("requires explicit confirmation before a live idea launch", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, draft: false,
       stage: "IDEA_REFINEMENT", stage_status: "RUNNING", state: "REFINEMENT_IN_PROGRESS" }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation runtime={{ provider_mode: "live", ready: true }} />);
     expect(screen.getByText(/generate directions with the Idea agent/i)).toBeInTheDocument();
     expect(screen.queryByText(/recorded example directions/i)).not.toBeInTheDocument();
@@ -199,7 +226,7 @@ describe("experiment creation checkpoint", () => {
       { artifact_id: "candidate-3", version: 2, parent_artifact_id: "candidate-2",
         title: "Follow-up reminders", hypothesis: "Reduce no-shows", origin: "GENERATED", run_id: "run-2" }] };
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json(draft)).mockResolvedValueOnce(Response.json(regenerated));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("radio", { name: /queue visibility/i }));
     fireEvent.click(screen.getByRole("button", { name: "Try more directions" }));
@@ -213,7 +240,7 @@ describe("experiment creation checkpoint", () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, draft: true,
       mode: "SYSTEM_DISCOVERY", idea_seed: null, state: "DISCOVERY_IN_PROGRESS",
       stage: "IDEA_DISCOVERY", stage_status: "RUNNING", candidates: [] }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     expect(await screen.findByText(/Idea discovery in progress/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Try more directions" })).not.toBeInTheDocument();
@@ -224,16 +251,20 @@ describe("experiment creation checkpoint", () => {
     const failed = { ...saved, draft: false, state: "REFINEMENT_FAILED", retry_safe: true,
       stage: "IDEA_REFINEMENT", stage_status: "BLOCKED", blocked_reason: "REFINEMENT_FAILED", latest_run_id: "run-1" };
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json(failed))
-      .mockResolvedValueOnce(Response.json({ run_id: "run-2", state: "AWAITING_REVIEW", advice, advice_source: "RECORDED_FAKE" }))
+      .mockResolvedValueOnce(Response.json({ run_id: "run-2", experiment_id: "exp-1", task_kind: "IDEA_REFINEMENT",
+        status: "RUNNING", provider_mode: "fake", created_at: "2026-09-28T08:00:00Z" }))
       .mockResolvedValueOnce(Response.json({ ...failed, state: "AWAITING_REVIEW", retry_safe: false,
         stage_status: "WAITING_FOR_INPUT", blocked_reason: null, latest_run_id: "run-2", advice,
         advice_source: "RECORDED_FAKE" }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("button", { name: "Retry refinement" }));
     expect(await screen.findByRole("heading", { name: advice.title })).toBeInTheDocument();
-    expect(fetcher.mock.calls[1][0]).toBe("/api/operator/experiments/exp-1/refine");
-    expect(JSON.parse(fetcher.mock.calls[1][1].body).idempotency_key).not.toBe("run-1");
+    expect(fetcher.mock.calls[1][0]).toBe("/api/operator/experiments/exp-1/agent-runs");
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({
+      task_kind: "IDEA_REFINEMENT", command_key: expect.any(String),
+    });
+    expect(JSON.parse(fetcher.mock.calls[1][1].body).command_key).not.toBe("run-1");
     expect(await screen.findByText("Waiting for input")).toBeInTheDocument();
     expect(fetcher).toHaveBeenCalledTimes(3);
   });
@@ -245,7 +276,7 @@ describe("experiment creation checkpoint", () => {
     const ready = { ...failed, state: "AWAITING_SELECTION", retry_safe: false,
       stage_status: "WAITING_FOR_INPUT", blocked_reason: null, candidates };
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json(failed)).mockResolvedValueOnce(Response.json(ready));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("button", { name: "Retry discovery" }));
     expect(await screen.findByText("Clinic intake")).toBeInTheDocument();
@@ -255,7 +286,7 @@ describe("experiment creation checkpoint", () => {
 
   it("continues a historical experiment that is awaiting its first refinement", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json(saved));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     expect(await screen.findByRole("button", { name: "Refine idea" })).toBeEnabled();
   });
@@ -264,7 +295,7 @@ describe("experiment creation checkpoint", () => {
     const fetcher = vi.fn().mockRejectedValueOnce(new Error("connection lost"))
       .mockResolvedValueOnce(Response.json({ ...saved, draft: false, state: "REFINEMENT_IN_PROGRESS",
         stage: "IDEA_REFINEMENT", stage_status: "RUNNING" }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     const first = render(<ExperimentCreation runtime={runtime} />);
     fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "  Clinic idea\n" } });
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
@@ -282,7 +313,7 @@ describe("experiment creation checkpoint", () => {
       .mockResolvedValueOnce(Response.json({ ...saved, state: "REFINEMENT_IN_PROGRESS" }))
       .mockResolvedValueOnce(Response.json({ ...saved, state: "REFINEMENT_IN_PROGRESS" }))
       .mockResolvedValueOnce(Response.json({ ...saved, state: "AWAITING_REVIEW", latest_run_id: "run-1", advice }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     await act(async () => { await Promise.resolve(); await Promise.resolve(); });
     expect(screen.getByText(/refinement in progress/i)).toBeInTheDocument();
@@ -297,7 +328,7 @@ describe("experiment creation checkpoint", () => {
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ ...saved, state: "AWAITING_REVIEW",
       latest_run_id: "run-1", advice }))
       .mockResolvedValueOnce(Response.json({ experiment_id: "exp-1", idea_brief_artifact_id: "idea-1", state: "IDEA_ACCEPTED" }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     const accept = await screen.findByRole("button", { name: "Accept and save idea" });
     expect(screen.getByText(/Suggested relationship: Clarifies core intent/)).toBeInTheDocument();
@@ -316,17 +347,35 @@ describe("experiment creation checkpoint", () => {
   });
 
   it("marks recorded advice as an example rather than a live agent result", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ...saved, state: "AWAITING_REVIEW",
-      latest_run_id: "run-1", advice, advice_source: "RECORDED_FAKE" })));
+    stubSavedSnapshot({ ...saved, state: "AWAITING_REVIEW",
+      latest_run_id: "run-1", advice, advice_source: "RECORDED_FAKE" });
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     expect(await screen.findByText("Recorded example · no live agent ran")).toBeInTheDocument();
     expect(screen.getByText("Full suggested idea and open questions").closest("details")).not.toHaveAttribute("open");
   });
 
+  it("keeps acceptance available for a legacy pending snapshot whose run record is missing", async () => {
+    const legacy = { ...saved, state: "AWAITING_REVIEW", latest_run_id: "legacy-run", advice,
+      advice_source: "RECORDED_FAKE" };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path === "/api/operator/experiments/exp-1") return Response.json(legacy);
+      if (path === "/api/operator/agent-runs/legacy-run") return Response.json({ detail: "Not Found" }, { status: 404 });
+      if (path.endsWith("/events")) return Response.json({ detail: "Not Found" }, { status: 404 });
+      throw new Error(`Unexpected request: ${path}`);
+    }));
+
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+
+    expect(await screen.findByRole("button", { name: "Accept and save idea" })).toBeDisabled();
+    expect(screen.getByText(/Legacy saved suggestion.*no run record/i)).toBeInTheDocument();
+    expect(screen.getAllByText(advice.title).length).toBeGreaterThan(0);
+  });
+
   it("shows the exact proposed title even when its selected direction had a shorter name", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ...saved, mode: "SYSTEM_DISCOVERY",
+    stubSavedSnapshot({ ...saved, mode: "SYSTEM_DISCOVERY",
       state: "AWAITING_REVIEW", candidates, selected_candidate_artifact_id: "candidate-1",
-      latest_run_id: "run-1", advice, advice_source: "RECORDED_FAKE" })));
+      latest_run_id: "run-1", advice, advice_source: "RECORDED_FAKE" });
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     expect(await screen.findByRole("heading", { name: advice.title })).toBeInTheDocument();
     expect(screen.getByText(/Selected direction:/)).toHaveTextContent("Clinic intake");
@@ -340,7 +389,7 @@ describe("experiment creation checkpoint", () => {
       .mockResolvedValueOnce(Response.json(reviewState))
       .mockResolvedValueOnce(Response.json({ experiment_id: "exp-1", idea_brief_artifact_id: "idea-1",
         state: "IDEA_ACCEPTED" }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     const first = render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     const accept = await screen.findByRole("button", { name: "Accept and save idea" });
     fireEvent.change(screen.getByRole("combobox", { name: /intent relationship/i }),
@@ -361,7 +410,7 @@ describe("experiment creation checkpoint", () => {
 
   it.each(["MATERIAL_PIVOT", "UNRELATED"])("blocks %s acceptance in the normal path", async (category) => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, state: "AWAITING_REVIEW",
-      latest_run_id: "run-1", advice })); vi.stubGlobal("fetch", fetcher);
+      latest_run_id: "run-1", advice })); stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     const select = await screen.findByRole("combobox", { name: /intent relationship/i });
     fireEvent.change(select, { target: { value: category } });
@@ -373,7 +422,7 @@ describe("experiment creation checkpoint", () => {
   it("blocks acceptance when the model proposes an unrelated relationship", async () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json({ ...saved, state: "AWAITING_REVIEW",
       latest_run_id: "run-1", advice: { ...advice, intent_relationship: "UNRELATED" } }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     const select = await screen.findByRole("combobox", { name: /intent relationship/i });
     fireEvent.change(select, { target: { value: "PRESERVES_CORE_INTENT" } });
@@ -404,7 +453,7 @@ describe("experiment creation checkpoint", () => {
     };
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json({ ...saved, state: "RETURN_REVIEW_REQUIRED",
       accepted_brief: returnAvailable.prior_brief.payload, return_available: returnAvailable }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
 
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
 
@@ -431,7 +480,7 @@ describe("experiment creation checkpoint", () => {
       .mockRejectedValueOnce(new Error("lost return response"))
       .mockResolvedValueOnce(Response.json(returnState))
       .mockResolvedValueOnce(Response.json({ experiment_id: "exp-1", cycle_id: "cycle-2", state: "AWAITING_REFINEMENT" }));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Start refinement from committed feedback" }));
@@ -459,7 +508,7 @@ describe("experiment creation checkpoint", () => {
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json(returnState))
       .mockResolvedValueOnce(Response.json({ detail: [{ loc: ["body", "feedback", "role"] }] }, { status: 422 }))
       .mockResolvedValueOnce(Response.json(returnState));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Start refinement from committed feedback" }));
@@ -479,7 +528,7 @@ describe("experiment creation checkpoint", () => {
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json(returnState))
       .mockResolvedValueOnce(Response.json({ detail: "FORGED_RESEARCH_FEEDBACK" }, { status: 409 }))
       .mockRejectedValueOnce(new Error("status offline"));
-    vi.stubGlobal("fetch", fetcher);
+    stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
 
     fireEvent.click(await screen.findByRole("button", { name: "Start refinement from committed feedback" }));
@@ -537,8 +586,8 @@ describe("experiment creation checkpoint", () => {
       feedback: { artifact_id: "feedback-1", version: 1, content_hash: "feedback-hash", payload: { change: ["Narrow to intake"] }, failed_dimensions: [] },
       evidence: { report_artifact_id: "report-1", recommendation_artifact_id: "recommendation-1" }, return_lineage: [],
     };
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(Response.json({ ...saved, state: "AWAITING_REVIEW",
-      latest_run_id: "run-return-1", advice: returnedAdvice, accepted_brief: prior, return_context: returnAvailable })));
+    stubSavedSnapshot({ ...saved, state: "AWAITING_REVIEW",
+      latest_run_id: "run-return-1", advice: returnedAdvice, accepted_brief: prior, return_context: returnAvailable });
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
 
     fireEvent.click(await screen.findByText("Full suggested idea and open questions"));

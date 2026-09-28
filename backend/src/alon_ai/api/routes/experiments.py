@@ -21,6 +21,10 @@ from alon_ai.api.schemas.experiments import (
 from alon_ai.services.experiments import ExperimentService
 from alon_ai.services.ideas import IdeaService
 from alon_ai.services.research import ResearchService
+from alon_ai.services.schemas.agent_runs import (
+    SetupIdeaProfileRequest,
+    SetupIdeaProfileResult,
+)
 from alon_ai.services.schemas.intake import ExperimentSnapshot
 
 router = APIRouter()
@@ -29,6 +33,13 @@ ExperimentServiceDependency = Annotated[
 ]
 IdeaServiceDependency = Annotated[IdeaService, Depends(get_idea_service)]
 ResearchServiceDependency = Annotated[ResearchService, Depends(get_research_service)]
+
+
+@router.post("/idea-profile", response_model=SetupIdeaProfileResult)
+async def setup_idea_profile(
+    body: SetupIdeaProfileRequest, service: ExperimentServiceDependency
+) -> SetupIdeaProfileResult:
+    return await service.setup_profile(body)
 
 
 @router.post("/experiments", response_model=ExperimentSnapshot, status_code=201)

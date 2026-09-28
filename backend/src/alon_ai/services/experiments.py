@@ -754,6 +754,20 @@ class ExperimentService:
 
         return await IntakeService(self.context).create(body)
 
+    async def setup_profile(self, body):
+        from alon_ai.services.schemas.agent_runs import SetupIdeaProfileResult
+
+        profile_id, version = await _profile(
+            self.context, body.profile, self.context.operator_id
+        )
+        return SetupIdeaProfileResult(
+            profile_id=profile_id,
+            profile_version=version,
+            budget_usd=str(self.context.settings.idea_intake_budget_usd)
+            if self.context.settings.idea_intake_budget_usd is not None
+            else None,
+        )
+
     async def runtime_status(self) -> ExperimentRuntimeStatus:
         return await experiment_runtime_status(self.context)
 

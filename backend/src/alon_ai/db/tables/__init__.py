@@ -1,6 +1,7 @@
 """Canonical metadata and registration of every existing SQL table."""
 
 from alon_ai.db.tables import accounting as accounting
+from alon_ai.db.tables import agent_runs as agent_runs
 from alon_ai.db.tables import contact as contact
 from alon_ai.db.tables import intake as intake
 from alon_ai.db.tables import openai as openai
