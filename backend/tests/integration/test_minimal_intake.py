@@ -154,6 +154,31 @@ async def test_missing_saved_context_is_one_targeted_block(governance_engine):
         assert response.json() == {"detail": "OPERATOR_PROFILE_REQUIRED"}
 
 
+async def test_guided_discovery_preserves_exact_text_and_command_identity(
+    governance_engine,
+):
+    app, _ = await configured_app(governance_engine)
+    guidance = "  Software services for small dental clinics.\nKeep it practical.  "
+    command_key = str(uuid4())
+    with TestClient(app) as client:
+        login(client)
+        body = {"command_key": command_key, "generation_guidance": guidance}
+        response = client.post("/operator/ideas/generate", json=body, headers=ORIGIN)
+        assert response.status_code == 200, response.text
+        saved = response.json()
+        assert saved["brief"]["guidance"] == guidance
+        assert (
+            client.post("/operator/ideas/generate", json=body, headers=ORIGIN).json()
+            == saved
+        )
+        conflict = client.post(
+            "/operator/ideas/generate",
+            json={**body, "generation_guidance": "A different market"},
+            headers=ORIGIN,
+        )
+        assert conflict.status_code == 409
+
+
 async def test_missing_budget_is_one_targeted_block(governance_engine):
     app, _ = await configured_app(governance_engine, with_budget=False)
     with TestClient(app) as client:

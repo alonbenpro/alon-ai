@@ -139,6 +139,105 @@
         "title": "AgentRunRequest",
         "type": "object"
       },
+      "ArtifactInput": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "format": "uuid",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ArtifactKind"
+          },
+          "role": {
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+            "title": "Role",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "kind",
+          "version",
+          "content_hash",
+          "role"
+        ],
+        "title": "ArtifactInput",
+        "type": "object"
+      },
+      "ArtifactKind": {
+        "enum": [
+          "EXPERIMENT_BRIEF",
+          "IDEA_SEED",
+          "IDEA_CANDIDATE",
+          "IDEA_BRIEF",
+          "RESEARCH_PLAN",
+          "RESEARCH_EVIDENCE",
+          "COMPETITOR_PROFILE",
+          "SERVICE_PROFILE",
+          "PRICE_OBSERVATION",
+          "MARKET_RESEARCH_REPORT",
+          "MARKET_RESEARCH_RECOMMENDATION",
+          "RESEARCH_FEEDBACK_BRIEF",
+          "OFFER_RESEARCH_GAP_BRIEF",
+          "DELIVERY_SCOPE_ESTIMATE",
+          "OFFER_DESIGN_INPUT_BUNDLE",
+          "COMMERCIAL_DESIGN_ENVELOPE",
+          "OFFER_DESIGN_PROPOSAL",
+          "OFFER_PACKAGE",
+          "OFFER_QUALIFICATION_PROFILE",
+          "INITIAL_OUTREACH_POLICY",
+          "OUTREACH_PROMPT_CONFIGURATION",
+          "OUTREACH_CONTEXT_BUNDLE",
+          "LEAD_OPPORTUNITY_NARRATIVE",
+          "CONVERSATION_STRATEGY",
+          "OUTREACH_SEQUENCE_PLAN",
+          "EMAIL_DRAFT",
+          "DRAFT_VALIDATION_RESULT",
+          "INBOUND_CONTENT_SAFETY_ASSESSMENT",
+          "SENDER_IDENTITY_DECISION",
+          "CONVERSATION_TURN_CONTEXT",
+          "REPLY_INTERPRETATION",
+          "CONVERSATION_FACT_LEDGER",
+          "CONVERSATION_DECISION",
+          "CONVERSION_READINESS_DECISION",
+          "ALLOWED_RESPONSE_OBJECTIVE",
+          "COMMERCIAL_DISCLOSURE_DECISION",
+          "NEGOTIATION_OPTION_SET",
+          "RESPONSE_PLAN",
+          "RESPONSE_DRAFT",
+          "RESPONSE_VALIDATION_RESULT",
+          "RECIPIENT_REFERRAL_EVIDENCE",
+          "LEAD_REQUESTED_FOLLOW_UP",
+          "INVOICE_HANDOFF_BRIEF",
+          "DEMO_REQUEST_BRIEF",
+          "MEETING_HANDOFF_BRIEF",
+          "OPERATOR_ACTION_REQUIRED",
+          "MANUAL_OUTCOME_EVENT",
+          "OPERATOR_AUTHORED_MESSAGE",
+          "VALIDATION_RESULT",
+          "ACCEPTANCE_RECEIPT"
+        ],
+        "title": "ArtifactKind",
+        "type": "string"
+      },
       "CancelRunRequest": {
         "additionalProperties": false,
         "properties": {
@@ -595,6 +694,18 @@
             "format": "uuid",
             "title": "Command Key",
             "type": "string"
+          },
+          "generation_guidance": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Guidance"
           }
         },
         "required": [
@@ -649,6 +760,51 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "MarketResearchCase": {
+        "additionalProperties": false,
+        "properties": {
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "finding_count": {
+            "title": "Finding Count",
+            "type": "integer"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "progress": {
+            "enum": [
+              "NOT_STARTED",
+              "PARTIAL"
+            ],
+            "title": "Progress",
+            "type": "string"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectResearchCase"
+            },
+            "title": "Subjects",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "subjects",
+          "finding_count",
+          "progress",
+          "limitations"
+        ],
+        "title": "MarketResearchCase",
         "type": "object"
       },
       "OperatorProfileInput": {
@@ -928,6 +1084,18 @@
             "format": "uuid",
             "title": "Command Key",
             "type": "string"
+          },
+          "generation_guidance": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Guidance"
           }
         },
         "required": [
@@ -956,6 +1124,226 @@
           "reason"
         ],
         "title": "RejectRunRequest",
+        "type": "object"
+      },
+      "ResearchCoverage": {
+        "additionalProperties": false,
+        "properties": {
+          "dimension": {
+            "enum": [
+              "CUSTOMER_PAIN",
+              "BUYER",
+              "DEMAND",
+              "ALTERNATIVES",
+              "COMPETITION",
+              "PRICING",
+              "REACHABILITY",
+              "DELIVERY"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "finding_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Finding Ids",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "UNRESEARCHED",
+              "SUPPORTED",
+              "CONTRADICTED",
+              "INCONCLUSIVE",
+              "UNAVAILABLE",
+              "MIXED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension",
+          "status",
+          "finding_ids"
+        ],
+        "title": "ResearchCoverage",
+        "type": "object"
+      },
+      "ResearchSourceView": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "default": "REFERENCE_ONLY",
+            "enum": [
+              "CURRENT_SOURCE",
+              "REFERENCE_ONLY"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "available_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Until"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "const": "FIRECRAWL",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "reference": {
+            "additionalProperties": false,
+            "properties": {
+              "call_id": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Call Id"
+              },
+              "evidence_id": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Evidence Id"
+              },
+              "expires_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Expires At"
+              },
+              "field": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Field"
+              },
+              "grant_id": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Grant Id"
+              },
+              "grant_version": {
+                "anyOf": [
+                  {
+                    "minimum": 1.0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Grant Version"
+              },
+              "kind": {
+                "enum": [
+                  "RETAINED_CONTENT",
+                  "GOVERNANCE_EVIDENCE"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "retained_id": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Retained Id"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "title": "SourceReference",
+            "type": "object"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "ResearchSourceView",
         "type": "object"
       },
       "ResolvedInput": {
@@ -1126,6 +1514,64 @@
         "title": "RunEvents",
         "type": "object"
       },
+      "RunReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "accrued": {
+            "title": "Accrued",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "model_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Identifier"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "receipt_id": {
+            "format": "uuid",
+            "title": "Receipt Id",
+            "type": "string"
+          },
+          "reserved": {
+            "title": "Reserved",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageItem"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "receipt_id",
+          "provider",
+          "state",
+          "currency",
+          "reserved",
+          "accrued"
+        ],
+        "title": "RunReceipt",
+        "type": "object"
+      },
       "RunRef": {
         "additionalProperties": false,
         "properties": {
@@ -1223,6 +1669,14 @@
             ],
             "title": "Output"
           },
+          "partial_options": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Partial Options",
+            "type": "array"
+          },
           "receipt_id": {
             "anyOf": [
               {
@@ -1234,6 +1688,44 @@
               }
             ],
             "title": "Receipt Id"
+          },
+          "receipts": {
+            "items": {
+              "$ref": "#/components/schemas/RunReceipt"
+            },
+            "title": "Receipts",
+            "type": "array"
+          },
+          "research_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Research Gaps",
+            "type": "array"
+          },
+          "research_status": {
+            "default": "NOT_STARTED",
+            "enum": [
+              "NOT_STARTED",
+              "RUNNING",
+              "ASSESSED",
+              "INCOMPLETE",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Research Status",
+            "type": "string"
+          },
+          "research_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Research Summary"
           },
           "run_id": {
             "format": "uuid",
@@ -1253,6 +1745,13 @@
             "title": "Status",
             "type": "string"
           },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RunStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
           "usage": {
             "items": {
               "$ref": "#/components/schemas/UsageItem"
@@ -1266,6 +1765,89 @@
           "status"
         ],
         "title": "RunResult",
+        "type": "object"
+      },
+      "RunStep": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "provider_call_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Call Id"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "result_artifact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Artifact Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "step_key": {
+            "format": "uuid",
+            "title": "Step Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_key",
+          "ordinal",
+          "kind",
+          "status",
+          "created_at"
+        ],
+        "title": "RunStep",
         "type": "object"
       },
       "RunView": {
@@ -1380,6 +1962,14 @@
             ],
             "title": "Output"
           },
+          "partial_options": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Partial Options",
+            "type": "array"
+          },
           "pending_cost_usd": {
             "anyOf": [
               {
@@ -1435,6 +2025,44 @@
             ],
             "title": "Receipt Id"
           },
+          "receipts": {
+            "items": {
+              "$ref": "#/components/schemas/RunReceipt"
+            },
+            "title": "Receipts",
+            "type": "array"
+          },
+          "research_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Research Gaps",
+            "type": "array"
+          },
+          "research_status": {
+            "default": "NOT_STARTED",
+            "enum": [
+              "NOT_STARTED",
+              "RUNNING",
+              "ASSESSED",
+              "INCOMPLETE",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Research Status",
+            "type": "string"
+          },
+          "research_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Research Summary"
+          },
           "resolved_inputs": {
             "items": {
               "$ref": "#/components/schemas/ResolvedInput"
@@ -1481,6 +2109,13 @@
             ],
             "title": "Status",
             "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RunStep"
+            },
+            "title": "Steps",
+            "type": "array"
           },
           "task_kind": {
             "enum": [
@@ -1603,6 +2238,310 @@
         "title": "SetupIdeaProfileResult",
         "type": "object"
       },
+      "SourceFindingPayload": {
+        "additionalProperties": false,
+        "description": "Original analytical observations only; quotations stay in licensed storage.",
+        "properties": {
+          "claim": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Claim",
+            "type": "string"
+          },
+          "dimension": {
+            "enum": [
+              "CUSTOMER_PAIN",
+              "BUYER",
+              "DEMAND",
+              "ALTERNATIVES",
+              "COMPETITION",
+              "PRICING",
+              "REACHABILITY",
+              "DELIVERY"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "evidence_status": {
+            "enum": [
+              "SUPPORTED",
+              "CONTRADICTED",
+              "INCONCLUSIVE",
+              "UNAVAILABLE"
+            ],
+            "title": "Evidence Status",
+            "type": "string"
+          },
+          "finding": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Finding",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "maxLength": 4000,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Limitations",
+            "type": "array"
+          },
+          "research_schema": {
+            "const": "SOURCE_FINDING_V1",
+            "default": "SOURCE_FINDING_V1",
+            "title": "Research Schema",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "step_key": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Step Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "step_key",
+          "dimension",
+          "claim",
+          "finding",
+          "evidence_status",
+          "limitations"
+        ],
+        "title": "SourceFindingPayload",
+        "type": "object"
+      },
+      "SourceFindingView": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "format": "uuid",
+                "title": "Artifact Id",
+                "type": "string"
+              },
+              "content_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Content Hash",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/ArtifactKind"
+              },
+              "role": {
+                "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+                "title": "Role",
+                "type": "string"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "version": {
+                "minimum": 1.0,
+                "title": "Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "kind",
+              "version",
+              "content_hash",
+              "role"
+            ],
+            "title": "ArtifactInput",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "observation": {
+            "$ref": "#/components/schemas/SourceFindingPayload"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchSourceView"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "subject": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "format": "uuid",
+                "title": "Artifact Id",
+                "type": "string"
+              },
+              "content_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Content Hash",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/ArtifactKind"
+              },
+              "role": {
+                "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+                "title": "Role",
+                "type": "string"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "version": {
+                "minimum": 1.0,
+                "title": "Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "kind",
+              "version",
+              "content_hash",
+              "role"
+            ],
+            "title": "ArtifactInput",
+            "type": "object"
+          }
+        },
+        "required": [
+          "artifact",
+          "subject",
+          "observation",
+          "sources",
+          "created_at"
+        ],
+        "title": "SourceFindingView",
+        "type": "object"
+      },
+      "SourceReference": {
+        "additionalProperties": false,
+        "properties": {
+          "call_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id"
+          },
+          "evidence_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Id"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "grant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Id"
+          },
+          "grant_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Version"
+          },
+          "kind": {
+            "enum": [
+              "RETAINED_CONTENT",
+              "GOVERNANCE_EVIDENCE"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "retained_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retained Id"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "SourceReference",
+        "type": "object"
+      },
       "StartProposalRequest": {
         "additionalProperties": false,
         "properties": {
@@ -1647,6 +2586,109 @@
           "command_key"
         ],
         "title": "StartReturnRefinementRequest",
+        "type": "object"
+      },
+      "SubjectResearchCase": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchCoverage"
+            },
+            "title": "Coverage",
+            "type": "array"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/SourceFindingView"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "gaps": {
+            "items": {
+              "enum": [
+                "CUSTOMER_PAIN",
+                "BUYER",
+                "DEMAND",
+                "ALTERNATIVES",
+                "COMPETITION",
+                "PRICING",
+                "REACHABILITY",
+                "DELIVERY"
+              ],
+              "type": "string"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "mode": {
+            "enum": [
+              "CANDIDATE",
+              "SELECTED",
+              "SUPPLIED",
+              "REFINED"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "subject": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "format": "uuid",
+                "title": "Artifact Id",
+                "type": "string"
+              },
+              "content_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Content Hash",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/ArtifactKind"
+              },
+              "role": {
+                "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+                "title": "Role",
+                "type": "string"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "version": {
+                "minimum": 1.0,
+                "title": "Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "kind",
+              "version",
+              "content_hash",
+              "role"
+            ],
+            "title": "ArtifactInput",
+            "type": "object"
+          }
+        },
+        "required": [
+          "subject",
+          "mode",
+          "current",
+          "findings",
+          "coverage",
+          "gaps"
+        ],
+        "title": "SubjectResearchCase",
         "type": "object"
       },
       "SystemStatus": {
@@ -2520,6 +3562,46 @@
           }
         },
         "summary": "Refine Experiment"
+      }
+    },
+    "/operator/experiments/{experiment_id}/research-case": {
+      "get": {
+        "operationId": "get_research_case_operator_experiments__experiment_id__research_case_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketResearchCase"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Research Case"
       }
     },
     "/operator/experiments/{experiment_id}/returns/refine": {

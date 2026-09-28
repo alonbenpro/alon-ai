@@ -48,6 +48,7 @@ runs = table(
         ["record_operator_profiles.id", "record_operator_profiles.version"],
     ),
     UniqueConstraint("command_key"),
+    UniqueConstraint("run_id", "experiment_id"),
     UniqueConstraint("dbos_workflow_id"),
     CheckConstraint("task_kind IN ('IDEA_DISCOVERY','IDEA_REFINEMENT')"),
     CheckConstraint("provider_mode IN ('live','fake','disabled')"),

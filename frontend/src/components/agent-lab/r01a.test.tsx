@@ -40,6 +40,7 @@ const run = {
   experiment_id: "exp-r01a",
   task_kind: "IDEA_REFINEMENT",
   status: "SUCCEEDED",
+  research_status: "ASSESSED",
   phase: "WAITING_FOR_OPERATOR",
   provider_mode: "live",
   created_at: "2026-09-28T08:00:00Z",
@@ -67,6 +68,7 @@ const run = {
 const result = {
   run_id: "run-r01a",
   status: "SUCCEEDED",
+  research_status: "ASSESSED",
   output: advice,
   advice_source: "OPENAI",
   receipt_id: "receipt-1",
@@ -92,6 +94,29 @@ describe("R01A live idea run inspector", () => {
     render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
     expect(await screen.findByText("Recorded ledger cost")).toBeInTheDocument();
     expect(screen.queryByText("Actual cost")).not.toBeInTheDocument();
+  });
+
+  it("shows retained child steps and the parent receipt when the run includes them", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.endsWith("/events")) return Response.json(events);
+      if (path.endsWith("/result")) return Response.json(result);
+      return Response.json({ ...run, research_status: "INCOMPLETE", research_gaps: ["Buyer budget unknown"],
+        research_summary: { finding: "Initial buyer evidence is limited", limitations: ["One segment"],
+          unresolved_questions: ["Who signs the contract?"] },
+        receipts: [{ receipt_id: "receipt-brave", provider: "BRAVE", model_identifier: null,
+          state: "FINAL", currency: "USD", reserved: "0.01", accrued: "0.01", usage: [] }],
+        steps: [{ step_key: "step-1", ordinal: 1,
+        kind: "BRAVE_SEARCH", status: "SUCCEEDED", result_artifact_id: "finding-1", provider_call_id: "call-1" }] });
+    }));
+    render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+    expect(await screen.findByText("Child steps and receipts")).toBeInTheDocument();
+    expect(screen.getByText("receipt-1")).toBeInTheDocument();
+    expect(screen.getByText("INCOMPLETE")).toBeInTheDocument();
+    expect(screen.getByText("Initial buyer evidence is limited")).toBeInTheDocument();
+    expect(screen.getByText(/Buyer budget unknown/)).toBeInTheDocument();
+    expect(screen.getByText(/Provider receipts \(1\)/)).toBeInTheDocument();
+    expect(screen.getByText(/Result finding-1 · Call call-1/)).toBeInTheDocument();
   });
 
   it("reopens the saved run with exact input, output, cost, and separate review without starting another run", async () => {

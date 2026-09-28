@@ -327,6 +327,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operator/experiments/{experiment_id}/research-case": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Research Case */
+        get: operations["get_research_case_operator_experiments__experiment_id__research_case_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operator/experiments/{experiment_id}/returns/refine": {
         parameters: {
             query?: never;
@@ -534,6 +551,32 @@ export interface components {
              */
             task_kind: "IDEA_DISCOVERY" | "IDEA_REFINEMENT";
         };
+        /** ArtifactInput */
+        ArtifactInput: {
+            /**
+             * Artifact Id
+             * Format: uuid
+             */
+            artifact_id: string;
+            /** Content Hash */
+            content_hash: string;
+            kind: components["schemas"]["ArtifactKind"];
+            /** Role */
+            role: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Version */
+            version: number;
+        };
+        /**
+         * ArtifactKind
+         * @enum {string}
+         */
+        ArtifactKind: "EXPERIMENT_BRIEF" | "IDEA_SEED" | "IDEA_CANDIDATE" | "IDEA_BRIEF" | "RESEARCH_PLAN" | "RESEARCH_EVIDENCE" | "COMPETITOR_PROFILE" | "SERVICE_PROFILE" | "PRICE_OBSERVATION" | "MARKET_RESEARCH_REPORT" | "MARKET_RESEARCH_RECOMMENDATION" | "RESEARCH_FEEDBACK_BRIEF" | "OFFER_RESEARCH_GAP_BRIEF" | "DELIVERY_SCOPE_ESTIMATE" | "OFFER_DESIGN_INPUT_BUNDLE" | "COMMERCIAL_DESIGN_ENVELOPE" | "OFFER_DESIGN_PROPOSAL" | "OFFER_PACKAGE" | "OFFER_QUALIFICATION_PROFILE" | "INITIAL_OUTREACH_POLICY" | "OUTREACH_PROMPT_CONFIGURATION" | "OUTREACH_CONTEXT_BUNDLE" | "LEAD_OPPORTUNITY_NARRATIVE" | "CONVERSATION_STRATEGY" | "OUTREACH_SEQUENCE_PLAN" | "EMAIL_DRAFT" | "DRAFT_VALIDATION_RESULT" | "INBOUND_CONTENT_SAFETY_ASSESSMENT" | "SENDER_IDENTITY_DECISION" | "CONVERSATION_TURN_CONTEXT" | "REPLY_INTERPRETATION" | "CONVERSATION_FACT_LEDGER" | "CONVERSATION_DECISION" | "CONVERSION_READINESS_DECISION" | "ALLOWED_RESPONSE_OBJECTIVE" | "COMMERCIAL_DISCLOSURE_DECISION" | "NEGOTIATION_OPTION_SET" | "RESPONSE_PLAN" | "RESPONSE_DRAFT" | "RESPONSE_VALIDATION_RESULT" | "RECIPIENT_REFERRAL_EVIDENCE" | "LEAD_REQUESTED_FOLLOW_UP" | "INVOICE_HANDOFF_BRIEF" | "DEMO_REQUEST_BRIEF" | "MEETING_HANDOFF_BRIEF" | "OPERATOR_ACTION_REQUIRED" | "MANUAL_OUTCOME_EVENT" | "OPERATOR_AUTHORED_MESSAGE" | "VALIDATION_RESULT" | "ACCEPTANCE_RECEIPT";
         /** CancelRunRequest */
         CancelRunRequest: {
             /**
@@ -678,6 +721,8 @@ export interface components {
              * Format: uuid
              */
             command_key: string;
+            /** Generation Guidance */
+            generation_guidance?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -701,6 +746,25 @@ export interface components {
         LoginRequest: {
             /** Password */
             password: string;
+        };
+        /** MarketResearchCase */
+        MarketResearchCase: {
+            /**
+             * Experiment Id
+             * Format: uuid
+             */
+            experiment_id: string;
+            /** Finding Count */
+            finding_count: number;
+            /** Limitations */
+            limitations: string[];
+            /**
+             * Progress
+             * @enum {string}
+             */
+            progress: "NOT_STARTED" | "PARTIAL";
+            /** Subjects */
+            subjects: components["schemas"]["SubjectResearchCase"][];
         };
         /** OperatorProfileInput */
         OperatorProfileInput: {
@@ -824,6 +888,8 @@ export interface components {
              * Format: uuid
              */
             command_key: string;
+            /** Generation Guidance */
+            generation_guidance?: string | null;
         };
         /** RejectRunRequest */
         RejectRunRequest: {
@@ -834,6 +900,66 @@ export interface components {
             command_key: string;
             /** Reason */
             reason: string;
+        };
+        /** ResearchCoverage */
+        ResearchCoverage: {
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "CUSTOMER_PAIN" | "BUYER" | "DEMAND" | "ALTERNATIVES" | "COMPETITION" | "PRICING" | "REACHABILITY" | "DELIVERY";
+            /** Finding Ids */
+            finding_ids: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "UNRESEARCHED" | "SUPPORTED" | "CONTRADICTED" | "INCONCLUSIVE" | "UNAVAILABLE" | "MIXED";
+        };
+        /** ResearchSourceView */
+        ResearchSourceView: {
+            /**
+             * Availability
+             * @default REFERENCE_ONLY
+             * @enum {string}
+             */
+            availability: "CURRENT_SOURCE" | "REFERENCE_ONLY";
+            /** Available Until */
+            available_until?: string | null;
+            /** Provider */
+            provider?: "FIRECRAWL" | null;
+            /** SourceReference */
+            reference: {
+                /** Call Id */
+                call_id?: string | null;
+                /** Evidence Id */
+                evidence_id?: string | null;
+                /** Expires At */
+                expires_at?: string | null;
+                /** Field */
+                field?: string | null;
+                /** Grant Id */
+                grant_id?: string | null;
+                /** Grant Version */
+                grant_version?: number | null;
+                /**
+                 * Kind
+                 * @enum {string}
+                 */
+                kind: "RETAINED_CONTENT" | "GOVERNANCE_EVIDENCE";
+                /** Retained Id */
+                retained_id?: string | null;
+                /**
+                 * Schema Version
+                 * @default 1
+                 * @constant
+                 */
+                schema_version: 1;
+            };
+            /** Title */
+            title?: string | null;
+            /** Url */
+            url?: string | null;
         };
         /** ResolvedInput */
         ResolvedInput: {
@@ -911,6 +1037,28 @@ export interface components {
             /** Events */
             events: components["schemas"]["RunEvent"][];
         };
+        /** RunReceipt */
+        RunReceipt: {
+            /** Accrued */
+            accrued: string;
+            /** Currency */
+            currency: string;
+            /** Model Identifier */
+            model_identifier?: string | null;
+            /** Provider */
+            provider: string;
+            /**
+             * Receipt Id
+             * Format: uuid
+             */
+            receipt_id: string;
+            /** Reserved */
+            reserved: string;
+            /** State */
+            state: string;
+            /** Usage */
+            usage?: components["schemas"]["UsageItem"][];
+        };
         /** RunRef */
         RunRef: {
             /**
@@ -954,8 +1102,26 @@ export interface components {
             output?: {
                 [key: string]: unknown;
             } | null;
+            /** Partial Options */
+            partial_options?: {
+                [key: string]: unknown;
+            }[];
             /** Receipt Id */
             receipt_id?: string | null;
+            /** Receipts */
+            receipts?: components["schemas"]["RunReceipt"][];
+            /** Research Gaps */
+            research_gaps?: string[];
+            /**
+             * Research Status
+             * @default NOT_STARTED
+             * @enum {string}
+             */
+            research_status: "NOT_STARTED" | "RUNNING" | "ASSESSED" | "INCOMPLETE" | "OUTCOME_UNKNOWN";
+            /** Research Summary */
+            research_summary?: {
+                [key: string]: unknown;
+            } | null;
             /**
              * Run Id
              * Format: uuid
@@ -966,8 +1132,37 @@ export interface components {
              * @enum {string}
              */
             status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /** Steps */
+            steps?: components["schemas"]["RunStep"][];
             /** Usage */
             usage?: components["schemas"]["UsageItem"][];
+        };
+        /** RunStep */
+        RunStep: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Kind */
+            kind: string;
+            /** Ordinal */
+            ordinal: number;
+            /** Provider Call Id */
+            provider_call_id?: string | null;
+            /** Reason Code */
+            reason_code?: string | null;
+            /** Result Artifact Id */
+            result_artifact_id?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Step Key
+             * Format: uuid
+             */
+            step_key: string;
         };
         /** RunView */
         RunView: {
@@ -1010,6 +1205,10 @@ export interface components {
             output?: {
                 [key: string]: unknown;
             } | null;
+            /** Partial Options */
+            partial_options?: {
+                [key: string]: unknown;
+            }[];
             /** Pending Cost Usd */
             pending_cost_usd?: string | null;
             /**
@@ -1031,6 +1230,20 @@ export interface components {
             provider_mode: "live" | "fake" | "disabled";
             /** Receipt Id */
             receipt_id?: string | null;
+            /** Receipts */
+            receipts?: components["schemas"]["RunReceipt"][];
+            /** Research Gaps */
+            research_gaps?: string[];
+            /**
+             * Research Status
+             * @default NOT_STARTED
+             * @enum {string}
+             */
+            research_status: "NOT_STARTED" | "RUNNING" | "ASSESSED" | "INCOMPLETE" | "OUTCOME_UNKNOWN";
+            /** Research Summary */
+            research_summary?: {
+                [key: string]: unknown;
+            } | null;
             /** Resolved Inputs */
             resolved_inputs?: components["schemas"]["ResolvedInput"][];
             /**
@@ -1051,6 +1264,8 @@ export interface components {
              * @enum {string}
              */
             status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /** Steps */
+            steps?: components["schemas"]["RunStep"][];
             /**
              * Task Kind
              * @enum {string}
@@ -1099,6 +1314,119 @@ export interface components {
             /** Profile Version */
             profile_version: number;
         };
+        /**
+         * SourceFindingPayload
+         * @description Original analytical observations only; quotations stay in licensed storage.
+         */
+        SourceFindingPayload: {
+            /** Claim */
+            claim: string;
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "CUSTOMER_PAIN" | "BUYER" | "DEMAND" | "ALTERNATIVES" | "COMPETITION" | "PRICING" | "REACHABILITY" | "DELIVERY";
+            /**
+             * Evidence Status
+             * @enum {string}
+             */
+            evidence_status: "SUPPORTED" | "CONTRADICTED" | "INCONCLUSIVE" | "UNAVAILABLE";
+            /** Finding */
+            finding: string;
+            /** Limitations */
+            limitations: string[];
+            /**
+             * Research Schema
+             * @default SOURCE_FINDING_V1
+             * @constant
+             */
+            research_schema: "SOURCE_FINDING_V1";
+            /** Run Id */
+            run_id: string;
+            /** Step Key */
+            step_key: string;
+        };
+        /** SourceFindingView */
+        SourceFindingView: {
+            /** ArtifactInput */
+            artifact: {
+                /**
+                 * Artifact Id
+                 * Format: uuid
+                 */
+                artifact_id: string;
+                /** Content Hash */
+                content_hash: string;
+                kind: components["schemas"]["ArtifactKind"];
+                /** Role */
+                role: string;
+                /**
+                 * Schema Version
+                 * @default 1
+                 * @constant
+                 */
+                schema_version: 1;
+                /** Version */
+                version: number;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            observation: components["schemas"]["SourceFindingPayload"];
+            /** Sources */
+            sources: components["schemas"]["ResearchSourceView"][];
+            /** ArtifactInput */
+            subject: {
+                /**
+                 * Artifact Id
+                 * Format: uuid
+                 */
+                artifact_id: string;
+                /** Content Hash */
+                content_hash: string;
+                kind: components["schemas"]["ArtifactKind"];
+                /** Role */
+                role: string;
+                /**
+                 * Schema Version
+                 * @default 1
+                 * @constant
+                 */
+                schema_version: 1;
+                /** Version */
+                version: number;
+            };
+        };
+        /** SourceReference */
+        SourceReference: {
+            /** Call Id */
+            call_id?: string | null;
+            /** Evidence Id */
+            evidence_id?: string | null;
+            /** Expires At */
+            expires_at?: string | null;
+            /** Field */
+            field?: string | null;
+            /** Grant Id */
+            grant_id?: string | null;
+            /** Grant Version */
+            grant_version?: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "RETAINED_CONTENT" | "GOVERNANCE_EVIDENCE";
+            /** Retained Id */
+            retained_id?: string | null;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+        };
         /** StartProposalRequest */
         StartProposalRequest: {
             /**
@@ -1125,6 +1453,43 @@ export interface components {
              * Format: uuid
              */
             verdict_id: string;
+        };
+        /** SubjectResearchCase */
+        SubjectResearchCase: {
+            /** Coverage */
+            coverage: components["schemas"]["ResearchCoverage"][];
+            /** Current */
+            current: boolean;
+            /** Findings */
+            findings: components["schemas"]["SourceFindingView"][];
+            /** Gaps */
+            gaps: ("CUSTOMER_PAIN" | "BUYER" | "DEMAND" | "ALTERNATIVES" | "COMPETITION" | "PRICING" | "REACHABILITY" | "DELIVERY")[];
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "CANDIDATE" | "SELECTED" | "SUPPLIED" | "REFINED";
+            /** ArtifactInput */
+            subject: {
+                /**
+                 * Artifact Id
+                 * Format: uuid
+                 */
+                artifact_id: string;
+                /** Content Hash */
+                content_hash: string;
+                kind: components["schemas"]["ArtifactKind"];
+                /** Role */
+                role: string;
+                /**
+                 * Schema Version
+                 * @default 1
+                 * @constant
+                 */
+                schema_version: 1;
+                /** Version */
+                version: number;
+            };
         };
         /** SystemStatus */
         SystemStatus: {
@@ -1741,6 +2106,37 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_research_case_operator_experiments__experiment_id__research_case_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketResearchCase"];
                 };
             };
             /** @description Validation Error */

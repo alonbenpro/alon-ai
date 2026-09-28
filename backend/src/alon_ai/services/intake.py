@@ -44,7 +44,14 @@ class IntakeService:
         self.store = IntakeRepository(context.engine)
         self.records = ProductRecordsRepository(context.engine)
 
-    async def _roots(self, key: UUID, idea_seed: str | None, *, draft: bool) -> UUID:
+    async def _roots(
+        self,
+        key: UUID,
+        idea_seed: str | None,
+        *,
+        draft: bool,
+        generation_guidance: str | None = None,
+    ) -> UUID:
         context = self.context
         experiment_id = _id(context.operator_id, f"intake/{key}")
         existing = await repo.existing_experiment(
@@ -113,9 +120,10 @@ class IntakeService:
         brief_id = _id(experiment_id, "brief")
         brief = await repo.artifact_row(context.engine, brief_id)
         if brief is None:
-            payload = IntakePolicySnapshot(budget_usd=intake["budget_usd"]).model_dump(
-                mode="json"
-            )
+            payload = IntakePolicySnapshot(
+                budget_usd=intake["budget_usd"],
+                guidance=generation_guidance or "",
+            ).model_dump(mode="json")
             await self.records.append_artifact(
                 ArtifactDraft(
                     id=brief_id,
@@ -290,7 +298,12 @@ class IntakeService:
         return await self._dispatch(experiment_id, body.command_key, started=True)
 
     async def generate(self, body: GenerateIdeaRequest) -> dict:
-        experiment_id = await self._roots(body.command_key, None, draft=True)
+        experiment_id = await self._roots(
+            body.command_key,
+            None,
+            draft=True,
+            generation_guidance=body.generation_guidance,
+        )
         if not await self.store.claim(
             experiment_id, body.command_key, "GENERATE", body.model_dump(mode="json")
         ):

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 
 import type { components } from "@/lib/api/schema";
 import { RunInspector } from "@/components/agent-lab/run-inspector";
+import { ResearchCasePanel, type ResearchCase } from "@/components/experiments/research-case";
 
 type Mode = "USER_SEEDED_REFINEMENT" | "SYSTEM_DISCOVERY";
 type Relationship = "PRESERVES_CORE_INTENT" | "CLARIFIES_CORE_INTENT" | "NARROWS_CORE_INTENT" | "MATERIAL_PIVOT" | "UNRELATED";
@@ -126,6 +127,28 @@ function BriefDetails({ brief }: { brief: Brief }) {
   </dl>;
 }
 
+type ResearchSubject = ResearchCase["subjects"][number];
+const comparisonDimensions = ["DEMAND", "ALTERNATIVES", "DELIVERY", "BUYER", "CUSTOMER_PAIN"] as const;
+function CandidateFindings({ subject }: { subject: ResearchSubject | undefined }) {
+  if (!subject) return null;
+  return <span className="experiment-comparison" role="group" aria-label="Research comparison">
+    {comparisonDimensions.map((dimension) => {
+      const findings = subject.findings.filter((finding) => finding.observation.dimension === dimension);
+      if (!findings.length) return null;
+      return <span key={dimension} className="experiment-comparison__dimension"><strong>{dimension.toLowerCase()}</strong>
+        {findings.slice(0, 2).map((finding) => {
+          const sourced = finding.sources.some((source) => source.reference.kind === "RETAINED_CONTENT");
+          const text = `${finding.observation.claim}: ${finding.observation.finding}`;
+          return <span key={finding.artifact.artifact_id}>{text.length > 150 ? `${text.slice(0, 149)}…` : text}
+            <small>{sourced ? `${finding.observation.evidence_status.toLowerCase()} · retained source` : "Agent analysis · unverified"}</small>
+          </span>;
+        })}
+        {findings.length > 2 && <small>+{findings.length - 2} more in the research case</small>}
+      </span>;
+    })}
+  </span>;
+}
+
 function feedbackValue(value: unknown): string {
   if (Array.isArray(value)) return value.map((item) => feedbackValue(item)).join(" · ");
   if (typeof value === "object" && value !== null) return JSON.stringify(value);
@@ -140,6 +163,8 @@ function returnReviewMessage(reason: ReturnReview["reason_code"]) {
 
 export function ExperimentCreation({ experimentId, runtime }: { experimentId?: string; runtime: RuntimeReadiness | null }) {
   const [ideaSeed, setIdeaSeed] = useState("");
+  const [generationGuidance, setGenerationGuidance] = useState("");
+  const [researchCase, setResearchCase] = useState<ResearchCase | null>(null);
   const [revisionText, setRevisionText] = useState("");
   const [draft, setDraft] = useState(false);
   const [stage, setStage] = useState<Snapshot["stage"]>();
@@ -176,6 +201,10 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
     runId: string;
     status: components["schemas"]["RunView"]["review_status"];
   } | null>(null);
+  const [runResearchStatus, setRunResearchStatus] = useState<{
+    runId: string; taskKind: string; status: string; researchStatus?: string; blockedReason?: string | null;
+    partialOptions?: { artifact_id: string; title: string; hypothesis: string }[];
+  } | null>(null);
   const [liveConfirmed, setLiveConfirmed] = useState(false);
   const createPayload = useRef<components["schemas"]["CreateExperimentRequest"] | null>(null);
   const pendingIdeaCommand = useRef<{ path: string; payload: object } | null>(null);
@@ -184,6 +213,16 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
 
   const reportRunReviewStatus = useCallback((run: string, status: components["schemas"]["RunView"]["review_status"]) => {
     setRunReviewStatus({ runId: run, status });
+  }, []);
+  const reportRunResearchStatus = useCallback((run: { run_id: string; task_kind: string; status: string;
+    research_status?: string; blocked_reason?: string | null;
+    partial_options?: Record<string, unknown>[] }) => {
+    const partialOptions = run.partial_options?.filter((option): option is {
+      artifact_id: string; title: string; hypothesis: string;
+    } => typeof option.artifact_id === "string" && typeof option.title === "string" &&
+      typeof option.hypothesis === "string");
+    setRunResearchStatus({ runId: run.run_id, taskKind: run.task_kind, status: run.status,
+      researchStatus: run.research_status, blockedReason: run.blocked_reason, partialOptions });
   }, []);
 
   const apply = useCallback((saved: Snapshot) => {
@@ -206,6 +245,7 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
     }
     setRunId(saved.latest_run_id ?? ""); setAdvice(saved.advice); setAdviceSource(saved.advice_source);
     setRunReviewStatus((current) => current?.runId === saved.latest_run_id ? current : null);
+    setRunResearchStatus((current) => current?.runId === saved.latest_run_id ? current : null);
     for (const action of ["discover", "refine"] as const) {
       const pending = readPendingRunCommand(saved.experiment_id, action);
       const key = action === "discover" ? discoverKey : refineKey;
@@ -280,12 +320,13 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
     if (runtime.provider_mode === "live" && !liveConfirmed) { setMessage("Confirm the live call before continuing."); return; }
     const path = generate ? "/api/operator/ideas/generate" : "/api/operator/experiments";
     if (!createPayload.current) {
-      const payload = generate ? { command_key: crypto.randomUUID() } : createBody(ideaSeed, crypto.randomUUID());
+      const payload = generate ? { command_key: crypto.randomUUID(),
+        ...(generationGuidance.trim() ? { generation_guidance: generationGuidance } : {}) } : createBody(ideaSeed, crypto.randomUUID());
       createPayload.current = payload;
       pendingIdeaCommand.current = { path, payload };
       sessionStorage.setItem(draftKey, JSON.stringify({ ideaSeed, path, payload }));
     }
-    setBusy(generate ? "Generating ideas…" : "Starting experiment…"); setMessage("");
+    setBusy(generate ? "Discovering directions…" : "Starting experiment…"); setMessage("");
     try {
       const command = pendingIdeaCommand.current;
       if (!command) throw new Error("COMMAND_UNAVAILABLE");
@@ -313,7 +354,8 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       if (action === "revise") return { action, path: `/api/operator/ideas/${encodeURIComponent(id)}/revisions`,
         payload: { candidate_artifact_id: candidateChoice, idea_seed: text, command_key: key } };
       if (action === "regenerate") return { action, path: `/api/operator/ideas/${encodeURIComponent(id)}/generate`,
-        payload: { candidate_artifact_id: candidateChoice || undefined, command_key: key } };
+        payload: { candidate_artifact_id: candidateChoice || undefined, command_key: key,
+          ...(generationGuidance.trim() ? { generation_guidance: generationGuidance } : {}) } };
       return { action, path: `/api/operator/ideas/${encodeURIComponent(id)}/start`,
         payload: { candidate_artifact_id: candidateChoice, command_key: key } };
     })();
@@ -434,12 +476,47 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
   const canRefine = !draft && !statusUnavailable && !blockedReason && state === "AWAITING_REFINEMENT";
   const chosenDraft = candidates.find((candidate) => candidate.artifact_id === candidateChoice);
   const editChanged = !!chosenDraft && revisionText !== chosenDraft.hypothesis;
+  const visibleCandidates = candidates.filter((candidate) => !proposalHistory.some((revision) =>
+    revision.parent_artifact_id === candidate.artifact_id && candidates.some((item) => item.artifact_id === revision.artifact_id)));
+  const candidateResearch = (candidate: { artifact_id: string }) => {
+    if (researchCase?.experiment_id !== id) return undefined;
+    let artifactId: string | null = candidate.artifact_id;
+    const seen = new Set<string>();
+    while (artifactId && !seen.has(artifactId)) {
+      seen.add(artifactId);
+      const subject = researchCase.subjects.find((item) => item.subject.artifact_id === artifactId);
+      if (subject?.findings.length) return subject;
+      artifactId = proposalHistory.find((revision) => revision.artifact_id === artifactId)?.parent_artifact_id ?? null;
+    }
+    return undefined;
+  };
+  const discoveryIncomplete = draft && stageStatus === "WAITING_FOR_INPUT" &&
+    (visibleCandidates.length !== 3 || runtime?.provider_mode === "live" && visibleCandidates.some((candidate) =>
+      !candidateResearch(candidate)?.findings.length));
+  const incompleteRun = runResearchStatus?.runId === runId && runResearchStatus.taskKind === "IDEA_DISCOVERY" &&
+    (runResearchStatus.researchStatus === "INCOMPLETE" ||
+      runResearchStatus.status === "BLOCKED" && runResearchStatus.blockedReason === "RESEARCH_INCOMPLETE");
+  const blockedDiscovery = mode === "SYSTEM_DISCOVERY" && (state === "DISCOVERY_BLOCKED" || incompleteRun);
+  const runStatusPending = draft && mode === "SYSTEM_DISCOVERY" && !!runId && runtime?.provider_mode === "live" &&
+    runResearchStatus?.runId !== runId;
+  const savedPartialOptions = incompleteRun && runResearchStatus?.runId === runId ? runResearchStatus.partialOptions : undefined;
+  const partialOptions = (savedPartialOptions ?? visibleCandidates.map((candidate) => ({
+    artifact_id: candidate.artifact_id, title: candidate.title, hypothesis: candidate.hypothesis,
+  }))).map((candidate) => ({ id: candidate.artifact_id, title: candidate.title,
+    hypothesis: candidate.hypothesis, evidence: candidateResearch(candidate) }));
+  for (const subject of researchCase?.experiment_id === id ? researchCase.subjects : []) {
+    if (subject.mode === "CANDIDATE" && (!runId || subject.findings.some((finding) => finding.observation.run_id === runId)) &&
+      !partialOptions.some((option) => option.id === subject.subject.artifact_id)) {
+      partialOptions.push({ id: subject.subject.artifact_id, title: `Saved candidate ${partialOptions.length + 1}`,
+        hypothesis: "Candidate wording is unavailable in this snapshot.", evidence: subject });
+    }
+  }
 
   return <div className="experiment-workspace">
     <header className="experiment-heading"><div><p className="eyebrow">Experiment studio / 01</p><h1>{state === "AWAITING_REVIEW" ? "Review idea" : id ? "Experiment" : "New experiment"}</h1><p>{state === "AWAITING_REVIEW" ? "Review the proposed wording before accepting it." : "Bring an idea, or explore a few directions. You approve the final wording."}</p></div>
       {state !== "IDEA_ACCEPTED" && <div className={runtime?.provider_mode === "live" && runtime.ready ? "experiment-runtime experiment-runtime--live" : "experiment-runtime"} role="note">
         {runtime?.ready && runtime.provider_mode === "live" ? <><strong>Live OpenAI mode</strong><p>Idea calls may incur a cost.</p><label><input type="checkbox" checked={liveConfirmed} onChange={(event) => setLiveConfirmed(event.target.checked)} /> I understand this may incur a cost</label></> :
-          runtime?.ready && runtime.provider_mode === "fake" ? <><strong>Recorded demo · example output</strong><p>Prewritten Idea agent responses. No live research or Offer agent runs here.</p></> :
+          runtime?.ready && runtime.provider_mode === "fake" ? <><strong>Recorded demo · example output</strong><p>Prewritten Idea agent responses. No live research was performed.</p></> :
             <><strong>Runtime blocked</strong><p>No agent can start until the runtime is ready.</p></>}
       </div>}
     </header>
@@ -447,8 +524,9 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
     {(!id || !!ideaSeed) && <section className="experiment-form-panel" aria-labelledby="setup-heading">
       <div className="experiment-section-heading"><span>Starting point</span><h2 id="setup-heading">{id ? draft ? "Choose a direction" : "Your starting idea" : "What are you thinking about?"}</h2></div>
       {id ? <div className="experiment-saved-seed" title={`${draft ? "Proposal session" : "Experiment"} ${id}`}><div><span>{draft ? runtime?.provider_mode === "fake" ? "Exploring recorded examples" : "Exploring generated directions" : mode === "SYSTEM_DISCOVERY" ? "Selected direction" : "Original wording"}</span>{ideaSeed && <pre>{ideaSeed}</pre>}</div><p>{stageStatus === "RUNNING" ? "Agent running" : stageStatus === "BLOCKED" ? "Blocked" : stageStatus === "COMPLETE" ? "Complete" : "Waiting for input"}</p></div> :
-        <form onSubmit={(event) => void start(event)} noValidate><label className="experiment-field experiment-field--wide"><span>Your idea <small>(optional)</small></span><textarea aria-label="Your idea" name="ideaSeed" value={ideaSeed} onChange={(event) => { setIdeaSeed(event.target.value); setMessage(""); }} rows={3} placeholder="Describe the problem or opportunity in a sentence…" disabled={!!busy || createUncertain} /><small>{runtime?.provider_mode === "fake" ? "Your exact wording is kept. Or start with recorded example directions." : "Your exact wording is kept. Or generate directions with the Idea agent."}</small></label>
-          {message && <p className="experiment-error" role="alert">{message}</p>}<div className="experiment-action-row"><button type="submit" disabled={!runtime?.ready || !!busy}>{createUncertain ? "Retry start" : "Start experiment"} <span aria-hidden="true">↗</span></button><button type="button" className="experiment-secondary-action" disabled={!runtime?.ready || !!busy || createUncertain || !!ideaSeed.trim()} onClick={() => void start(undefined, true)}>Generate an idea</button></div></form>}
+        <form onSubmit={(event) => void start(event)} noValidate><label className="experiment-field experiment-field--wide"><span>Your idea <small>(optional)</small></span><textarea aria-label="Your idea" name="ideaSeed" value={ideaSeed} onChange={(event) => { setIdeaSeed(event.target.value); setMessage(""); }} rows={3} placeholder="Describe the problem or opportunity in a sentence…" disabled={!!busy || createUncertain} /><small>{runtime?.provider_mode === "fake" ? "Your exact wording is kept. Or explore recorded example directions." : "Your exact wording is kept. A supplied idea is researched and deepened in the same run."}</small></label>
+          {!ideaSeed.trim() && <label className="experiment-field experiment-field--wide"><span>Discovery guidance <small>(optional)</small></span><textarea aria-label="Discovery guidance" value={generationGuidance} maxLength={4000} onChange={(event) => setGenerationGuidance(event.target.value)} rows={2} placeholder="Audience, problem area, or constraints to explore…" disabled={!!busy || createUncertain} /></label>}
+          {message && <p className="experiment-error" role="alert">{message}</p>}<div className="experiment-action-row"><button type="submit" disabled={!runtime?.ready || !!busy}>{createUncertain ? "Retry start" : "Start experiment"} <span aria-hidden="true">↗</span></button><button type="button" className="experiment-secondary-action" disabled={!runtime?.ready || !!busy || createUncertain || !!ideaSeed.trim()} onClick={() => void start(undefined, true)}>Discover</button></div></form>}
     </section>}
     {blockedReason && <p className="experiment-error" role="status">{blockedReason.replaceAll("_", " ")}</p>}
     {id && <section className="experiment-review" aria-live="polite" aria-labelledby="refinement-heading"><div className="experiment-section-heading"><span>{draft ? runtime?.provider_mode === "fake" ? "Recorded directions" : "Generated directions" : "Next step"}</span><h2 id="refinement-heading">{draft ? "Pick a direction" : state === "AWAITING_REVIEW" ? "Review the proposed change" : state === "IDEA_ACCEPTED" ? "Idea approved" : "Experiment progress"}</h2></div>
@@ -459,10 +537,16 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       {!busy && canRetry && draft && state === "DISCOVERY_FAILED" && <button type="button" disabled={!runtime?.ready} onClick={() => void sendDraft("regenerate")}>Retry discovery</button>}
       {!busy && !statusUnavailable && (state === "DISCOVERY_BLOCKED" || state === "REFINEMENT_BLOCKED" || failed(state) && !retrySafe) && <div role="status"><p>This attempt needs server resolution before another run can start.</p><button type="button" onClick={() => void load(id)}>Check status</button></div>}
       {message && <p className="experiment-error" role="alert">{message}</p>}
-      {draft && stageStatus === "WAITING_FOR_INPUT" && !statusUnavailable && <div className="experiment-candidates"><p>{runtime?.provider_mode === "fake" ? "These are prewritten examples, not researched opportunities." : "These directions are hypotheses. Demand is unverified."} Pick one, change its wording if needed, then start.</p>
-        <fieldset disabled={!!busy || !!pendingDraft}><legend className="visually-hidden">Choose a direction</legend>{candidates.map((candidate) => <label key={candidate.artifact_id} className="experiment-candidate"><input type="radio" name="candidate" checked={candidateChoice === candidate.artifact_id} onChange={() => { setCandidateChoice(candidate.artifact_id); setRevisionText(candidate.hypothesis); }} /><span><strong>{candidate.title}</strong><span>{candidate.hypothesis}</span></span></label>)}</fieldset>
+      {blockedDiscovery && !statusUnavailable && <section className="experiment-candidates" aria-labelledby="partial-options-heading"><h3 id="partial-options-heading">Discovery incomplete</h3><p role="status">INCOMPLETE: {partialOptions.length} saved candidate {partialOptions.length === 1 ? "option is" : "options are"} available. Three researched directions were required. These partial results cannot be selected.</p>
+        {partialOptions.length === 0 ? <p>No candidate option was retained. Review the research case and run steps for saved progress.</p> : <div className="experiment-partial-options">{partialOptions.map((option) => <article key={option.id} className="experiment-candidate"><span><strong>{option.title}</strong><span>{option.hypothesis}</span><span>{option.evidence ? `${option.evidence.findings.length} findings · ${option.evidence.gaps.length} open gaps` : "Research record unavailable"}</span><CandidateFindings subject={option.evidence} /></span></article>)}</div>}
+      </section>}
+      {draft && stageStatus === "WAITING_FOR_INPUT" && !blockedDiscovery && !statusUnavailable && <div className="experiment-candidates"><p>{runtime?.provider_mode === "fake" ? "These are prewritten examples, not researched opportunities." : "Compare the retained findings and gaps. Demand remains unverified."} Pick one to deepen in this experiment.</p>
+        {runStatusPending && <p role="status">Checking the saved discovery run before selection.</p>}
+        {discoveryIncomplete && <p role="status"><strong>INCOMPLETE:</strong> {visibleCandidates.length !== 3 ? `Discovery returned ${visibleCandidates.length} of 3 required directions.` : "Research findings are missing for one or more directions."} Review the retained case and retry discovery when safe.</p>}
+        <fieldset disabled={!!busy || !!pendingDraft || !!discoveryIncomplete || !!runStatusPending}><legend className="visually-hidden">Choose a direction</legend>{visibleCandidates.map((candidate) => { const evidence = candidateResearch(candidate); return <label key={candidate.artifact_id} className="experiment-candidate"><input type="radio" name="candidate" checked={candidateChoice === candidate.artifact_id} onChange={() => { setCandidateChoice(candidate.artifact_id); setRevisionText(candidate.hypothesis); }} /><span><strong>{candidate.title}</strong><span>{candidate.hypothesis}</span><span>{runtime?.provider_mode === "fake" ? "Recorded example · no live evidence" : evidence ? `${evidence.findings.length} findings · ${evidence.gaps.length} open gaps` : "Research record unavailable"}</span>{evidence && evidence.subject.artifact_id !== candidate.artifact_id && <span>Findings belong to the earlier wording. This edit will be deepened after selection.</span>}<CandidateFindings subject={evidence} /></span></label>; })}</fieldset>
         {candidateChoice && <div className="experiment-edit"><label className="experiment-field"><span>Change this direction <small>(optional)</small></span><textarea aria-label="Refine this proposal" value={revisionText} disabled={!!busy || !!pendingDraft} onChange={(event) => setRevisionText(event.target.value)} rows={2} /></label><p>{editChanged ? "Keep your edit first so Start uses your words." : "Starting uses the selected wording above."}</p></div>}
-        {pendingDraft ? <><p>Confirmation is pending. Check saved status, then retry this exact command.</p><button type="button" disabled={!!busy} onClick={() => void sendDraft(pendingDraft.action)}>Retry {pendingDraft.action}</button></> : <div className="experiment-action-row"><button type="button" disabled={!candidateChoice || editChanged || !!busy} onClick={() => void sendDraft("start")}>Start experiment <span aria-hidden="true">↗</span></button>{candidateChoice && <button type="button" className="experiment-secondary-action" disabled={!editChanged || !revisionText.trim() || !!busy} onClick={() => void sendDraft("revise")}>Keep edited version</button>}<button type="button" className="experiment-text-action" disabled={!!busy} onClick={() => void sendDraft("regenerate")}>Try more directions</button></div>}
+        <label className="experiment-field"><span>Guidance for more directions <small>(optional)</small></span><textarea aria-label="Revision guidance" value={generationGuidance} maxLength={4000} disabled={!!busy || !!pendingDraft} onChange={(event) => setGenerationGuidance(event.target.value)} rows={2} placeholder="What should the next comparison explore or avoid?" /></label>
+        {pendingDraft ? <><p>Confirmation is pending. Check saved status, then retry this exact command.</p><button type="button" disabled={!!busy || !!runStatusPending} onClick={() => void sendDraft(pendingDraft.action)}>Retry {pendingDraft.action}</button></> : <div className="experiment-action-row"><button type="button" disabled={!candidateChoice || editChanged || !!busy || !!discoveryIncomplete || !!runStatusPending} onClick={() => void sendDraft("start")}>Select and deepen <span aria-hidden="true">↗</span></button>{candidateChoice && <button type="button" className="experiment-secondary-action" disabled={!editChanged || !revisionText.trim() || !!busy || !!discoveryIncomplete || !!runStatusPending} onClick={() => void sendDraft("revise")}>Keep edited version</button>}<button type="button" className="experiment-text-action" disabled={!!busy || !!runStatusPending} onClick={() => void sendDraft("regenerate")}>Try more directions</button></div>}
       </div>}
       {proposalHistory.length > 0 && <details className="experiment-history" aria-label="Proposal history"><summary>Earlier versions <span>{proposalHistory.length}</span></summary><p>Every generated direction and saved edit is kept here so you can trace how this idea changed.</p><ol>{proposalHistory.map((revision) => <li key={revision.artifact_id}><strong>v{revision.version} · {revision.origin === "OPERATOR_EDIT" ? "Your edit" : "Generated"}</strong><span>{revision.idea_seed ?? revision.hypothesis}</span></li>)}</ol></details>}
       {returnAvailable && <section className="experiment-return" aria-labelledby="return-heading"><div className="experiment-section-heading"><span>Research return</span><h3 id="return-heading">Research feedback return</h3></div>
@@ -476,15 +560,16 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       {!draft && mode === "SYSTEM_DISCOVERY" && candidates.length >= 3 && candidates.length <= 5 && <div className="experiment-candidates"><p>{runtime?.provider_mode === "fake" ? "Recorded example directions; no demand has been tested." : "Directions are hypotheses; demand has not been tested."}</p>
         {state === "AWAITING_SELECTION" ? <><fieldset disabled={!!busy || !!pendingSelection}><legend>Choose one direction to refine</legend>{candidates.map((candidate) => <label key={candidate.artifact_id} className="experiment-candidate"><input type="radio" name="candidate" checked={candidateChoice === candidate.artifact_id} onChange={() => setCandidateChoice(candidate.artifact_id)} /><span><strong>{candidate.title}</strong><span>{candidate.hypothesis}</span></span></label>)}</fieldset>{pendingSelection ? <><p>Selection confirmation is pending. Retry the saved choice and reason with the same command.</p><p>Reason: {pendingSelection.reason}</p><button type="button" disabled={!!busy || statusUnavailable} onClick={() => void select()}>Retry selection</button></> : <><label className="experiment-field"><span>Why this direction?</span><textarea aria-label="Reason for selection" value={selectionReason} onChange={(event) => setSelectionReason(event.target.value)} rows={2} /></label><button type="button" disabled={!candidateChoice || !selectionReason.trim() || !!busy || statusUnavailable} onClick={() => void select()}>Select direction</button></>}</> :
           selectedCandidate && <p className="experiment-selected">Selected direction: <strong>{selectedCandidate.title}</strong></p>}</div>}
-      {!busy && canRefine && <button type="button" disabled={!runtime?.ready} onClick={() => void run("refine")}>{returnAvailable ? "Refine returned idea" : mode === "SYSTEM_DISCOVERY" ? "Refine selected direction" : "Refine idea"}</button>}
+      {!busy && canRefine && <button type="button" disabled={!runtime?.ready} onClick={() => void run("refine")}>{returnAvailable ? "Refine returned idea" : "Retry deepening"}</button>}
       {advice && state === "AWAITING_REVIEW" && runReviewStatus?.runId === runId && runReviewStatus.status === "PENDING" && <div className="experiment-advice"><div className="experiment-advice__lead"><span className="eyebrow">{returnAvailable ? "Returned idea · awaiting approval" : adviceSource === "RECORDED_FAKE" ? "Recorded example · no live agent ran" : "Idea agent suggestion · awaiting approval"}</span><h3>{advice.title}</h3>{advice.core_intent !== advice.title && <p>{advice.core_intent}</p>}<small>This is suggested wording for your idea. It becomes the current version only if you approve it.</small></div><dl><div><dt>For</dt><dd>{advice.customer}</dd></div><div><dt>Problem</dt><dd>{advice.problem}</dd></div></dl>
         <details className="experiment-proposed-brief"><summary>Full suggested idea and open questions</summary><BriefDetails brief={advice} /><div className="experiment-uncertainties"><h4>Still unverified</h4><ul aria-label="Unknowns to test">{advice.uncertainties.map((item) => <li key={item}>{item}</li>)}</ul><p>Source references: {advice.grounding_refs.join(" · ")}</p></div></details>
         <div className="experiment-intent"><div><h4>Approve this version?</h4><p>Suggested relationship: {relationshipLabels[advice.intent_relationship]}. Your classification decides whether it can be accepted.</p></div>{pendingAcceptance ? <><p>Acceptance confirmation is pending. Retry the exact saved review command.</p><p>Operator classification: {relationshipLabels[pendingAcceptance.intent_relationship]}</p><p>Reason: {pendingAcceptance.intent_rationale}</p><button type="button" disabled={!!busy || statusUnavailable || !!blockedIntent || pendingAcceptance.run_id !== runId} onClick={() => void accept()}>Retry acceptance</button></> : <><div className="experiment-intent__fields"><label className="experiment-field"><span>How does it relate to your idea?</span><select aria-label="Intent relationship" value={relationship} onChange={(event) => { setRelationship(event.target.value as Relationship); setIntentConfirmed(false); }}><option value="">Choose a relationship</option><option value="PRESERVES_CORE_INTENT">Preserves core intent</option><option value="CLARIFIES_CORE_INTENT">Clarifies core intent</option><option value="NARROWS_CORE_INTENT">Narrows core intent</option><option value="MATERIAL_PIVOT">Material pivot</option><option value="UNRELATED">Unrelated</option></select></label><label className="experiment-field"><span>Why?</span><textarea aria-label="Reason for classification" value={intentRationale} onChange={(event) => setIntentRationale(event.target.value)} rows={2} /></label></div><label className="experiment-confirm"><input type="checkbox" checked={intentConfirmed} disabled={!relationship || !!blockedIntent} onChange={(event) => setIntentConfirmed(event.target.checked)} /> I confirm this classification and approve accepting this idea</label></>}
         {blockedIntent && <p className="experiment-error">{relationship === "UNRELATED" || advice.intent_relationship === "UNRELATED" ? "An unrelated proposal cannot be accepted here." : "A material pivot cannot be accepted here; it requires a separate approval decision."}</p>}{!pendingAcceptance && <button type="button" disabled={!relationship || !intentConfirmed || !intentRationale.trim() || !!blockedIntent || !!busy || statusUnavailable} onClick={() => void accept()}>Accept and save idea</button>}</div></div>}
       {state === "IDEA_ACCEPTED" && <div className="experiment-success" role="status"><strong>Experiment ready</strong>{acceptedBrief && <><h3>{acceptedBrief.title}</h3><p>{acceptedBrief.core_intent}</p></>}{adviceSource === "RECORDED_FAKE" && <p>Accepted from a recorded example. No live agent ran.</p>}<p>The accepted idea is saved as the current version.</p><a href={`/experiments/${encodeURIComponent(id)}`}>View experiment <span aria-hidden="true">↗</span></a></div>}
     </section>}
+    {id && runtime?.provider_mode === "live" && (draft || !!runId) && <ResearchCasePanel experimentId={id} refreshKey={`${runId}:${state}:${stageStatus}`} onCase={setResearchCase} />}
     {id && runId && <RunInspector key={`${runId}:${runReviewStatus?.runId === runId && runReviewStatus.status === "ACCEPTED" ? "accepted" : "review"}`} experimentId={id} runId={runId}
       legacyPendingReview={state === "AWAITING_REVIEW" && !!advice}
-      onReviewStatus={reportRunReviewStatus} onRejected={() => void load(id, true)} />}
+      onReviewStatus={reportRunReviewStatus} onResearchStatus={reportRunResearchStatus} onRejected={() => void load(id, true)} />}
   </div>;
 }

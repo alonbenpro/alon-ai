@@ -30,6 +30,7 @@ from alon_ai.db.repositories.openai_run import OpenAIRunOutcome, OpenAIRunStore
 from alon_ai.db.repositories.records import ProductRecordsRepository
 from alon_ai.integrations.schemas.provider import CallAttribution
 from alon_ai.services.agent_runs import OpenAIRuntime
+from alon_ai.services.combined_idea import CombinedIdeaRuntime
 from alon_ai.services.experiments import (
     AcceptRequest,
     ExperimentContext,
@@ -309,11 +310,12 @@ async def discover_experiment(
             advice.model_dump(mode="json") if success and advice is not None else None
         )
         durable = await OpenAIRunStore(engine).get(body.idempotency_key)
-        if (
-            not success
-            or durable is None
-            or durable.output_hash != sha256(canonical_json(payload))
-        ):
+        durable_hash = (
+            service.output_hash
+            if isinstance(service, CombinedIdeaRuntime)
+            else (durable.output_hash if durable else None)
+        )
+        if not success or durable_hash != sha256(canonical_json(payload)):
             retry_safe = await _confirmed_safe_retry(
                 engine,
                 body.idempotency_key,
@@ -349,7 +351,9 @@ async def discover_experiment(
                         "hypothesis": candidate.hypothesis,
                     },
                     created_by=request.operator_id,
-                    created_at=datetime.now(UTC),
+                    created_at=service.row["created_at"]
+                    if isinstance(service, CombinedIdeaRuntime)
+                    else datetime.now(UTC),
                 ),
                 command_key=_id(body.idempotency_key, f"candidate-command-{index}"),
             )
@@ -366,7 +370,11 @@ async def discover_experiment(
             "state": "AWAITING_SELECTION",
             "candidates": snapshot["candidates"],
         }
-    except ExperimentError:
+    except ExperimentError as error:
+        if error.detail == "RESEARCH_INCOMPLETE" and claimed_operation_id is not None:
+            await experiment_repository.block_discovery(
+                engine, body.idempotency_key, experiment_id, claimed_operation_id
+            )
         raise
     except Exception as error:
         if claimed_operation_id is not None:
@@ -450,19 +458,22 @@ async def select_experiment_candidate(
         role="SELECTED_CANDIDATE",
     )
     try:
-        receipt = await repository.select_idea_candidate(
-            experiment_id,
-            candidate_input,
-            selected_by=request.operator_id,
-            reason=body.reason,
-            command_key=_id(body.command_key, "candidate-selection-command"),
-        )
-        cycle = await repository.create_cycle(
-            experiment_id,
-            candidate=candidate_input,
-            selection_id=receipt.result_id,
-            command_key=_id(body.command_key, "selected-cycle-command"),
-        )
+        async with AgentRunRepository(request.engine).review_scope(
+            candidate_discovery_run_id, request.operator_id
+        ):
+            receipt = await repository.select_idea_candidate(
+                experiment_id,
+                candidate_input,
+                selected_by=request.operator_id,
+                reason=body.reason,
+                command_key=_id(body.command_key, "candidate-selection-command"),
+            )
+            cycle = await repository.create_cycle(
+                experiment_id,
+                candidate=candidate_input,
+                selection_id=receipt.result_id,
+                command_key=_id(body.command_key, "selected-cycle-command"),
+            )
     except ProductRecordsDenied as error:
         raise ExperimentError(409, error.reason) from None
     return {
@@ -604,9 +615,12 @@ async def refine_experiment(
         payload = advice.model_dump(mode="json") if success and advice else None
         if success and payload:
             durable_run = await OpenAIRunStore(engine).get(body.idempotency_key)
-            if durable_run is None or durable_run.output_hash != sha256(
-                canonical_json(payload)
-            ):
+            durable_hash = (
+                service.output_hash
+                if isinstance(service, CombinedIdeaRuntime)
+                else (durable_run.output_hash if durable_run else None)
+            )
+            if durable_hash != sha256(canonical_json(payload)):
                 success = False
                 payload = None
         retry_safe = not success and await _confirmed_safe_retry(
@@ -634,7 +648,11 @@ async def refine_experiment(
             if success and advice
             else None,
         }
-    except ExperimentError:
+    except ExperimentError as error:
+        if error.detail == "RESEARCH_INCOMPLETE" and claimed_operation_id is not None:
+            await experiment_repository.block_refinement(
+                engine, body.idempotency_key, experiment_id, claimed_operation_id
+            )
         raise
     except Exception as error:
         # No output can be accepted after an interrupted or denied run.

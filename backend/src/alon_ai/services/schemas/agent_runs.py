@@ -63,7 +63,38 @@ class OperatorProfileProjection(StrictRunDTO):
     constraints: list[str]
 
 
+class RunReceipt(StrictRunDTO):
+    receipt_id: UUID
+    provider: str
+    model_identifier: str | None = None
+    state: str
+    currency: str
+    reserved: str
+    accrued: str
+    usage: list[UsageItem] = Field(default_factory=list)
+
+
+class RunStep(StrictRunDTO):
+    step_key: UUID
+    ordinal: int
+    kind: str
+    status: str
+    reason_code: str | None = None
+    provider_call_id: UUID | None = None
+    result_artifact_id: UUID | None = None
+    created_at: datetime
+    finished_at: datetime | None = None
+
+
 class RunView(RunRef):
+    research_gaps: list[str] = Field(default_factory=list)
+    research_summary: dict[str, Any] | None = None
+    partial_options: list[dict[str, Any]] = Field(default_factory=list)
+    receipts: list[RunReceipt] = Field(default_factory=list)
+    steps: list[RunStep] = Field(default_factory=list)
+    research_status: Literal[
+        "NOT_STARTED", "RUNNING", "ASSESSED", "INCOMPLETE", "OUTCOME_UNKNOWN"
+    ] = "NOT_STARTED"
     phase: Literal[
         "ADMITTED",
         "EXECUTING",
@@ -96,6 +127,14 @@ class RunView(RunRef):
 
 
 class RunResult(StrictRunDTO):
+    research_gaps: list[str] = Field(default_factory=list)
+    research_summary: dict[str, Any] | None = None
+    partial_options: list[dict[str, Any]] = Field(default_factory=list)
+    receipts: list[RunReceipt] = Field(default_factory=list)
+    steps: list[RunStep] = Field(default_factory=list)
+    research_status: Literal[
+        "NOT_STARTED", "RUNNING", "ASSESSED", "INCOMPLETE", "OUTCOME_UNKNOWN"
+    ] = "NOT_STARTED"
     run_id: UUID
     status: RunStatus
     output: dict[str, Any] | None = None

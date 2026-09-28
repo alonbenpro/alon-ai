@@ -1,5 +1,5 @@
 #!/bin/sh
-# Private, loopback-only L05 operator stack. Run from any directory.
+# Private, loopback-only operator stack. Run from any directory.
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd -P)
@@ -21,7 +21,7 @@ Usage: scripts/local-dev.sh {up|down|status|help}
   down    Stop the stack while keeping the database volume and login material
   status  Show container status
   help    Show this help
-  Live OpenAI requires an explicit reviewed authority manifest and paid-call acknowledgment.
+  Live combined Idea requires a reviewed authority manifest and paid-call acknowledgment.
   See docs/runbooks/local-development.md; default provider mode is disabled.
 EOF
 }
@@ -56,15 +56,19 @@ docker_preflight() {
 }
 
 live_preflight() {
-    [ "${ALON_AI_L07_LIVE_ACK:-}" = I_ACCEPT_PAID_CALLS ] || fail 'Live OpenAI mode requires ALON_AI_L07_LIVE_ACK=I_ACCEPT_PAID_CALLS for each startup.'
-    [ -n "${ALON_AI_L07_LIVE_MANIFEST:-}" ] || fail 'Live OpenAI mode requires ALON_AI_L07_LIVE_MANIFEST pointing to the reviewed, non-secret authority manifest.'
-    case "$ALON_AI_L07_LIVE_MANIFEST" in
+    [ "${ALON_AI_R01A_LIVE_ACK:-}" = I_ACCEPT_PAID_CALLS ] || fail 'Live combined mode requires ALON_AI_R01A_LIVE_ACK=I_ACCEPT_PAID_CALLS for each startup.'
+    [ -n "${ALON_AI_R01A_LIVE_MANIFEST:-}" ] || fail 'Live combined mode requires ALON_AI_R01A_LIVE_MANIFEST pointing to the reviewed authority manifest beside its evidence documents.'
+    [ -n "${ALON_AI_IDEA_INTAKE_BUDGET_USD:-}" ] || fail 'Live combined mode requires a finite ALON_AI_IDEA_INTAKE_BUDGET_USD for API and worker.'
+    case "$ALON_AI_R01A_LIVE_MANIFEST" in
         /*) ;;
-        *) ALON_AI_L07_LIVE_MANIFEST="$ROOT/$ALON_AI_L07_LIVE_MANIFEST" ;;
+        *) ALON_AI_R01A_LIVE_MANIFEST="$ROOT/$ALON_AI_R01A_LIVE_MANIFEST" ;;
     esac
-    export ALON_AI_L07_LIVE_MANIFEST
-    python3 - "$ALON_AI_L07_LIVE_MANIFEST" <<'PY'
+    export ALON_AI_R01A_LIVE_MANIFEST
+    python3 - "$ALON_AI_R01A_LIVE_MANIFEST" "$ALON_AI_IDEA_INTAKE_BUDGET_USD" <<'PY'
 import os
+import json
+import re
+from decimal import Decimal, InvalidOperation
 import stat
 import sys
 from pathlib import Path
@@ -72,11 +76,104 @@ from pathlib import Path
 path = Path(sys.argv[1])
 try:
     info = path.lstat()
+    directory = path.parent.lstat()
 except OSError:
-    raise SystemExit("local-dev: live authority manifest is missing") from None
-if not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid() or info.st_mode & 0o022:
-    raise SystemExit("local-dev: live authority manifest must be an owner-owned regular file without group/world write permission")
+    raise SystemExit("local-dev: reviewed manifest or directory is missing") from None
+if (not stat.S_ISDIR(directory.st_mode) or directory.st_uid != os.getuid()
+        or stat.S_IMODE(directory.st_mode) != 0o700):
+    raise SystemExit("local-dev: reviewed manifest directory must be owner-owned and mode 0700")
+if (not stat.S_ISREG(info.st_mode) or info.st_uid != os.getuid()
+        or stat.S_IMODE(info.st_mode) != 0o600 or info.st_nlink != 1
+        or info.st_size > 1_048_576):
+    raise SystemExit("local-dev: reviewed manifest must be owner-owned regular file mode 0600 with one link")
+try:
+    manifest = json.loads(path.read_bytes())
+    documents = {proof['document'] for proof in manifest['proofs']}
+    if not documents:
+        raise ValueError('missing proofs')
+    for name in documents:
+        if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', name):
+            raise ValueError('invalid proof filename')
+        proof_info = (path.parent / name).lstat()
+        if (not stat.S_ISREG(proof_info.st_mode)
+                or proof_info.st_uid != os.getuid()
+                or stat.S_IMODE(proof_info.st_mode) != 0o600
+                or proof_info.st_nlink != 1 or proof_info.st_size > 10_000_000):
+            raise ValueError('invalid proof file')
+except (OSError, ValueError, KeyError, TypeError):
+    raise SystemExit("local-dev: reviewed evidence must be owner-owned regular files mode 0600 with one link") from None
+try:
+    budget = Decimal(sys.argv[2])
+except InvalidOperation:
+    budget = Decimal(0)
+if not budget.is_finite() or budget <= 0 or budget.as_tuple().exponent < -2:
+    raise SystemExit("local-dev: live budget must be a positive finite USD amount with at most two decimal places")
 PY
+}
+
+import_combined_review() {
+    manifest_dir=$(dirname -- "$ALON_AI_R01A_LIVE_MANIFEST")
+    manifest_name=$(basename -- "$ALON_AI_R01A_LIVE_MANIFEST")
+    compose run --rm --no-deps -T --user root -v "$manifest_dir:/app/reviewed-input:ro" live-provision python - "$manifest_name" <<'PY'
+import json
+import os
+import re
+import shutil
+import stat
+import sys
+from pathlib import Path
+
+source = Path('/app/reviewed-input')
+target = Path('/app/.local/.combined-review-input')
+try:
+    if target.is_symlink():
+        target.unlink()
+    elif target.exists():
+        shutil.rmtree(target)
+    name = sys.argv[1]
+    if not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', name):
+        raise ValueError('invalid manifest filename')
+    def private_bytes(filename, limit):
+        fd = os.open(source / filename, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        try:
+            info = os.fstat(fd)
+            if (not stat.S_ISREG(info.st_mode) or stat.S_IMODE(info.st_mode) != 0o600
+                    or info.st_nlink != 1 or info.st_size > limit):
+                raise ValueError('invalid reviewed file')
+            with os.fdopen(fd, 'rb', closefd=False) as stream:
+                data = stream.read(limit + 1)
+            if len(data) > limit:
+                raise ValueError('reviewed file too large')
+            return data
+        finally:
+            os.close(fd)
+    manifest = private_bytes(name, 1_048_576)
+    entries = json.loads(manifest)
+    documents = {p['document'] for p in entries['proofs']}
+    if not documents or any(not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9_.-]{0,127}', item) for item in documents):
+        raise ValueError('invalid reviewed document names')
+    target.mkdir(mode=0o700)
+    os.chown(target, 10001, 10001)
+    for filename in [name, *sorted(documents - {name})]:
+        data = manifest if filename == name else private_bytes(filename, 10_000_000)
+        fd = os.open(target / filename, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        try:
+            with os.fdopen(fd, 'wb', closefd=False) as output:
+                output.write(data)
+                output.flush()
+                os.fsync(output.fileno())
+            os.fchown(fd, 10001, 10001)
+        finally:
+            os.close(fd)
+except Exception:
+    if target.is_dir():
+        shutil.rmtree(target)
+    raise SystemExit('Private reviewed manifest/evidence import failed') from None
+PY
+}
+
+cleanup_combined_review() {
+    compose run --rm --no-deps -T --user root live-provision python -c 'import pathlib,shutil; p=pathlib.Path("/app/.local/.combined-review-input"); p.is_symlink() and p.unlink() or p.is_dir() and shutil.rmtree(p)'
 }
 
 compose_cli() {
@@ -266,12 +363,16 @@ case "${1:-help}" in
         if [ "${ALON_AI_PROVIDER_MODE:-disabled}" = live ]; then
             compose build live-provision || fail 'Live provisioner image build failed.'
             compose run --rm --no-deps --user root live-provision sh -c 'chown 10001:10001 /app/.local && chmod 700 /app/.local' || fail 'Live secret volume initialization failed.'
-            if ! compose run --rm --no-deps live-provision test -d /app/.local/live; then
-                compose run --rm --no-deps -v "$ALON_AI_L07_LIVE_MANIFEST:/app/authority-manifest.json:ro" live-provision test -f /app/authority-manifest.json || fail 'Live manifest is not a regular file inside Docker; place it in the checkout .local directory shared with Docker.'
-                compose run --rm --no-deps -v "$ALON_AI_L07_LIVE_MANIFEST:/app/authority-manifest.json:ro" live-provision python -m alon_ai.services.live_idea_provision --manifest /app/authority-manifest.json --data-dir /app/.local || fail 'Live authority/key provisioning failed; no model request was sent.'
-            else
-                compose run --rm --no-deps live-provision sh -c 'test -f /app/.local/live/live-idea.json && test -f /app/.local/live/live-secret.key && test -d /app/.local/live/secrets' || fail 'Live private volume is incomplete; review it privately before restarting.'
+            trap 'cleanup_combined_review >/dev/null 2>&1 || :' 0
+            trap 'exit 130' 2
+            trap 'exit 143' 15
+            import_combined_review || fail 'Reviewed combined authority/evidence import failed; no provider request was sent.'
+            manifest_name=$(basename -- "$ALON_AI_R01A_LIVE_MANIFEST")
+            if ! compose run --rm --no-deps live-provision python -m alon_ai.services.combined_idea_provision --manifest "/app/.local/.combined-review-input/$manifest_name" --data-dir /app/.local; then
+                fail 'Combined authority/key provisioning failed; no provider request was sent.'
             fi
+            cleanup_combined_review >/dev/null || fail 'Temporary reviewed input cleanup failed; inspect the private volume before continuing.'
+            trap - 0 2 15
         fi
         compose up -d --wait api worker frontend || fail 'Application services did not become ready. Inspect docker compose logs.'
         compose ps --status running --services worker | grep -Fx worker >/dev/null || fail 'Worker exited after startup. Inspect worker logs.'

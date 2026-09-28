@@ -81,56 +81,12 @@ Start an experiment from its multiline idea or generate, revise, and select a pr
 
 Live mode requires the separate reviewed model, rights, price, credential, and finite spend setup below, plus Alon's authorization for the actual paid call. A configured credential or a recorded run is not proof of live execution.
 
-### Explicit live OpenAI setup
+### Historical L07 OpenAI setup
 
-Live refinement is optional and can incur a charge. First run the ordinary stack to provision the local operator; copy the operator UUID printed by the provisioner. Prepare a **reviewed, non-secret** JSON manifest on the host with the fields in `LiveIdeaSetupManifest` (`backend/src/alon_ai/api/live_idea_provision.py`). It must identify that active operator, the OpenAI account/plan/terms and evidence references, current model pricing in **USD per one token** (not per million tokens), a current USD-to-ILS rate, effective and expiry times, request/token bounds, a budget cap, and control limits. Supply actual reviewed values; placeholder values do not confer rights. Include both `INPUT_TOKEN` and `OUTPUT_TOKEN` prices, and a `CACHED_TOKEN` price/bound when that usage is expected. Keep the underlying terms, price card, FX quote, and control approval available for audit; the manifest's reference strings alone do not prove their contents. This template is intentionally invalid until the placeholders are replaced:
-
-```json
-{
-  "operator_id": "<ACTIVE_OPERATOR_UUID>",
-  "effective_at": "<UTC_START>",
-  "expires_at": "<UTC_END>",
-  "account_handle": "<APPROVED_ACCOUNT_HANDLE>",
-  "plan_identifier": "<APPROVED_PLAN>",
-  "order_form_ref": "<APPROVED_ORDER_REF>",
-  "terms_version": "<REVIEWED_TERMS_VERSION>",
-  "rights_reference": "<REVIEWED_TERMS_EVIDENCE>",
-  "pricing_reference": "<CURRENT_PRICE_CARD_EVIDENCE>",
-  "fx_reference": "<CURRENT_USD_ILS_QUOTE_EVIDENCE>",
-  "control_reference": "<OPERATOR_LIMIT_APPROVAL>",
-  "model_identifier": "<APPROVED_MODEL>",
-  "reasoning_effort": "low",
-  "max_output_tokens": 300,
-  "timeout_seconds": 30,
-  "budget_cap_usd": "<APPROVED_USD_CAP>",
-  "secret_handle": "openai-idea-key",
-  "fx_rate": "<CURRENT_USD_TO_ILS_RATE>",
-  "retention_seconds": 60,
-  "quota_limit": 10,
-  "window_seconds": 3600,
-  "concurrency_limit": 1,
-  "failure_threshold": 2,
-  "failure_window_seconds": 3600,
-  "cooldown_seconds": 60,
-  "prices": [
-    {"component": "INPUT_TOKEN", "unit_price": "<CURRENT_USD_PER_ONE_INPUT_TOKEN>", "max_quantity": "<REVIEWED_INPUT_BOUND>"},
-    {"component": "OUTPUT_TOKEN", "unit_price": "<CURRENT_USD_PER_ONE_OUTPUT_TOKEN>", "max_quantity": "<REVIEWED_OUTPUT_BOUND_AT_LEAST_300>"}
-  ]
-}
-```
-
-Save the manifest under this checkout's ignored `.local/` directory, for example `.local/live-authority.json`. This path is shared with the local Docker engine; a host-only temporary directory may mount as a directory instead of the intended file. The manifest contains no key, so mode `0644` is acceptable inside the owner-only `.local` directory. The launcher verifies that Docker sees a regular file. For example:
-
-```sh
-export ALON_AI_PROVIDER_MODE=live
-export ALON_AI_L07_LIVE_ACK=I_ACCEPT_PAID_CALLS
-export ALON_AI_L07_LIVE_MANIFEST="$PWD/.local/live-authority.json"
-./scripts/local-dev.sh up
-```
-
-The launcher checks the explicit acknowledgment and owner-owned, non-writable manifest. On first live setup, a one-time service in the **same Compose project** registers the reviewed grant, prices, FX and controls atomically in the existing governance tables and prompts for the OpenAI API key without echoing it. It stores the encrypted credential, its encryption key, and the bound runtime config in a separate Compose volume owned by the API container's user; no key is put in the host manifest or printed. The API mounts that volume read-only. Later `up` commands reuse it without another key prompt. Keep the manifest path and acknowledgment set for each live startup, and use the same Compose project name for `up` and `down`. The worker remains provider-disabled and outreach-disabled.
-
-The browser names live mode before submission and requires a separate cost acknowledgment. Creation saves records, then the server executes the existing governed `USER_SEEDED_REFINEMENT` profile; only **Accept and save idea** creates an accepted IdeaBrief. A configured key by itself never grants authority: the bound grant, price, budget, operator, and time limits are checked before dispatch. If setup fails, no live request is sent; review the manifest and private-volume state deliberately rather than deleting the database volume. Replacing an existing live config/key needs a separate reviewed rotation procedure. No live paid call is part of the automated L07 verification.
+The prior OpenAI-only L07 manifest and provisioner are retained for historical
+replay. The local launcher now starts the R01A combined provider and does not
+accept `ALON_AI_L07_LIVE_ACK` or `ALON_AI_L07_LIVE_MANIFEST` as live setup.
+Follow the combined setup below for new local live runs.
 
 ## Development and verification
 
@@ -154,3 +110,146 @@ Use `docker compose` in the last command when the plugin is installed. `make tes
 - **Provisioning refused:** an existing operator was disabled or has a different subject. Review the operator row and the intended identity; startup will not overwrite it.
 - **Migration/readiness failure:** inspect `docker compose -f infra/compose.yaml logs postgres api worker frontend` (or `docker-compose`). The launcher stops before app startup if migration or provisioning fails. PostgreSQL data is retained.
 - **npm cache permission error during host `make setup`:** use `npm_config_cache="$(mktemp -d)" make setup`; do not use `sudo npm` or change ownership of unrelated data.
+
+## Reviewed R01A combined provider setup
+
+Combined Idea execution requires OpenAI, Brave, and Firecrawl authority together.
+Run the ordinary disabled stack once to create and identify the active local
+operator. Then prepare the reviewed manifest and evidence. The live launcher
+provisions the combined runtime under the API and worker UID in the same Compose
+project. Provisioning makes no provider calls.
+
+Prepare an owner-private directory (`0700`) containing a reviewed manifest and
+its evidence documents, each regular file mode `0600`, with no symbolic or hard
+links. The exact schema is `CombinedIdeaSetupManifest` in
+`backend/src/alon_ai/services/combined_idea_provision.py`. Print its full JSON
+schema without opening the database or prompting for keys:
+
+```sh
+cd backend
+.venv/bin/python -m alon_ai.services.combined_idea_provision \
+  --manifest /absolute/private/combined-manifest.json \
+  --data-dir /absolute/private/provider-data --print-schema
+```
+
+The manifest contains `version: 1`, `config`, `authorities`, `proofs`,
+`firecrawl_commercial_approvals`, and `research_model_use_approvals`. Supply the
+actual reviewed values; there are no
+production example grants, inferred rights, or default prices. `config` is the
+exact `CombinedIdeaConfig`: model and per-call token caps, aggregate model request
+and token limits, whole-run timeout, research policy, and capability bindings.
+The research policy requires calls, pages, elapsed time, spend, results, PDF
+bytes/pages/text, and parser CPU/memory/wall-time limits (`pdf_cpu_seconds`,
+`pdf_memory_bytes`, `pdf_wall_seconds`). PDF capture requires Linux resource
+limits and fails closed before spending a credit on unsupported hosts.
+Research bindings are reviewed templates; the runtime derives immutable run
+identities and budgets before execution. Their workflow/version UUIDs are not
+permission to execute a different run.
+
+Each authority supplies complete immutable `policy`, `grant`, `prices`, `fx`, and
+`evidence` records matching the config, active operator, account, capability,
+model, terms, scope, validity, and prices. Each evidence UUID must have exactly
+one `proofs` entry containing a document filename next to the manifest and its
+SHA-256 digest. Retain the reviewed documents for audit. The command checks their
+bytes; the operator remains responsible for reviewing what they authorize.
+
+Brave is limited to `OFFICIAL_SOURCE_IDENTIFICATION` with empty required and
+stored fields and no retention policy. Search results and URLs remain ephemeral;
+Brave search is not retained evidence. Every Firecrawl grant additionally needs
+an approval tied to its grant evidence UUID, reviewed by the active operator,
+with `express_commercial_use_authorized: true` and
+`permitted_use: "R01A_COMMERCIAL_MARKET_RESEARCH"`. This attests that the retained
+document expressly authorizes the intended commercial use. Possession of an API
+key, a paid subscription, or a copy of public terms does not supply that approval.
+Missing or mismatched commercial proof blocks setup.
+
+Firecrawl `FIRECRAWL_PAGE_CAPTURE` bindings must explicitly request and be
+licensed to retain both `URL` and `TEXT`: include both in
+`config.intended_use.required_fields` and `grant.storage_fields`, with the
+reviewed retention rule and positive retention duration. `TITLE` is optional.
+These rights let the saved research case show the original source URL and its
+permitted text while the grant and retention remain current. Missing source
+fields block provisioning; the app never adds storage rights on the operator's
+behalf. Brave remains ephemeral and gains no storage rights from this rule.
+
+Both Brave and Firecrawl research grants must explicitly permit outbound use
+(`outbound_use_permitted: true`) because their scoped tool results enter the
+selected OpenAI model. For every research grant, `research_model_use_approvals`
+must bind its grant evidence UUID to `outbound_to_openai_authorized: true`,
+`permitted_use: "R01A_MODEL_CONSUMPTION"`, the exact approved OpenAI account handle
+and model identifier, and the reviewing operator. The retained grant document
+must support that permission: Firecrawl needs both commercial-use authorization
+and authorization for the scoped data's disclosure to the selected LLM. Brave
+outbound permission covers only ephemeral official-source URLs; it grants no
+storage or retention rights. The OpenAI generation grant remains outbound-disabled.
+Missing, different-destination, or unreviewed outbound rights block provisioning;
+no permission is inferred from an API key or from enabling the combined runtime.
+
+Research prices use USD per declared unit. Firecrawl Map is unavailable in the
+R01A live demo: its API does not confirm billed credits, and unresolved accounting
+prevents a combined run from completing. Both runtime configuration and reviewed
+provisioning reject Map bindings until reconciliation support exists, including
+included-credit plans. Use Brave plus Firecrawl page capture for the reviewed
+demo. Supported research bounds are one request or captured page. PDF capture uses the approved raw PDF path with
+server parsing disabled; local limits do not authorize additional remote parsing.
+Model pricing uses the exact selected model and both input and output token
+components. The model and research budgets and all controls remain enforced by
+the existing governance ledger.
+
+An included-credit research plan may use an actual marginal USD price of `0`.
+Do not invent a positive allocation price and label it cash spend. Every such
+provider/account requires an `included_research_credits` entry identifying the
+exact zero-price IDs, their pricing evidence references, the control evidence
+references, the reviewing operator, and a finite `included_credit_limit` with
+`credit_unit: "PROVIDER_CREDIT"`. The reviewed evidence must confirm the remaining
+included allowance and the account controls: `included_credits_confirmed: true`,
+`pay_as_you_go_enabled: false`, and `automatic_topups_enabled: false`. Missing
+proof or enabled paid overage blocks zero-price provisioning. This does not
+authorize commercial use or disclosure to an LLM; those separate approvals above
+remain required.
+
+The sum of each covered capability's lifetime dispatch quota multiplied by its
+maximum per-request credit quantity must fit the included allowance. Each quota
+window, anchored at its policy effective time, must extend through the runtime's
+expiry so it cannot replenish within the approval period. Keep the reviewed
+validity short enough for those controls, and account for any use outside this
+application when reviewing remaining credits. Per-run call/page/credit bounds
+still apply. Receipts retain observed usage quantity with USD cost zero when
+confirmed; unknown usage remains unresolved. These limits apply to included
+credits; they do not turn OpenAI model pricing into a zero-price plan.
+
+The launcher imports the reviewed manifest and only its referenced evidence
+files from their owner-private host directory through a read-only mount. It
+copies them temporarily into the private Compose volume under the app UID,
+then removes those temporary copies after provisioning. The source directory
+and files must be owned by the host operator and have modes `0700` and `0600`,
+respectively. Run from a real terminal so all three API key prompts can suppress
+echo. The finite budget and paid-call acknowledgment are required on every live
+startup:
+
+```sh
+export ALON_AI_PROVIDER_MODE=live
+export ALON_AI_IDEA_INTAKE_BUDGET_USD=<APPROVED_FINITE_USD_AMOUNT>
+export ALON_AI_R01A_LIVE_ACK=I_ACCEPT_PAID_CALLS
+export ALON_AI_R01A_LIVE_MANIFEST=/absolute/private/reviewed/combined-manifest.json
+./scripts/local-dev.sh up
+```
+
+The launcher registers reviewed authority and prompts for each provider key on
+first setup. It publishes the three encrypted, consumer-scoped stores and
+`combined-live/combined-idea.json` in the Compose private volume. Later `up`
+commands recheck the same reviewed manifest, evidence digests, active operator,
+authority rows, and encrypted stores without asking for keys again. Changes
+require a separately reviewed rotation; provisioning will not overwrite an
+existing configuration. An interrupted process can leave an unpublished
+`.combined-stage-*` directory, which needs deliberate operator cleanup. The
+launcher also removes its temporary `.combined-review-input` copy on ordinary
+failure or interruption; a forced container or host shutdown can leave this
+copy in the private volume until the next live startup, which replaces it.
+
+Both API and worker receive the same `ALON_AI_PROVIDER_MODE=live`,
+`ALON_AI_R01A_LIVE_CONFIG_PATH=/app/.local/combined-live/combined-idea.json`,
+and finite `ALON_AI_IDEA_INTAKE_BUDGET_USD`; they mount the same private volume
+read-only. Provider execution still requires reviewed authority at dispatch and
+a separate browser cost acknowledgment. Do not use a synthetic test manifest
+as production authority. No live paid call is part of automated verification.

@@ -32,6 +32,7 @@ type FetchHandler = (input: RequestInfo | URL, init?: RequestInit) => Promise<Re
 function stubExperimentFetch(fetcher: FetchHandler) {
   const fallbackRun = (runId: string): components["schemas"]["RunView"] => ({
     run_id: runId, experiment_id: "exp-1", task_kind: "IDEA_REFINEMENT", status: "SUCCEEDED", phase: "WAITING_FOR_OPERATOR",
+    research_status: "NOT_STARTED",
     provider_mode: "fake", created_at: "2026-09-28T08:00:00Z", profile_id: "profile-1", profile_version: 1,
     operator_profile: { profile_id: "profile-1", version: 1, content_hash: "profile-hash", capabilities: [], constraints: [] },
     review_status: "PENDING", cancel_requested: false, cancel_confirmed: false,
@@ -64,7 +65,8 @@ describe("experiment creation checkpoint", () => {
     expect(screen.queryByText(/One idea is enough/i)).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Experiment preview")).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Your idea" })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Generate an idea" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Discover" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Discovery guidance" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start experiment" })).toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Objective" })).not.toBeInTheDocument();
     expect(screen.queryByRole("textbox", { name: "Target customer" })).not.toBeInTheDocument();
@@ -74,7 +76,178 @@ describe("experiment creation checkpoint", () => {
   it("does not discard typed idea text through the generate action", () => {
     render(<ExperimentCreation runtime={runtime} />);
     fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "My exact idea" } });
-    expect(screen.getByRole("button", { name: "Generate an idea" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Discover" })).toBeDisabled();
+  });
+
+  it("sends optional discovery guidance exactly once with the discovery command", async () => {
+    const draft = { ...saved, draft: true, mode: "SYSTEM_DISCOVERY", idea_seed: null,
+      state: "AWAITING_SELECTION", stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT", candidates };
+    const fetcher = vi.fn().mockResolvedValue(Response.json(draft));
+    stubExperimentFetch(fetcher);
+    render(<ExperimentCreation runtime={runtime} />);
+    fireEvent.change(screen.getByRole("textbox", { name: "Discovery guidance" }), {
+      target: { value: "  Focus on independent clinics in Israel.\n" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Discover" }));
+    expect(await screen.findByText("Clinic intake")).toBeInTheDocument();
+    expect(JSON.parse(fetcher.mock.calls[0][1].body)).toEqual({
+      generation_guidance: "  Focus on independent clinics in Israel.\n",
+      command_key: expect.any(String),
+    });
+  });
+
+  it("marks discovery incomplete when fewer than three directions are retained", async () => {
+    stubSavedSnapshot({ ...saved, draft: true, mode: "SYSTEM_DISCOVERY", idea_seed: null,
+      state: "AWAITING_SELECTION", stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT",
+      candidates: candidates.slice(0, 2) });
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    expect(await screen.findByText(/Discovery returned 2 of 3 required directions/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Select and deepen" })).toBeDisabled();
+  });
+
+  it("requires retained findings for all three live comparison cards before selection", async () => {
+    const draft = { ...saved, draft: true, mode: "SYSTEM_DISCOVERY", idea_seed: null,
+      state: "AWAITING_SELECTION", stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT", candidates };
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      const path = String(input);
+      if (path.endsWith("/research-case")) return Response.json({
+        experiment_id: "exp-1", progress: "PARTIAL", finding_count: 2, limitations: [],
+        subjects: candidates.slice(0, 2).map((candidate) => ({
+          subject: { artifact_id: candidate.artifact_id, kind: "IDEA_CANDIDATE", version: 1, role: "SUBJECT" },
+          mode: "CANDIDATE", current: true, coverage: [], gaps: ["DEMAND"],
+          findings: [{ artifact: { artifact_id: `finding-${candidate.artifact_id}`, version: 1 },
+            observation: { dimension: "DEMAND", claim: "Potential need", finding: "Limited signal",
+              evidence_status: "INCONCLUSIVE", limitations: [], step_key: "step-1" }, sources: [] }],
+        })),
+      });
+      if (path === "/api/operator/experiments/exp-1") return Response.json(draft);
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation experimentId="exp-1" runtime={{ provider_mode: "live", ready: true }} />);
+    expect(await screen.findByText(/Research findings are missing for one or more directions/)).toBeInTheDocument();
+    expect(screen.getAllByRole("radio")).toHaveLength(3);
+    expect(screen.getByRole("button", { name: "Select and deepen" })).toBeDisabled();
+    expect(fetcher.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(true);
+  });
+
+  it("refreshes an initially empty case when discovery completes and groups unverified analysis on cards", async () => {
+    let snapshotReads = 0;
+    let caseReads = 0;
+    const running = { ...saved, mode: "SYSTEM_DISCOVERY", draft: true, idea_seed: null,
+      state: "DISCOVERY_IN_PROGRESS", stage: "IDEA_DISCOVERY", stage_status: "RUNNING",
+      latest_run_id: "run-1", candidates: [] };
+    const ready = { ...running, state: "AWAITING_SELECTION", stage_status: "WAITING_FOR_INPUT", candidates };
+    const observation = (artifactId: string, dimension: string, claim: string, finding: string) => ({
+      artifact: { artifact_id: artifactId, version: 1 },
+      observation: { run_id: "run-1", dimension, claim, finding, evidence_status: "INCONCLUSIVE",
+        limitations: ["Agent-generated hypothesis; not an observed market fact."], step_key: "step-1" },
+      sources: [],
+    });
+    const subjects = candidates.map((candidate, index) => ({
+      subject: { artifact_id: candidate.artifact_id, kind: "IDEA_CANDIDATE", version: 1, role: "SUBJECT" },
+      mode: "CANDIDATE", current: true, coverage: [], gaps: ["PRICING"],
+      findings: index === 0 ? [
+        observation("finding-demand", "DEMAND", "Commercial reasoning", "Clinic owners may pay to reduce missed visits"),
+        observation("finding-alternative", "ALTERNATIVES", "Alternative 1", "Manual reminder calls remain common"),
+        observation("finding-risk", "DELIVERY", "Risk 1", "Integration effort could be high"),
+      ] : [observation(`finding-${index}`, "DEMAND", "Commercial reasoning", "Demand remains uncertain")],
+    }));
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      const path = String(input);
+      if (path === "/api/operator/experiments/exp-1") return Response.json(++snapshotReads === 1 ? running : ready);
+      if (path.endsWith("/research-case")) return Response.json(++caseReads === 1 ? {
+        experiment_id: "exp-1", progress: "NOT_STARTED", finding_count: 0, limitations: [], subjects: [],
+      } : { experiment_id: "exp-1", progress: "PARTIAL", finding_count: 5, limitations: [], subjects });
+      if (path.endsWith("/events")) return Response.json({ events: [] });
+      if (path.endsWith("/result")) return Response.json({ run_id: "run-1", status: "SUCCEEDED", output: null });
+      if (path === "/api/operator/agent-runs/run-1") return Response.json({ run_id: "run-1", experiment_id: "exp-1",
+        task_kind: "IDEA_DISCOVERY", status: "SUCCEEDED", research_status: "ASSESSED", phase: "WAITING_FOR_OPERATOR",
+        provider_mode: "live", created_at: "2026-09-28T08:00:00Z", profile_id: "profile-1", profile_version: 1,
+        operator_profile: { profile_id: "profile-1", version: 1, content_hash: "hash", capabilities: [], constraints: [] },
+        review_status: "PENDING" });
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation experimentId="exp-1" runtime={{ provider_mode: "live", ready: true }} />);
+    expect(await screen.findByText(/Research has not started/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Check status" }));
+    const firstCard = (await screen.findByRole("radio", { name: /Clinic intake/i })).closest("label")!;
+    expect(await within(firstCard).findByText(/Commercial reasoning: Clinic owners may pay/)).toBeInTheDocument();
+    expect(within(firstCard).getByText(/Alternative 1: Manual reminder calls/)).toBeInTheDocument();
+    expect(within(firstCard).getByText(/Risk 1: Integration effort/)).toBeInTheDocument();
+    expect(within(firstCard).getAllByText("Agent analysis · unverified")).toHaveLength(3);
+    fireEvent.click(within(firstCard).getByRole("radio"));
+    expect(screen.getByRole("button", { name: "Select and deepen" })).toBeEnabled();
+    expect(caseReads).toBe(2);
+    expect(fetcher.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(true);
+  });
+
+  it("shows case-only partial options on a blocked discovery without a selection action", async () => {
+    const blocked = { ...saved, mode: "SYSTEM_DISCOVERY", draft: true, idea_seed: null,
+      state: "DISCOVERY_BLOCKED", stage: "IDEA_DISCOVERY", stage_status: "BLOCKED",
+      blocked_reason: "RESEARCH_INCOMPLETE", latest_run_id: "run-1", candidates: [] };
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      void init;
+      const path = String(input);
+      if (path === "/api/operator/experiments/exp-1") return Response.json(blocked);
+      if (path.endsWith("/research-case")) return Response.json({ experiment_id: "exp-1", progress: "PARTIAL",
+        finding_count: 1, limitations: [], subjects: [{
+          subject: { artifact_id: "candidate-partial", kind: "IDEA_CANDIDATE", version: 1, role: "SUBJECT" },
+          mode: "CANDIDATE", current: true, coverage: [], gaps: ["PRICING"], findings: [{
+            artifact: { artifact_id: "finding-1", version: 1 },
+            observation: { run_id: "run-1", dimension: "BUYER", claim: "Clinics buy scheduling help",
+              finding: "One buyer interview is retained", evidence_status: "INCONCLUSIVE",
+              limitations: [], step_key: "step-1" }, sources: [],
+          }],
+        }] });
+      if (path.endsWith("/events")) return Response.json({ events: [] });
+      if (path.endsWith("/result")) return Response.json({ run_id: "run-1", status: "BLOCKED", output: null });
+      if (path === "/api/operator/agent-runs/run-1") return Response.json({ run_id: "run-1", experiment_id: "exp-1",
+        task_kind: "IDEA_DISCOVERY", status: "BLOCKED", research_status: "INCOMPLETE", blocked_reason: "RESEARCH_INCOMPLETE",
+        phase: "BLOCKED", provider_mode: "live", created_at: "2026-09-28T08:00:00Z", profile_id: "profile-1",
+        profile_version: 1, operator_profile: { profile_id: "profile-1", version: 1, content_hash: "hash",
+          capabilities: [], constraints: [] }, review_status: "PENDING", partial_options: [] });
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation experimentId="exp-1" runtime={{ provider_mode: "live", ready: true }} />);
+    expect(await screen.findByRole("heading", { name: "Discovery incomplete" })).toBeInTheDocument();
+    expect(await screen.findByText("Saved candidate 1")).toBeInTheDocument();
+    expect(screen.getByText(/Clinics buy scheduling help: One buyer interview is retained/)).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Select and deepen" })).not.toBeInTheDocument();
+    expect(fetcher.mock.calls.every(([, init]) => init?.method !== "POST")).toBe(true);
+  });
+
+  it("uses the incomplete run's saved partial options over stale snapshot candidates", async () => {
+    const snapshot = { ...saved, mode: "SYSTEM_DISCOVERY", draft: true, idea_seed: null,
+      state: "AWAITING_SELECTION", stage: "IDEA_DISCOVERY", stage_status: "WAITING_FOR_INPUT",
+      latest_run_id: "run-1", candidates };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path === "/api/operator/experiments/exp-1") return Response.json(snapshot);
+      if (path.endsWith("/research-case")) return Response.json({ experiment_id: "exp-1", progress: "NOT_STARTED",
+        finding_count: 0, limitations: [], subjects: [] });
+      if (path.endsWith("/events")) return Response.json({ events: [] });
+      if (path.endsWith("/result")) return Response.json({ run_id: "run-1", status: "BLOCKED", output: null });
+      if (path === "/api/operator/agent-runs/run-1") return Response.json({ run_id: "run-1", experiment_id: "exp-1",
+        task_kind: "IDEA_DISCOVERY", status: "BLOCKED", research_status: "INCOMPLETE", blocked_reason: "RESEARCH_INCOMPLETE",
+        phase: "BLOCKED", provider_mode: "live", created_at: "2026-09-28T08:00:00Z", profile_id: "profile-1",
+        profile_version: 1, operator_profile: { profile_id: "profile-1", version: 1, content_hash: "hash",
+          capabilities: [], constraints: [] }, review_status: "PENDING",
+        partial_options: [{ artifact_id: "partial-1", title: "Partial clinic direction", hypothesis: "Unverified clinic need" },
+          { artifact_id: "malformed", title: 42, hypothesis: "Invalid record" }] });
+      throw new Error(`Unexpected request: ${path}`);
+    }));
+    render(<ExperimentCreation experimentId="exp-1" runtime={{ provider_mode: "live", ready: true }} />);
+    expect(await screen.findByRole("heading", { name: "Discovery incomplete" })).toBeInTheDocument();
+    expect(screen.getByText("Partial clinic direction")).toBeInTheDocument();
+    expect(screen.queryByText("Invalid record")).not.toBeInTheDocument();
+    expect(screen.queryByText("Clinic intake")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Select and deepen" })).not.toBeInTheDocument();
   });
 
   it("starts a supplied idea with only exact text and one command, then restores its run with GET", async () => {
@@ -105,15 +278,15 @@ describe("experiment creation checkpoint", () => {
     const fetcher = vi.fn().mockResolvedValueOnce(Response.json(draft)).mockResolvedValueOnce(Response.json(edited));
     stubExperimentFetch(fetcher);
     render(<ExperimentCreation runtime={runtime} />);
-    fireEvent.click(screen.getByRole("button", { name: "Generate an idea" }));
+    fireEvent.click(screen.getByRole("button", { name: "Discover" }));
     expect(await screen.findByText("Clinic intake")).toBeInTheDocument();
     expect(fetcher.mock.calls[0][0]).toBe("/api/operator/ideas/generate");
     fireEvent.click(screen.getByRole("radio", { name: /queue visibility/i }));
     fireEvent.change(screen.getByRole("textbox", { name: "Refine this proposal" }), { target: { value: "  New wording\n" } });
-    expect(screen.getByRole("button", { name: "Start experiment" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Select and deepen" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Keep edited version" }));
     expect(await screen.findByText("v4 · Your edit")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Start experiment" })).toBeEnabled();
+    expect(screen.getByRole("button", { name: "Select and deepen" })).toBeEnabled();
     expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/revisions");
     expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ candidate_artifact_id: "candidate-2", idea_seed: "  New wording\n" });
   });
@@ -128,7 +301,7 @@ describe("experiment creation checkpoint", () => {
     stubExperimentFetch(fetcher);
     const first = render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("radio", { name: /queue visibility/i }));
-    fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
+    fireEvent.click(screen.getByRole("button", { name: "Select and deepen" }));
     expect(await screen.findByText("Agent running")).toBeInTheDocument();
     expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/start");
     expect(JSON.parse(fetcher.mock.calls[1][1].body)).toEqual({ candidate_artifact_id: "candidate-2", command_key: expect.any(String) });
@@ -185,7 +358,7 @@ describe("experiment creation checkpoint", () => {
     const fetcher = vi.fn(); stubExperimentFetch(fetcher);
     render(<ExperimentCreation runtime={{ provider_mode: "disabled", ready: false }} />);
     expect(screen.getByText("Runtime blocked")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Generate an idea" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Discover" })).toBeDisabled();
     expect(screen.getByRole("button", { name: "Start experiment" })).toBeDisabled();
     expect(screen.queryByText("Recorded demo mode")).not.toBeInTheDocument();
     expect(fetcher).not.toHaveBeenCalled();
@@ -196,7 +369,7 @@ describe("experiment creation checkpoint", () => {
       stage: "IDEA_REFINEMENT", stage_status: "RUNNING", state: "REFINEMENT_IN_PROGRESS" }));
     stubExperimentFetch(fetcher);
     render(<ExperimentCreation runtime={{ provider_mode: "live", ready: true }} />);
-    expect(screen.getByText(/generate directions with the Idea agent/i)).toBeInTheDocument();
+    expect(screen.getByText(/supplied idea is researched and deepened in the same run/i)).toBeInTheDocument();
     expect(screen.queryByText(/recorded example directions/i)).not.toBeInTheDocument();
     fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "Clinic idea" } });
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
@@ -229,11 +402,15 @@ describe("experiment creation checkpoint", () => {
     stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
     fireEvent.click(await screen.findByRole("radio", { name: /queue visibility/i }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Revision guidance" }), {
+      target: { value: "  Compare lower-cost clinic segments.\n" },
+    });
     fireEvent.click(screen.getByRole("button", { name: "Try more directions" }));
     expect(await screen.findByText("v2 · Generated")).toBeInTheDocument();
     expect(screen.getByText("v1 · Generated")).toBeInTheDocument();
     expect(fetcher.mock.calls[1][0]).toBe("/api/operator/ideas/exp-1/generate");
-    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ candidate_artifact_id: "candidate-2" });
+    expect(JSON.parse(fetcher.mock.calls[1][1].body)).toMatchObject({ candidate_artifact_id: "candidate-2",
+      generation_guidance: "  Compare lower-cost clinic segments.\n" });
   });
 
   it("does not offer another generation while saved discovery is running", async () => {
@@ -288,7 +465,7 @@ describe("experiment creation checkpoint", () => {
     const fetcher = vi.fn().mockResolvedValue(Response.json(saved));
     stubExperimentFetch(fetcher);
     render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
-    expect(await screen.findByRole("button", { name: "Refine idea" })).toBeEnabled();
+    expect(await screen.findByRole("button", { name: "Retry deepening" })).toBeEnabled();
   });
 
   it("retries an ambiguous initial command with the same body after reload", async () => {

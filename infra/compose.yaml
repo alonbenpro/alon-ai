@@ -24,6 +24,7 @@ services:
       ALON_AI_OUTREACH_ENABLED: "false"
       ALON_AI_PROVIDER_MODE: ${ALON_AI_PROVIDER_MODE:-disabled}
       ALON_AI_IDEA_INTAKE_BUDGET_USD: ${ALON_AI_IDEA_INTAKE_BUDGET_USD:-}
+      ALON_AI_R01A_LIVE_CONFIG_PATH: /app/.local/combined-live/combined-idea.json
       ALON_AI_L07_LIVE_CONFIG_PATH: /app/.local/live/live-idea.json
       ALON_AI_L07_SECRET_ROOT: /app/.local/live/secrets
       ALON_AI_L07_SECRET_KEY_FILE: /app/.local/live/live-secret.key
@@ -56,6 +57,7 @@ services:
       ALON_AI_OUTREACH_ENABLED: "false"
       ALON_AI_PROVIDER_MODE: ${ALON_AI_PROVIDER_MODE:-disabled}
       ALON_AI_IDEA_INTAKE_BUDGET_USD: ${ALON_AI_IDEA_INTAKE_BUDGET_USD:-}
+      ALON_AI_R01A_LIVE_CONFIG_PATH: /app/.local/combined-live/combined-idea.json
       ALON_AI_L07_LIVE_CONFIG_PATH: /app/.local/live/live-idea.json
       ALON_AI_L07_SECRET_ROOT: /app/.local/live/secrets
       ALON_AI_L07_SECRET_KEY_FILE: /app/.local/live/live-secret.key

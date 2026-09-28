@@ -26,6 +26,7 @@ from alon_ai.services.schemas.agent_runs import (
     SetupIdeaProfileResult,
 )
 from alon_ai.services.schemas.intake import ExperimentSnapshot
+from alon_ai.services.schemas.research import MarketResearchCase
 
 router = APIRouter()
 ExperimentServiceDependency = Annotated[
@@ -61,6 +62,15 @@ async def get_experiment(
     experiment_id: UUID, service: ExperimentServiceDependency
 ) -> dict:
     return await service.get(experiment_id)
+
+
+@router.get(
+    "/experiments/{experiment_id}/research-case", response_model=MarketResearchCase
+)
+async def get_research_case(
+    experiment_id: UUID, service: ResearchServiceDependency
+) -> MarketResearchCase:
+    return await service.get_case(experiment_id)
 
 
 @router.post(

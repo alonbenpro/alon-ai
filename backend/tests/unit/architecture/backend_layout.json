@@ -13,7 +13,7 @@
       "test": "backend/tests/unit/test_worker.py"
     },
     {
-      "owner": "alon_ai.services.live_idea_provision",
+      "owner": "alon_ai.services.combined_idea_provision",
       "path": "scripts/local-dev.sh",
       "test": "scripts/tests/test_local_dev.py"
     },
@@ -244,6 +244,20 @@
       "method": "GET",
       "owner": "alon_ai.services.experiments",
       "path": "/operator/experiments/{experiment_id}",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id"
+        ],
+        "kwargs": {},
+        "method": "get_case"
+      },
+      "handler": "alon_ai.api.routes.experiments.get_research_case",
+      "method": "GET",
+      "owner": "alon_ai.services.research",
+      "path": "/operator/experiments/{experiment_id}/research-case",
       "test": "backend/tests/unit/architecture/test_api_routes.py"
     },
     {

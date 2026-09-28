@@ -72,12 +72,13 @@ function statusLabel(run: RunView) {
     status === "QUEUED" ? "Live · queued" : `Live · ${status.toLowerCase().replaceAll("_", " ")}`;
 }
 
-export function RunInspector({ experimentId, runId, legacyPendingReview = false, onRejected, onReviewStatus }: {
+export function RunInspector({ experimentId, runId, legacyPendingReview = false, onRejected, onReviewStatus, onResearchStatus }: {
   experimentId: string;
   runId: string;
   legacyPendingReview?: boolean;
   onRejected?: () => void;
   onReviewStatus?: (runId: string, status: RunView["review_status"]) => void;
+  onResearchStatus?: (run: RunView) => void;
 }) {
   const [run, setRun] = useState<RunView | null>(null);
   const [legacyMissing, setLegacyMissing] = useState(false);
@@ -112,6 +113,7 @@ export function RunInspector({ experimentId, runId, legacyPendingReview = false,
       if (active()) {
         setRun(nextRun);
         onReviewStatus?.(nextRun.run_id, nextRun.review_status);
+        onResearchStatus?.(nextRun);
       }
       if (eventResponse?.ok) {
         const nextEvents = await eventResponse.json() as RunEvents;
@@ -133,7 +135,7 @@ export function RunInspector({ experimentId, runId, legacyPendingReview = false,
       if (active()) setMessage(error instanceof Error ? error.message : "Run status is unavailable.");
       return null;
     }
-  }, [runId, legacyPendingReview, onReviewStatus]);
+  }, [runId, legacyPendingReview, onReviewStatus, onResearchStatus]);
 
   useEffect(() => {
     let active = true;
@@ -233,6 +235,9 @@ export function RunInspector({ experimentId, runId, legacyPendingReview = false,
   const inputs = run.resolved_inputs?.length ? run.resolved_inputs : run.input_refs ?? [];
   const output = run.output ?? result?.output;
   const references = groundingReferences(output);
+  const summaryFinding = typeof run.research_summary?.finding === "string" ? run.research_summary.finding : null;
+  const summaryLimitations = Array.isArray(run.research_summary?.limitations) ?
+    run.research_summary.limitations.filter((value): value is string => typeof value === "string") : [];
   return <section className="agent-run-inspector" aria-labelledby="run-inspector-heading">
     <div className="agent-run-inspector__heading">
       <div className="experiment-section-heading"><span>Saved service run · {String(run.task_kind ?? "agent run").replaceAll("_", " ")}</span><h2 id="run-inspector-heading">Agent run</h2></div>
@@ -245,9 +250,16 @@ export function RunInspector({ experimentId, runId, legacyPendingReview = false,
       <div><dt>Profile</dt><dd>{run.profile_id} · v{run.profile_version}</dd></div>
       <div><dt>Output source</dt><dd>{run.advice_source ?? "Not recorded"}</dd></div>
       <div><dt>Review</dt><dd>{run.review_status}</dd></div>
+      <div><dt>Receipt</dt><dd>{run.receipt_id ?? result?.receipt_id ?? "Not recorded"}</dd></div>
+      {run.research_status && <div><dt>Research</dt><dd>{run.research_status.replaceAll("_", " ")}</dd></div>}
     </dl>
     {message && <p className="experiment-error" role="alert">{message}</p>}
     {run.blocked_reason && <p className="agent-run-inspector__blocked" role="alert"><strong>{run.blocked_reason}</strong>{run.blocked_reason === "LIVE_CONFIG_REQUIRED" ? " — live provider credentials or authorization are missing." : ""}</p>}
+    {(summaryFinding || run.research_gaps?.length) && <div className="agent-run-inspector__events"><h3>Research assessment</h3>
+      {summaryFinding && <p>{summaryFinding}</p>}
+      {summaryLimitations.length ? <p>Limits: {summaryLimitations.join(" · ")}</p> : null}
+      {run.research_gaps?.length ? <p>Open gaps: {run.research_gaps.join(" · ")}</p> : null}
+    </div>}
     {run.cancel_requested && <p className="agent-run-inspector__cancel" role="status">{run.cancel_confirmed ? "Cancellation confirmed by the service." : "Cancellation requested. The service has not confirmed that the run stopped."}</p>}
     <div className="agent-run-inspector__grid">
       <div><h3>Exact input</h3>
@@ -275,10 +287,18 @@ export function RunInspector({ experimentId, runId, legacyPendingReview = false,
       {run.usage?.length ? <ul>{run.usage.map((item, index) => <li key={`${item.component}-${index}`}>
         {item.component}: {item.quantity ?? "Quantity unavailable"} · {item.cost == null ? "Cost unavailable" : `${item.currency} ${item.cost}`} · {item.knowledge.toLowerCase()}
       </li>)}</ul> : <p>No usage record has been retained.</p>}
+      {run.receipts?.length ? <details><summary>Provider receipts ({run.receipts.length})</summary><ul>{run.receipts.map((receipt) => <li key={receipt.receipt_id}>
+        {receipt.provider} · {receipt.state} · {receipt.receipt_id} · reserved {receipt.currency} {receipt.reserved} · accrued {receipt.currency} {receipt.accrued}
+      </li>)}</ul></details> : null}
     </div>
     <div className="agent-run-inspector__events"><h3>Run events</h3>{events.length ? <ol>{events.map((event) => <li key={event.sequence}>
       <time dateTime={event.at}>{event.at}</time><strong>{event.type.replaceAll("_", " ")}</strong>{event.detail && <span>{event.detail}</span>}
     </li>)}</ol> : <p>No events have been recorded.</p>}</div>
+    {run.steps && <div className="agent-run-inspector__events"><h3>Child steps and receipts</h3>{run.steps.length ? <ol>{run.steps.map((step) => <li key={step.step_key}>
+      <span>{step.ordinal}. {step.kind.replaceAll("_", " ")}</span><strong>{step.status.replaceAll("_", " ")}</strong>
+      <span>{step.reason_code ?? ""}{step.result_artifact_id ? ` · Result ${step.result_artifact_id}` : ""}
+        {step.provider_call_id ? ` · Call ${step.provider_call_id}` : ""}</span>
+    </li>)}</ol> : <p>No child steps have been retained.</p>}</div>}
     {(run.status === "QUEUED" || run.status === "RUNNING") && <button type="button" className="experiment-secondary-action" disabled={!!busy || run.cancel_confirmed} onClick={() => void cancel()}>
       {run.cancel_confirmed ? "Run cancelled" : busy === "cancel" ? "Requesting cancellation…" : run.cancel_requested ? "Retry cancellation" : "Cancel run"}
     </button>}

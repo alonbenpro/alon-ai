@@ -20,6 +20,7 @@ dependencies = [
     "pydantic-ai[dbos]>=2.35.3",
     "pydantic-evals>=2.35.3",
     "pydantic-settings>=2.15.0",
+    "pypdf==6.19.0",
     "sqlalchemy[asyncio]>=2.0.52",
     "structlog>=26.1.0",
 ]

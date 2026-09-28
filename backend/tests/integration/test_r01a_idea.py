@@ -832,6 +832,22 @@ async def test_dispatch_denies_wrong_experiment_artifact_before_provider(
     foreign = await service.store.get(other_ref.run_id)
     assert original and foreign
     bad_id, bad_key = uuid4(), uuid4()
+    forged_refs = [original["input_refs"][0], foreign["input_refs"][1]]
+    forged_hash = agent_run_service_module.sha256(
+        agent_run_service_module.canonical_json(
+            {
+                "experiment_id": str(first),
+                "task_kind": "IDEA_REFINEMENT",
+                "profile": [
+                    str(original["profile_id"]),
+                    original["profile_version"],
+                    original["profile_hash"],
+                ],
+                "input_refs": forged_refs,
+                "runtime_config_hash": None,
+            }
+        )
+    )
     await service.store.admit(
         {
             "run_id": bad_id,
@@ -839,8 +855,8 @@ async def test_dispatch_denies_wrong_experiment_artifact_before_provider(
             "experiment_id": first,
             "operator_id": operator_id,
             "task_kind": "IDEA_REFINEMENT",
-            "request_hash": "a" * 64,
-            "input_refs": [original["input_refs"][0], foreign["input_refs"][1]],
+            "request_hash": forged_hash,
+            "input_refs": forged_refs,
             "profile_id": original["profile_id"],
             "profile_version": original["profile_version"],
             "profile_hash": original["profile_hash"],

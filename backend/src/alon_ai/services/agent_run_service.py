@@ -1,10 +1,12 @@
 """Operator admission, inspection and control of durable Idea runs."""
 
-from uuid import UUID
+from decimal import Decimal
+from uuid import UUID, uuid5
 
 from alon_ai.agents.schemas.openai import canonical_json, sha256
+from alon_ai.db.repositories.agent_run_steps import AgentRunStepRepository
 from alon_ai.db.repositories.agent_runs import AgentRunRepository
-from alon_ai.db.repositories.experiments import ExperimentError
+from alon_ai.db.repositories.experiments import ExperimentError, artifact_row
 from alon_ai.db.repositories.intake import IntakeRepository
 from alon_ai.db.repositories.openai_idea import OpenAIIdeaInputRepository
 from alon_ai.db.repositories.openai_run import OpenAIRunStore
@@ -24,8 +26,10 @@ from alon_ai.services.schemas.agent_runs import (
     ResolvedInput,
     RunEvent,
     RunEvents,
+    RunReceipt,
     RunRef,
     RunResult,
+    RunStep,
     RunView,
     UsageItem,
 )
@@ -55,6 +59,26 @@ class AgentRunService:
             )
             if schema_version is None:
                 raise ExperimentError(409, "IDEA_INPUT_STALE")
+            if cycle["purpose"] == "SAME_INTENT_RETURN":
+                _returned, prior, feedback = await inputs.return_inputs(
+                    experiment_id, detail["cycle_id"]
+                )
+                if prior is None or feedback is None:
+                    raise ExperimentError(409, "IDEA_INPUT_STALE")
+                return profile, [
+                    {
+                        "artifact_id": str(item["id"]),
+                        "kind": item["kind"],
+                        "version": item["version"],
+                        "content_hash": item["content_hash"],
+                        "role": role,
+                    }
+                    for item, role in (
+                        (brief, "EXPERIMENT_BRIEF"),
+                        (prior, "PRIOR_IDEA_BRIEF"),
+                        (feedback, "RESEARCH_FEEDBACK"),
+                    )
+                ]
             source = await self.store.artifact(
                 experiment_id,
                 {
@@ -124,6 +148,9 @@ class AgentRunService:
                         profile.content_hash,
                     ],
                     "input_refs": input_refs,
+                    "runtime_config_hash": getattr(
+                        self.context.idea_runtime_provider, "config_fingerprint", None
+                    ),
                 }
             )
         )
@@ -200,7 +227,48 @@ class AgentRunService:
             if row["status"] == "CANCELLED"
             else "BLOCKED"
         )
+        steps = await AgentRunStepRepository(self.context.engine).list(run_id)
+        case_step = next(
+            (item for item in steps if item["kind"] == "ARTIFACT_SAVE"), None
+        )
+        research_status = (
+            "NOT_STARTED"
+            if case_step is None
+            else "ASSESSED"
+            if case_step["status"] == "SUCCEEDED"
+            else "INCOMPLETE"
+            if case_step["reason_code"] == "RESEARCH_INCOMPLETE"
+            else "RUNNING"
+            if case_step["status"] == "CLAIMED"
+            else "OUTCOME_UNKNOWN"
+        )
+        summary = await artifact_row(
+            self.context.engine, uuid5(run_id, "combined-case")
+        )
+        partial_options = []
+        if research_status == "INCOMPLETE" and row["task_kind"] == "IDEA_DISCOVERY":
+            for index in range(2):
+                candidate = await artifact_row(
+                    self.context.engine, _id(run_id, f"candidate-{index}")
+                )
+                if (
+                    candidate is not None
+                    and candidate["experiment_id"] == row["experiment_id"]
+                ):
+                    partial_options.append(
+                        {"artifact_id": str(candidate["id"]), **candidate["payload"]}
+                    )
         view.update(
+            research_summary=summary["payload"] if summary else None,
+            research_gaps=summary["payload"]["unresolved_questions"] if summary else [],
+            partial_options=partial_options,
+            steps=[
+                RunStep.model_validate(
+                    {field: step[field] for field in RunStep.model_fields}
+                )
+                for step in steps
+            ],
+            research_status=research_status,
             phase=phase,
             input_refs=resolved,
             resolved_inputs=resolved,
@@ -242,6 +310,81 @@ class AgentRunService:
                 constraints=profile_row["constraints"],
             ),
         )
+        children = await AgentRunStepRepository(self.context.engine).receipts(run_id)
+        calls = {
+            item["call"]["id"]: item for item in children if item["call"] is not None
+        }
+        if calls:
+            projected = []
+            for item in calls.values():
+                child = item["call"]
+                superseded = {
+                    usage["supersedes_id"]
+                    for usage in item["usage"]
+                    if usage["supersedes_id"]
+                }
+                latest = [
+                    usage for usage in item["usage"] if usage["id"] not in superseded
+                ]
+                projected.append(
+                    RunReceipt(
+                        receipt_id=child["id"],
+                        provider=child["provider"],
+                        model_identifier=child["model_identifier"],
+                        state=child["state"],
+                        currency=child["currency"],
+                        reserved=str(child["reserved"]),
+                        accrued=str(child["accrued"]),
+                        usage=[
+                            UsageItem(
+                                component=usage["component"],
+                                quantity=str(usage["quantity"])
+                                if usage["quantity"] is not None
+                                else None,
+                                cost=str(usage["cost"])
+                                if usage["cost"] is not None
+                                else None,
+                                currency=usage["currency"],
+                                knowledge=usage["knowledge"],
+                            )
+                            for usage in latest
+                        ],
+                    )
+                )
+            known = all(
+                receipt.state in {"FINAL", "RELEASED"}
+                and receipt.currency == "USD"
+                and all(usage.knowledge == "FINAL" for usage in receipt.usage)
+                for receipt in projected
+            )
+            pending = [
+                receipt
+                for receipt in projected
+                if receipt.state not in {"FINAL", "RELEASED"}
+            ]
+            view.update(
+                receipts=projected,
+                receipt_id=None,
+                model_identifier=next(
+                    (
+                        receipt.model_identifier
+                        for receipt in projected
+                        if receipt.model_identifier
+                    ),
+                    None,
+                ),
+                usage=[usage for receipt in projected for usage in receipt.usage],
+                actual_cost_usd=str(
+                    sum((Decimal(receipt.accrued) for receipt in projected), Decimal(0))
+                )
+                if known
+                else None,
+                pending_cost_usd=str(
+                    sum((Decimal(receipt.reserved) for receipt in pending), Decimal(0))
+                )
+                if pending and all(receipt.currency == "USD" for receipt in pending)
+                else None,
+            )
         return RunView.model_validate(view)
 
     async def result(self, run_id: UUID) -> RunResult:
@@ -249,6 +392,12 @@ class AgentRunService:
         return RunResult(
             run_id=view.run_id,
             status=view.status,
+            research_summary=view.research_summary,
+            research_gaps=view.research_gaps,
+            partial_options=view.partial_options,
+            steps=view.steps,
+            receipts=view.receipts,
+            research_status=view.research_status,
             output=view.output,
             advice_source=view.advice_source,
             receipt_id=view.receipt_id,
@@ -298,6 +447,28 @@ class AgentRunService:
                 run_id, "BLOCKED", blocked_reason="RUN_APPLICATION_VERSION_CHANGED"
             )
             return
+        expected_hash = sha256(
+            canonical_json(
+                {
+                    "experiment_id": str(row["experiment_id"]),
+                    "task_kind": row["task_kind"],
+                    "profile": [
+                        str(row["profile_id"]),
+                        row["profile_version"],
+                        row["profile_hash"],
+                    ],
+                    "input_refs": row["input_refs"],
+                    "runtime_config_hash": getattr(
+                        context.idea_runtime_provider, "config_fingerprint", None
+                    ),
+                }
+            )
+        )
+        if row["request_hash"] != expected_hash:
+            await self.store.finish(
+                run_id, "BLOCKED", blocked_reason="RUN_CONFIGURATION_CHANGED"
+            )
+            return
         if not await self.store.start(run_id):
             return
         try:
@@ -344,7 +515,15 @@ class AgentRunService:
                 if "BLOCKED" in state
                 else "FAILED"
             )
-            reported_outcome = result.get("outcome") or result.get("latest_outcome")
+            reported_outcome = (
+                result.get("outcome")
+                or result.get("latest_outcome")
+                or (
+                    "SUCCEEDED"
+                    if status == "SUCCEEDED"
+                    else result.get("blocked_reason")
+                )
+            )
             await self.store.finish(
                 run_id,
                 status,

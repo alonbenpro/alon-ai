@@ -1,5 +1,6 @@
 """Durable, owner-scoped admission and lifecycle for operator Idea runs."""
 
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from uuid import UUID
 
@@ -386,6 +387,31 @@ class AgentRunRepository:
                 .one()
             )
             return updated
+
+    @asynccontextmanager
+    async def review_scope(self, run_id: UUID | None, operator_id: UUID):
+        """Keep consuming a discovery result ordered before concurrent rejection."""
+        if run_id is None:
+            yield
+            return
+        async with self.engine.begin() as connection:
+            row = (
+                (
+                    await connection.execute(
+                        select(runs)
+                        .where(
+                            runs.c.run_id == run_id,
+                            runs.c.operator_id == operator_id,
+                        )
+                        .with_for_update(read=True)
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if row is not None and row["review_status"] == "REJECTED":
+                raise ExperimentError(409, "DISCOVERY_RUN_REJECTED")
+            yield
 
     async def reject(self, run_id: UUID, operator_id: UUID, key: UUID, reason: str):
         async with self.engine.begin() as connection:

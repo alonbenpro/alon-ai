@@ -15,16 +15,27 @@ class IntakePolicySnapshot(BaseModel):
     guidance: str = Field(default="", max_length=4000)
 
 
-class GenerateIdeaRequest(BaseModel):
+class IntakeCommand(BaseModel):
     model_config = ConfigDict(extra="forbid")
     command_key: UUID
+
+
+class GenerateIdeaRequest(IntakeCommand):
+    generation_guidance: str | None = Field(default=None, max_length=4000)
+
+    @field_validator("generation_guidance")
+    @classmethod
+    def meaningful_guidance(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("generation guidance is blank")
+        return value
 
 
 class RegenerateIdeaRequest(GenerateIdeaRequest):
     candidate_artifact_id: UUID | None = None
 
 
-class StartProposalRequest(GenerateIdeaRequest):
+class StartProposalRequest(IntakeCommand):
     candidate_artifact_id: UUID
 
 
