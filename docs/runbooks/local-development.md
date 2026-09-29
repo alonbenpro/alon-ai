@@ -146,6 +146,23 @@ Research bindings are reviewed templates; the runtime derives immutable run
 identities and budgets before execution. Their workflow/version UUIDs are not
 permission to execute a different run.
 
+For Alon's approved single live validation, configure `model_identifier` as
+`gpt-6-luna` and `reasoning_effort` as `max`. Bound the validation to at most 12
+OpenAI model requests, 250,000 aggregate input tokens, and 24,000 aggregate
+output tokens, with a `$0.20` OpenAI cap. Bound Brave to 6 searches and `$0.05`.
+Bound Firecrawl to 8 page captures from confirmed included credits, with
+pay-as-you-go and automatic top-ups disabled. The application budget is at most
+`$0.25` total. Set lifetime provider quotas to 12 OpenAI requests, 6 Brave
+searches, and 8 Firecrawl captures through the approval's expiry; the quota
+windows must not replenish during that period. Keep per-run limits at or below
+those quotas. The Firecrawl included-credit allowance must also be at most 8
+credits. Put these limits in the reviewed authorities and runtime config; the
+manifest must use each actual account's reviewed prices and remaining credits.
+At current standard OpenAI rates, the token ceilings cost about `$0.037` before
+any account-specific pricing or taxes; the OpenAI cap includes headroom.
+Firecrawl's zero marginal price applies only when reviewed account evidence
+confirms included credits and disabled paid overage.
+
 Each authority supplies complete immutable `policy`, `grant`, `prices`, `fx`, and
 `evidence` records matching the config, active operator, account, capability,
 model, terms, scope, validity, and prices. Each evidence UUID must have exactly

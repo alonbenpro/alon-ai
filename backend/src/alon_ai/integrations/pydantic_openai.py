@@ -34,7 +34,9 @@ def build_openai_model(
     secret: SecretStr,
     timeout_seconds: float,
     max_output_tokens: int,
-    reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"],
+    reasoning_effort: Literal[
+        "none", "minimal", "low", "medium", "high", "xhigh", "max"
+    ],
     http_transport: httpx.AsyncBaseTransport | None = None,
 ) -> OpenAIResponsesModel:
     """The sole production construction path; use as an async context manager.
@@ -74,7 +76,7 @@ def openai_model_factory(
     timeout_seconds: float = 60,
     max_output_tokens: int = 32768,
     reasoning_effort: Literal[
-        "none", "minimal", "low", "medium", "high", "xhigh"
+        "none", "minimal", "low", "medium", "high", "xhigh", "max"
     ] = "low",
     http_transport: httpx.AsyncBaseTransport | None = None,
 ) -> Callable[[SecretStr], Model]:

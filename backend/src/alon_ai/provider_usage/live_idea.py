@@ -163,6 +163,10 @@ def build_live_idea_runtime_provider(
 ) -> LiveIdeaRuntimeProvider:
     """Bind explicit operator policy and secret authority to a route callable."""
 
+    legacy_reasoning_effort = config.reasoning_effort
+    if legacy_reasoning_effort == "max":
+        raise AccountingDenied(Reason.CONFIG)
+
     selected_transport = transport if transport is not None else SDKResponsesTransport()
 
     async def provision_live_seeded_runtime(
@@ -197,7 +201,7 @@ def build_live_idea_runtime_provider(
                 config_version=config_version,
                 adapter_version=capability_config.adapter_version,
                 model_identifier=config.model_identifier,
-                reasoning_effort=config.reasoning_effort,
+                reasoning_effort=legacy_reasoning_effort,
                 max_output_tokens=config.max_output_tokens,
                 timeout_seconds=config.timeout_seconds,
             )

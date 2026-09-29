@@ -4,7 +4,7 @@ import asyncio
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import cast
+from typing import Literal, cast
 from uuid import uuid4
 
 import pytest
@@ -199,7 +199,14 @@ def setup_model():
         yield
 
     def build(
-        *, function=respond, dispatch_guard=guard, run_key=None, production=False
+        *,
+        function=respond,
+        dispatch_guard=guard,
+        run_key=None,
+        production=False,
+        reasoning_effort: Literal[
+            "none", "minimal", "low", "medium", "high", "xhigh", "max"
+        ] = "low",
     ):
         return GovernedPydanticModel(
             repository=cast(GovernanceRepository, ledger),
@@ -212,10 +219,21 @@ def setup_model():
             model_factory=None
             if production
             else lambda secret: FunctionModel(function),
+            reasoning_effort=reasoning_effort,
             dispatch_guard=dispatch_guard,
         )
 
     return build, ledger, responses
+
+
+def test_governed_model_admits_max_reasoning_and_keeps_it_in_request_settings(
+    setup_model,
+):
+    build, _, _ = setup_model
+
+    model = build(reasoning_effort="max")
+
+    assert model._request_settings["openai_reasoning_effort"] == "max"
 
 
 async def request(model):
@@ -422,6 +440,62 @@ async def test_native_openai_tool_call_and_usage_are_not_wrapped_in_legacy_envel
         Decimal(5),
         Decimal(4),
     ]
+
+
+async def test_max_reasoning_effort_is_sent_to_openai_responses(setup_model):
+    import json
+
+    import httpx2
+
+    from alon_ai.integrations.pydantic_openai import openai_model_factory
+
+    build, _, _ = setup_model
+    payloads = []
+
+    async def handler(wire_request):
+        payloads.append(json.loads(wire_request.content))
+        return httpx2.Response(
+            200,
+            json={
+                "id": "resp_max_reasoning",
+                "created_at": 1720000000,
+                "object": "response",
+                "model": "gpt-4.1-mini",
+                "status": "completed",
+                "output": [
+                    {
+                        "id": "msg_1",
+                        "type": "message",
+                        "status": "completed",
+                        "role": "assistant",
+                        "content": [
+                            {
+                                "type": "output_text",
+                                "text": "done",
+                                "annotations": [],
+                            }
+                        ],
+                    }
+                ],
+                "usage": {
+                    "input_tokens": 20,
+                    "output_tokens": 5,
+                    "total_tokens": 25,
+                    "input_tokens_details": {"cached_tokens": 0},
+                    "output_tokens_details": {"reasoning_tokens": 0},
+                },
+            },
+        )
+
+    model = build(reasoning_effort="max")
+    model._model_factory = openai_model_factory(
+        "gpt-4.1-mini",
+        reasoning_effort="max",
+        http_transport=httpx2.MockTransport(handler),
+    )
+    await request(model)
+
+    assert payloads[0]["reasoning"]["effort"] == "max"
 
 
 async def test_growing_tool_context_cannot_exceed_reserved_input_bound(setup_model):

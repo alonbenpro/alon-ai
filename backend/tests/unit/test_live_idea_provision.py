@@ -1,12 +1,13 @@
 """The live setup manifest must be explicit and contains no provider secret."""
 
+import json
 import os
 import pty
 import select
 import threading
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
-from typing import cast
+from typing import Literal, cast
 from uuid import uuid4
 
 import pytest
@@ -14,6 +15,9 @@ from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alon_ai.integrations.schemas.provider import UsageComponent
+from alon_ai.provider_usage.live_idea import build_live_idea_runtime_provider
+from alon_ai.provider_usage.schemas.accounting import AccountingDenied
+from alon_ai.security.secrets import SecretStore
 from alon_ai.services import live_idea_provision as provision
 from alon_ai.services.live_idea_provision import (
     LiveIdeaSetupManifest,
@@ -22,7 +26,13 @@ from alon_ai.services.live_idea_provision import (
 )
 
 
-def sample_manifest() -> LiveIdeaSetupManifest:
+def sample_manifest(
+    *,
+    reasoning_effort: Literal[
+        "none", "minimal", "low", "medium", "high", "xhigh", "max"
+    ] = "low",
+    model_identifier="gpt-5-mini",
+) -> LiveIdeaSetupManifest:
     now = datetime.now(UTC)
     return LiveIdeaSetupManifest(
         operator_id=uuid4(),
@@ -36,8 +46,8 @@ def sample_manifest() -> LiveIdeaSetupManifest:
         pricing_reference="operator-reviewed-price-card",
         fx_reference="operator-reviewed-fx-quote",
         control_reference="operator-reviewed-limit-policy",
-        model_identifier="gpt-5-mini",
-        reasoning_effort="low",
+        model_identifier=model_identifier,
+        reasoning_effort=reasoning_effort,
         max_output_tokens=300,
         timeout_seconds=30,
         budget_cap_usd=Decimal("1.00"),
@@ -77,6 +87,29 @@ def test_setup_bundle_binds_operator_reviewed_prices_and_rights():
     }
     assert all(proof.mode == "TRUSTED_REFERENCE" for proof in bundle.evidence)
     assert bundle.grant.storage_fields
+
+
+def test_setup_manifest_accepts_gpt_6_luna_at_max_reasoning_effort():
+    original = sample_manifest(
+        reasoning_effort="low", model_identifier="gpt-6-luna"
+    ).model_dump(mode="json")
+    assert LiveIdeaSetupManifest.model_validate_json(json.dumps(original))
+    raw = dict(original)
+    raw["model_identifier"] = "gpt-6-luna"
+    raw["reasoning_effort"] = "max"
+
+    manifest = LiveIdeaSetupManifest.model_validate_json(json.dumps(raw))
+
+    assert manifest.model_identifier == "gpt-6-luna"
+    assert manifest.reasoning_effort == "max"
+
+
+def test_legacy_live_provider_rejects_max_effort_before_runtime_creation():
+    manifest = sample_manifest(reasoning_effort="max", model_identifier="gpt-6-luna")
+    config = make_authority_bundle(manifest).config
+
+    with pytest.raises(AccountingDenied, match="CONFIG"):
+        build_live_idea_runtime_provider(config, cast(SecretStore, object()))
 
 
 def test_key_prompt_refuses_missing_tty_without_echo_fallback(monkeypatch):

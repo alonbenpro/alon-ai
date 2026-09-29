@@ -275,7 +275,7 @@ class GovernedPydanticModel(Model):
         dispatch_guard: DispatchGuard,
         model_factory: ModelFactory | None = None,
         reasoning_effort: Literal[
-            "none", "minimal", "low", "medium", "high", "xhigh"
+            "none", "minimal", "low", "medium", "high", "xhigh", "max"
         ] = "low",
         timeout_seconds: int = 60,
         step_checkpoint: ModelStepCheckpoint | None = None,
@@ -291,7 +291,7 @@ class GovernedPydanticModel(Model):
             or not 1 <= max_output_tokens <= 32768
             or not 1 <= timeout_seconds <= 3600
             or reasoning_effort
-            not in {"none", "minimal", "low", "medium", "high", "xhigh"}
+            not in {"none", "minimal", "low", "medium", "high", "xhigh", "max"}
         ):
             raise AccountingDenied(Reason.CONFIG)
         components = {price.component for price in prices}
