@@ -292,7 +292,7 @@
         "title": "CancelRunResult",
         "type": "object"
       },
-      "CommercialInput": {
+      "CommercialInput-Input": {
         "additionalProperties": false,
         "properties": {
           "currency": {
@@ -380,6 +380,51 @@
         "title": "CommercialInput",
         "type": "object"
       },
+      "CommercialInput-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "hourly_cost": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Hourly Cost",
+            "type": "string"
+          },
+          "maximum_discount_rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Maximum Discount Rate",
+            "type": "string"
+          },
+          "minimum_deposit_rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Minimum Deposit Rate",
+            "type": "string"
+          },
+          "minimum_margin_rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Minimum Margin Rate",
+            "type": "string"
+          },
+          "minimum_project_price": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Minimum Project Price",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "hourly_cost",
+          "minimum_project_price",
+          "minimum_margin_rate",
+          "maximum_discount_rate",
+          "minimum_deposit_rate"
+        ],
+        "title": "CommercialInput",
+        "type": "object"
+      },
       "CreateExperimentRequest": {
         "additionalProperties": false,
         "properties": {
@@ -408,7 +453,7 @@
         "title": "CreateExperimentRequest",
         "type": "object"
       },
-      "DeliveryInput": {
+      "DeliveryInput-Input": {
         "additionalProperties": false,
         "properties": {
           "concurrent_projects": {
@@ -444,6 +489,34 @@
               }
             ],
             "title": "Max Project Hours"
+          }
+        },
+        "required": [
+          "max_project_hours",
+          "hours_per_week",
+          "concurrent_projects"
+        ],
+        "title": "DeliveryInput",
+        "type": "object"
+      },
+      "DeliveryInput-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "concurrent_projects": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Concurrent Projects",
+            "type": "integer"
+          },
+          "hours_per_week": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+            "title": "Hours Per Week",
+            "type": "string"
+          },
+          "max_project_hours": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+            "title": "Max Project Hours",
+            "type": "string"
           }
         },
         "required": [
@@ -807,7 +880,7 @@
         "title": "MarketResearchCase",
         "type": "object"
       },
-      "OperatorProfileInput": {
+      "OperatorProfileInput-Input": {
         "additionalProperties": false,
         "properties": {
           "capabilities": {
@@ -820,7 +893,7 @@
             "type": "array"
           },
           "commercial": {
-            "$ref": "#/components/schemas/CommercialInput"
+            "$ref": "#/components/schemas/CommercialInput-Input"
           },
           "constraints": {
             "items": {
@@ -831,7 +904,43 @@
             "type": "array"
           },
           "delivery": {
-            "$ref": "#/components/schemas/DeliveryInput"
+            "$ref": "#/components/schemas/DeliveryInput-Input"
+          }
+        },
+        "required": [
+          "capabilities",
+          "constraints",
+          "delivery",
+          "commercial"
+        ],
+        "title": "OperatorProfileInput",
+        "type": "object"
+      },
+      "OperatorProfileInput-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "commercial": {
+            "$ref": "#/components/schemas/CommercialInput-Output"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Constraints",
+            "type": "array"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryInput-Output"
           }
         },
         "required": [
@@ -2148,6 +2257,63 @@
         "title": "RunView",
         "type": "object"
       },
+      "SavedIdeaProfileResult": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OperatorProfileInput-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "profile_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Version"
+          }
+        },
+        "required": [
+          "profile_id",
+          "profile_version",
+          "profile",
+          "budget_usd"
+        ],
+        "title": "SavedIdeaProfileResult",
+        "type": "object"
+      },
       "SelectCandidateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -2197,7 +2363,7 @@
         "additionalProperties": false,
         "properties": {
           "profile": {
-            "$ref": "#/components/schemas/OperatorProfileInput"
+            "$ref": "#/components/schemas/OperatorProfileInput-Input"
           }
         },
         "required": [
@@ -3710,6 +3876,22 @@
       }
     },
     "/operator/idea-profile": {
+      "get": {
+        "operationId": "get_idea_profile_operator_idea_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedIdeaProfileResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Idea Profile"
+      },
       "post": {
         "operationId": "setup_idea_profile_operator_idea_profile_post",
         "requestBody": {

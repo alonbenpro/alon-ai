@@ -388,7 +388,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Get Idea Profile */
+        get: operations["get_idea_profile_operator_idea_profile_get"];
         put?: never;
         /** Setup Idea Profile */
         post: operations["setup_idea_profile_operator_idea_profile_post"];
@@ -603,7 +604,7 @@ export interface components {
             status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
         };
         /** CommercialInput */
-        CommercialInput: {
+        "CommercialInput-Input": {
             /** Currency */
             currency: string;
             /** Hourly Cost */
@@ -617,6 +618,21 @@ export interface components {
             /** Minimum Project Price */
             minimum_project_price: number | string;
         };
+        /** CommercialInput */
+        "CommercialInput-Output": {
+            /** Currency */
+            currency: string;
+            /** Hourly Cost */
+            hourly_cost: string;
+            /** Maximum Discount Rate */
+            maximum_discount_rate: string;
+            /** Minimum Deposit Rate */
+            minimum_deposit_rate: string;
+            /** Minimum Margin Rate */
+            minimum_margin_rate: string;
+            /** Minimum Project Price */
+            minimum_project_price: string;
+        };
         /** CreateExperimentRequest */
         CreateExperimentRequest: {
             /**
@@ -628,13 +644,22 @@ export interface components {
             idea_seed?: string | null;
         };
         /** DeliveryInput */
-        DeliveryInput: {
+        "DeliveryInput-Input": {
             /** Concurrent Projects */
             concurrent_projects: number;
             /** Hours Per Week */
             hours_per_week: number | string;
             /** Max Project Hours */
             max_project_hours: number | string;
+        };
+        /** DeliveryInput */
+        "DeliveryInput-Output": {
+            /** Concurrent Projects */
+            concurrent_projects: number;
+            /** Hours Per Week */
+            hours_per_week: string;
+            /** Max Project Hours */
+            max_project_hours: string;
         };
         /** ExperimentRuntimeStatus */
         ExperimentRuntimeStatus: {
@@ -767,13 +792,22 @@ export interface components {
             subjects: components["schemas"]["SubjectResearchCase"][];
         };
         /** OperatorProfileInput */
-        OperatorProfileInput: {
+        "OperatorProfileInput-Input": {
             /** Capabilities */
             capabilities: string[];
-            commercial: components["schemas"]["CommercialInput"];
+            commercial: components["schemas"]["CommercialInput-Input"];
             /** Constraints */
             constraints: string[];
-            delivery: components["schemas"]["DeliveryInput"];
+            delivery: components["schemas"]["DeliveryInput-Input"];
+        };
+        /** OperatorProfileInput */
+        "OperatorProfileInput-Output": {
+            /** Capabilities */
+            capabilities: string[];
+            commercial: components["schemas"]["CommercialInput-Output"];
+            /** Constraints */
+            constraints: string[];
+            delivery: components["schemas"]["DeliveryInput-Output"];
         };
         /** OperatorProfileProjection */
         OperatorProfileProjection: {
@@ -1274,6 +1308,16 @@ export interface components {
             /** Usage */
             usage?: components["schemas"]["UsageItem"][];
         };
+        /** SavedIdeaProfileResult */
+        SavedIdeaProfileResult: {
+            /** Budget Usd */
+            budget_usd: string | null;
+            profile: components["schemas"]["OperatorProfileInput-Output"] | null;
+            /** Profile Id */
+            profile_id: string | null;
+            /** Profile Version */
+            profile_version: number | null;
+        };
         /** SelectCandidateRequest */
         SelectCandidateRequest: {
             /**
@@ -1300,7 +1344,7 @@ export interface components {
         };
         /** SetupIdeaProfileRequest */
         SetupIdeaProfileRequest: {
-            profile: components["schemas"]["OperatorProfileInput"];
+            profile: components["schemas"]["OperatorProfileInput-Input"];
         };
         /** SetupIdeaProfileResult */
         SetupIdeaProfileResult: {
@@ -2220,6 +2264,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_idea_profile_operator_idea_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedIdeaProfileResult"];
                 };
             };
         };

@@ -179,3 +179,10 @@ class SetupIdeaProfileResult(StrictRunDTO):
     profile_id: UUID
     profile_version: int
     budget_usd: str | None
+
+
+class SavedIdeaProfileResult(StrictRunDTO):
+    profile_id: UUID | None
+    profile_version: int | None
+    profile: OperatorProfileInput | None
+    budget_usd: str | None

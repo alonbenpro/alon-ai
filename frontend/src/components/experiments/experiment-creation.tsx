@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
+import Link from "next/link";
 
 import type { components } from "@/lib/api/schema";
 import { RunInspector } from "@/components/agent-lab/run-inspector";
@@ -58,6 +59,7 @@ type Snapshot = components["schemas"]["ExperimentSnapshot"] & {
 export type RuntimeReadiness = components["schemas"]["ExperimentRuntimeStatus"];
 
 const draftKey = "experiment-create-pending";
+const setupDraftKey = "experiment-profile-setup-draft";
 const runKey = (experiment: string, action: "discover" | "refine") => `experiment-${experiment}-${action}-key`;
 type PendingRunCommand = { command_key: string; previous_run_id: string | null };
 function readPendingRunCommand(experiment: string, action: "discover" | "refine"): PendingRunCommand | null {
@@ -296,6 +298,13 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       if (!active) return;
       if (experimentId) { void load(experimentId); return; }
       try {
+        const setupDraft = sessionStorage.getItem(setupDraftKey);
+        if (setupDraft) {
+          const saved = JSON.parse(setupDraft) as { ideaSeed?: string; generationGuidance?: string };
+          if (typeof saved.ideaSeed === "string") setIdeaSeed(saved.ideaSeed);
+          if (typeof saved.generationGuidance === "string") setGenerationGuidance(saved.generationGuidance);
+          sessionStorage.removeItem(setupDraftKey);
+        }
         const draft = sessionStorage.getItem(draftKey);
         if (draft) {
           const pending = JSON.parse(draft) as { ideaSeed: string; payload: components["schemas"]["CreateExperimentRequest"]; path: string };
@@ -526,7 +535,7 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       {id ? <div className="experiment-saved-seed" title={`${draft ? "Proposal session" : "Experiment"} ${id}`}><div><span>{draft ? runtime?.provider_mode === "fake" ? "Exploring recorded examples" : "Exploring generated directions" : mode === "SYSTEM_DISCOVERY" ? "Selected direction" : "Original wording"}</span>{ideaSeed && <pre>{ideaSeed}</pre>}</div><p>{stageStatus === "RUNNING" ? "Agent running" : stageStatus === "BLOCKED" ? "Blocked" : stageStatus === "COMPLETE" ? "Complete" : "Waiting for input"}</p></div> :
         <form onSubmit={(event) => void start(event)} noValidate><label className="experiment-field experiment-field--wide"><span>Your idea <small>(optional)</small></span><textarea aria-label="Your idea" name="ideaSeed" value={ideaSeed} onChange={(event) => { setIdeaSeed(event.target.value); setMessage(""); }} rows={3} placeholder="Describe the problem or opportunity in a sentence…" disabled={!!busy || createUncertain} /><small>{runtime?.provider_mode === "fake" ? "Your exact wording is kept. Or explore recorded example directions." : "Your exact wording is kept. A supplied idea is researched and deepened in the same run."}</small></label>
           {!ideaSeed.trim() && <label className="experiment-field experiment-field--wide"><span>Discovery guidance <small>(optional)</small></span><textarea aria-label="Discovery guidance" value={generationGuidance} maxLength={4000} onChange={(event) => setGenerationGuidance(event.target.value)} rows={2} placeholder="Audience, problem area, or constraints to explore…" disabled={!!busy || createUncertain} /></label>}
-          {message && <p className="experiment-error" role="alert">{message}</p>}<div className="experiment-action-row"><button type="submit" disabled={!runtime?.ready || !!busy}>{createUncertain ? "Retry start" : "Start experiment"} <span aria-hidden="true">↗</span></button><button type="button" className="experiment-secondary-action" disabled={!runtime?.ready || !!busy || createUncertain || !!ideaSeed.trim()} onClick={() => void start(undefined, true)}>Discover</button></div></form>}
+          {message && <p className="experiment-error" role="alert">{message} {message.includes("operator profile") && <Link href="/experiments/profile" onClick={() => sessionStorage.setItem(setupDraftKey, JSON.stringify({ ideaSeed, generationGuidance }))}>Set up your profile</Link>}</p>}<div className="experiment-action-row"><button type="submit" disabled={!runtime?.ready || !!busy}>{createUncertain ? "Retry start" : "Start experiment"} <span aria-hidden="true">↗</span></button><button type="button" className="experiment-secondary-action" disabled={!runtime?.ready || !!busy || createUncertain || !!ideaSeed.trim()} onClick={() => void start(undefined, true)}>Discover</button></div></form>}
     </section>}
     {blockedReason && <p className="experiment-error" role="status">{blockedReason.replaceAll("_", " ")}</p>}
     {id && <section className="experiment-review" aria-live="polite" aria-labelledby="refinement-heading"><div className="experiment-section-heading"><span>{draft ? runtime?.provider_mode === "fake" ? "Recorded directions" : "Generated directions" : "Next step"}</span><h2 id="refinement-heading">{draft ? "Pick a direction" : state === "AWAITING_REVIEW" ? "Review the proposed change" : state === "IDEA_ACCEPTED" ? "Idea approved" : "Experiment progress"}</h2></div>

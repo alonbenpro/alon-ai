@@ -22,6 +22,7 @@ from alon_ai.services.experiments import ExperimentService
 from alon_ai.services.ideas import IdeaService
 from alon_ai.services.research import ResearchService
 from alon_ai.services.schemas.agent_runs import (
+    SavedIdeaProfileResult,
     SetupIdeaProfileRequest,
     SetupIdeaProfileResult,
 )
@@ -41,6 +42,13 @@ async def setup_idea_profile(
     body: SetupIdeaProfileRequest, service: ExperimentServiceDependency
 ) -> SetupIdeaProfileResult:
     return await service.setup_profile(body)
+
+
+@router.get("/idea-profile", response_model=SavedIdeaProfileResult)
+async def get_idea_profile(
+    service: ExperimentServiceDependency,
+) -> SavedIdeaProfileResult:
+    return await service.get_profile()
 
 
 @router.post("/experiments", response_model=ExperimentSnapshot, status_code=201)

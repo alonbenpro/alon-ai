@@ -7,7 +7,7 @@ import { backendFetch, getSession } from "@/lib/operator/server";
 vi.mock("next/image", () => ({
   default: function TestImage({ alt }: { alt: string }) { return <span role="img" aria-label={alt} />; },
 }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
+vi.mock("next/navigation", () => ({ redirect: vi.fn(), usePathname: () => "/" }));
 vi.mock("@/lib/operator/server", () => ({
   backendFetch: vi.fn(),
   getSession: vi.fn(),

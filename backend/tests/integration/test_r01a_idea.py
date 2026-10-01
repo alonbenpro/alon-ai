@@ -265,6 +265,83 @@ async def test_authenticated_profile_setup_enables_intake_without_sql(
         assert response.status_code == 201, response.text
 
 
+async def test_idea_profile_get_reads_latest_saved_version(governance_engine):
+    app, operator_id = await configured_app(governance_engine, with_profile=False)
+    approved = profile(operator_id)
+
+    def payload(capabilities):
+        return {
+            "profile": {
+                "capabilities": capabilities,
+                "constraints": list(approved.constraints),
+                "delivery": approved.delivery.model_dump(
+                    mode="json", exclude={"schema_version"}
+                ),
+                "commercial": approved.commercial.model_dump(
+                    mode="json", exclude={"schema_version"}
+                ),
+            }
+        }
+
+    with TestClient(app) as client:
+        assert client.get("/operator/idea-profile").status_code == 401
+        login(client)
+        empty = client.get("/operator/idea-profile")
+        assert empty.status_code == 200, empty.text
+        assert empty.json() == {
+            "profile_id": None,
+            "profile_version": None,
+            "profile": None,
+            "budget_usd": "1.00",
+        }
+
+        first_payload = payload(list(approved.capabilities))
+        first = client.post(
+            "/operator/idea-profile", json=first_payload, headers=ORIGIN
+        )
+        assert first.status_code == 200, first.text
+        assert (
+            client.post(
+                "/operator/idea-profile", json=first_payload, headers=ORIGIN
+            ).json()
+            == first.json()
+        )
+
+        equivalent_payload = payload(list(approved.capabilities))
+        equivalent_payload["profile"]["delivery"]["hours_per_week"] += ".00"
+        equivalent_payload["profile"]["commercial"]["minimum_margin_rate"] += "0"
+        equivalent = client.post(
+            "/operator/idea-profile", json=equivalent_payload, headers=ORIGIN
+        )
+        assert equivalent.status_code == 200, equivalent.text
+        assert equivalent.json() == first.json()
+
+        changed_payload = payload(["Python development", "Workflow consulting"])
+        second = client.post(
+            "/operator/idea-profile", json=changed_payload, headers=ORIGIN
+        )
+        assert second.status_code == 200, second.text
+        assert second.json()["profile_id"] == first.json()["profile_id"]
+        assert second.json()["profile_version"] == 2
+        saved = client.get("/operator/idea-profile")
+        assert saved.status_code == 200, saved.text
+        assert saved.json() == {
+            **second.json(),
+            "profile": changed_payload["profile"],
+        }
+
+        reverted = client.post(
+            "/operator/idea-profile", json=first_payload, headers=ORIGIN
+        )
+        assert reverted.status_code == 200, reverted.text
+        assert reverted.json()["profile_id"] == first.json()["profile_id"]
+        assert reverted.json()["profile_version"] == 3
+        assert client.get("/operator/idea-profile").json() == {
+            **reverted.json(),
+            "profile": first_payload["profile"],
+        }
+
+
 async def test_successful_run_stays_pending_review_until_explicit_accept(
     governance_engine,
 ):

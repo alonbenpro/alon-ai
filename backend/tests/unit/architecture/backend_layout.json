@@ -366,6 +366,18 @@
     },
     {
       "delegation": {
+        "args": [],
+        "kwargs": {},
+        "method": "get_profile"
+      },
+      "handler": "alon_ai.api.routes.experiments.get_idea_profile",
+      "method": "GET",
+      "owner": "alon_ai.services.experiments",
+      "path": "/operator/idea-profile",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
         "args": [
           "body"
         ],

@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 
 const destinations = [
+  { title: "Operator profile", detail: "Saved capabilities and delivery limits", href: "/experiments/profile" },
   { title: "Overview", detail: "Top of the control desk", href: "#overview" },
   { title: "System status", detail: "Health, readiness, and recorded work", href: "#system" },
   { title: "Activity log", detail: "Server-confirmed activity", href: "#activity" },
@@ -27,7 +28,7 @@ export function OperatorControls({ onOverview = true }: { onOverview?: boolean }
 
   const navigate = (href: string) => {
     close();
-    if (!onOverview) {
+    if (!onOverview || href.startsWith("/")) {
       router.push(href);
       return;
     }

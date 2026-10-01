@@ -410,6 +410,16 @@ html[data-motion="off"] *, html[data-motion="off"] *::before, html[data-motion="
 .experiment-field small { color: var(--muted); font-size: 11px; }
 .experiment-field input, .experiment-field textarea, .experiment-field select { border-color: var(--line-strong); background: #0b1423; }
 .experiment-field textarea::placeholder { color: var(--subtle); }
+.profile-workspace { max-width: 960px; }
+.profile-form { display: grid; gap: 18px; }
+.profile-form fieldset { min-width: 0; display: grid; gap: 14px; margin: 0; padding: 20px; border: 1px solid var(--line); border-radius: 12px; background: #101827; }
+.profile-form legend { padding: 0 8px; color: var(--ink); font-size: 14px; font-weight: 600; }
+.profile-form p, .profile-workspace > p { color: var(--muted); font-size: 13px; line-height: 1.5; }
+.profile-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.profile-form textarea { min-height: 80px; }
+.profile-form input { min-height: 40px; padding: 10px; border: 1px solid var(--line-strong); border-radius: 7px; color: var(--ink); }
+.profile-form .experiment-action-row a { color: var(--blue); }
+@media (max-width: 680px) { .profile-grid { grid-template-columns: 1fr; } }
 .experiment-field input:hover, .experiment-field textarea:hover, .experiment-field select:hover, .experiment-field input:focus, .experiment-field textarea:focus, .experiment-field select:focus { border-color: var(--blue); }
 .experiment-field textarea:focus, .experiment-field select:focus { box-shadow: 0 0 0 2px #9587ff30; }
 .experiment-action-row button, .experiment-review > button, .experiment-review > div[role="status"] button, .experiment-candidates > button, .experiment-intent button, .experiment-success a, .experiment-return > button { border-color: #b0a4ff; color: #100e27; background: linear-gradient(115deg, #a699ff, #b8acff); box-shadow: 0 0 18px #9587ff2b; }

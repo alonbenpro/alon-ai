@@ -58,6 +58,17 @@ function stubSavedSnapshot(snapshot: unknown) {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); sessionStorage.clear(); });
 
 describe("experiment creation checkpoint", () => {
+  it("restores an unsent idea after profile setup without starting a run", async () => {
+    sessionStorage.setItem("experiment-profile-setup-draft", JSON.stringify({ ideaSeed: "  Exact idea\nwith details  ", generationGuidance: "Israel" }));
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    render(<ExperimentCreation runtime={runtime} />);
+    await act(async () => {});
+    expect(screen.getByRole("textbox", { name: "Your idea" })).toHaveValue("  Exact idea\nwith details  ");
+    fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "" } });
+    expect(screen.getByRole("textbox", { name: "Discovery guidance" })).toHaveValue("Israel");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
   it("starts from one optional idea field without asking for a mission brief", () => {
     render(<ExperimentCreation runtime={runtime} />);
     expect(screen.getByRole("heading", { name: "New experiment" })).toBeInTheDocument();
@@ -349,6 +360,7 @@ describe("experiment creation checkpoint", () => {
     fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "Clinic idea" } });
     fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
     expect(await screen.findByRole("alert")).toHaveTextContent(/operator profile/i);
+    expect(screen.getByRole("link", { name: "Set up your profile" })).toHaveAttribute("href", "/experiments/profile");
     expect(screen.getByRole("button", { name: "Start experiment" })).toBeEnabled();
     expect(screen.queryByRole("textbox", { name: "Objective" })).not.toBeInTheDocument();
     expect(fetcher).toHaveBeenCalledOnce();

@@ -173,16 +173,23 @@ async def _profile(
     delivery = DeliveryConstraints.model_validate(payload.delivery.model_dump())
     commercial = CommercialConstraints.model_validate(payload.commercial.model_dump())
     rows = await experiment_repository.profile_rows(engine, operator_id)
-    expected_delivery = delivery.model_dump(mode="json")
-    expected_commercial = commercial.model_dump(mode="json")
-    for row in rows:
-        if (
-            row["capabilities"] == list(payload.capabilities)
-            and row["constraints"] == list(payload.constraints)
-            and row["delivery"] == expected_delivery
-            and row["commercial"] == expected_commercial
-        ):
-            return row["id"], row["version"]
+    latest = next(
+        (
+            row
+            for row in rows
+            if row["profile_schema_version"] == 2 and row["approved_by"] == operator_id
+        ),
+        None,
+    )
+    if latest and (
+        latest["capabilities"] == list(payload.capabilities)
+        and latest["constraints"] == list(payload.constraints)
+        and DeliveryConstraints.model_validate_json(json.dumps(latest["delivery"]))
+        == delivery
+        and CommercialConstraints.model_validate_json(json.dumps(latest["commercial"]))
+        == commercial
+    ):
+        return latest["id"], latest["version"]
     profile_id = rows[0]["id"] if rows else _id(operator_id, "profile")
     version = rows[0]["version"] + 1 if rows else 1
     profile = OperatorProfileVersion(
@@ -763,6 +770,49 @@ class ExperimentService:
         return SetupIdeaProfileResult(
             profile_id=profile_id,
             profile_version=version,
+            budget_usd=str(self.context.settings.idea_intake_budget_usd)
+            if self.context.settings.idea_intake_budget_usd is not None
+            else None,
+        )
+
+    async def get_profile(self):
+        from alon_ai.services.schemas.agent_runs import SavedIdeaProfileResult
+
+        rows = await experiment_repository.profile_rows(
+            self.context.engine, self.context.operator_id
+        )
+        saved = next(
+            (
+                row
+                for row in rows
+                if row["profile_schema_version"] == 2
+                and row["approved_by"] == self.context.operator_id
+            ),
+            None,
+        )
+        return SavedIdeaProfileResult(
+            profile_id=saved["id"] if saved else None,
+            profile_version=saved["version"] if saved else None,
+            profile=OperatorProfileInput(
+                capabilities=saved["capabilities"],
+                constraints=saved["constraints"],
+                delivery=DeliveryInput.model_validate(
+                    {
+                        key: value
+                        for key, value in saved["delivery"].items()
+                        if key != "schema_version"
+                    }
+                ),
+                commercial=CommercialInput.model_validate(
+                    {
+                        key: value
+                        for key, value in saved["commercial"].items()
+                        if key != "schema_version"
+                    }
+                ),
+            )
+            if saved
+            else None,
             budget_usd=str(self.context.settings.idea_intake_budget_usd)
             if self.context.settings.idea_intake_budget_usd is not None
             else None,
