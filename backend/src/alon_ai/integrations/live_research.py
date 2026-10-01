@@ -61,9 +61,17 @@ class ResearchCapabilityBinding(StrictDTO):
             and not use.required_fields
             and not self.grant.storage_fields
         )
+        personal_firecrawl_test = (
+            use.capability is Capability.FIRECRAWL_PAGE_CAPTURE
+            and use.purpose is Purpose.R01A_PERSONAL_NONCOMMERCIAL_TEST
+        )
         if (
             use.capability not in RESEARCH_CAPABILITIES
-            or (not transient and use.purpose is not Purpose.RESEARCH)
+            or (
+                not transient
+                and use.purpose is not Purpose.RESEARCH
+                and not personal_firecrawl_test
+            )
             or self.config.secret_handle is None
             or self.config.requested_count != 1
             or (not transient and not use.required_fields)

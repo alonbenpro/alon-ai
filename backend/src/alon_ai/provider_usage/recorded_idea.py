@@ -121,7 +121,13 @@ async def provision_recorded_seeded_runtime(
     grant = ProviderUsageGrant(
         grant_id=_id(run_id, "grant"),
         version=1,
-        **use.model_dump(exclude={"schema_version", "required_fields"}),
+        **use.model_dump(
+            exclude={
+                "schema_version",
+                "required_fields",
+                "personal_noncommercial_approval_ref",
+            }
+        ),
         outbound_use_permitted=True,
         storage_fields=frozenset({ContentField.TEXT}),
         retention_rule_id=_id(run_id, "retention"),

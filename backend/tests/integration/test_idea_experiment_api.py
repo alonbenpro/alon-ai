@@ -194,8 +194,8 @@ async def test_live_mode_uses_only_explicit_startup_provider_with_recorded_test_
     config = SimpleNamespace(secret_handle="recorded-only")
     secrets = SimpleNamespace(get=lambda handle: "recorded-secret")
 
-    def load_config(cls, raw):
-        observed.append(("config", raw))
+    def load_runtime_config(path):
+        observed.append(("config", path.read_text(encoding="utf-8")))
         return config
 
     def load_secrets(path, loaded_config):
@@ -207,9 +207,7 @@ async def test_live_mode_uses_only_explicit_startup_provider_with_recorded_test_
         return service, attribution, "OPENAI"
 
     monkeypatch.setattr(
-        combined_idea.CombinedIdeaConfig,
-        "model_validate_json",
-        classmethod(load_config),
+        provision, "load_combined_idea_runtime_config", load_runtime_config
     )
     monkeypatch.setattr(provision, "load_combined_secret_store", load_secrets)
     monkeypatch.setattr(

@@ -124,7 +124,7 @@ class AuthRepository:
     async def logout(self, session_id: UUID) -> None:
         async with self.engine.begin() as connection:
             await connection.execute(
-                text("""UPDATE operator_sessions SET revoked_at=now()
+                text("""UPDATE operator_sessions SET revoked_at=GREATEST(now(), issued_at)
                     WHERE id=:id AND revoked_at IS NULL"""),
                 {"id": session_id},
             )

@@ -42,7 +42,8 @@ def market_evidence_permitted(grant: ProviderUsageGrant, field: ContentField) ->
     Provider retention rights are necessary but do not grant model-input purpose.
     """
 
-    return grant.purpose is Purpose.RESEARCH and field in _MARKET_EVIDENCE_FIELDS.get(
+    permitted_purpose = grant.purpose is Purpose.RESEARCH
+    return permitted_purpose and field in _MARKET_EVIDENCE_FIELDS.get(
         grant.capability, frozenset()
     )
 

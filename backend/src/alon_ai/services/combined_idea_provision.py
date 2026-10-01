@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import asyncio
-import getpass
 import hashlib
 import json
 import os
@@ -17,19 +16,18 @@ import shutil
 import stat
 import sys
 import tempfile
-import termios
-import warnings
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Literal, Self
 from uuid import UUID
 
-from pydantic import Field, SecretStr, model_validator
+from pydantic import AwareDatetime, Field, SecretStr, model_validator
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alon_ai.config import Settings
 from alon_ai.db.engine import create_engine
 from alon_ai.db.repositories.live_idea_provision import (
+    active_operator_for_subject,
     current_operator_status,
     register_authority_rows,
 )
@@ -68,6 +66,15 @@ _CONSUMERS = {
     Provider.BRAVE: "brave-research",
     Provider.FIRECRAWL: "firecrawl-research",
 }
+_API_KEY_CONSUMERS = {
+    "OPENAI_API_KEY": "openai-idea",
+    "BRAVE_API_KEY": "brave-research",
+    "FIRECRAWL_API_KEY": "firecrawl-research",
+}
+BOOTSTRAP_OPERATOR_ID = UUID("00000000-0000-4000-8000-00000000f00d")
+_OPERATOR_REFERENCE_KEYS = frozenset(
+    {"approved_by", "registered_by", "reviewed_by", "attested_by"}
+)
 
 
 class ReviewedAuthority(StrictDTO):
@@ -87,13 +94,24 @@ class ReviewedProof(StrictDTO):
 
 
 class FirecrawlCommercialApproval(StrictDTO):
-    """Operator attestation to express permission in the retained grant document."""
+    """Operator attestation to express Firecrawl authorization for commercial use."""
 
     grant_id: UUID
     evidence_id: UUID
     express_commercial_use_authorized: Literal[True]
     permitted_use: Literal["R01A_COMMERCIAL_MARKET_RESEARCH"]
     reviewed_by: UUID
+
+
+class FirecrawlPersonalUseApproval(StrictDTO):
+    """Operator attestation that this Firecrawl use is personal and noncommercial."""
+
+    grant_id: UUID
+    evidence_id: UUID
+    operator_attested_personal_noncommercial_test: Literal[True]
+    permitted_use: Literal["R01A_PERSONAL_NONCOMMERCIAL_TEST"]
+    attested_by: UUID
+    attested_at: AwareDatetime
 
 
 class ResearchModelUseApproval(StrictDTO):
@@ -130,7 +148,10 @@ class CombinedIdeaSetupManifest(StrictDTO):
     authorities: tuple[ReviewedAuthority, ...] = Field(min_length=3, max_length=6)
     proofs: tuple[ReviewedProof, ...] = Field(min_length=12, max_length=42)
     firecrawl_commercial_approvals: tuple[FirecrawlCommercialApproval, ...] = Field(
-        min_length=1, max_length=4
+        default=(), max_length=4
+    )
+    firecrawl_personal_use_approvals: tuple[FirecrawlPersonalUseApproval, ...] = Field(
+        default=(), max_length=4
     )
 
     research_model_use_approvals: tuple[ResearchModelUseApproval, ...] = Field(
@@ -165,16 +186,35 @@ class CombinedIdeaSetupManifest(StrictDTO):
         handles = _handles(config)
         if len(set(handles.values())) != 3:
             raise ValueError("separate provider secret handles required")
-        approvals = {a.grant_id: a for a in self.firecrawl_commercial_approvals}
+        commercial_approvals = {
+            a.grant_id: a for a in self.firecrawl_commercial_approvals
+        }
+        personal_approvals = {
+            a.grant_id: a for a in self.firecrawl_personal_use_approvals
+        }
         firecrawl_grants = {
-            a.grant.grant_id
+            a.grant.grant_id: a.grant
             for a in self.authorities
             if a.grant.provider is Provider.FIRECRAWL
         }
-        if set(approvals) != firecrawl_grants or len(approvals) != len(
-            self.firecrawl_commercial_approvals
+        commercial_grants = {
+            grant_id
+            for grant_id, grant in firecrawl_grants.items()
+            if grant.purpose is Purpose.RESEARCH
+        }
+        personal_grants = {
+            grant_id
+            for grant_id, grant in firecrawl_grants.items()
+            if grant.purpose is Purpose.R01A_PERSONAL_NONCOMMERCIAL_TEST
+        }
+        if (
+            set(commercial_approvals) != commercial_grants
+            or set(personal_approvals) != personal_grants
+            or set(commercial_approvals) & set(personal_approvals)
+            or len(commercial_approvals) != len(self.firecrawl_commercial_approvals)
+            or len(personal_approvals) != len(self.firecrawl_personal_use_approvals)
         ):
-            raise ValueError("exact Firecrawl commercial proof required")
+            raise ValueError("exact Firecrawl use approval required")
         model_approvals = {a.grant_id: a for a in self.research_model_use_approvals}
         research_grants = {b.grant.grant_id for b in bindings}
         if set(model_approvals) != research_grants or len(model_approvals) != len(
@@ -271,12 +311,23 @@ class CombinedIdeaSetupManifest(StrictDTO):
                 ):
                     raise ValueError("reviewed page URL and text retention required")
             if grant.provider is Provider.FIRECRAWL:
-                approval = approvals[grant.grant_id]
-                if (
-                    approval.evidence_id != grant.supporting_evidence_ref
-                    or approval.reviewed_by != operator
-                ):
-                    raise ValueError("Firecrawl express commercial permission required")
+                if grant.purpose is Purpose.RESEARCH:
+                    approval = commercial_approvals[grant.grant_id]
+                    if (
+                        approval.evidence_id != grant.supporting_evidence_ref
+                        or approval.reviewed_by != operator
+                    ):
+                        raise ValueError(
+                            "Firecrawl express commercial permission required"
+                        )
+                elif grant.purpose is Purpose.R01A_PERSONAL_NONCOMMERCIAL_TEST:
+                    approval = personal_approvals[grant.grant_id]
+                    if (
+                        approval.evidence_id != grant.supporting_evidence_ref
+                        or approval.attested_by != operator
+                        or approval.attested_at > start
+                    ):
+                        raise ValueError("Firecrawl personal-use approval mismatch")
             if binding:
                 model_approval = model_approvals[grant.grant_id]
                 if (
@@ -464,27 +515,158 @@ def load_combined_secret_store(
         raise AccountingDenied(Reason.SECRET) from None
 
 
-def read_api_key(consumer: str) -> SecretStr:
+def load_combined_idea_runtime_config(config_path: Path) -> CombinedIdeaConfig:
+    """Bind personal Firecrawl rights only from this bundle's reviewed attestation."""
     try:
-        fd = os.open("/dev/tty", os.O_RDWR | os.O_NOCTTY)
-        with os.fdopen(fd, "w") as terminal:
-            termios.tcgetattr(terminal.fileno())
-            with warnings.catch_warnings():
-                warnings.simplefilter("error", getpass.GetPassWarning)
-                value = getpass.getpass(f"API key for {consumer}: ", stream=terminal)
-        if not value:
-            raise ValueError("empty credential")
-        return SecretStr(value)
-    except (OSError, ValueError, termios.error, getpass.GetPassWarning):
-        raise RuntimeError("Private terminal required for provider key") from None
+        config = CombinedIdeaConfig.model_validate_json(_read_private(config_path))
+        manifest = CombinedIdeaSetupManifest.model_validate_json(
+            _read_private(config_path.parent / "reviewed-manifest.json")
+        )
+        if manifest.config != config:
+            raise ValueError("reviewed config mismatch")
+        approvals = {
+            approval.grant_id: approval
+            for approval in manifest.firecrawl_personal_use_approvals
+        }
+        bindings = []
+        personal_grants = set()
+        for binding in config.research_bindings:
+            use = binding.config.intended_use
+            if use.purpose is not Purpose.R01A_PERSONAL_NONCOMMERCIAL_TEST:
+                if binding.grant.grant_id in approvals:
+                    raise ValueError("unexpected personal Firecrawl approval")
+                bindings.append(binding)
+                continue
+            grant = binding.grant
+            personal_grants.add(grant.grant_id)
+            approval = approvals.get(grant.grant_id)
+            if (
+                use.provider is not Provider.FIRECRAWL
+                or use.capability is not Capability.FIRECRAWL_PAGE_CAPTURE
+                or approval is None
+                or approval.evidence_id != grant.supporting_evidence_ref
+                or approval.attested_by != config.model.approved_by
+            ):
+                raise ValueError("personal Firecrawl approval mismatch")
+            scoped_use = use.model_copy(
+                update={"personal_noncommercial_approval_ref": approval.evidence_id}
+            )
+            scoped_config = binding.config.model_copy(
+                update={"intended_use": scoped_use}
+            )
+            bindings.append(binding.model_copy(update={"config": scoped_config}))
+        if personal_grants != set(approvals):
+            raise ValueError("personal Firecrawl approval set mismatch")
+        return config.model_copy(update={"research_bindings": tuple(bindings)})
+    except Exception:  # noqa: BLE001 - redact private paths and evidence details
+        raise ValueError("reviewed local combined runtime scope required") from None
+
+
+def read_api_keys_file(path: Path) -> dict[str, SecretStr]:
+    """Read exactly three credentials from a private dotenv-style file, never source it."""
+    try:
+        contents = _read_private(path, 16_384).decode("utf-8")
+    except (OSError, UnicodeDecodeError, ValueError):
+        raise ValueError("owner-private provider key file required") from None
+
+    values: dict[str, SecretStr] = {}
+    for line in contents.splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        name, separator, value = line.partition("=")
+        if (
+            not separator
+            or name not in _API_KEY_CONSUMERS
+            or name in values
+            or not value
+            or value != value.strip()
+            or not value.isprintable()
+            or any(character.isspace() for character in value)
+            or value[0] in "'\""
+        ):
+            raise ValueError("invalid provider key file")
+        values[name] = SecretStr(value)
+    if set(values) != set(_API_KEY_CONSUMERS):
+        raise ValueError("provider key file must contain all three provider keys")
+    return {_API_KEY_CONSUMERS[name]: value for name, value in values.items()}
+
+
+async def configured_active_operator_id(
+    engine: AsyncEngine, auth_subject: str | None
+) -> UUID | None:
+    if not auth_subject:
+        return None
+    return await active_operator_for_subject(engine, auth_subject)
+
+
+def _contains_bootstrap_operator(value: object) -> bool:
+    marker = str(BOOTSTRAP_OPERATOR_ID)
+    if isinstance(value, dict):
+        return any(_contains_bootstrap_operator(child) for child in value.values())
+    if isinstance(value, list):
+        return any(_contains_bootstrap_operator(child) for child in value)
+    return value == marker
+
+
+def _validate_bootstrap_operator_markers(raw: dict) -> None:
+    marker = str(BOOTSTRAP_OPERATOR_ID)
+
+    def visit(value: object, key: str | None = None) -> None:
+        if isinstance(value, dict):
+            for name, child in value.items():
+                visit(child, name)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child, key)
+        elif value == marker and key not in _OPERATOR_REFERENCE_KEYS:
+            raise ValueError("invalid local operator marker placement")
+        elif key in _OPERATOR_REFERENCE_KEYS and value != marker:
+            raise ValueError(
+                "local operator marker must cover every approval reference"
+            )
+
+    visit(raw)
+
+
+def _resolve_bootstrap_operator(raw: dict, operator_id: UUID) -> dict:
+    marker = str(BOOTSTRAP_OPERATOR_ID)
+    _validate_bootstrap_operator_markers(raw)
+
+    def replace(value: object, key: str | None = None) -> object:
+        if isinstance(value, dict):
+            return {name: replace(child, name) for name, child in value.items()}
+        if isinstance(value, list):
+            return [replace(child, key) for child in value]
+        if value == marker:
+            if key not in _OPERATOR_REFERENCE_KEYS:
+                raise ValueError("invalid local operator marker placement")
+            return str(operator_id)
+        if key in _OPERATOR_REFERENCE_KEYS:
+            raise ValueError(
+                "local operator marker must cover every approval reference"
+            )
+        return value
+
+    resolved = replace(raw)
+    if not isinstance(resolved, dict):
+        raise TypeError("invalid local operator manifest")
+    return resolved
 
 
 async def provision_from_manifest(
-    manifest_path: Path, data_dir: Path, engine: AsyncEngine
+    manifest_path: Path, data_dir: Path, engine: AsyncEngine, keys_file: Path
 ) -> Path:
-    manifest = CombinedIdeaSetupManifest.model_validate_json(
-        _read_private(manifest_path)
-    )
+    raw_manifest = json.loads(_read_private(manifest_path))
+    if _contains_bootstrap_operator(raw_manifest):
+        _validate_bootstrap_operator_markers(raw_manifest)
+        operator_id = await configured_active_operator_id(
+            engine, Settings().operator_auth_subject
+        )
+        if operator_id is None:
+            raise RuntimeError("Current active operator approval required")
+        raw_manifest = _resolve_bootstrap_operator(raw_manifest, operator_id)
+    manifest = CombinedIdeaSetupManifest.model_validate_json(json.dumps(raw_manifest))
     for proof in manifest.proofs:
         if (
             hashlib.sha256(
@@ -503,6 +685,8 @@ async def provision_from_manifest(
         ):
             raise RuntimeError("Current active operator approval required")
 
+    await require_operator()
+    credentials = read_api_keys_file(keys_file)
     _private_data_dir(data_dir)
     with _provision_lock(data_dir):
         await require_operator()
@@ -511,8 +695,10 @@ async def provision_from_manifest(
         if final_dir.exists() or final_dir.is_symlink():
             _private_data_dir(final_dir)
             if (
-                _read_private(final_dir / "reviewed-manifest.json")
-                != manifest.model_dump_json().encode()
+                CombinedIdeaSetupManifest.model_validate_json(
+                    _read_private(final_dir / "reviewed-manifest.json")
+                )
+                != manifest
                 or CombinedIdeaConfig.model_validate_json(_read_private(config_path))
                 != config
             ):
@@ -520,8 +706,14 @@ async def provision_from_manifest(
                     "Published authority differs; reviewed rotation required"
                 )
             store = load_combined_secret_store(final_dir, config)
-            for handle in _handles(config).values():
-                store.get(handle)
+            for consumer, handle in _handles(config).items():
+                if (
+                    store.for_consumer(consumer).get(handle).get_secret_value()
+                    != credentials[consumer].get_secret_value()
+                ):
+                    raise RuntimeError(
+                        "Published credentials differ; reviewed rotation required"
+                    )
             for authority in manifest.authorities:
                 await register_authority_rows(engine, authority)
             return config_path
@@ -530,7 +722,7 @@ async def provision_from_manifest(
             for consumer, handle in _handles(config).items():
                 private = stage / consumer
                 _private_data_dir(private)
-                value = read_api_key(consumer)
+                value = credentials[consumer]
                 key = secrets.token_bytes(32)
                 _write_private_new(private / "live-secret.key", key)
                 store = EncryptedFileSecretStore(
@@ -569,26 +761,42 @@ def main() -> None:
     )
     parser.add_argument("--manifest", type=Path)
     parser.add_argument("--data-dir", type=Path)
+    parser.add_argument("--keys-file", type=Path)
     parser.add_argument("--print-schema", action="store_true")
     args = parser.parse_args()
     if args.print_schema:
         print(json.dumps(CombinedIdeaSetupManifest.model_json_schema(), indent=2))
         return
-    if args.manifest is None or args.data_dir is None:
-        parser.error("--manifest and --data-dir are required for provisioning")
+    if args.manifest is None or args.data_dir is None or args.keys_file is None:
+        parser.error(
+            "--manifest, --data-dir, and --keys-file are required for provisioning"
+        )
 
     async def run() -> None:
         engine = create_engine(Settings())
         try:
-            await provision_from_manifest(args.manifest, args.data_dir, engine)
+            await provision_from_manifest(
+                args.manifest, args.data_dir, engine, args.keys_file
+            )
         finally:
             await engine.dispose()
 
     try:
         asyncio.run(run())
-    except Exception:  # noqa: BLE001 - never print private paths, input, or credentials
+    except Exception as exc:  # noqa: BLE001 - never print private paths or values
+        category = (
+            "reviewed authority or configuration"
+            if isinstance(exc, (ValueError, TypeError))
+            else "private file access"
+            if isinstance(exc, (OSError, UnicodeDecodeError))
+            else "operator or published authority state"
+            if isinstance(exc, RuntimeError)
+            else "provider accounting authority"
+            if isinstance(exc, AccountingDenied)
+            else "unexpected internal failure"
+        )
         print(
-            "Combined provisioning failed; review private authority and evidence",
+            f"Combined provisioning failed ({category}); review private authority and evidence",
             file=sys.stderr,
         )
         raise SystemExit(1) from None

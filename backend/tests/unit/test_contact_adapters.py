@@ -96,7 +96,13 @@ def licensed(capability: Capability, field: ContentField):
     grant = ProviderUsageGrant(
         grant_id=uuid4(),
         version=1,
-        **use.model_dump(exclude={"schema_version", "required_fields"}),
+        **use.model_dump(
+            exclude={
+                "schema_version",
+                "required_fields",
+                "personal_noncommercial_approval_ref",
+            }
+        ),
         outbound_use_permitted=True,
         storage_fields=frozenset({field}),
         retention_rule_id=uuid4(),

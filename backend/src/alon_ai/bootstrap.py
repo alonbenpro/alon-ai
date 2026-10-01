@@ -38,10 +38,12 @@ def load_idea_runtime_provider(settings: Settings):
     import stat
 
     from alon_ai.services.combined_idea import (
-        CombinedIdeaConfig,
         build_combined_idea_provider,
     )
-    from alon_ai.services.combined_idea_provision import load_combined_secret_store
+    from alon_ai.services.combined_idea_provision import (
+        load_combined_idea_runtime_config,
+        load_combined_secret_store,
+    )
 
     config_path = settings.r01a_live_config_path
     if config_path is None:
@@ -55,9 +57,7 @@ def load_idea_runtime_provider(settings: Settings):
             or info.st_size > 262144
         ):
             raise ValueError("private configuration required")
-        config = CombinedIdeaConfig.model_validate_json(
-            config_path.read_text(encoding="utf-8")
-        )
+        config = load_combined_idea_runtime_config(config_path)
         secrets = load_combined_secret_store(config_path.parent, config)
         return build_combined_idea_provider(config, secrets, settings)
     except Exception:  # noqa: BLE001 - never expose configuration or key details

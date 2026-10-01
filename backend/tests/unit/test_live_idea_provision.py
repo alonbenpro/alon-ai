@@ -5,6 +5,7 @@ import os
 import pty
 import select
 import threading
+from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from typing import Literal, cast
@@ -14,6 +15,7 @@ import pytest
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncEngine
 
+from alon_ai.db.repositories.live_idea_provision import active_operator_for_subject
 from alon_ai.integrations.schemas.provider import UsageComponent
 from alon_ai.provider_usage.live_idea import build_live_idea_runtime_provider
 from alon_ai.provider_usage.schemas.accounting import AccountingDenied
@@ -24,6 +26,70 @@ from alon_ai.services.live_idea_provision import (
     LivePriceSpec,
     make_authority_bundle,
 )
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "row, expected", [(None, None), ({"status": "DISABLED"}, None)]
+)
+async def test_local_operator_resolution_requires_matching_active_subject(
+    row, expected
+):
+    operator_id = uuid4()
+    result_row = None if row is None else {"id": operator_id, **row}
+
+    class Result:
+        def mappings(self):
+            return self
+
+        def one_or_none(self):
+            return result_row
+
+    class Connection:
+        async def execute(self, statement):
+            assert "auth_subject" in str(statement)
+            assert "local-operator@alon.ai" in statement.compile().params.values()
+            return Result()
+
+    class Engine:
+        @asynccontextmanager
+        async def connect(self):
+            yield Connection()
+
+    resolved = await active_operator_for_subject(
+        cast(AsyncEngine, Engine()), "local-operator@alon.ai"
+    )
+
+    assert resolved == expected
+
+
+@pytest.mark.asyncio
+async def test_local_operator_resolution_returns_active_matching_id():
+    operator_id = uuid4()
+
+    class Result:
+        def mappings(self):
+            return self
+
+        def one_or_none(self):
+            return {"id": operator_id, "status": "ACTIVE"}
+
+    class Connection:
+        async def execute(self, statement):
+            assert "local-operator@alon.ai" in statement.compile().params.values()
+            return Result()
+
+    class Engine:
+        @asynccontextmanager
+        async def connect(self):
+            yield Connection()
+
+    assert (
+        await active_operator_for_subject(
+            cast(AsyncEngine, Engine()), "local-operator@alon.ai"
+        )
+        == operator_id
+    )
 
 
 def sample_manifest(

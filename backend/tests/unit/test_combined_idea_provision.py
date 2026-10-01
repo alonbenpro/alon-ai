@@ -2,13 +2,16 @@
 
 import hashlib
 import os
+import subprocess
+import sys
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from pathlib import Path
 from typing import cast
 from uuid import uuid4
 
 import pytest
-from pydantic import SecretStr, ValidationError
+from pydantic import ValidationError
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from alon_ai.integrations.live_research import (
@@ -133,7 +136,13 @@ def reviewed(tmp_path):
         grant = ProviderUsageGrant(
             grant_id=uuid4(),
             version=1,
-            **use.model_dump(exclude={"schema_version", "required_fields"}),
+            **use.model_dump(
+                exclude={
+                    "schema_version",
+                    "required_fields",
+                    "personal_noncommercial_approval_ref",
+                }
+            ),
             outbound_use_permitted=True,
             storage_fields=fields,
             retention_rule_id=uuid4() if fields else None,
@@ -271,6 +280,38 @@ def reviewed(tmp_path):
     return manifest, path
 
 
+def write_api_keys_file(directory):
+    path = directory / "live-keys.env"
+    path.write_text(
+        "OPENAI_API_KEY=synthetic-openai\n"
+        "BRAVE_API_KEY=synthetic-brave\n"
+        "FIRECRAWL_API_KEY=synthetic-firecrawl\n"
+    )
+    path.chmod(0o600)
+    return path
+
+
+def mark_manifest_for_local_operator(path):
+    raw = __import__("json").loads(path.read_text())
+    marker = str(setup.BOOTSTRAP_OPERATOR_ID)
+
+    def visit(value):
+        if isinstance(value, dict):
+            for key, child in value.items():
+                if key in setup._OPERATOR_REFERENCE_KEYS:
+                    value[key] = marker
+                else:
+                    visit(child)
+        elif isinstance(value, list):
+            for child in value:
+                visit(child)
+
+    visit(raw)
+    path.write_text(__import__("json").dumps(raw))
+    path.chmod(0o600)
+    return raw
+
+
 def test_requires_explicit_commercial_permission_and_complete_proof(tmp_path):
     manifest, _ = reviewed(tmp_path)
     for patch in ({"firecrawl_commercial_approvals": []}, {"proofs": []}):
@@ -286,6 +327,101 @@ def test_requires_explicit_commercial_permission_and_complete_proof(tmp_path):
         setup.CombinedIdeaSetupManifest.model_validate_json(
             __import__("json").dumps(raw)
         )
+
+
+def test_allows_operator_attested_personal_firecrawl_use(tmp_path):
+    manifest, _ = reviewed(tmp_path)
+    raw = manifest.model_dump(mode="json")
+    commercial = raw["firecrawl_commercial_approvals"][0]
+    personal_purpose = "R01A_PERSONAL_NONCOMMERCIAL_TEST"
+    firecrawl_grant_id = commercial["grant_id"]
+    for binding in raw["config"]["research_bindings"]:
+        if binding["grant"]["grant_id"] == commercial["grant_id"]:
+            binding["grant"]["purpose"] = personal_purpose
+            binding["config"]["intended_use"]["purpose"] = personal_purpose
+            firecrawl_grant_id = binding["grant"]["grant_id"]
+    for authority in raw["authorities"]:
+        if authority["grant"]["grant_id"] == firecrawl_grant_id:
+            authority["grant"]["purpose"] = personal_purpose
+    raw["firecrawl_commercial_approvals"] = []
+    raw["firecrawl_personal_use_approvals"] = [
+        {
+            "grant_id": commercial["grant_id"],
+            "evidence_id": commercial["evidence_id"],
+            "operator_attested_personal_noncommercial_test": True,
+            "permitted_use": personal_purpose,
+            "attested_by": commercial["reviewed_by"],
+            "attested_at": raw["config"]["model"]["effective_at"],
+        }
+    ]
+
+    approved = setup.CombinedIdeaSetupManifest.model_validate_json(
+        __import__("json").dumps(raw)
+    )
+
+    assert approved.firecrawl_commercial_approvals == ()
+    assert approved.config.research_bindings[1].grant.purpose.value == (
+        "R01A_PERSONAL_NONCOMMERCIAL_TEST"
+    )
+
+
+def test_personal_firecrawl_approval_must_be_positive_and_exact(tmp_path):
+    manifest, _ = reviewed(tmp_path)
+    raw = manifest.model_dump(mode="json")
+    commercial = raw["firecrawl_commercial_approvals"][0]
+    personal_purpose = "R01A_PERSONAL_NONCOMMERCIAL_TEST"
+    firecrawl_grant_id = commercial["grant_id"]
+    for binding in raw["config"]["research_bindings"]:
+        if binding["grant"]["grant_id"] == commercial["grant_id"]:
+            binding["grant"]["purpose"] = personal_purpose
+            binding["config"]["intended_use"]["purpose"] = personal_purpose
+            firecrawl_grant_id = binding["grant"]["grant_id"]
+    for authority in raw["authorities"]:
+        if authority["grant"]["grant_id"] == firecrawl_grant_id:
+            authority["grant"]["purpose"] = personal_purpose
+    raw["firecrawl_commercial_approvals"] = []
+    raw["firecrawl_personal_use_approvals"] = [
+        {
+            "grant_id": commercial["grant_id"],
+            "evidence_id": commercial["evidence_id"],
+            "operator_attested_personal_noncommercial_test": True,
+            "permitted_use": personal_purpose,
+            "attested_by": commercial["reviewed_by"],
+            "attested_at": raw["config"]["model"]["effective_at"],
+        }
+    ]
+    for mutate in (
+        lambda approval: approval.update(
+            operator_attested_personal_noncommercial_test=False
+        ),
+        lambda approval: approval.update(
+            attested_by="00000000-0000-0000-0000-000000000000"
+        ),
+        lambda approval: approval.update(attested_at="9999-01-01T00:00:00Z"),
+    ):
+        invalid = __import__("copy").deepcopy(raw)
+        mutate(invalid["firecrawl_personal_use_approvals"][0])
+        with pytest.raises(ValidationError):
+            setup.CombinedIdeaSetupManifest.model_validate_json(
+                __import__("json").dumps(invalid)
+            )
+    both = __import__("copy").deepcopy(raw)
+    both["firecrawl_commercial_approvals"] = [commercial]
+    with pytest.raises(ValidationError):
+        setup.CombinedIdeaSetupManifest.model_validate_json(
+            __import__("json").dumps(both)
+        )
+
+
+def test_personal_firecrawl_purpose_is_restricted_to_page_capture(tmp_path):
+    manifest, _ = reviewed(tmp_path)
+    binding = manifest.config.research_bindings[1].model_dump(mode="json")
+    for row in (binding["grant"], binding["config"]["intended_use"]):
+        row["capability"] = "FIRECRAWL_PDF_CAPTURE"
+        row["purpose"] = "R01A_PERSONAL_NONCOMMERCIAL_TEST"
+
+    with pytest.raises(ValidationError):
+        ResearchCapabilityBinding.model_validate_json(__import__("json").dumps(binding))
 
 
 def test_brave_retention_and_scope_mismatches_denied(tmp_path):
@@ -309,7 +445,8 @@ def test_brave_retention_and_scope_mismatches_denied(tmp_path):
 @pytest.mark.asyncio
 async def test_publish_three_scoped_envelopes_and_exact_replay(tmp_path, monkeypatch):
     manifest, path = reviewed(tmp_path)
-    registered, prompts = [], []
+    keys_file = write_api_keys_file(tmp_path)
+    registered = []
 
     async def active(*_):
         return "ACTIVE"
@@ -317,21 +454,16 @@ async def test_publish_three_scoped_envelopes_and_exact_replay(tmp_path, monkeyp
     async def register(_, authority):
         registered.append(authority)
 
-    def prompt(consumer):
-        prompts.append(consumer)
-        return SecretStr("secret-" + consumer)
-
     monkeypatch.setattr(setup, "current_operator_status", active)
     monkeypatch.setattr(setup, "register_authority_rows", register)
-    monkeypatch.setattr(setup, "read_api_key", prompt)
     engine = cast(AsyncEngine, object())
     directory = tmp_path / "private"
-    output = await setup.provision_from_manifest(path, directory, engine)
-    assert output.is_file() and len(registered) == 3 and len(prompts) == 3
+    output = await setup.provision_from_manifest(path, directory, engine, keys_file)
+    assert output.is_file() and len(registered) == 3
     store = setup.load_combined_secret_store(output.parent, manifest.config)
     assert (
         store.for_consumer("openai-idea").get("openai-key").get_secret_value()
-        == "secret-openai-idea"
+        == "synthetic-openai"
     )
     with pytest.raises(SecretStoreError):
         store.for_consumer("openai-idea").get("brave-key")
@@ -339,14 +471,330 @@ async def test_publish_three_scoped_envelopes_and_exact_replay(tmp_path, monkeyp
         store.research_store().get("openai-key")
     for file in directory.rglob("*"):
         if file.is_file():
-            assert b"secret-openai-idea" not in file.read_bytes()
-    assert await setup.provision_from_manifest(path, directory, engine) == output
-    assert len(prompts) == 3 and len(registered) == 6
+            assert b"synthetic-openai" not in file.read_bytes()
+    assert (
+        await setup.provision_from_manifest(path, directory, engine, keys_file)
+        == output
+    )
+    assert len(registered) == 6
+
+
+@pytest.mark.asyncio
+async def test_runtime_config_derives_personal_firecrawl_scope_from_reviewed_manifest(
+    tmp_path, monkeypatch
+):
+    manifest, manifest_path = reviewed(tmp_path)
+    raw = manifest.model_dump(mode="json")
+    commercial = raw["firecrawl_commercial_approvals"][0]
+    personal_purpose = Purpose.R01A_PERSONAL_NONCOMMERCIAL_TEST.value
+    grant_id = commercial["grant_id"]
+    for binding in raw["config"]["research_bindings"]:
+        if binding["grant"]["grant_id"] == grant_id:
+            binding["grant"]["purpose"] = personal_purpose
+            binding["config"]["intended_use"]["purpose"] = personal_purpose
+    for authority in raw["authorities"]:
+        if authority["grant"]["grant_id"] == grant_id:
+            authority["grant"]["purpose"] = personal_purpose
+    raw["firecrawl_commercial_approvals"] = []
+    raw["firecrawl_personal_use_approvals"] = [
+        {
+            "grant_id": grant_id,
+            "evidence_id": commercial["evidence_id"],
+            "operator_attested_personal_noncommercial_test": True,
+            "permitted_use": personal_purpose,
+            "attested_by": commercial["reviewed_by"],
+            "attested_at": raw["config"]["model"]["effective_at"],
+        }
+    ]
+    manifest = setup.CombinedIdeaSetupManifest.model_validate_json(
+        __import__("json").dumps(raw)
+    )
+    manifest_path.write_text(manifest.model_dump_json())
+    manifest_path.chmod(0o600)
+    keys_file = write_api_keys_file(tmp_path)
+
+    async def active(*_):
+        return "ACTIVE"
+
+    async def register(*_):
+        return None
+
+    monkeypatch.setattr(setup, "current_operator_status", active)
+    monkeypatch.setattr(setup, "register_authority_rows", register)
+    config_path = await setup.provision_from_manifest(
+        manifest_path,
+        tmp_path / "private",
+        cast(AsyncEngine, object()),
+        keys_file,
+    )
+
+    runtime_config = setup.load_combined_idea_runtime_config(config_path)
+    firecrawl = next(
+        binding
+        for binding in runtime_config.research_bindings
+        if binding.config.intended_use.provider is Provider.FIRECRAWL
+    )
+    approval = manifest.firecrawl_personal_use_approvals[0]
+
+    assert (
+        firecrawl.config.intended_use.purpose
+        is Purpose.R01A_PERSONAL_NONCOMMERCIAL_TEST
+    )
+    assert (
+        firecrawl.config.intended_use.personal_noncommercial_approval_ref
+        == approval.evidence_id
+        == firecrawl.grant.supporting_evidence_ref
+    )
+    assert (
+        manifest.config.research_bindings[
+            1
+        ].config.intended_use.personal_noncommercial_approval_ref
+        is None
+    )
+
+
+def test_exact_replay_is_stable_across_python_hash_seeds(tmp_path):
+    _, manifest_path = reviewed(tmp_path)
+    keys_file = write_api_keys_file(tmp_path)
+    data_dir = tmp_path / "private"
+    provision = """
+import asyncio
+import sys
+from pathlib import Path
+from alon_ai.services import combined_idea_provision as setup
+
+async def active(*_):
+    return "ACTIVE"
+
+async def register(*_):
+    return None
+
+setup.current_operator_status = active
+setup.register_authority_rows = register
+try:
+    asyncio.run(setup.provision_from_manifest(
+        Path(sys.argv[1]), Path(sys.argv[2]), object(), Path(sys.argv[3])
+    ))
+except Exception:
+    raise SystemExit(1) from None
+print("PROVISIONED")
+"""
+
+    for seed in ("1", "7"):
+        result = subprocess.run(
+            [
+                sys.executable,
+                "-c",
+                provision,
+                str(manifest_path),
+                str(data_dir),
+                str(keys_file),
+            ],
+            cwd=Path(__file__).resolve().parents[2],
+            env={**os.environ, "PYTHONHASHSEED": seed},
+            capture_output=True,
+            check=False,
+            text=True,
+        )
+        assert result.returncode == 0, f"exact replay failed with PYTHONHASHSEED={seed}"
+        assert result.stdout.strip() == "PROVISIONED"
+
+
+@pytest.mark.asyncio
+async def test_local_operator_marker_resolves_before_keys_and_is_not_persisted(
+    tmp_path, monkeypatch
+):
+    manifest, path = reviewed(tmp_path)
+    raw = mark_manifest_for_local_operator(path)
+    keys_file = write_api_keys_file(tmp_path)
+    active_operator = uuid4()
+    events = []
+    registered = []
+
+    async def resolve(engine, subject):
+        events.append(("resolve", subject))
+        return active_operator
+
+    async def active(engine, operator_id):
+        events.append(("active", operator_id))
+        assert operator_id == active_operator
+        return "ACTIVE"
+
+    original_read_keys = setup.read_api_keys_file
+
+    def read_keys(file):
+        assert events[:2] == [
+            ("resolve", "local-operator@alon.ai"),
+            ("active", active_operator),
+        ]
+        events.append(("keys", None))
+        return original_read_keys(file)
+
+    async def register(_, authority):
+        registered.append(authority)
+
+    monkeypatch.setattr(
+        setup,
+        "Settings",
+        lambda: type(
+            "LocalSettings", (), {"operator_auth_subject": "local-operator@alon.ai"}
+        )(),
+    )
+    monkeypatch.setattr(setup, "configured_active_operator_id", resolve)
+    monkeypatch.setattr(setup, "current_operator_status", active)
+    monkeypatch.setattr(setup, "read_api_keys_file", read_keys)
+    monkeypatch.setattr(setup, "register_authority_rows", register)
+
+    directory = tmp_path / "private"
+    output = await setup.provision_from_manifest(
+        path, directory, cast(AsyncEngine, object()), keys_file
+    )
+
+    published_manifest = (output.parent / "reviewed-manifest.json").read_text()
+    published_config = CombinedIdeaConfig.model_validate_json(output.read_bytes())
+    assert str(setup.BOOTSTRAP_OPERATOR_ID) in __import__("json").dumps(raw)
+    assert str(setup.BOOTSTRAP_OPERATOR_ID) not in published_manifest
+    assert str(setup.BOOTSTRAP_OPERATOR_ID) not in output.read_text()
+    assert published_config.model.approved_by == active_operator
+    assert published_config.research_policy.approved_by == active_operator
+    assert len(registered) == 3
+    assert all(row.grant.approved_by == active_operator for row in registered)
+    assert all(
+        proof.registered_by == active_operator
+        for row in registered
+        for proof in row.evidence
+    )
+    assert events[2] == ("keys", None)
+    assert manifest.config.model.approved_by != active_operator
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("mutation", ["mixed_reference", "marker_in_grant_id"])
+async def test_malformed_operator_marker_fails_before_keys_or_authority(
+    tmp_path, monkeypatch, mutation
+):
+    _, path = reviewed(tmp_path)
+    raw = mark_manifest_for_local_operator(path)
+    marker = str(setup.BOOTSTRAP_OPERATOR_ID)
+    if mutation == "mixed_reference":
+        raw["config"]["research_policy"]["approved_by"] = str(uuid4())
+    else:
+        raw["authorities"][0]["grant"]["grant_id"] = marker
+    path.write_text(__import__("json").dumps(raw))
+    path.chmod(0o600)
+
+    async def forbidden(*_):
+        pytest.fail("malformed marker must fail before operator lookup")
+
+    monkeypatch.setattr(setup, "configured_active_operator_id", forbidden)
+    monkeypatch.setattr(
+        setup,
+        "read_api_keys_file",
+        lambda _: pytest.fail("malformed marker must fail before reading keys"),
+    )
+    monkeypatch.setattr(
+        setup,
+        "register_authority_rows",
+        lambda *_: pytest.fail("malformed marker must fail before authority writes"),
+    )
+
+    with pytest.raises(ValueError, match="local operator marker"):
+        await setup.provision_from_manifest(
+            path,
+            tmp_path / "private",
+            cast(AsyncEngine, object()),
+            write_api_keys_file(tmp_path),
+        )
+
+
+@pytest.mark.asyncio
+async def test_missing_local_operator_fails_before_reading_keys(tmp_path, monkeypatch):
+    _, path = reviewed(tmp_path)
+    mark_manifest_for_local_operator(path)
+
+    async def missing(*_):
+        return None
+
+    monkeypatch.setattr(setup, "configured_active_operator_id", missing)
+    monkeypatch.setattr(
+        setup,
+        "read_api_keys_file",
+        lambda _: pytest.fail("missing active operator must fail before reading keys"),
+    )
+    with pytest.raises(RuntimeError, match="Current active operator approval required"):
+        await setup.provision_from_manifest(
+            path,
+            tmp_path / "private",
+            cast(AsyncEngine, object()),
+            write_api_keys_file(tmp_path),
+        )
+
+
+@pytest.mark.asyncio
+async def test_bootstrap_operator_change_requires_reviewed_rotation(
+    tmp_path, monkeypatch
+):
+    _, path = reviewed(tmp_path)
+    mark_manifest_for_local_operator(path)
+    keys_file = write_api_keys_file(tmp_path)
+    active_operator = uuid4()
+    registered = []
+
+    async def resolve(*_):
+        return active_operator
+
+    async def active(_, operator_id):
+        assert operator_id == active_operator
+        return "ACTIVE"
+
+    async def register(_, authority):
+        registered.append(authority)
+
+    monkeypatch.setattr(setup, "configured_active_operator_id", resolve)
+    monkeypatch.setattr(setup, "current_operator_status", active)
+    monkeypatch.setattr(setup, "register_authority_rows", register)
+    engine = cast(AsyncEngine, object())
+    directory = tmp_path / "private"
+    await setup.provision_from_manifest(path, directory, engine, keys_file)
+    active_operator = uuid4()
+
+    with pytest.raises(RuntimeError, match="reviewed rotation required"):
+        await setup.provision_from_manifest(path, directory, engine, keys_file)
+
+    assert len(registered) == 3
+
+
+@pytest.mark.asyncio
+async def test_exact_replay_rejects_changed_key_file(tmp_path, monkeypatch):
+    _, manifest_path = reviewed(tmp_path)
+    keys_file = write_api_keys_file(tmp_path)
+
+    async def active(*_):
+        return "ACTIVE"
+
+    async def register(*_):
+        return None
+
+    monkeypatch.setattr(setup, "current_operator_status", active)
+    monkeypatch.setattr(setup, "register_authority_rows", register)
+    directory = tmp_path / "private"
+    engine = cast(AsyncEngine, object())
+    await setup.provision_from_manifest(manifest_path, directory, engine, keys_file)
+    keys_file.write_text(
+        "OPENAI_API_KEY=rotated-openai\n"
+        "BRAVE_API_KEY=synthetic-brave\n"
+        "FIRECRAWL_API_KEY=synthetic-firecrawl\n"
+    )
+    keys_file.chmod(0o600)
+
+    with pytest.raises(RuntimeError, match="reviewed rotation required"):
+        await setup.provision_from_manifest(manifest_path, directory, engine, keys_file)
 
 
 @pytest.mark.asyncio
 async def test_registration_failure_never_publishes_config(tmp_path, monkeypatch):
     _, path = reviewed(tmp_path)
+    keys_file = write_api_keys_file(tmp_path)
 
     async def active(*_):
         return "ACTIVE"
@@ -356,10 +804,9 @@ async def test_registration_failure_never_publishes_config(tmp_path, monkeypatch
 
     monkeypatch.setattr(setup, "current_operator_status", active)
     monkeypatch.setattr(setup, "register_authority_rows", fail)
-    monkeypatch.setattr(setup, "read_api_key", lambda _: SecretStr("synthetic"))
     with pytest.raises(RuntimeError):
         await setup.provision_from_manifest(
-            path, tmp_path / "private", cast(AsyncEngine, object())
+            path, tmp_path / "private", cast(AsyncEngine, object()), keys_file
         )
     assert not (tmp_path / "private" / "combined-live").exists()
     assert not tuple((tmp_path / "private").glob(".combined-stage-*"))
@@ -370,21 +817,22 @@ async def test_evidence_tampering_and_public_manifest_fail_before_prompt(
     tmp_path, monkeypatch
 ):
     manifest, path = reviewed(tmp_path)
+    keys_file = write_api_keys_file(tmp_path)
 
     def forbidden(_):
         pytest.fail("must reject before requesting a credential")
 
-    monkeypatch.setattr(setup, "read_api_key", forbidden)
+    monkeypatch.setattr(setup, "read_api_keys_file", forbidden)
     path.chmod(0o644)
     with pytest.raises(ValueError):
         await setup.provision_from_manifest(
-            path, tmp_path / "private", cast(AsyncEngine, object())
+            path, tmp_path / "private", cast(AsyncEngine, object()), keys_file
         )
     path.chmod(0o600)
     (tmp_path / manifest.proofs[0].document).write_bytes(b"tampered")
     with pytest.raises(ValueError, match="changed"):
         await setup.provision_from_manifest(
-            path, tmp_path / "private", cast(AsyncEngine, object())
+            path, tmp_path / "private", cast(AsyncEngine, object()), keys_file
         )
 
 
@@ -402,10 +850,66 @@ def test_private_reader_rejects_symlinks_and_hardlinks(tmp_path):
         setup._read_private(link)
 
 
-def test_key_prompt_cannot_fallback_to_echo(monkeypatch):
-    monkeypatch.setattr(setup.os, "open", lambda *_: (_ for _ in ()).throw(OSError()))
-    with pytest.raises(RuntimeError, match="Private terminal"):
-        setup.read_api_key("openai-idea")
+def test_private_key_file_maps_only_the_three_provider_keys(tmp_path):
+    path = tmp_path / "live-keys.env"
+    path.write_text(
+        "# local live credentials\n"
+        "OPENAI_API_KEY=synthetic-openai\n"
+        "BRAVE_API_KEY=synthetic-brave\n"
+        "FIRECRAWL_API_KEY=synthetic-firecrawl\n"
+    )
+    path.chmod(0o600)
+
+    keys = setup.read_api_keys_file(path)
+
+    assert {
+        consumer: secret.get_secret_value() for consumer, secret in keys.items()
+    } == {
+        "openai-idea": "synthetic-openai",
+        "brave-research": "synthetic-brave",
+        "firecrawl-research": "synthetic-firecrawl",
+    }
+
+
+@pytest.mark.parametrize(
+    "contents",
+    [
+        "OPENAI_API_KEY=synthetic-openai\nBRAVE_API_KEY=synthetic-brave\n",
+        (
+            "OPENAI_API_KEY=synthetic-openai\nBRAVE_API_KEY=synthetic-brave\n"
+            "FIRECRAWL_API_KEY=synthetic-firecrawl\nEXTRA=value\n"
+        ),
+        (
+            "OPENAI_API_KEY=synthetic-openai\nOPENAI_API_KEY=second\n"
+            "BRAVE_API_KEY=synthetic-brave\nFIRECRAWL_API_KEY=synthetic-firecrawl\n"
+        ),
+        (
+            "OPENAI_API_KEY=synthetic-openai\nBRAVE_API_KEY=synthetic-brave\n"
+            "FIRECRAWL_API_KEY=\n"
+        ),
+    ],
+)
+def test_private_key_file_rejects_missing_duplicate_extra_or_empty_values(
+    tmp_path, contents
+):
+    path = tmp_path / "live-keys.env"
+    path.write_text(contents)
+    path.chmod(0o600)
+
+    with pytest.raises(ValueError, match="provider key file"):
+        setup.read_api_keys_file(path)
+
+
+def test_private_key_file_rejects_public_permissions_before_parsing(tmp_path):
+    path = tmp_path / "live-keys.env"
+    path.write_text(
+        "OPENAI_API_KEY=synthetic-openai\nBRAVE_API_KEY=synthetic-brave\n"
+        "FIRECRAWL_API_KEY=synthetic-firecrawl\n"
+    )
+    path.chmod(0o644)
+
+    with pytest.raises(ValueError, match="owner-private"):
+        setup.read_api_keys_file(path)
 
 
 def test_map_unavailable_even_with_reviewed_result_limit_price_bound(tmp_path):

@@ -198,7 +198,13 @@ def make_authority_bundle(manifest: LiveIdeaSetupManifest) -> LiveAuthorityBundl
     grant = ProviderUsageGrant(
         grant_id=identity("grant"),
         version=1,
-        **use.model_dump(exclude={"schema_version", "required_fields"}),
+        **use.model_dump(
+            exclude={
+                "schema_version",
+                "required_fields",
+                "personal_noncommercial_approval_ref",
+            }
+        ),
         outbound_use_permitted=False,
         storage_fields=frozenset({ContentField.TEXT}),
         retention_rule_id=identity("retention"),
