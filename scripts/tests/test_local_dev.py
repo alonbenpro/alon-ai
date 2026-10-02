@@ -32,6 +32,7 @@ class LocalDevTests(unittest.TestCase):
         docker.write_text(
             "#!/bin/sh\n"
             "printf 'project=%s mode=%s budget=%s auth_env=%s/%s %s\\n' \"${COMPOSE_PROJECT_NAME:-default}\" \"${ALON_AI_PROVIDER_MODE:-unset}\" \"${ALON_AI_IDEA_INTAKE_BUDGET_USD:-unset}\" \"${ALON_AI_OPERATOR_PASSWORD_HASH+set}\" \"${ALON_AI_SESSION_SIGNING_KEY+set}\" \"$*\" >> \"$FAKE_DOCKER_LOG\"\n"
+            "if [ \"${FAKE_REQUIRE_DOCKER_CREDENTIAL_HELPER:-0}\" = 1 ]; then command -v docker-credential-desktop >/dev/null 2>&1 || exit 88; fi\n"
             "if [ \"$1\" = info ] && [ \"${FAKE_DOCKER_DOWN:-0}\" = 1 ]; then exit 1; fi\n"
             "case \"$*\" in\n"
             "  *'config --format json'*) printf 'volume=%s_postgres_data\\n' \"${COMPOSE_PROJECT_NAME:-default}\" >> \"$FAKE_DOCKER_LOG\"; printf '{\"volumes\":{\"postgres_data\":{\"name\":\"%s_postgres_data\"}}}\\n' \"${COMPOSE_PROJECT_NAME:-default}\"; exit 0;;\n"
@@ -125,6 +126,24 @@ class LocalDevTests(unittest.TestCase):
         self.assertIn("live", result.stdout)
         self.assertIn("down", result.stdout)
         self.assertIn("status", result.stdout)
+
+    def test_docker_desktop_helper_is_found_in_user_docker_bin(self):
+        home = self.root / "home"
+        helper_dir = home / ".docker/bin"
+        helper_dir.mkdir(parents=True)
+        helper = helper_dir / "docker-credential-desktop"
+        helper.write_text("#!/bin/sh\nexit 0\n")
+        helper.chmod(0o755)
+
+        result = self.run_script(
+            "status",
+            extra_env={
+                "HOME": str(home),
+                "FAKE_REQUIRE_DOCKER_CREDENTIAL_HELPER": "1",
+            },
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
 
     def test_disabled_command_forces_provider_mode_off(self):
         self.write_auth()

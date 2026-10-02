@@ -46,7 +46,20 @@ PY
     export COMPOSE_PROJECT_NAME
 }
 
+ensure_docker_credential_helper_path() {
+    command -v docker-credential-desktop >/dev/null 2>&1 && return 0
+
+    for helper_dir in "${HOME:-}/.docker/bin" /Applications/Docker.app/Contents/Resources/bin; do
+        if [ -x "$helper_dir/docker-credential-desktop" ]; then
+            PATH="$PATH:$helper_dir"
+            export PATH
+            return 0
+        fi
+    done
+}
+
 docker_preflight() {
+    ensure_docker_credential_helper_path
     command -v docker >/dev/null 2>&1 || fail 'Docker CLI is missing.'
     if [ -z "${COMPOSE:-}" ]; then
         if docker compose version >/dev/null 2>&1; then
