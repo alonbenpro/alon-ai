@@ -4,12 +4,13 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any, Literal, cast
 from uuid import UUID, uuid5
 
 from pydantic import Field, model_validator
 from pydantic_ai.toolsets import FunctionToolset
+from sqlalchemy import select
 
 from alon_ai.agents.idea_agent import run_idea_agent
 from alon_ai.agents.idea_discovery import (
@@ -45,6 +46,7 @@ from alon_ai.db.repositories.openai_idea import OpenAIIdeaInputRepository
 from alon_ai.db.repositories.openai_live import _ensure_exact_config
 from alon_ai.db.repositories.openai_run import OpenAIRunOutcome
 from alon_ai.db.repositories.records import ProductRecordsRepository
+from alon_ai.db.tables import accounting as governance
 from alon_ai.integrations.live_idea import LiveIdeaRuntimeConfig
 from alon_ai.integrations.live_research import (
     ResearchCapabilityBinding,
@@ -318,6 +320,69 @@ class CombinedIdeaRuntime:
             revision_guidance=revision["payload"]["hypothesis"] if revision else None,
         )
 
+    async def _research_instructions(self, _context):
+        # Refresh advisory counts before each model request. Dispatch still owns
+        # atomic admission, so this snapshot never expands provider authority.
+        if not self.config.research_bindings:
+            return None
+        repository = GovernanceRepository(self.context.engine)
+        now = repository.clock()
+        quotas = []
+        async with self.context.engine.connect() as connection:
+            for binding in self.config.research_bindings:
+                use = binding.config.intended_use
+                authority = (
+                    (
+                        await connection.execute(
+                            select(governance.authorities).where(
+                                governance.authorities.c.account == use.account_handle,
+                                governance.authorities.c.capability == use.capability,
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+                policy = await repository._policy(connection, authority, now)
+                window = policy.effective_at + timedelta(
+                    seconds=(
+                        (now - policy.effective_at)
+                        // timedelta(seconds=policy.window_seconds)
+                    )
+                    * policy.window_seconds
+                )
+                used = (
+                    authority["quota_used"]
+                    if authority["window_start"] == window
+                    else 0
+                )
+                quotas.append(
+                    {
+                        "capability": use.capability.value,
+                        "quota_limit": policy.quota_limit,
+                        "remaining_calls": max(0, policy.quota_limit - used),
+                    }
+                )
+        policy = self.config.research_policy
+        limits = {
+            "run_limits": {
+                "max_calls": policy.max_calls,
+                "max_pages": policy.max_pages,
+                "max_results": policy.max_results,
+                "max_spend_usd": str(policy.max_spend_usd),
+                "timeout_seconds": policy.timeout_seconds,
+            },
+            "provider_quotas": quotas,
+        }
+        return (
+            "Approved research limits and current provider quota: "
+            + canonical_json(limits)
+            + "\nUse a few high-yield searches; reserve calls for page captures and "
+            "evidence inspection. These counts are upper bounds, not targets. "
+            "Do not request more provider calls than the remaining allowance. "
+            "Finish with a truthful assessment or named gaps before limits are exhausted."
+        )
+
     async def _run(self, operation, *, returned=False, revision_guidance=None):
         self._diagnostic_stage = "REFERENCE_RESOLUTION"
         try:
@@ -421,7 +486,11 @@ class CombinedIdeaRuntime:
         ):
             if capability in capabilities:
                 exposed.append(method)
-        toolset = FunctionToolset(tools=exposed)
+        # A model may return several calls together; governed research admits
+        # one call at a time under the approved provider concurrency limits.
+        toolset = FunctionToolset(
+            tools=exposed, sequential=True, instructions=self._research_instructions
+        )
         try:
             self._diagnostic_stage = "AGENT_EXECUTION"
             async with asyncio.timeout(self.provisioned.run_timeout_seconds):

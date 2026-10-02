@@ -28,6 +28,16 @@ def test_diagnostic_preserves_safe_denial_cause_hidden_by_research_tool():
     assert diagnostic.frames == ["ResearchToolError", "AccountingDenied:BUDGET"]
 
 
+def test_diagnostic_preserves_safe_research_code_without_exception_context():
+    diagnostic = diagnostic_for_error(
+        "AGENT_EXECUTION", ResearchToolError("CONCURRENCY")
+    )
+
+    assert diagnostic.error_type == "ResearchToolError"
+    assert diagnostic.code == "CONCURRENCY"
+    assert diagnostic.message == "The provider concurrency limit denied this request."
+
+
 def test_diagnostic_uses_only_validation_locations_and_types():
     class Input(BaseModel):
         count: int

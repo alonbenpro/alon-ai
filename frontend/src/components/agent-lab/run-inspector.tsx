@@ -44,6 +44,19 @@ function usd(value: string | null | undefined) {
   return value == null ? "Not recorded" : `$${value}`;
 }
 
+function hasUnresolvedReceipt(receipts: RunView["receipts"] | RunResult["receipts"] | undefined) {
+  return receipts?.some((receipt) => receipt.state !== "FINAL") ?? false;
+}
+
+function costSummary(run: RunView, result: RunResult | null) {
+  const actual = run.actual_cost_usd ?? result?.actual_cost_usd;
+  if (actual != null) return usd(actual);
+  if (run.pending_cost_usd != null || hasUnresolvedReceipt(run.receipts) || hasUnresolvedReceipt(result?.receipts)) {
+    return "Awaiting reconciliation";
+  }
+  return "Not recorded";
+}
+
 function savedRejectCommand(runId: string): { command_key: string; reason: string } | null {
   try {
     const stored = sessionStorage.getItem(`agent-run-${runId}-reject-command`);
@@ -74,7 +87,7 @@ function stepLabel(kind: string) {
 }
 
 function eventSummary(event: RunEvents["events"][number]) {
-  return [event.diagnostic?.code, event.detail].filter((value): value is string => Boolean(value)).join(" · ");
+  return [...new Set([event.diagnostic?.code, event.detail].filter((value): value is string => Boolean(value)))].join(" · ");
 }
 
 function firstIdeaInput(inputs: NonNullable<RunView["resolved_inputs"]>) {
@@ -266,7 +279,7 @@ export function RunInspector({ experimentId, runId, legacyPendingReview = false,
     <dl className="agent-run-inspector__facts" aria-label="Run summary">
       <div><dt>Elapsed</dt><dd>{elapsed(run.started_at, run.finished_at)}</dd></div>
       <div><dt>Model</dt><dd>{run.model_identifier ?? "Not recorded"}</dd></div>
-      <div><dt>Cost</dt><dd>{usd(run.actual_cost_usd ?? result?.actual_cost_usd)}</dd></div>
+      <div><dt>Cost</dt><dd>{costSummary(run, result)}</dd></div>
       <div><dt>Research</dt><dd>{label(run.research_status)}</dd></div>
     </dl>
     {message && <p className="experiment-error" role="alert">{message}</p>}
@@ -304,7 +317,7 @@ export function RunInspector({ experimentId, runId, legacyPendingReview = false,
     <details className="agent-run-inspector__usage">
       <summary>Cost details</summary>
       {run.provider_mode === "fake" && <p>Recorded ledger amounts are synthetic; no provider charge occurred.</p>}
-      <dl><div><dt>{run.provider_mode === "fake" ? "Recorded reservation" : "Pending cost"}</dt><dd>{usd(run.pending_cost_usd)}</dd></div><div><dt>{run.provider_mode === "fake" ? "Recorded ledger cost" : "Actual cost"}</dt><dd>{usd(run.actual_cost_usd ?? result?.actual_cost_usd)}</dd></div></dl>
+      <dl><div><dt>{run.provider_mode === "fake" ? "Recorded reservation" : "Pending cost"}</dt><dd>{usd(run.pending_cost_usd)}</dd></div><div><dt>{run.provider_mode === "fake" ? "Recorded ledger cost" : "Actual cost"}</dt><dd>{run.provider_mode === "fake" ? usd(run.actual_cost_usd ?? result?.actual_cost_usd) : costSummary(run, result)}</dd></div></dl>
       {run.usage?.length ? <ul>{run.usage.map((item, index) => <li key={`${item.component}-${index}`}>
         {item.component}: {item.quantity ?? "Quantity unavailable"} · {item.cost == null ? "Cost unavailable" : `${item.currency} ${item.cost}`} · {item.knowledge.toLowerCase()}
       </li>)}</ul> : <p>No usage record has been retained.</p>}
@@ -312,11 +325,11 @@ export function RunInspector({ experimentId, runId, legacyPendingReview = false,
     <div className="agent-run-inspector__events"><h3>Activity timeline</h3>{events.length ? <ol>{events.map((event) => <li key={event.sequence}>
       <time dateTime={event.at}>{event.at}</time><strong>{event.type.replaceAll("_", " ")}</strong>{eventSummary(event) && <span>{eventSummary(event)}</span>}
     </li>)}</ol> : <p>No events have been recorded.</p>}</div>
-    {run.steps && <div className="agent-run-inspector__events"><h3>Provider requests and responses</h3>{run.steps.length ? <ol>{run.steps.map((step) => <li key={step.step_key}>
+    {run.steps && <details className="agent-run-inspector__events"><summary>Provider call details</summary>{run.steps.length ? <ol>{run.steps.map((step) => <li key={step.step_key}>
       <span>{step.ordinal}. {stepLabel(step.kind)}</span><strong>{step.status.replaceAll("_", " ")}</strong>
       <span>{step.reason_code ?? ""}{step.result_artifact_id ? ` · Result ${step.result_artifact_id}` : ""}
         {step.provider_call_id ? ` · Call ${step.provider_call_id}` : ""}</span>
-    </li>)}</ol> : <p>No child steps have been retained.</p>}</div>}
+    </li>)}</ol> : <p>No child steps have been retained.</p>}</details>}
     {(run.status === "QUEUED" || run.status === "RUNNING") && <button type="button" className="experiment-secondary-action" disabled={!!busy || run.cancel_confirmed} onClick={() => void cancel()}>
       {run.cancel_confirmed ? "Run cancelled" : busy === "cancel" ? "Requesting cancellation…" : run.cancel_requested ? "Retry cancellation" : "Cancel run"}
     </button>}

@@ -19,16 +19,55 @@ from alon_ai.integrations.schemas.provider import (
     CaptureFormat,
     FirecrawlCaptureRequest,
     FirecrawlMapRequest,
+    ProviderErrorCode,
+    ProviderFailure,
     public_url,
 )
+from alon_ai.provider_usage.schemas.accounting import AccountingDenied, Reason
 from alon_ai.services.schemas.records import SourceReference
 
 
 class ResearchToolError(Exception):
     """Safe error marker with no provider response or request text."""
 
-    def __init__(self) -> None:
-        super().__init__("RESEARCH_TOOL_UNAVAILABLE")
+    def __init__(self, code: str = "RESEARCH_TOOL_UNAVAILABLE") -> None:
+        self.code = code if code in _SAFE_CODES else "RESEARCH_TOOL_UNAVAILABLE"
+        super().__init__(self.code)
+
+
+_SAFE_CODES = frozenset(
+    {
+        "RESEARCH_TOOL_UNAVAILABLE",
+        *(reason.value for reason in Reason),
+        *(code.value for code in ProviderErrorCode),
+    }
+)
+
+
+def _research_tool_error(error: Exception) -> ResearchToolError:
+    if isinstance(error, AccountingDenied):
+        provider_code = _provider_cause_code(error)
+        if error.reason is Reason.UNCERTAIN and provider_code is not None:
+            return ResearchToolError(provider_code)
+        return ResearchToolError(error.reason.value)
+    if isinstance(error, ProviderFailure):
+        return ResearchToolError(error.code.value)
+    return ResearchToolError()
+
+
+def _provider_cause_code(error: Exception) -> str | None:
+    """Read only a classified nested provider code, never an exception message."""
+
+    initial = error.__cause__ or error.__context__
+    current: Exception | None = initial if isinstance(initial, Exception) else None
+    seen: set[int] = set()
+    while current is not None and id(current) not in seen and len(seen) < 4:
+        seen.add(id(current))
+        if isinstance(current, ProviderFailure):
+            return current.code.value
+        next_error = current.__cause__ or current.__context__
+        current = next_error if isinstance(next_error, Exception) else None
+    return None
 
 
 @dataclass(frozen=True)
@@ -102,8 +141,8 @@ class ResearchTools:
                 # The orchestrator must never checkpoint tool message history.
                 return tuple(public_url(url) for url in result.urls)
             return self._references(result)
-        except Exception:  # noqa: BLE001 - no request/provider details cross tool boundary
-            raise ResearchToolError() from None
+        except Exception as error:  # noqa: BLE001 - no request/provider details cross tool boundary
+            raise _research_tool_error(error) from None
 
     async def map_site(
         self, url: str, *, limit: int | None = None
@@ -115,8 +154,8 @@ class ResearchTools:
             limit = min(limit, self._max_results)
             request = FirecrawlMapRequest(url=public_url(url), limit=limit)
             return self._references(await self._port.map(self._experiment_id, request))
-        except Exception:  # noqa: BLE001 - no request/provider details cross tool boundary
-            raise ResearchToolError() from None
+        except Exception as error:  # noqa: BLE001 - no request/provider details cross tool boundary
+            raise _research_tool_error(error) from None
 
     async def capture_page(
         self, url: str, *, js_wait_ms: int = 0
@@ -135,8 +174,8 @@ class ResearchTools:
             return self._references(
                 await self._port.capture(self._experiment_id, request)
             )
-        except Exception:  # noqa: BLE001 - no request/provider details cross tool boundary
-            raise ResearchToolError() from None
+        except Exception as error:  # noqa: BLE001 - no request/provider details cross tool boundary
+            raise _research_tool_error(error) from None
 
     async def capture_pdf(self, url: str) -> tuple[SourceReference, ...]:
         try:
@@ -148,8 +187,8 @@ class ResearchTools:
             return self._references(
                 await self._port.capture(self._experiment_id, request)
             )
-        except Exception:  # noqa: BLE001 - no request/provider details cross tool boundary
-            raise ResearchToolError() from None
+        except Exception as error:  # noqa: BLE001 - no request/provider details cross tool boundary
+            raise _research_tool_error(error) from None
 
     async def read_saved_evidence(
         self, retained_id: UUID, *, max_chars: int = 4000
@@ -169,8 +208,8 @@ class ResearchTools:
             ):
                 raise ValueError
             return excerpt
-        except Exception:  # noqa: BLE001 - no repository details cross tool boundary
-            raise ResearchToolError() from None
+        except Exception as error:  # noqa: BLE001 - no repository details cross tool boundary
+            raise _research_tool_error(error) from None
 
     @staticmethod
     def _references(value: tuple[SourceReference, ...]) -> tuple[SourceReference, ...]:

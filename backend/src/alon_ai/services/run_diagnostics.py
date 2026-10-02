@@ -170,7 +170,7 @@ def diagnostic_for_error(stage: str, error: Exception) -> RunDiagnostic:
     elif isinstance(classified, ExperimentError):
         code = _experiment_code(classified)
     elif isinstance(classified, ResearchToolError):
-        code = "RESEARCH_TOOL_UNAVAILABLE"
+        code = classified.code
     elif isinstance(classified, httpx.HTTPStatusError):
         status = classified.response.status_code
         code = f"HTTP_{status}" if 100 <= status <= 599 else "HTTP_REQUEST_FAILED"

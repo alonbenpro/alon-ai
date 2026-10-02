@@ -34,6 +34,7 @@ from alon_ai.policies.provider_rights import (
     IntendedUse,
     ProviderUsageGrant,
 )
+from alon_ai.provider_usage.schemas.accounting import AccountingDenied, Reason
 from alon_ai.services.schemas.records import SourceReference
 
 NOW = datetime(2026, 9, 28, tzinfo=UTC)
@@ -446,6 +447,51 @@ async def test_invalid_pdf_and_tool_errors_are_redacted(monkeypatch):
     assert "never-log-this" not in str(error.value)
     with pytest.raises(ResearchToolError):
         await tools.read_saved_evidence(uuid4())
+
+
+@pytest.mark.asyncio
+async def test_research_tools_preserve_safe_accounting_denial_code():
+    class Port:
+        async def search(self, experiment_id, request):
+            raise AccountingDenied(Reason.CONCURRENCY)
+
+        async def map(self, experiment_id, request):
+            raise AccountingDenied(Reason.CONCURRENCY)
+
+        async def capture(self, experiment_id, request):
+            raise AccountingDenied(Reason.CONCURRENCY)
+
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            raise AccountingDenied(Reason.CONCURRENCY)
+
+    with pytest.raises(ResearchToolError) as raised:
+        await ResearchTools(uuid4(), Port()).search_web("clinic workflows")
+
+    assert raised.value.code == "CONCURRENCY"
+
+
+@pytest.mark.asyncio
+async def test_research_tools_preserve_safe_provider_cause_of_uncertain_outcome():
+    class Port:
+        async def search(self, experiment_id, request):
+            try:
+                raise ProviderFailure(ProviderErrorCode.UNAVAILABLE)
+            except ProviderFailure as error:
+                raise AccountingDenied(Reason.UNCERTAIN) from error
+
+        async def map(self, experiment_id, request):
+            raise AssertionError
+
+        async def capture(self, experiment_id, request):
+            raise AssertionError
+
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            raise AssertionError
+
+    with pytest.raises(ResearchToolError) as raised:
+        await ResearchTools(uuid4(), Port()).search_web("clinic workflows")
+
+    assert raised.value.code == "UNAVAILABLE"
 
 
 @pytest.mark.asyncio

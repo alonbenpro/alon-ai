@@ -261,11 +261,21 @@ async def test_native_run_reuses_intake_and_persists_truthful_outcome(
 
 
 @pytest.mark.parametrize(
-    "discovery", [False, True, "incomplete", "selected", "revision"]
+    ("discovery", "parallel_tools"),
+    [
+        (False, False),
+        (True, False),
+        ("incomplete", False),
+        ("selected", False),
+        ("revision", False),
+        pytest.param(False, True, id="multiple-tools"),
+        pytest.param(False, "expired-quota-window", id="expired-quota-window"),
+    ],
 )
 async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_case(
-    governance_engine, monkeypatch, discovery
+    governance_engine, monkeypatch, discovery, parallel_tools
 ):
+    import asyncio
     from datetime import timedelta
 
     import httpx
@@ -288,7 +298,7 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
     now = datetime.now(UTC)
     monkeypatch.setattr(test_governance, "datetime", lambda *args, **kwargs: now)
     _, _, _, brave_config, brave_grant, _ = await test_governance.seed(
-        governance_engine, transient=True
+        governance_engine, transient=True, concurrency=1, quota=6
     )
     _, _, _, capture_config, capture_grant, _ = await test_governance.seed(
         governance_engine,
@@ -306,6 +316,52 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
     )
     bundle = make_authority_bundle(manifest)
     await register_authority(governance_engine, bundle)
+    if parallel_tools:
+        from sqlalchemy import select, update
+
+        from alon_ai.db.tables import accounting as gov
+        from alon_ai.provider_usage.schemas.accounting import ControlPolicy
+
+        async with governance_engine.begin() as connection:
+            authority = (
+                (
+                    await connection.execute(
+                        select(gov.authorities).where(
+                            gov.authorities.c.account == "synthetic-account",
+                            gov.authorities.c.capability == "BRAVE_WEB_COVERAGE",
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            policy = ControlPolicy.model_validate_json(
+                json.dumps(
+                    (
+                        await connection.execute(
+                            select(gov.policies.c.data).where(
+                                gov.policies.c.id == authority["policy_id"]
+                            )
+                        )
+                    ).scalar_one()
+                )
+            )
+            window = policy.effective_at + (
+                (now - policy.effective_at) // timedelta(seconds=policy.window_seconds)
+            ) * timedelta(seconds=policy.window_seconds)
+            await connection.execute(
+                update(gov.authorities)
+                .where(
+                    gov.authorities.c.account == "synthetic-account",
+                    gov.authorities.c.capability == "BRAVE_WEB_COVERAGE",
+                )
+                .values(
+                    window_start=window
+                    if parallel_tools is True
+                    else window - timedelta(seconds=policy.window_seconds),
+                    quota_used=1 if parallel_tools is True else 6,
+                )
+            )
     config = CombinedIdeaConfig(
         version=1,
         model=bundle.config,
@@ -314,11 +370,11 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
             approved_by=owner.id,
             effective_at=now - timedelta(seconds=1),
             expires_at=now + timedelta(hours=1),
-            max_calls=3,
-            max_pages=2,
+            max_calls=14 if parallel_tools else 3,
+            max_pages=8 if parallel_tools else 2,
             timeout_seconds=90,
             max_spend_usd=Decimal("0.25"),
-            max_results=2,
+            max_results=5 if parallel_tools else 2,
             max_pdf_bytes=100000,
             max_pdf_pages=1,
             max_text_chars=10000,
@@ -365,9 +421,13 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
     monkeypatch.setattr(intake_module, "discover_experiment", observe_discover)
     captured = []
     network = []
+    active_requests = 0
+    max_active_requests = 0
 
-    def transport(request):
+    async def transport(request):
         network.append(request.url.host)
+        # Yield while the governed reservation is active, exposing overlapping calls.
+        await asyncio.sleep(0.02)
         return httpx.Response(
             200,
             json={
@@ -399,10 +459,25 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
                 resolver=lambda _: ("8.8.8.8",),
             )
 
+        async def search(self, experiment_id, request):
+            nonlocal active_requests, max_active_requests
+            active_requests += 1
+            max_active_requests = max(max_active_requests, active_requests)
+            try:
+                return await super().search(experiment_id, request)
+            finally:
+                active_requests -= 1
+
         async def capture(self, experiment_id, request):
-            result = await super().capture(experiment_id, request)
-            captured.extend(result)
-            return result
+            nonlocal active_requests, max_active_requests
+            active_requests += 1
+            max_active_requests = max(max_active_requests, active_requests)
+            try:
+                result = await super().capture(experiment_id, request)
+                captured.extend(result)
+                return result
+            finally:
+                active_requests -= 1
 
     monkeypatch.setattr(combined_idea, "GovernedLiveResearchPort", ControlledPort)
     calls = []
@@ -422,6 +497,29 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
         scope_key = native_input["approved_limits_ref"]
         per_run_calls[scope_key] = per_run_calls.get(scope_key, 0) + 1
         index = per_run_calls[scope_key]
+        if parallel_tools:
+            assert info.instructions is not None
+            budget_text = info.instructions.split(
+                "Approved research limits and current provider quota: ", 1
+            )[1].split("\n", 1)[0]
+            budget = json.loads(budget_text)
+            assert budget["run_limits"] == {
+                "max_calls": 14,
+                "max_pages": 8,
+                "max_results": 5,
+                "max_spend_usd": "0.25",
+                "timeout_seconds": 90,
+            }
+            brave_quota = next(
+                quota
+                for quota in budget["provider_quotas"]
+                if quota["capability"] == "BRAVE_WEB_COVERAGE"
+            )
+            assert brave_quota["quota_limit"] == 6
+            assert brave_quota["remaining_calls"] == (
+                (5 if parallel_tools is True else 6) - (0 if index == 1 else 2)
+            )
+            assert "synthetic-account" not in budget_text
         if index == 1:
             native_inputs.append(native_input)
         is_discovery = native_input["operation"] == "DISCOVER"
@@ -433,7 +531,22 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
                     tool_call_id="search",
                 )
             ]
-        elif index == 2:
+            if parallel_tools:
+                parts.extend(
+                    [
+                        ToolCallPart(
+                            "search_web",
+                            {"query": "clinic appointment reminder prices"},
+                            tool_call_id="second-search",
+                        ),
+                        ToolCallPart(
+                            "capture_page",
+                            {"url": "https://example.com/"},
+                            tool_call_id="capture",
+                        ),
+                    ]
+                )
+        elif index == 2 and not parallel_tools:
             parts = [
                 ToolCallPart(
                     "capture_page",
@@ -441,7 +554,7 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
                     tool_call_id="capture",
                 )
             ]
-        elif index == 3:
+        elif index == (2 if parallel_tools else 3):
             assert captured
             parts = [
                 ToolCallPart(
@@ -567,8 +680,12 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
     activity = (await AgentRunRepository(governance_engine).get(row["run_id"]))[
         "events"
     ]
-    assert sum(event["type"] == "RESEARCH_REQUEST" for event in activity) == 2
-    assert sum(event["type"] == "RESEARCH_RESPONSE" for event in activity) == 2
+    assert sum(event["type"] == "RESEARCH_REQUEST" for event in activity) == (
+        3 if parallel_tools else 2
+    )
+    assert sum(event["type"] == "RESEARCH_RESPONSE" for event in activity) == (
+        3 if parallel_tools else 2
+    )
     assert "Clinics send appointment reminders manually" not in str(activity)
     assert result.status == ("BLOCKED" if discovery == "incomplete" else "SUCCEEDED"), (
         result.blocked_reason,
@@ -576,9 +693,15 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
         len(calls),
         network,
     )
-    assert network == ["api.search.brave.com", "api.firecrawl.dev"]
-    assert len(calls) == 4
+    assert max_active_requests == 1
+    assert network == (
+        ["api.search.brave.com", "api.search.brave.com", "api.firecrawl.dev"]
+        if parallel_tools
+        else ["api.search.brave.com", "api.firecrawl.dev"]
+    )
+    assert len(calls) == (3 if parallel_tools else 4)
     assert len(result.receipts) == 6
+    assert all(receipt.state == "FINAL" for receipt in result.receipts)
     assert {receipt.provider for receipt in result.receipts} == {
         "OPENAI",
         "BRAVE",

@@ -115,6 +115,28 @@ describe("R01A live idea run inspector", () => {
     expect(screen.getByText("Cost details").closest("details")).not.toHaveAttribute("open");
   });
 
+  it("waits for reconciliation when a provider receipt is unresolved and does not repeat its diagnostic code", async () => {
+    const unresolvedReceipt = { receipt_id: "receipt-brave", provider: "BRAVE", model_identifier: null,
+      state: "OUTCOME_UNKNOWN", currency: "USD", reserved: "0.01", accrued: "0.01", usage: [] };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.endsWith("/events")) return Response.json({ events: [{ sequence: 1, at: "2026-10-02T10:00:00Z",
+        type: "RESEARCH_RESPONSE", detail: "RESEARCH_TOOL_UNAVAILABLE", diagnostic: {
+          stage: "research", error_type: "ResearchToolError", code: "RESEARCH_TOOL_UNAVAILABLE",
+          message: "A research tool was unavailable for this request.", frames: [] } }] });
+      if (path.endsWith("/result")) return Response.json({ ...result, status: "OUTCOME_UNKNOWN", actual_cost_usd: null,
+        receipts: [unresolvedReceipt] });
+      return Response.json({ ...run, status: "OUTCOME_UNKNOWN", phase: "OUTCOME_UNKNOWN", actual_cost_usd: null,
+        pending_cost_usd: null, receipts: [unresolvedReceipt] });
+    }));
+
+    render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+
+    expect((await screen.findAllByText("Awaiting reconciliation")).length).toBeGreaterThan(0);
+    expect(screen.getByText("RESEARCH_TOOL_UNAVAILABLE")).toBeInTheDocument();
+    expect(screen.queryByText("RESEARCH_TOOL_UNAVAILABLE · RESEARCH_TOOL_UNAVAILABLE")).not.toBeInTheDocument();
+  });
+
   it("shows provider request activity while keeping receipts in technical details", async () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const path = String(input);
@@ -129,7 +151,10 @@ describe("R01A live idea run inspector", () => {
         kind: "BRAVE_SEARCH", status: "SUCCEEDED", result_artifact_id: "finding-1", provider_call_id: "call-1" }] });
     }));
     render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
-    expect(await screen.findByText("Provider requests and responses")).toBeInTheDocument();
+    const providerDetails = (await screen.findByText("Provider call details")).closest("details")!;
+    expect(providerDetails).not.toHaveAttribute("open");
+    fireEvent.click(within(providerDetails).getByText("Provider call details"));
+    expect(providerDetails).toHaveAttribute("open");
     expect(screen.getByText("receipt-1")).toBeInTheDocument();
     expect(screen.getByText("incomplete")).toBeInTheDocument();
     expect(screen.getByText("Initial buyer evidence is limited")).toBeInTheDocument();
