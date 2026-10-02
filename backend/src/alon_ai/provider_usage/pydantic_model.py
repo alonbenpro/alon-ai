@@ -25,6 +25,7 @@ from pydantic_ai.messages import (
     ModelMessagesTypeAdapter,
     ModelRequest,
     ModelResponse,
+    ToolCallPart,
     UserPromptPart,
 )
 from pydantic_ai.models import Model, ModelRequestParameters
@@ -35,6 +36,7 @@ from pydantic_ai.settings import ModelSettings
 from alon_ai.agents.schemas.openai import canonical_json, sha256
 from alon_ai.db.repositories.accounting import GovernanceRepository
 from alon_ai.db.repositories.agent_run_steps import AgentRunStepRepository
+from alon_ai.db.repositories.agent_runs import AgentRunRepository
 from alon_ai.integrations.pydantic_openai import openai_model_factory
 from alon_ai.integrations.schemas.provider import (
     CallAttribution,
@@ -476,6 +478,17 @@ class GovernedPydanticModel(Model):
         self._ordinal += 1
         key = uuid5(self._run_key, f"model-request/{self._ordinal}")
         await self._claim_step(key, messages, model_request_parameters)
+        activity = (
+            AgentRunRepository(self._repository.engine)
+            if self._step_checkpoint is not None
+            else None
+        )
+        if activity is not None and self._step_checkpoint is not None:
+            await activity.record_activity(
+                self._step_checkpoint.run_id,
+                "MODEL_REQUEST",
+                f"OpenAI request {self._ordinal} prepared · {self.model_name}",
+            )
         adapter = _RequestAdapter(self, messages, model_request_parameters, key)
         executor = GovernedExecutor(
             self._repository,
@@ -500,6 +513,49 @@ class GovernedPydanticModel(Model):
             await asyncio.shield(
                 self._checkpoint_result(key, result, adapter.response, failure_reason)
             )
+            if activity is not None and self._step_checkpoint is not None:
+                response = adapter.response
+                if response is not None and result is not None and result.error is None:
+                    allowed_names = {
+                        tool.name for tool in model_request_parameters.function_tools
+                    }
+                    names = sorted(
+                        {
+                            part.tool_name
+                            for part in response.parts
+                            if isinstance(part, ToolCallPart)
+                            and part.tool_name in allowed_names
+                            and re.fullmatch(
+                                r"[A-Za-z][A-Za-z0-9_]{0,63}", part.tool_name
+                            )
+                        }
+                    )
+                    summary = (
+                        "tools: " + ", ".join(names)
+                        if names
+                        else "unrecognized tool request"
+                        if any(
+                            isinstance(part, ToolCallPart) for part in response.parts
+                        )
+                        else "output returned"
+                    )
+                    detail = (
+                        f"OpenAI response {self._ordinal} received · {summary} · "
+                        f"input tokens: {response.usage.input_tokens} · "
+                        f"output tokens: {response.usage.output_tokens}"
+                    )
+                else:
+                    code = (
+                        result.error.value
+                        if result and result.error
+                        else failure_reason
+                    )
+                    detail = f"OpenAI request {self._ordinal} stopped · {code}"
+                await asyncio.shield(
+                    activity.record_activity(
+                        self._step_checkpoint.run_id, "MODEL_RESPONSE", detail
+                    )
+                )
         assert result is not None
         if result.error is not None:
             raise ProviderFailure(result.error)

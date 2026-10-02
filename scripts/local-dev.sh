@@ -423,7 +423,7 @@ case "${1:-help}" in
                 ALON_AI_PROVIDER_MODE=fake
                 ;;
             live)
-                ALON_AI_IDEA_INTAKE_BUDGET_USD=0.25
+                ALON_AI_IDEA_INTAKE_BUDGET_USD=0.20
                 ALON_AI_PROVIDER_MODE=live
                 ALON_AI_R01A_LIVE_ACK=I_ACCEPT_PAID_CALLS
                 ALON_AI_R01A_LIVE_MANIFEST="$ROOT/.local/live-authority.json"

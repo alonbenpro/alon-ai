@@ -7,6 +7,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 from alon_ai.services.experiments import OperatorProfileInput
+from alon_ai.services.run_diagnostics import RunDiagnostic
 
 TaskKind = Literal["IDEA_DISCOVERY", "IDEA_REFINEMENT"]
 RunStatus = Literal[
@@ -87,6 +88,7 @@ class RunStep(StrictRunDTO):
 
 
 class RunView(RunRef):
+    diagnostic: RunDiagnostic | None = None
     research_gaps: list[str] = Field(default_factory=list)
     research_summary: dict[str, Any] | None = None
     partial_options: list[dict[str, Any]] = Field(default_factory=list)
@@ -127,6 +129,7 @@ class RunView(RunRef):
 
 
 class RunResult(StrictRunDTO):
+    diagnostic: RunDiagnostic | None = None
     research_gaps: list[str] = Field(default_factory=list)
     research_summary: dict[str, Any] | None = None
     partial_options: list[dict[str, Any]] = Field(default_factory=list)
@@ -149,6 +152,7 @@ class RunEvent(StrictRunDTO):
     at: datetime
     type: str
     detail: str | None = None
+    diagnostic: RunDiagnostic | None = None
 
 
 class RunEvents(StrictRunDTO):

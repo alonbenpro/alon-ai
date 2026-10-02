@@ -140,6 +140,22 @@ async def model_request(model):
     )
 
 
+async def test_activity_omits_unregistered_response_tool_names(governance_engine):
+    async def respond(messages, info):
+        return ModelResponse(
+            [ToolCallPart("SECRET_provider_payload", {}, tool_call_id="call")],
+            usage=RequestUsage(input_tokens=20, output_tokens=5),
+        )
+
+    result, _, _, arguments = await provision(
+        governance_engine, response_function=respond
+    )
+    await model_request(result.model)
+    row = await AgentRunRepository(governance_engine).get(arguments["run_id"])
+    assert "SECRET_provider_payload" not in str(row["events"])
+    assert "unrecognized tool request" in row["events"][-1]["detail"]
+
+
 @pytest.mark.integration
 async def test_combined_model_uses_two_real_receipts_then_denies_third_before_network(
     governance_engine,
@@ -165,6 +181,21 @@ async def test_combined_model_uses_two_real_receipts_then_denies_third_before_ne
     assert [row["status"] for row in steps] == ["SUCCEEDED", "SUCCEEDED", "BLOCKED"]
     assert steps[2]["reason_code"] == "BUDGET"
     assert steps[2]["provider_call_id"] is None
+    parent = await AgentRunRepository(governance_engine).get(arguments["run_id"])
+    activity = [
+        event for event in parent["events"] if event["type"].startswith("MODEL_")
+    ]
+    assert [event["type"] for event in activity] == [
+        "MODEL_REQUEST",
+        "MODEL_RESPONSE",
+        "MODEL_REQUEST",
+        "MODEL_RESPONSE",
+        "MODEL_REQUEST",
+        "MODEL_RESPONSE",
+    ]
+    assert "20" in activity[1]["detail"] and "5" in activity[1]["detail"]
+    assert "BUDGET" in activity[-1]["detail"]
+    assert "native result" not in str(activity)
     assert 80 < (result.attribution.deadline - datetime.now(UTC)).total_seconds() <= 90
     async with governance_engine.connect() as connection:
         rows = (await connection.execute(select(gov.calls))).mappings().all()

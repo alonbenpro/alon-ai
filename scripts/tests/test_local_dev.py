@@ -174,7 +174,7 @@ class LocalDevTests(unittest.TestCase):
         result = self.run_script("live")
         self.assertEqual(result.returncode, 0, result.stderr)
         commands = self.log.read_text()
-        self.assertIn("mode=live budget=0.25", commands)
+        self.assertIn("mode=live budget=0.20", commands)
         self.assertIn("--keys-file /app/.local/.combined-review-input/live-keys.env", commands)
         self.assertIn(":/app/reviewed-input:ro", commands)
         self.assertIn("python - live-authority.json", commands)

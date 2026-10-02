@@ -17,6 +17,7 @@ from alon_ai.db.repositories.agent_runs import AgentRunRepository
 from alon_ai.db.repositories.experiments import ExperimentError
 from alon_ai.integrations.recorded_idea import _RecordedResponses
 from alon_ai.provider_usage.recorded_idea import provision_recorded_seeded_runtime
+from alon_ai.provider_usage.schemas.accounting import AccountingDenied, Reason
 from alon_ai.services import agent_run_service as agent_run_service_module
 from alon_ai.services import ideas as ideas_module
 from alon_ai.services.agent_run_service import (
@@ -27,6 +28,7 @@ from alon_ai.services.agent_run_service import (
 from alon_ai.services.experiments import AcceptRequest, ExperimentContext
 from alon_ai.services.ideas import IdeaService
 from alon_ai.services.intake import IntakeService
+from alon_ai.services.run_diagnostics import record_diagnostic
 from alon_ai.services.schemas.agent_runs import (
     AgentRunRequest,
     CancelRunRequest,
@@ -61,6 +63,96 @@ async def test_run_admission_is_idempotent_and_durable(governance_engine):
     refreshed = await IntakeService(context).snapshot(experiment_id)
     assert refreshed["latest_run_id"] == first.run_id
     assert refreshed["stage_status"] == "RUNNING"
+
+
+async def test_run_failure_diagnostic_is_retained_and_projected(governance_engine):
+    app, operator_id = await configured_app(governance_engine)
+    context = ExperimentContext(governance_engine, app.state.settings, operator_id)
+    experiment_id = await IntakeService(context)._roots(
+        uuid4(), "Exact seed", draft=False
+    )
+    service = AgentRunService(context)
+    admitted = await service.admit(
+        experiment_id, AgentRunRequest(task_kind="IDEA_REFINEMENT", command_key=uuid4())
+    )
+
+    await record_diagnostic(
+        service.store,
+        admitted.run_id,
+        "PROVIDER_PROVISIONING",
+        AccountingDenied(Reason.BUDGET),
+    )
+    view = await service.get(admitted.run_id)
+    events = await service.events(admitted.run_id)
+
+    assert view.diagnostic is not None
+    assert view.diagnostic.stage == "PROVIDER_PROVISIONING"
+    assert view.diagnostic.code == "BUDGET"
+    assert view.diagnostic.message == "The approved budget denied this request."
+    assert events.events[0].diagnostic is None
+    assert events.events[-1].diagnostic == view.diagnostic
+
+
+async def test_provider_provisioning_denial_is_visible_on_blocked_run(
+    governance_engine,
+):
+    app, operator_id = await configured_app(governance_engine)
+
+    async def denied_provider(engine, **arguments):
+        raise AccountingDenied(Reason.BUDGET)
+
+    settings = app.state.settings.model_copy(update={"provider_mode": "live"})
+    context = ExperimentContext(
+        governance_engine,
+        settings,
+        operator_id,
+        idea_runtime_provider=denied_provider,
+    )
+    experiment_id = await IntakeService(context)._roots(
+        uuid4(), "Exact seed", draft=False
+    )
+    service = AgentRunService(context)
+    admitted = await service.admit(
+        experiment_id, AgentRunRequest(task_kind="IDEA_REFINEMENT", command_key=uuid4())
+    )
+
+    await service.execute(admitted.run_id)
+    view = await service.get(admitted.run_id)
+
+    assert view.status == "BLOCKED"
+    assert view.diagnostic is not None
+    assert view.diagnostic.stage == "PROVIDER_PROVISIONING"
+    assert view.diagnostic.code == "BUDGET"
+
+
+async def test_discovery_provisioning_denial_is_visible_on_blocked_run(
+    governance_engine,
+):
+    app, operator_id = await configured_app(governance_engine)
+
+    async def denied_provider(engine, **arguments):
+        raise AccountingDenied(Reason.BUDGET)
+
+    settings = app.state.settings.model_copy(update={"provider_mode": "live"})
+    context = ExperimentContext(
+        governance_engine,
+        settings,
+        operator_id,
+        idea_runtime_provider=denied_provider,
+    )
+    experiment_id = await IntakeService(context)._roots(uuid4(), None, draft=False)
+    service = AgentRunService(context)
+    admitted = await service.admit(
+        experiment_id, AgentRunRequest(task_kind="IDEA_DISCOVERY", command_key=uuid4())
+    )
+
+    await service.execute(admitted.run_id)
+    view = await service.get(admitted.run_id)
+
+    assert view.status == "BLOCKED"
+    assert view.diagnostic is not None
+    assert view.diagnostic.stage == "PROVIDER_PROVISIONING"
+    assert view.diagnostic.code == "BUDGET"
 
 
 async def test_worker_execution_retains_result_without_second_provider_call(

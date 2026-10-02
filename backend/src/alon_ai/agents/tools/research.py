@@ -71,16 +71,23 @@ class GovernedResearchPort(Protocol):
 class ResearchTools:
     """Bounded tool facade scoped to one experiment and a trusted service port."""
 
-    def __init__(self, experiment_id: UUID, port: GovernedResearchPort) -> None:
+    def __init__(
+        self, experiment_id: UUID, port: GovernedResearchPort, *, max_results: int = 20
+    ) -> None:
+        if type(max_results) is not int or not 1 <= max_results <= 20:
+            raise ValueError("invalid research result limit")
         self._experiment_id = experiment_id
         self._port = port
+        self._max_results = max_results
 
     async def search_web(
-        self, query: str, *, limit: int = 10
+        self, query: str, *, limit: int | None = None
     ) -> tuple[SourceReference, ...] | tuple[str, ...]:
         try:
+            limit = 10 if limit is None else limit
             if not query.strip() or len(query) > 600 or not 1 <= limit <= 20:
                 raise ValueError
+            limit = min(limit, self._max_results)
             request = BraveSearchRequest(
                 capability=Capability.BRAVE_WEB_COVERAGE,
                 query=SecretStr(query),
@@ -99,11 +106,13 @@ class ResearchTools:
             raise ResearchToolError() from None
 
     async def map_site(
-        self, url: str, *, limit: int = 10
+        self, url: str, *, limit: int | None = None
     ) -> tuple[SourceReference, ...]:
         try:
+            limit = 10 if limit is None else limit
             if not 1 <= limit <= 20:
                 raise ValueError
+            limit = min(limit, self._max_results)
             request = FirecrawlMapRequest(url=public_url(url), limit=limit)
             return self._references(await self._port.map(self._experiment_id, request))
         except Exception:  # noqa: BLE001 - no request/provider details cross tool boundary

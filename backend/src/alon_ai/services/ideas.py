@@ -43,6 +43,7 @@ from alon_ai.services.experiments import (
     _read_persisted_advice,
 )
 from alon_ai.services.idea_safety import IdeaSafetyError, validate_idea_advice
+from alon_ai.services.run_diagnostics import record_diagnostic
 from alon_ai.services.schemas.records import (
     ArtifactDraft,
     ArtifactInput,
@@ -275,17 +276,32 @@ async def discover_experiment(
         "budget_usd": Decimal(detail["brief"]["budget_usd"]),
     }
     claimed_operation_id: UUID | None = None
+    service = None
+    execution_started = False
+    diagnostic_recorded = False
     try:
-        if settings.provider_mode == "fake":
-            service, attribution = await request.recorded_runtime_provisioner(
-                engine, **runtime_args
+        try:
+            if settings.provider_mode == "fake":
+                service, attribution = await request.recorded_runtime_provisioner(
+                    engine, **runtime_args
+                )
+                advice_source = "RECORDED_FAKE"
+            else:
+                provider = request.idea_runtime_provider
+                if provider is None:
+                    raise ExperimentError(409, "LIVE_CONFIG_REQUIRED")
+                service, attribution, advice_source = await provider(
+                    engine, **runtime_args
+                )
+        except Exception as error:
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "PROVIDER_PROVISIONING",
+                error,
             )
-            advice_source = "RECORDED_FAKE"
-        else:
-            provider = request.idea_runtime_provider
-            if provider is None:
-                raise ExperimentError(409, "LIVE_CONFIG_REQUIRED")
-            service, attribution, advice_source = await provider(engine, **runtime_args)
+            diagnostic_recorded = True
+            raise
         await experiment_repository.claim_discovery(
             engine,
             experiment_id,
@@ -295,6 +311,7 @@ async def discover_experiment(
             advice_source,
         )
         claimed_operation_id = attribution.operation_run_id
+        execution_started = True
         execution = await service.discover_system(
             attribution,
             facts=RoutingFacts(needs_ai=True),
@@ -377,6 +394,15 @@ async def discover_experiment(
             )
         raise
     except Exception as error:
+        if not diagnostic_recorded and not (
+            execution_started and isinstance(service, CombinedIdeaRuntime)
+        ):
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "AGENT_EXECUTION" if execution_started else "OPERATION_CLAIM",
+                error,
+            )
         if claimed_operation_id is not None:
             await experiment_repository.block_discovery(
                 engine, body.idempotency_key, experiment_id, claimed_operation_id
@@ -569,6 +595,9 @@ async def refine_experiment(
     if roots is None:
         raise ExperimentError(409, "EXPERIMENT_NOT_READY")
     claimed_operation_id: UUID | None = None
+    service = None
+    execution_started = False
+    diagnostic_recorded = False
     try:
         runtime_args = {
             "experiment_id": experiment_id,
@@ -578,16 +607,28 @@ async def refine_experiment(
             "run_id": body.idempotency_key,
             "budget_usd": Decimal(detail["brief"]["budget_usd"]),
         }
-        if settings.provider_mode == "fake":
-            service, attribution = await request.recorded_runtime_provisioner(
-                engine, **runtime_args
+        try:
+            if settings.provider_mode == "fake":
+                service, attribution = await request.recorded_runtime_provisioner(
+                    engine, **runtime_args
+                )
+                advice_source = "RECORDED_FAKE"
+            else:
+                provider = request.idea_runtime_provider
+                if provider is None:
+                    raise ExperimentError(409, "LIVE_CONFIG_REQUIRED")
+                service, attribution, advice_source = await provider(
+                    engine, **runtime_args
+                )
+        except Exception as error:
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "PROVIDER_PROVISIONING",
+                error,
             )
-            advice_source = "RECORDED_FAKE"
-        else:
-            provider = request.idea_runtime_provider
-            if provider is None:
-                raise ExperimentError(409, "LIVE_CONFIG_REQUIRED")
-            service, attribution, advice_source = await provider(engine, **runtime_args)
+            diagnostic_recorded = True
+            raise
         await _claim_refinement(
             request,
             experiment_id=experiment_id,
@@ -597,6 +638,7 @@ async def refine_experiment(
             advice_source=advice_source,
         )
         claimed_operation_id = attribution.operation_run_id
+        execution_started = True
         execution = await service.refine_cycle(
             attribution,
             cycle_id=detail["cycle_id"],
@@ -656,6 +698,15 @@ async def refine_experiment(
         raise
     except Exception as error:
         # No output can be accepted after an interrupted or denied run.
+        if not diagnostic_recorded and not (
+            execution_started and isinstance(service, CombinedIdeaRuntime)
+        ):
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "AGENT_EXECUTION" if execution_started else "OPERATION_CLAIM",
+                error,
+            )
         if claimed_operation_id is not None:
             await experiment_repository.block_refinement(
                 engine, body.idempotency_key, experiment_id, claimed_operation_id

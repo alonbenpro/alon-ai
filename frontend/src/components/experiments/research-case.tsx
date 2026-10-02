@@ -68,35 +68,37 @@ export function ResearchCasePanel({ experimentId, refreshKey, onCase }: {
     return () => { active = false; };
   }, [load, refreshKey]);
 
+  const caseBody = researchCase && <>
+    <p>{researchCase.progress === "PARTIAL" ? `Partial research record · ${researchCase.finding_count} saved findings. This record does not establish a completed assessment.` : "No completed assessment is available yet."}</p>
+    {researchCase.limitations.length > 0 && <div><h3>Case limitations</h3><ul>{researchCase.limitations.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
+    {researchCase.subjects.map((subject) => <article key={subject.subject.artifact_id} className="experiment-research-subject">
+      <h3>{label(subject.mode)} · {subject.current ? "current" : "earlier"} subject</h3>
+      <p>Artifact {subject.subject.artifact_id} · v{subject.subject.version}</p>
+      <div className="experiment-research-case__columns"><div><h4>Coverage and gaps</h4>
+        <ul>{subject.coverage.map((item) => <li key={item.dimension}><strong>{label(item.dimension)}:</strong> {label(item.status)}</li>)}</ul>
+        {subject.gaps.length > 0 && <p>Open gaps: {subject.gaps.map(label).join(" · ")}</p>}
+      </div><div><h4>Research observations</h4>
+        {subject.findings.length === 0 && <p>No research observation has been retained for this subject.</p>}
+        {subject.findings.map((finding) => <article key={finding.artifact.artifact_id} className="experiment-research-finding">
+          <strong>{label(finding.observation.dimension)} · {label(finding.observation.evidence_status)}</strong>
+          <p>{finding.observation.finding}</p><p>Claim assessed: {finding.observation.claim}</p>
+          {finding.observation.limitations.length > 0 && <p>Limits: {finding.observation.limitations.join(" · ")}</p>}
+          <small>Step {finding.observation.step_key} · Finding {finding.artifact.artifact_id} · v{finding.artifact.version}</small>
+          <details><summary>Source references ({finding.sources.length})</summary>{finding.sources.length ? <ul>{finding.sources.map((source, index) => {
+            const url = currentFirecrawlUrl(source);
+            return <li key={index}>{url ? <a href={url.href} target="_blank" rel="noopener noreferrer">{source.title?.trim() || url.hostname}</a> : "Original source unavailable"}
+              {" · "}{source.reference.retained_id ?? source.reference.evidence_id ?? "Reference ID unavailable"}</li>;
+          })}</ul> : <p>Agent analysis without a retained source; treat this as unverified.</p>}</details>
+        </article>)}
+      </div></div>
+    </article>)}
+  </>;
+
   return <section className="experiment-research-case" aria-labelledby="research-case-heading">
-    <div className="experiment-section-heading"><span>Retained evidence</span><h2 id="research-case-heading">Market research case</h2></div>
+    <div className="experiment-section-heading"><span>Retained evidence</span><h2 id="research-case-heading">Research details</h2></div>
     {unavailable && <p role="status">Research case is unavailable. The saved run and proposal remain visible; evidence coverage cannot be confirmed here.</p>}
     {!unavailable && !researchCase && <p role="status">Loading retained research…</p>}
-    {researchCase && <>
-      <p>{researchCase.progress === "PARTIAL" ? "Partial research record" : "Research has not started"} · {researchCase.finding_count} saved findings. This record does not establish a completed assessment.</p>
-      {researchCase.limitations.length > 0 && <div><h3>Case limitations</h3><ul>{researchCase.limitations.map((item, index) => <li key={index}>{item}</li>)}</ul></div>}
-      {researchCase.subjects.map((subject) => <article key={subject.subject.artifact_id} className="experiment-research-subject">
-        <h3>{label(subject.mode)} · {subject.current ? "current" : "earlier"} subject</h3>
-        <p>Artifact {subject.subject.artifact_id} · v{subject.subject.version}</p>
-        <div className="experiment-research-case__columns"><div><h4>Coverage and gaps</h4>
-          <ul>{subject.coverage.map((item) => <li key={item.dimension}><strong>{label(item.dimension)}:</strong> {label(item.status)}</li>)}</ul>
-          {subject.gaps.length > 0 && <p>Open gaps: {subject.gaps.map(label).join(" · ")}</p>}
-        </div><div><h4>Research observations</h4>
-          {subject.findings.length === 0 && <p>No research observation has been retained for this subject.</p>}
-          {subject.findings.map((finding) => <article key={finding.artifact.artifact_id} className="experiment-research-finding">
-            <strong>{label(finding.observation.dimension)} · {label(finding.observation.evidence_status)}</strong>
-            <p>{finding.observation.finding}</p><p>Claim assessed: {finding.observation.claim}</p>
-            {finding.observation.limitations.length > 0 && <p>Limits: {finding.observation.limitations.join(" · ")}</p>}
-            <small>Step {finding.observation.step_key} · Finding {finding.artifact.artifact_id} · v{finding.artifact.version}</small>
-            <details><summary>Source references ({finding.sources.length})</summary>{finding.sources.length ? <ul>{finding.sources.map((source, index) => {
-              const url = currentFirecrawlUrl(source);
-              return <li key={index}>{url ? <a href={url.href} target="_blank" rel="noopener noreferrer">{source.title?.trim() || url.hostname}</a> : "Original source unavailable"}
-                {" · "}{source.reference.retained_id ?? source.reference.evidence_id ?? "Reference ID unavailable"}</li>;
-            })}</ul> : <p>Agent analysis without a retained source; treat this as unverified.</p>}</details>
-          </article>)}
-        </div></div>
-      </article>)}
-    </>}
+    {researchCase && (researchCase.finding_count === 0 ? <details className="experiment-research-case__empty"><summary>Research has not started · 0 saved findings</summary>{caseBody}</details> : caseBody)}
     <button type="button" className="experiment-secondary-action" onClick={() => void load(() => true)}>Refresh research case</button>
   </section>;
 }

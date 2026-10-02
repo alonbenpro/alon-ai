@@ -39,6 +39,33 @@ from alon_ai.services.schemas.records import SourceReference
 NOW = datetime(2026, 9, 28, tzinfo=UTC)
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize("limit", [None, 10, 3])
+async def test_research_tool_requests_respect_the_approved_result_limit(limit):
+    requests = []
+
+    class Port:
+        async def search(self, experiment_id, request):
+            requests.append(request)
+            return ()
+
+        async def map(self, experiment_id, request):
+            requests.append(request)
+            return ()
+
+        async def capture(self, experiment_id, request):
+            raise AssertionError("not used by this test")
+
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            raise AssertionError("not used by this test")
+
+    tools = ResearchTools(uuid4(), Port(), max_results=5)
+    kwargs = {} if limit is None else {"limit": limit}
+    await tools.search_web("clinic workflows", **kwargs)
+    await tools.map_site("https://example.com", **kwargs)
+    assert [request.limit for request in requests] == [min(limit or 10, 5)] * 2
+
+
 def authority(capability: Capability, fields: frozenset[ContentField]):
     provider = (
         Provider.BRAVE if capability.name.startswith("BRAVE") else Provider.FIRECRAWL

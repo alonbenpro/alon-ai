@@ -205,7 +205,9 @@ async def test_native_run_reuses_intake_and_persists_truthful_outcome(
         provisioned = await native(engine, **arguments, dispatch_guard=guard)
         row = await AgentRunRepository(engine).get(arguments["run_id"])
         config = SimpleNamespace(
-            research_bindings=(), model_dump_json=lambda: '{"test":"synthetic-only"}'
+            research_bindings=(),
+            research_policy=SimpleNamespace(max_results=20),
+            model_dump_json=lambda: '{"test":"synthetic-only"}',
         )
         return (
             CombinedIdeaRuntime(context, config, provisioned, NoResearchPort(), row),
@@ -427,7 +429,7 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
             parts = [
                 ToolCallPart(
                     "search_web",
-                    {"query": "clinic appointment workflow", "limit": 1},
+                    {"query": "clinic appointment workflow"},
                     tool_call_id="search",
                 )
             ]
@@ -562,6 +564,12 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
     row = await AgentRunRepository(governance_engine).by_command(key)
     await AgentRunService(context).execute(row["run_id"], propagate_errors=True)
     result = await AgentRunService(context).get(row["run_id"])
+    activity = (await AgentRunRepository(governance_engine).get(row["run_id"]))[
+        "events"
+    ]
+    assert sum(event["type"] == "RESEARCH_REQUEST" for event in activity) == 2
+    assert sum(event["type"] == "RESEARCH_RESPONSE" for event in activity) == 2
+    assert "Clinics send appointment reminders manually" not in str(activity)
     assert result.status == ("BLOCKED" if discovery == "incomplete" else "SUCCEEDED"), (
         result.blocked_reason,
         errors,

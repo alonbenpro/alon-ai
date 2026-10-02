@@ -209,6 +209,14 @@ class AgentRunService:
         if profile_row is None:
             raise ExperimentError(409, "IDEA_INPUT_STALE")
         view = {field: row[field] for field in RunView.model_fields if field in row}
+        diagnostic = next(
+            (
+                event["diagnostic"]
+                for event in reversed(row["events"])
+                if event.get("diagnostic") is not None
+            ),
+            None,
+        )
         review_status = "ACCEPTED" if accepted else row["review_status"]
         phase = (
             "ACCEPTED"
@@ -301,6 +309,7 @@ class AgentRunService:
                 for item in usage_rows
             ],
             review_status=review_status,
+            diagnostic=diagnostic,
             cancel_requested=row["cancel_requested_at"] is not None,
             operator_profile=OperatorProfileProjection(
                 profile_id=profile_row["id"],
@@ -403,6 +412,7 @@ class AgentRunService:
             receipt_id=view.receipt_id,
             actual_cost_usd=view.actual_cost_usd,
             usage=view.usage,
+            diagnostic=view.diagnostic,
         )
 
     async def events(self, run_id: UUID) -> RunEvents:

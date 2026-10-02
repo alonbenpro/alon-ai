@@ -23,6 +23,7 @@ from sqlalchemy import select
 from alon_ai.agents.tools.research import SavedEvidenceExcerpt, TransientSearchUrls
 from alon_ai.db.repositories.accounting import GovernanceRepository
 from alon_ai.db.repositories.agent_run_steps import AgentRunStepRepository
+from alon_ai.db.repositories.agent_runs import AgentRunRepository
 from alon_ai.db.tables import accounting as gov
 from alon_ai.db.tables.agent_run_steps import steps as step_rows
 from alon_ai.db.tables.agent_runs import runs
@@ -40,6 +41,7 @@ from alon_ai.integrations.schemas.provider import (
     FirecrawlCaptureRequest,
     FirecrawlMapRequest,
     ProviderCallResult,
+    ProviderFailure,
     Purpose,
     SafeRequestMetadata,
     UsageComponent,
@@ -435,6 +437,35 @@ class GovernedLiveResearchPort:
         return result
 
     async def _execute(self, experiment_id, request):
+        activity = AgentRunRepository(self._repository.engine)
+        capability = request.capability.value
+        await activity.record_activity(
+            self._run_id,
+            "RESEARCH_REQUEST",
+            f"{capability} requested · result limit {getattr(request, 'limit', 1)}",
+        )
+        try:
+            result = await self._execute_request(experiment_id, request)
+        except AccountingDenied as error:
+            await asyncio.shield(
+                activity.record_activity(
+                    self._run_id,
+                    "RESEARCH_RESPONSE",
+                    f"{capability} blocked · {error.reason.value}",
+                )
+            )
+            raise
+        count = (
+            len(result.urls) if isinstance(result, TransientSearchUrls) else len(result)
+        )
+        await activity.record_activity(
+            self._run_id,
+            "RESEARCH_RESPONSE",
+            f"{capability} completed · {count} references returned",
+        )
+        return result
+
+    async def _execute_request(self, experiment_id, request):
         if experiment_id != self._attribution.experiment_id:
             raise AccountingDenied(Reason.SCOPE)
         now = self._repository.clock()
@@ -542,7 +573,7 @@ class GovernedLiveResearchPort:
             await self._steps.finish(
                 key, status="OUTCOME_UNKNOWN", reason="PROVIDER_OUTCOME_UNKNOWN"
             )
-            raise AccountingDenied(Reason.UNCERTAIN)
+            raise AccountingDenied(Reason.UNCERTAIN) from ProviderFailure(result.error)
         async with self._steps.dispatch_scope():
             if config.intended_use.purpose is Purpose.OFFICIAL_SOURCE_IDENTIFICATION:
                 if result.content is None:

@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from datetime import UTC, datetime
 from uuid import UUID
 
+import structlog
 from sqlalchemy import select, update
 from sqlalchemy.dialects.postgresql import insert
 
@@ -15,16 +16,22 @@ from alon_ai.db.tables.intake import commands, intakes
 from alon_ai.db.tables.openai import run_intents
 
 
-def _event(row, event_type: str, now: datetime, detail: str | None = None):
-    return [
-        *row["events"],
-        {
-            "sequence": len(row["events"]) + 1,
-            "at": now.isoformat(),
-            "type": event_type,
-            "detail": detail,
-        },
-    ]
+def _event(
+    row,
+    event_type: str,
+    now: datetime,
+    detail: str | None = None,
+    diagnostic: dict | None = None,
+):
+    event = {
+        "sequence": len(row["events"]) + 1,
+        "at": now.isoformat(),
+        "type": event_type,
+        "detail": detail,
+    }
+    if diagnostic is not None:
+        event["diagnostic"] = diagnostic
+    return [*row["events"], event]
 
 
 class AgentRunRepository:
@@ -277,6 +284,89 @@ class AgentRunRepository:
                 )
             )
             return True
+
+    async def append_diagnostic(self, run_id: UUID, diagnostic: dict):
+        """Append a classified diagnostic without changing lifecycle state.
+
+        The event log remains backwards compatible: historical events do not
+        contain a ``diagnostic`` member, while new events add one safely.
+        """
+        async with self.engine.begin() as connection:
+            row = (
+                (
+                    await connection.execute(
+                        select(runs).where(runs.c.run_id == run_id).with_for_update()
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if row is None:
+                return None
+            if any(event.get("diagnostic") == diagnostic for event in row["events"]):
+                return row
+            now = datetime.now(UTC)
+            return (
+                (
+                    await connection.execute(
+                        update(runs)
+                        .where(runs.c.run_id == run_id)
+                        .values(
+                            events=_event(
+                                row,
+                                "DIAGNOSTIC",
+                                now,
+                                detail=diagnostic["code"],
+                                diagnostic=diagnostic,
+                            )
+                        )
+                        .returning(runs)
+                    )
+                )
+                .mappings()
+                .one()
+            )
+
+    async def record_activity(
+        self, run_id: UUID, event_type: str, detail: str | None = None
+    ):
+        """Append a safe operator-visible activity event without lifecycle changes."""
+        try:
+            async with self.engine.begin() as connection:
+                row = (
+                    (
+                        await connection.execute(
+                            select(runs)
+                            .where(runs.c.run_id == run_id)
+                            .with_for_update()
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if row is None:
+                    return None
+                now = datetime.now(UTC)
+                return (
+                    (
+                        await connection.execute(
+                            update(runs)
+                            .where(runs.c.run_id == run_id)
+                            .values(events=_event(row, event_type, now, detail))
+                            .returning(runs)
+                        )
+                    )
+                    .mappings()
+                    .one()
+                )
+        except Exception as error:  # noqa: BLE001 - observability cannot change provider outcome
+            structlog.get_logger(__name__).error(
+                "agent_run_activity_persistence_failed",
+                run_id=str(run_id),
+                event_type=event_type,
+                error_type=type(error).__name__,
+            )
+            return None
 
     async def finish(
         self,

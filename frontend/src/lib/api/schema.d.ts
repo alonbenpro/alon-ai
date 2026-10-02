@@ -1052,6 +1052,22 @@ export interface components {
             /** Idea Seed */
             idea_seed: string;
         };
+        /**
+         * RunDiagnostic
+         * @description A stable error projection that is safe to retain and show to an operator.
+         */
+        RunDiagnostic: {
+            /** Code */
+            code: string;
+            /** Error Type */
+            error_type: string;
+            /** Frames */
+            frames: string[];
+            /** Message */
+            message: string;
+            /** Stage */
+            stage: string;
+        };
         /** RunEvent */
         RunEvent: {
             /**
@@ -1061,6 +1077,7 @@ export interface components {
             at: string;
             /** Detail */
             detail?: string | null;
+            diagnostic?: components["schemas"]["RunDiagnostic"] | null;
             /** Sequence */
             sequence: number;
             /** Type */
@@ -1132,6 +1149,7 @@ export interface components {
             actual_cost_usd?: string | null;
             /** Advice Source */
             advice_source?: string | null;
+            diagnostic?: components["schemas"]["RunDiagnostic"] | null;
             /** Output */
             output?: {
                 [key: string]: unknown;
@@ -1221,6 +1239,7 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+            diagnostic?: components["schemas"]["RunDiagnostic"] | null;
             /**
              * Experiment Id
              * Format: uuid

@@ -576,9 +576,9 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
         {blockedIntent && <p className="experiment-error">{relationship === "UNRELATED" || advice.intent_relationship === "UNRELATED" ? "An unrelated proposal cannot be accepted here." : "A material pivot cannot be accepted here; it requires a separate approval decision."}</p>}{!pendingAcceptance && <button type="button" disabled={!relationship || !intentConfirmed || !intentRationale.trim() || !!blockedIntent || !!busy || statusUnavailable} onClick={() => void accept()}>Accept and save idea</button>}</div></div>}
       {state === "IDEA_ACCEPTED" && <div className="experiment-success" role="status"><strong>Experiment ready</strong>{acceptedBrief && <><h3>{acceptedBrief.title}</h3><p>{acceptedBrief.core_intent}</p></>}{adviceSource === "RECORDED_FAKE" && <p>Accepted from a recorded example. No live agent ran.</p>}<p>The accepted idea is saved as the current version.</p><a href={`/experiments/${encodeURIComponent(id)}`}>View experiment <span aria-hidden="true">↗</span></a></div>}
     </section>}
-    {id && runtime?.provider_mode === "live" && (draft || !!runId) && <ResearchCasePanel experimentId={id} refreshKey={`${runId}:${state}:${stageStatus}`} onCase={setResearchCase} />}
     {id && runId && <RunInspector key={`${runId}:${runReviewStatus?.runId === runId && runReviewStatus.status === "ACCEPTED" ? "accepted" : "review"}`} experimentId={id} runId={runId}
       legacyPendingReview={state === "AWAITING_REVIEW" && !!advice}
       onReviewStatus={reportRunReviewStatus} onResearchStatus={reportRunResearchStatus} onRejected={() => void load(id, true)} />}
+    {id && runtime?.provider_mode === "live" && (draft || !!runId) && <ResearchCasePanel experimentId={id} refreshKey={`${runId}:${state}:${stageStatus}`} onCase={setResearchCase} />}
   </div>;
 }

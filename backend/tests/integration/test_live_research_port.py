@@ -30,6 +30,8 @@ from alon_ai.integrations.schemas.provider import (
     CallAttribution,
     Capability,
     FirecrawlCaptureRequest,
+    ProviderErrorCode,
+    ProviderFailure,
     UsageComponent,
 )
 from alon_ai.policies.provider_rights import GrantEvent, GrantEventKind
@@ -339,8 +341,12 @@ async def test_denial_and_unknown_outcome_stop_network_replay(governance_engine)
     with pytest.raises(AccountingDenied, match="SCOPE"):
         await service.search(uuid4(), search())
     assert not requests
-    with pytest.raises(AccountingDenied, match="UNCERTAIN"):
+    with pytest.raises(AccountingDenied, match="UNCERTAIN") as error:
         await service.search(values[2].experiment_id, search())
+    assert isinstance(error.value.__cause__, ProviderFailure)
+    # The executor classifies thrown adapter errors as unavailable while the
+    # paid outcome remains unknown; the diagnostic must preserve that code.
+    assert error.value.__cause__.code is ProviderErrorCode.UNAVAILABLE
     with pytest.raises(AccountingDenied, match="UNCERTAIN"):
         await port(values, httpx.MockTransport(fail)).search(
             values[2].experiment_id, search()

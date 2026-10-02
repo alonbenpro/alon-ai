@@ -49,7 +49,7 @@ const run = {
   outcome: "IDEA_PROPOSED",
   blocked_reason: null,
   resolved_inputs: [{ artifact_id: "seed-r01a", kind: "IDEA_SEED", version: 1, content_hash: "abc", role: "SEED",
-    payload: { idea_seed: idea } }],
+    payload: { origin: "USER_SUPPLIED", statement: idea } }],
   output: advice,
   advice_source: "OPENAI",
   model_identifier: "gpt-live",
@@ -83,6 +83,24 @@ const events = { events: [
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); sessionStorage.clear(); });
 
 describe("R01A live idea run inspector", () => {
+  it("shows the retained IDEA_SEED statement without rendering an empty research count", async () => {
+    const retainedStatement = "AI agents and workflows for small clinics";
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.endsWith("/events")) return Response.json({ events: [] });
+      if (path.endsWith("/result")) return Response.json({ ...result, output: null, status: "BLOCKED" });
+      return Response.json({ ...run, status: "BLOCKED", phase: "BLOCKED", output: null,
+        research_gaps: [], resolved_inputs: [{ ...run.resolved_inputs![0],
+          payload: { origin: "USER_SUPPLIED", statement: retainedStatement } }] });
+    }));
+
+    render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+
+    expect(await screen.findByText(retainedStatement)).toBeInTheDocument();
+    expect(screen.queryByText("No saved idea input was returned.")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^0$/)).not.toBeInTheDocument();
+  });
+
   it("labels recorded ledger cost without implying a paid provider charge", async () => {
     const recorded = { ...run, provider_mode: "fake" as const, advice_source: "RECORDED_FAKE" };
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
@@ -94,9 +112,10 @@ describe("R01A live idea run inspector", () => {
     render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
     expect(await screen.findByText("Recorded ledger cost")).toBeInTheDocument();
     expect(screen.queryByText("Actual cost")).not.toBeInTheDocument();
+    expect(screen.getByText("Cost details").closest("details")).not.toHaveAttribute("open");
   });
 
-  it("shows retained child steps and the parent receipt when the run includes them", async () => {
+  it("shows provider request activity while keeping receipts in technical details", async () => {
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
       const path = String(input);
       if (path.endsWith("/events")) return Response.json(events);
@@ -110,13 +129,40 @@ describe("R01A live idea run inspector", () => {
         kind: "BRAVE_SEARCH", status: "SUCCEEDED", result_artifact_id: "finding-1", provider_call_id: "call-1" }] });
     }));
     render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
-    expect(await screen.findByText("Child steps and receipts")).toBeInTheDocument();
+    expect(await screen.findByText("Provider requests and responses")).toBeInTheDocument();
     expect(screen.getByText("receipt-1")).toBeInTheDocument();
-    expect(screen.getByText("INCOMPLETE")).toBeInTheDocument();
+    expect(screen.getByText("incomplete")).toBeInTheDocument();
     expect(screen.getByText("Initial buyer evidence is limited")).toBeInTheDocument();
     expect(screen.getByText(/Buyer budget unknown/)).toBeInTheDocument();
     expect(screen.getByText(/Provider receipts \(1\)/)).toBeInTheDocument();
     expect(screen.getByText(/Result finding-1 · Call call-1/)).toBeInTheDocument();
+  });
+
+  it("shows a retained diagnostic with the failed stage and safe error details", async () => {
+    const diagnosticRun = {
+      ...run, status: "BLOCKED" as const, phase: "BLOCKED" as const, output: null,
+      blocked_reason: "REFINEMENT_UNAVAILABLE",
+      diagnostic: {
+        stage: "research request", error_type: "ResearchToolError", code: "RESEARCH_TOOL_UNAVAILABLE",
+        message: "Brave search could not complete within the approved request limit.",
+        frames: ["ResearchToolError: request limit exceeded"],
+      },
+    };
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.endsWith("/events")) return Response.json(events);
+      if (path.endsWith("/result")) return Response.json({ ...result, status: "BLOCKED", output: null,
+        diagnostic: diagnosticRun.diagnostic });
+      return Response.json(diagnosticRun);
+    }));
+
+    render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+
+    expect(await screen.findByRole("heading", { name: "Run error" })).toBeInTheDocument();
+    expect(screen.getByText("research request")).toBeInTheDocument();
+    expect(screen.getByText("ResearchToolError")).toBeInTheDocument();
+    expect(screen.getByText(/Brave search could not complete/)).toBeInTheDocument();
+    expect(screen.getByText("Diagnostic frames").closest("details")).not.toHaveAttribute("open");
   });
 
   it("reopens the saved run with exact input, output, cost, and separate review without starting another run", async () => {
@@ -133,18 +179,22 @@ describe("R01A live idea run inspector", () => {
 
     render(<ExperimentCreation experimentId="exp-r01a" runtime={runtime} />);
 
-    expect(await screen.findByText("$0.0123")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Agent run" })).toBeInTheDocument();
-    const inspector = within(screen.getByRole("region", { name: /agent run/i }));
-    expect(inspector.getByText((_text, node) => node?.tagName === "PRE" && node.textContent === idea)).toBeInTheDocument();
+    expect((await screen.findAllByText("$0.0123")).length).toBeGreaterThan(0);
+    expect(screen.getByRole("heading", { name: "Agent activity" })).toBeInTheDocument();
+    const inspectorElement = screen.getByRole("region", { name: /agent activity/i });
+    const inspector = within(inspectorElement);
+    expect(inspectorElement.querySelector(".agent-run-inspector__idea")).toHaveTextContent(idea.replace("\n", " "));
     expect(screen.getByRole("heading", { name: advice.title })).toBeInTheDocument();
-    expect(inspector.getByText(/Staff lose time following up on missed appointments/)).toBeInTheDocument();
+    expect(inspector.getAllByText(/Staff lose time following up on missed appointments/).length).toBeGreaterThan(0);
     expect(inspector.getByText("Live · complete")).toBeInTheDocument();
     expect(inspector.getByText("7s")).toBeInTheDocument();
     expect(inspector.getByText("$0.0000")).toBeInTheDocument();
-    expect(inspector.getByText("$0.0123")).toBeInTheDocument();
+    expect(inspector.getAllByText("$0.0123").length).toBeGreaterThan(0);
     expect(inspector.getByText(/250/)).toBeInTheDocument();
-    expect(inspector.getByText("Interview independent clinic owners")).toBeInTheDocument();
+    expect(inspector.getByText("Agent request")).toBeInTheDocument();
+    expect(inspector.getByText("Agent response")).toBeInTheDocument();
+    expect(inspector.getByText("View saved response").closest("details")).not.toHaveAttribute("open");
+    expect(inspector.getByText("Cost details").closest("details")).not.toHaveAttribute("open");
     expect(inspector.getByText(/SEED · OPERATOR_PROFILE/)).toBeInTheDocument();
     expect(inspector.getByText("RUN SUCCEEDED")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Accept and save idea" })).toBeInTheDocument();
@@ -263,8 +313,8 @@ describe("R01A live idea run inspector", () => {
 
     expect(await screen.findByText(/This run was rejected/i)).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Accept and save idea" })).not.toBeInTheDocument();
-    const inspector = within(screen.getByRole("region", { name: /agent run/i }));
-    expect(inspector.getByText(/Staff lose time following up on missed appointments/)).toBeInTheDocument();
+    const inspector = within(screen.getByRole("region", { name: /agent activity/i }));
+    expect(inspector.getAllByText(/Staff lose time following up on missed appointments/).length).toBeGreaterThan(0);
   });
 
   it("keeps exact output visible and explains a capability denial from acceptance", async () => {
@@ -292,7 +342,7 @@ describe("R01A live idea run inspector", () => {
     fireEvent.click(screen.getByRole("button", { name: "Accept and save idea" }));
 
     expect(await screen.findByText(/output needs a capability this Idea agent does not have/i)).toBeInTheDocument();
-    const inspector = within(screen.getByRole("region", { name: /agent run/i }));
-    expect(inspector.getByText(/Staff lose time following up on missed appointments/)).toBeInTheDocument();
+    const inspector = within(screen.getByRole("region", { name: /agent activity/i }));
+    expect(inspector.getAllByText(/Staff lose time following up on missed appointments/).length).toBeGreaterThan(0);
   });
 });

@@ -59,6 +59,7 @@ from alon_ai.provider_usage.live_research import GovernedLiveResearchPort
 from alon_ai.provider_usage.schemas.accounting import CallState
 from alon_ai.services.experiments import ExperimentContext, _id
 from alon_ai.services.research import ResearchService
+from alon_ai.services.run_diagnostics import record_diagnostic
 from alon_ai.services.schemas.records import (
     ArtifactDraft,
     ArtifactInput,
@@ -274,35 +275,43 @@ class CombinedIdeaRuntime:
         self.native = None
         self.output_hash = None
         self.steps = AgentRunStepRepository(context.engine)
+        self.runs = AgentRunRepository(context.engine)
         self.step_key = uuid5(row["run_id"], "combined-result")
+        self._diagnostic_stage = "REFERENCE_RESOLUTION"
 
     async def discover_system(self, attribution, *, facts, idempotency_key):
         return await self._run(IdeaOperation.DISCOVER)
 
     async def refine_cycle(self, attribution, *, cycle_id, facts, idempotency_key):
-        cycle, _ = await OpenAIIdeaInputRepository(self.context.engine).cycle_origin(
-            self.row["experiment_id"], cycle_id
-        )
-        command = await IntakeRepository(self.context.engine).command(
-            self.row["experiment_id"], self.row["command_key"]
-        )
-        history = await IntakeRepository(self.context.engine).history(
-            self.row["experiment_id"]
-        )
-        revision = next(
-            (
-                item
-                for item in history
-                if item["id"] == cycle["seed_artifact_id"]
-                and item["parent_artifact_id"] is not None
-            ),
-            None,
-        )
-        refinement = (
-            cycle["purpose"] == "SAME_INTENT_RETURN"
-            or revision is not None
-            or (command is not None and command["action"] == "REVISE")
-        )
+        try:
+            cycle, _ = await OpenAIIdeaInputRepository(
+                self.context.engine
+            ).cycle_origin(self.row["experiment_id"], cycle_id)
+            command = await IntakeRepository(self.context.engine).command(
+                self.row["experiment_id"], self.row["command_key"]
+            )
+            history = await IntakeRepository(self.context.engine).history(
+                self.row["experiment_id"]
+            )
+            revision = next(
+                (
+                    item
+                    for item in history
+                    if item["id"] == cycle["seed_artifact_id"]
+                    and item["parent_artifact_id"] is not None
+                ),
+                None,
+            )
+            refinement = (
+                cycle["purpose"] == "SAME_INTENT_RETURN"
+                or revision is not None
+                or (command is not None and command["action"] == "REVISE")
+            )
+        except Exception as error:
+            await record_diagnostic(
+                self.runs, self.row["run_id"], "REFERENCE_RESOLUTION", error
+            )
+            raise
         return await self._run(
             IdeaOperation.REFINE if refinement else IdeaOperation.SELECTED_DEEPEN,
             returned=cycle["purpose"] == "SAME_INTENT_RETURN",
@@ -310,6 +319,18 @@ class CombinedIdeaRuntime:
         )
 
     async def _run(self, operation, *, returned=False, revision_guidance=None):
+        self._diagnostic_stage = "REFERENCE_RESOLUTION"
+        try:
+            return await self._run_inner(
+                operation, returned=returned, revision_guidance=revision_guidance
+            )
+        except Exception as error:
+            await record_diagnostic(
+                self.runs, self.row["run_id"], self._diagnostic_stage, error
+            )
+            raise
+
+    async def _run_inner(self, operation, *, returned=False, revision_guidance=None):
         row, context = self.row, self.context
         store = AgentRunRepository(context.engine)
         profile = await store.profile_projection(row)
@@ -382,7 +403,11 @@ class CombinedIdeaRuntime:
             operation_id=self.provisioned.attribution.operation_run_id,
             operation_workflow_id=self.provisioned.attribution.workflow_run_id,
         )
-        tools = ResearchTools(row["experiment_id"], self.port)
+        tools = ResearchTools(
+            row["experiment_id"],
+            self.port,
+            max_results=self.config.research_policy.max_results,
+        )
         capabilities = {
             binding.config.intended_use.capability
             for binding in self.config.research_bindings
@@ -398,6 +423,7 @@ class CombinedIdeaRuntime:
                 exposed.append(method)
         toolset = FunctionToolset(tools=exposed)
         try:
+            self._diagnostic_stage = "AGENT_EXECUTION"
             async with asyncio.timeout(self.provisioned.run_timeout_seconds):
                 result = await run_idea_agent(
                     input,
@@ -413,12 +439,14 @@ class CombinedIdeaRuntime:
                 )
                 else set(self.native.source_refs)
             )
+            self._diagnostic_stage = "REFERENCE_RESOLUTION"
             await self.port.resolve_references(tuple(sorted(all_refs)))
             receipts = self.provisioned.model.receipts
             if not receipts or any(
                 receipt.state != CallState.FINAL for receipt in receipts
             ):
                 raise ExperimentError(409, "COMBINED_USAGE_UNRESOLVED")
+            self._diagnostic_stage = "ADVICE_MAPPING"
             output = mapped_advice(
                 self.native,
                 seed_kind=subject["kind"] if subject else None,
@@ -429,6 +457,7 @@ class CombinedIdeaRuntime:
                 if output
                 else None
             )
+            self._diagnostic_stage = "PUBLICATION"
             await self._publish(subject)
             await self.steps.finish(
                 row["run_id"],
