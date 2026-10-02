@@ -262,19 +262,23 @@ async def test_native_run_reuses_intake_and_persists_truthful_outcome(
 
 
 @pytest.mark.parametrize(
-    ("discovery", "parallel_tools"),
+    ("discovery", "parallel_tools", "read_size"),
     [
-        (False, False),
-        (True, False),
-        ("incomplete", False),
-        ("selected", False),
-        ("revision", False),
-        pytest.param(False, True, id="multiple-tools"),
-        pytest.param(False, "expired-quota-window", id="expired-quota-window"),
+        (False, False, None),
+        (True, False, None),
+        ("incomplete", False, None),
+        ("selected", False, None),
+        ("revision", False, None),
+        pytest.param(False, True, None, id="multiple-tools"),
+        pytest.param(False, "expired-quota-window", None, id="expired-quota-window"),
+        pytest.param(False, False, 1, id="one-character-read"),
+        pytest.param(False, False, 4000, id="maximum-character-read"),
+        pytest.param(False, False, "failed-read", id="reader-failure-diagnostic"),
+        pytest.param(False, False, "invalid-excerpt", id="invalid-excerpt-diagnostic"),
     ],
 )
 async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_case(
-    governance_engine, monkeypatch, discovery, parallel_tools
+    governance_engine, monkeypatch, discovery, parallel_tools, read_size
 ):
     import asyncio
     from datetime import timedelta
@@ -502,6 +506,12 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
             tool for tool in info.function_tools if tool.name == "capture_page"
         )
         assert set(capture_tool.parameters_json_schema["properties"]) == {"url"}
+        read_tool = next(
+            tool for tool in info.function_tools if tool.name == "read_saved_evidence"
+        )
+        read_schema = read_tool.parameters_json_schema["properties"]["max_chars"]
+        assert read_schema["minimum"] == 1
+        assert read_schema["maximum"] == 4000
         if parallel_tools:
             assert info.instructions is not None
             budget_text = info.instructions.split(
@@ -564,7 +574,10 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
             parts = [
                 ToolCallPart(
                     "read_saved_evidence",
-                    {"retained_id": str(captured[-1].retained_id)},
+                    {
+                        "retained_id": str(captured[-1].retained_id),
+                        **({"max_chars": read_size} if type(read_size) is int else {}),
+                    },
                     tool_call_id="read",
                 )
             ]
@@ -667,6 +680,20 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
         _env_file=None, provider_mode="live", idea_intake_budget_usd=Decimal("0.50")
     )
     provider = build_combined_idea_provider(config, ScopedSyntheticSecrets(), settings)
+    if read_size in {"failed-read", "invalid-excerpt"}:
+        from alon_ai.agents.tools.research import SavedEvidenceExcerpt
+        from alon_ai.services.schemas.records import SourceReference
+
+        async def broken_read(self, experiment_id, retained_id, *, max_chars):
+            if read_size == "failed-read":
+                raise RuntimeError("SECRET provider body and credential")
+            return SavedEvidenceExcerpt(
+                SourceReference.governance_evidence(uuid4()), "SECRET excerpt"
+            )
+
+        monkeypatch.setattr(
+            GovernedLiveResearchPort, "read_saved_evidence", broken_read
+        )
     context = ExperimentContext(
         governance_engine, settings, owner.id, idea_runtime_provider=provider
     )
@@ -685,6 +712,28 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
     activity = (await AgentRunRepository(governance_engine).get(row["run_id"]))[
         "events"
     ]
+    if read_size in {"failed-read", "invalid-excerpt"}:
+        expected_code = (
+            "EVIDENCE_READ_FAILED"
+            if read_size == "failed-read"
+            else "EVIDENCE_READ_RESULT_INVALID"
+        )
+        assert result.status == "BLOCKED"
+        assert result.output is None
+        assert result.diagnostic is not None
+        assert result.diagnostic.code == expected_code
+        assert any(
+            event.get("diagnostic", {}).get("code") == expected_code
+            for event in activity
+        )
+        assert "SECRET" not in result.model_dump_json()
+        assert "SECRET" not in str(activity)
+        assert len(calls) == 3
+        assert len(result.receipts) == 5
+        assert all(receipt.state == "FINAL" for receipt in result.receipts)
+        assert network == ["api.search.brave.com", "api.firecrawl.dev"]
+        assert result.actual_cost_usd is not None
+        return
     assert sum(event["type"] == "RESEARCH_REQUEST" for event in activity) == (
         3 if parallel_tools else 2
     )

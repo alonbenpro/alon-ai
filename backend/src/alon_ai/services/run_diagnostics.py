@@ -65,6 +65,11 @@ _MESSAGES = {
     "REFUSED": "The provider refused the request.",
     "WRITE_AUTHORITY_REQUIRED": "The provider requires approved write authority.",
     "RESEARCH_TOOL_UNAVAILABLE": "A research tool was unavailable for this request.",
+    "EVIDENCE_READ_INPUT_INVALID": (
+        "The evidence read requires a valid saved reference and 1–4,000 characters."
+    ),
+    "EVIDENCE_READ_RESULT_INVALID": "The saved evidence reader returned an invalid excerpt.",
+    "EVIDENCE_READ_FAILED": "The service could not read the saved evidence.",
     "VALIDATION_ERROR": "The returned data did not match the approved format.",
     "HTTP_REQUEST_FAILED": "The provider request failed.",
     "MODEL_RESPONSE_UNEXPECTED": "The model response could not be used.",

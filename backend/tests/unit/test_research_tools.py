@@ -5,11 +5,13 @@ import base64
 import sys
 import time
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import uuid4
 
 import httpx
 import pytest
-from pydantic import SecretStr
+from pydantic import SecretStr, ValidationError
+from pydantic_ai.toolsets import FunctionToolset
 
 from alon_ai.agents.tools.research import (
     ResearchToolError,
@@ -38,6 +40,22 @@ from alon_ai.provider_usage.schemas.accounting import AccountingDenied, Reason
 from alon_ai.services.schemas.records import SourceReference
 
 NOW = datetime(2026, 9, 28, tzinfo=UTC)
+
+
+class _NoopReadPort:
+    async def search(self, experiment_id, request):
+        raise AssertionError("not used by this test")
+
+    async def map(self, experiment_id, request):
+        raise AssertionError("not used by this test")
+
+    async def capture(self, experiment_id, request):
+        raise AssertionError("not used by this test")
+
+    async def read_saved_evidence(
+        self, experiment_id, retained_id, *, max_chars
+    ) -> Any:
+        raise AssertionError("not used by this test")
 
 
 @pytest.mark.asyncio
@@ -608,6 +626,184 @@ async def test_research_tools_reject_unbounded_requests_before_service_dispatch(
     with pytest.raises(ResearchToolError):
         await tools.read_saved_evidence(uuid4(), max_chars=4001)
     assert port.calls == 0
+
+
+def test_saved_evidence_tool_schema_bounds_arguments_with_installed_pydantic_ai():
+    registered = FunctionToolset(
+        [ResearchTools(uuid4(), _NoopReadPort()).read_saved_evidence]
+    ).tools["read_saved_evidence"]
+    schema = registered.function_schema.json_schema
+    assert schema["properties"]["retained_id"]["format"] == "uuid"
+    assert schema["properties"]["max_chars"]["minimum"] == 1
+    assert schema["properties"]["max_chars"]["maximum"] == 4000
+    validator = registered.function_schema.validator
+    retained_id = str(uuid4())
+    for value in (1, 4000):
+        assert (
+            validator.validate_python({"retained_id": retained_id, "max_chars": value})[
+                "max_chars"
+            ]
+            == value
+        )
+    assert validator.validate_python({"retained_id": retained_id})["max_chars"] == 4000
+    for arguments in (
+        {"retained_id": retained_id, "max_chars": 0},
+        {"retained_id": retained_id, "max_chars": 4001},
+        {"retained_id": retained_id, "max_chars": True},
+        {"retained_id": "not-a-uuid", "max_chars": 1},
+    ):
+        with pytest.raises(ValidationError):
+            validator.validate_python(arguments)
+
+
+@pytest.mark.asyncio
+async def test_saved_evidence_direct_calls_accept_default_and_boundary_limits():
+    retained_id = uuid4()
+    calls = []
+    excerpt = SavedEvidenceExcerpt(
+        SourceReference.retained_content(
+            retained_id=retained_id,
+            call_id=uuid4(),
+            grant_id=uuid4(),
+            grant_version=1,
+            field="text",
+            expires_at=NOW + timedelta(hours=1),
+        ),
+        "x",
+    )
+
+    class Port(_NoopReadPort):
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            calls.append((experiment_id, retained_id, max_chars))
+            return excerpt
+
+    experiment_id = uuid4()
+    tools = ResearchTools(experiment_id, Port())
+    assert await tools.read_saved_evidence(retained_id) == excerpt
+    assert await tools.read_saved_evidence(retained_id, max_chars=1) == excerpt
+    assert await tools.read_saved_evidence(retained_id, max_chars=4000) == excerpt
+    assert calls == [(experiment_id, retained_id, value) for value in (4000, 1, 4000)]
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "retained_id,max_chars",
+    [
+        ("not-a-uuid", 1),
+        (uuid4(), 0),
+        (uuid4(), 4001),
+        (uuid4(), True),
+        (uuid4(), 1.5),
+    ],
+)
+async def test_saved_evidence_rejects_invalid_direct_inputs_before_dispatch(
+    retained_id, max_chars
+):
+    class Port(_NoopReadPort):
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            raise AssertionError("invalid input reached the service")
+
+    with pytest.raises(ResearchToolError) as raised:
+        await ResearchTools(uuid4(), Port()).read_saved_evidence(
+            retained_id, max_chars=max_chars
+        )
+    assert raised.value.code == "EVIDENCE_READ_INPUT_INVALID"
+    assert raised.value.http_status is None
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "malformed",
+    [
+        "not an excerpt",
+        SavedEvidenceExcerpt(SourceReference.governance_evidence(uuid4()), "text"),
+        SavedEvidenceExcerpt(
+            SourceReference.retained_content(
+                retained_id=uuid4(),
+                call_id=uuid4(),
+                grant_id=uuid4(),
+                grant_version=1,
+                field="text",
+                expires_at=NOW + timedelta(hours=1),
+            ),
+            "text",
+        ),
+    ],
+)
+async def test_saved_evidence_classifies_malformed_port_result(malformed):
+    class Port(_NoopReadPort):
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            return malformed
+
+    with pytest.raises(ResearchToolError) as raised:
+        await ResearchTools(uuid4(), Port()).read_saved_evidence(uuid4())
+    assert raised.value.code == "EVIDENCE_READ_RESULT_INVALID"
+    assert raised.value.http_status is None
+
+
+@pytest.mark.asyncio
+async def test_saved_evidence_classifies_oversized_port_text():
+    expected_retained_id = uuid4()
+
+    class Port(_NoopReadPort):
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            return SavedEvidenceExcerpt(
+                SourceReference.retained_content(
+                    retained_id=expected_retained_id,
+                    call_id=uuid4(),
+                    grant_id=uuid4(),
+                    grant_version=1,
+                    field="text",
+                    expires_at=NOW + timedelta(hours=1),
+                ),
+                "long text",
+            )
+
+    with pytest.raises(ResearchToolError) as raised:
+        await ResearchTools(uuid4(), Port()).read_saved_evidence(
+            expected_retained_id, max_chars=1
+        )
+    assert raised.value.code == "EVIDENCE_READ_RESULT_INVALID"
+
+
+@pytest.mark.asyncio
+async def test_saved_evidence_unknown_error_omits_raw_message_and_context():
+    class Port(_NoopReadPort):
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            raise RuntimeError("SECRET provider data and key")
+
+    with pytest.raises(ResearchToolError) as raised:
+        await ResearchTools(uuid4(), Port()).read_saved_evidence(uuid4())
+    assert raised.value.code == "EVIDENCE_READ_FAILED"
+    assert raised.value.http_status is None
+    assert "SECRET" not in repr(raised.value)
+    assert raised.value.__context__ is None
+
+
+@pytest.mark.asyncio
+async def test_saved_evidence_preserves_typed_denial_and_provider_status():
+    class Port(_NoopReadPort):
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            raise AccountingDenied(Reason.UNCERTAIN) from ProviderFailure(
+                ProviderErrorCode.UNAVAILABLE, http_status=502
+            )
+
+    with pytest.raises(ResearchToolError) as raised:
+        await ResearchTools(uuid4(), Port()).read_saved_evidence(uuid4())
+    assert raised.value.code == "UNAVAILABLE"
+    assert raised.value.http_status == 502
+
+
+@pytest.mark.asyncio
+async def test_saved_evidence_preserves_typed_rights_denial():
+    class Port(_NoopReadPort):
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            raise AccountingDenied(Reason.RIGHTS)
+
+    with pytest.raises(ResearchToolError) as raised:
+        await ResearchTools(uuid4(), Port()).read_saved_evidence(uuid4())
+    assert raised.value.code == "RIGHTS"
+    assert raised.value.http_status is None
 
 
 @pytest.mark.asyncio

@@ -12,6 +12,39 @@ from alon_ai.provider_usage.schemas.accounting import AccountingDenied, Reason
 from alon_ai.services.run_diagnostics import diagnostic_for_error
 
 
+@pytest.mark.parametrize(
+    "code,message",
+    [
+        (
+            "EVIDENCE_READ_INPUT_INVALID",
+            "The evidence read requires a valid saved reference and 1–4,000 characters.",
+        ),
+        (
+            "EVIDENCE_READ_RESULT_INVALID",
+            "The saved evidence reader returned an invalid excerpt.",
+        ),
+        (
+            "EVIDENCE_READ_FAILED",
+            "The service could not read the saved evidence.",
+        ),
+    ],
+)
+def test_evidence_read_diagnostic_survives_grouped_context_without_secrets(
+    code, message
+):
+    try:
+        raise ResearchToolError(code) from ExceptionGroup(
+            "SECRET provider body", [RuntimeError("SECRET credential")]
+        )
+    except ResearchToolError as error:
+        diagnostic = diagnostic_for_error("AGENT_EXECUTION", error)
+
+    assert diagnostic.code == code
+    assert diagnostic.message == message
+    assert diagnostic.error_type == "ResearchToolError"
+    assert "SECRET" not in diagnostic.model_dump_json()
+
+
 def test_diagnostic_preserves_safe_denial_cause_hidden_by_research_tool():
     try:
         try:

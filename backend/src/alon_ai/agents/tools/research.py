@@ -8,10 +8,10 @@ return provider responses or credentials directly to an agent.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Annotated, Protocol
 from uuid import UUID
 
-from pydantic import SecretStr
+from pydantic import Field, SecretStr
 
 from alon_ai.integrations.schemas.provider import (
     BraveSearchRequest,
@@ -45,6 +45,9 @@ class ResearchToolError(Exception):
 _SAFE_CODES = frozenset(
     {
         "RESEARCH_TOOL_UNAVAILABLE",
+        "EVIDENCE_READ_INPUT_INVALID",
+        "EVIDENCE_READ_RESULT_INVALID",
+        "EVIDENCE_READ_FAILED",
         *(reason.value for reason in Reason),
         *(code.value for code in ProviderErrorCode),
     }
@@ -200,25 +203,38 @@ class ResearchTools:
             raise _research_tool_error(error) from None
 
     async def read_saved_evidence(
-        self, retained_id: UUID, *, max_chars: int = 4000
+        self,
+        retained_id: UUID,
+        *,
+        max_chars: Annotated[int, Field(strict=True, ge=1, le=4000)] = 4000,
     ) -> SavedEvidenceExcerpt:
+        if (
+            not isinstance(retained_id, UUID)
+            or type(max_chars) is not int
+            or not 1 <= max_chars <= 4000
+        ):
+            raise ResearchToolError("EVIDENCE_READ_INPUT_INVALID")
         try:
-            if not isinstance(retained_id, UUID) or not 1 <= max_chars <= 4000:
-                raise ValueError
             excerpt = await self._port.read_saved_evidence(
                 self._experiment_id, retained_id, max_chars=max_chars
             )
+        except (AccountingDenied, ProviderFailure) as error:
+            safe_error = _research_tool_error(error)
+        except Exception:  # noqa: BLE001 - no repository details cross tool boundary
+            safe_error = ResearchToolError("EVIDENCE_READ_FAILED")
+        else:
             if (
-                not isinstance(excerpt, SavedEvidenceExcerpt)
-                or excerpt.reference.kind != "RETAINED_CONTENT"
-                or excerpt.reference.retained_id != retained_id
-                or not isinstance(excerpt.text, str)
-                or len(excerpt.text) > max_chars
+                isinstance(excerpt, SavedEvidenceExcerpt)
+                and isinstance(excerpt.reference, SourceReference)
+                and excerpt.reference.kind == "RETAINED_CONTENT"
+                and excerpt.reference.retained_id == retained_id
+                and isinstance(excerpt.text, str)
+                and len(excerpt.text) <= max_chars
             ):
-                raise ValueError
-            return excerpt
-        except Exception as error:  # noqa: BLE001 - no repository details cross tool boundary
-            raise _research_tool_error(error) from None
+                return excerpt
+            del excerpt
+            safe_error = ResearchToolError("EVIDENCE_READ_RESULT_INVALID")
+        raise safe_error
 
     @staticmethod
     def _references(value: tuple[SourceReference, ...]) -> tuple[SourceReference, ...]:
