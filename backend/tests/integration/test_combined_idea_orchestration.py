@@ -497,6 +497,10 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
         scope_key = native_input["approved_limits_ref"]
         per_run_calls[scope_key] = per_run_calls.get(scope_key, 0) + 1
         index = per_run_calls[scope_key]
+        capture_tool = next(
+            tool for tool in info.function_tools if tool.name == "capture_page"
+        )
+        assert set(capture_tool.parameters_json_schema["properties"]) == {"url"}
         if parallel_tools:
             assert info.instructions is not None
             budget_text = info.instructions.split(

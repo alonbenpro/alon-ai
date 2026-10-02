@@ -4,13 +4,12 @@ from __future__ import annotations
 
 import asyncio
 from contextlib import asynccontextmanager
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, datetime
 from typing import Any, Literal, cast
 from uuid import UUID, uuid5
 
 from pydantic import Field, model_validator
 from pydantic_ai.toolsets import FunctionToolset
-from sqlalchemy import select
 
 from alon_ai.agents.idea_agent import run_idea_agent
 from alon_ai.agents.idea_discovery import (
@@ -46,7 +45,6 @@ from alon_ai.db.repositories.openai_idea import OpenAIIdeaInputRepository
 from alon_ai.db.repositories.openai_live import _ensure_exact_config
 from alon_ai.db.repositories.openai_run import OpenAIRunOutcome
 from alon_ai.db.repositories.records import ProductRecordsRepository
-from alon_ai.db.tables import accounting as governance
 from alon_ai.integrations.live_idea import LiveIdeaRuntimeConfig
 from alon_ai.integrations.live_research import (
     ResearchCapabilityBinding,
@@ -326,43 +324,15 @@ class CombinedIdeaRuntime:
         if not self.config.research_bindings:
             return None
         repository = GovernanceRepository(self.context.engine)
-        now = repository.clock()
-        quotas = []
-        async with self.context.engine.connect() as connection:
-            for binding in self.config.research_bindings:
-                use = binding.config.intended_use
-                authority = (
-                    (
-                        await connection.execute(
-                            select(governance.authorities).where(
-                                governance.authorities.c.account == use.account_handle,
-                                governance.authorities.c.capability == use.capability,
-                            )
-                        )
-                    )
-                    .mappings()
-                    .one()
+        quotas = await repository.quota_snapshot(
+            tuple(
+                (
+                    binding.config.intended_use.account_handle,
+                    binding.config.intended_use.capability,
                 )
-                policy = await repository._policy(connection, authority, now)
-                window = policy.effective_at + timedelta(
-                    seconds=(
-                        (now - policy.effective_at)
-                        // timedelta(seconds=policy.window_seconds)
-                    )
-                    * policy.window_seconds
-                )
-                used = (
-                    authority["quota_used"]
-                    if authority["window_start"] == window
-                    else 0
-                )
-                quotas.append(
-                    {
-                        "capability": use.capability.value,
-                        "quota_limit": policy.quota_limit,
-                        "remaining_calls": max(0, policy.quota_limit - used),
-                    }
-                )
+                for binding in self.config.research_bindings
+            )
+        )
         policy = self.config.research_policy
         limits = {
             "run_limits": {
@@ -477,11 +447,16 @@ class CombinedIdeaRuntime:
             binding.config.intended_use.capability
             for binding in self.config.research_bindings
         }
+
+        async def capture_page(url: str):
+            """Capture a page using the approved standard page capability."""
+            return await tools.capture_page(url)
+
         exposed: list[Any] = [tools.read_saved_evidence]
         for capability, method in (
             (Capability.BRAVE_WEB_COVERAGE, tools.search_web),
             (Capability.FIRECRAWL_MAP, tools.map_site),
-            (Capability.FIRECRAWL_PAGE_CAPTURE, tools.capture_page),
+            (Capability.FIRECRAWL_PAGE_CAPTURE, capture_page),
             (Capability.FIRECRAWL_PDF_CAPTURE, tools.capture_pdf),
         ):
             if capability in capabilities:
