@@ -10,6 +10,7 @@ from uuid import UUID, uuid5
 
 from pydantic import Field, model_validator
 from pydantic_ai.toolsets import FunctionToolset
+from pydantic_core import to_jsonable_python
 
 from alon_ai.agents.idea_agent import run_idea_agent
 from alon_ai.agents.idea_discovery import (
@@ -71,6 +72,21 @@ from alon_ai.services.schemas.research import (
     MarketResearchReportPayload,
     ResearchDimension,
 )
+
+
+def stable_config_hash(config) -> str:
+    """Normalize unordered permission sets while preserving ordered policy data."""
+
+    def normalize(value):
+        if isinstance(value, (set, frozenset)):
+            return sorted((normalize(item) for item in value), key=canonical_json)
+        if isinstance(value, dict):
+            return {key: normalize(item) for key, item in value.items()}
+        if isinstance(value, (tuple, list)):
+            return [normalize(item) for item in value]
+        return to_jsonable_python(value)
+
+    return sha256(canonical_json(normalize(config.model_dump(mode="python"))))
 
 
 class CombinedIdeaConfig(StrictDTO):
@@ -428,7 +444,7 @@ class CombinedIdeaRuntime:
             request_hash=sha256(input.model_dump_json()),
             config_ref=self.provisioned.attribution.config_version,
             config_version=1,
-            config_hash=sha256(self.config.model_dump_json()),
+            config_hash=stable_config_hash(self.config),
         )
         if checkpoint["status"] != "CLAIMED":
             raise ExperimentError(409, "COMBINED_RESULT_REPLAY_UNAVAILABLE")
@@ -814,7 +830,7 @@ def build_combined_idea_provider(config, secrets, settings):
             "OPENAI",
         )
 
-    cast(Any, provision).config_fingerprint = sha256(config.model_dump_json())
+    cast(Any, provision).config_fingerprint = stable_config_hash(config)
     return provision
 
 

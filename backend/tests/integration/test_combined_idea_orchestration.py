@@ -208,6 +208,7 @@ async def test_native_run_reuses_intake_and_persists_truthful_outcome(
             research_bindings=(),
             research_policy=SimpleNamespace(max_results=20),
             model_dump_json=lambda: '{"test":"synthetic-only"}',
+            model_dump=lambda **kwargs: {"test": "synthetic-only"},
         )
         return (
             CombinedIdeaRuntime(context, config, provisioned, NoResearchPort(), row),
