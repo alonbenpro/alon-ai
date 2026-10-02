@@ -108,7 +108,7 @@ def test_provider_failure_accepts_only_classified_http_status():
         )
     for status in (0, 600, True, "502"):
         with pytest.raises(ValueError):
-            ProviderFailure(ProviderErrorCode.UNAVAILABLE, http_status=status)
+            ProviderFailure(ProviderErrorCode.UNAVAILABLE, http_status=status)  # type: ignore[arg-type]
 
 
 def firecrawl(capability, body, *, resolver=lambda _: ("93.184.215.14",), **policy):
@@ -555,10 +555,19 @@ async def test_research_tools_preserve_safe_provider_cause_of_uncertain_outcome(
 @pytest.mark.asyncio
 async def test_research_tools_preserve_typed_http_status_without_provider_body():
     class Port:
+        async def search(self, experiment_id, request):
+            raise AssertionError
+
+        async def map(self, experiment_id, request):
+            raise AssertionError
+
         async def capture(self, experiment_id, request):
             raise AccountingDenied(Reason.UNCERTAIN) from ProviderFailure(
                 ProviderErrorCode.UNAVAILABLE, http_status=502
             )
+
+        async def read_saved_evidence(self, experiment_id, retained_id, *, max_chars):
+            raise AssertionError
 
     with pytest.raises(ResearchToolError) as raised:
         await ResearchTools(uuid4(), Port()).capture_page("https://example.com/")
