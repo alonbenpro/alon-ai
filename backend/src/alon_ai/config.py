@@ -69,6 +69,7 @@ class Settings(BaseSettings):
         None
     )
     l07_live_config_path: Path | None = None
+    r01a_live_config_path: Path | None = None
     l07_secret_root: Path | None = None
     l07_secret_key_file: Path | None = None
     l07_secret_key_version: str | None = None

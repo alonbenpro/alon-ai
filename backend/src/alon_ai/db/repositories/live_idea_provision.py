@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from typing import Protocol
 from uuid import UUID
 
@@ -75,6 +76,29 @@ async def register_authority_rows(
                     row[field] == value for field, value in expected.items()
                 )
 
+            async def exact_grant() -> bool:
+                row = (
+                    (
+                        await connection.execute(
+                            select(gov.grants).where(gov.grants.c.id == grant.grant_id)
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if row is None:
+                    return False
+                return (
+                    row["version"] == grant.version
+                    and row["account"] == grant.account_handle
+                    and row["capability"] == grant.capability
+                    and row["effective_at"] == grant.effective_at
+                    and row["expires_at"] == grant.expires_at
+                    and row["evidence_id"] == grant.supporting_evidence_ref
+                    and ProviderUsageGrant.model_validate_json(json.dumps(row["data"]))
+                    == grant
+                )
+
             matches = (
                 existing_authority["enabled"] is True
                 and existing_authority["policy_id"] == policy.id
@@ -88,19 +112,7 @@ async def register_authority_rows(
                         "evidence_id": policy.evidence_id,
                     },
                 )
-                and await exact(
-                    gov.grants,
-                    grant.grant_id,
-                    {
-                        "version": grant.version,
-                        "account": grant.account_handle,
-                        "capability": grant.capability,
-                        "effective_at": grant.effective_at,
-                        "expires_at": grant.expires_at,
-                        "data": grant.model_dump(mode="json"),
-                        "evidence_id": grant.supporting_evidence_ref,
-                    },
-                )
+                and await exact_grant()
                 and all(
                     [
                         await exact(
@@ -198,3 +210,24 @@ async def current_operator_status(engine: AsyncEngine, operator_id: UUID) -> str
         return await connection.scalar(
             select(operators.c.status).where(operators.c.id == operator_id)
         )
+
+
+async def active_operator_for_subject(
+    engine: AsyncEngine, auth_subject: str
+) -> UUID | None:
+    """Resolve only the active local operator bound to this login subject."""
+    async with engine.connect() as connection:
+        row = (
+            (
+                await connection.execute(
+                    select(operators.c.id, operators.c.status).where(
+                        operators.c.auth_subject == auth_subject
+                    )
+                )
+            )
+            .mappings()
+            .one_or_none()
+        )
+    if row is None or row["status"] != "ACTIVE":
+        return None
+    return row["id"]

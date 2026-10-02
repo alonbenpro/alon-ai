@@ -5,6 +5,7 @@ from datetime import UTC, datetime, timedelta
 from uuid import UUID
 
 from alon_ai.db.repositories import experiments as repo
+from alon_ai.db.repositories.agent_runs import AgentRunRepository
 from alon_ai.db.repositories.experiments import ExperimentError
 from alon_ai.db.repositories.intake import IntakeRepository
 from alon_ai.db.repositories.records import ProductRecordsRepository
@@ -17,6 +18,7 @@ from alon_ai.services.experiments import (
     _read_experiment,
 )
 from alon_ai.services.ideas import IdeaService, discover_experiment
+from alon_ai.services.schemas.agent_runs import AgentRunRequest
 from alon_ai.services.schemas.intake import (
     ExperimentSnapshot,
     GenerateIdeaRequest,
@@ -42,7 +44,14 @@ class IntakeService:
         self.store = IntakeRepository(context.engine)
         self.records = ProductRecordsRepository(context.engine)
 
-    async def _roots(self, key: UUID, idea_seed: str | None, *, draft: bool) -> UUID:
+    async def _roots(
+        self,
+        key: UUID,
+        idea_seed: str | None,
+        *,
+        draft: bool,
+        generation_guidance: str | None = None,
+    ) -> UUID:
         context = self.context
         experiment_id = _id(context.operator_id, f"intake/{key}")
         existing = await repo.existing_experiment(
@@ -111,9 +120,10 @@ class IntakeService:
         brief_id = _id(experiment_id, "brief")
         brief = await repo.artifact_row(context.engine, brief_id)
         if brief is None:
-            payload = IntakePolicySnapshot(budget_usd=intake["budget_usd"]).model_dump(
-                mode="json"
-            )
+            payload = IntakePolicySnapshot(
+                budget_usd=intake["budget_usd"],
+                guidance=generation_guidance or "",
+            ).model_dump(mode="json")
             await self.records.append_artifact(
                 ArtifactDraft(
                     id=brief_id,
@@ -201,9 +211,42 @@ class IntakeService:
         )
 
     async def _dispatch(
-        self, experiment_id, key, *, discovery=False, started=False, regenerate=False
+        self,
+        experiment_id,
+        key,
+        *,
+        discovery=False,
+        started=False,
+        regenerate=False,
+        run_owned=False,
     ):
         if not await self.store.owns_command(experiment_id, key):
+            return await self._result(experiment_id, key)
+        if not run_owned:
+            from alon_ai.services.agent_run_service import AgentRunService
+
+            runs = AgentRunService(self.context)
+            admitted = await runs.admit(
+                experiment_id,
+                AgentRunRequest(
+                    task_kind="IDEA_DISCOVERY" if discovery else "IDEA_REFINEMENT",
+                    command_key=key,
+                ),
+            )
+            if admitted.status == "BLOCKED":
+                blocked = await runs.get(admitted.run_id)
+                await self.store.finish(
+                    experiment_id, key, blocked_reason=blocked.blocked_reason
+                )
+                return await self._result(experiment_id, key)
+            if (
+                self.context.settings.provider_mode == "live"
+                and self.context.idea_runtime_provider is not None
+            ):
+                return await self.snapshot(experiment_id)
+            await runs.execute(
+                admitted.run_id, intake_service=self, propagate_errors=True
+            )
             return await self._result(experiment_id, key)
         try:
             if discovery:
@@ -251,15 +294,20 @@ class IntakeService:
         if not await self.store.claim(
             experiment_id, body.command_key, "START_SEED", body.model_dump(mode="json")
         ):
-            return await self._result(experiment_id, body.command_key)
+            return await self._dispatch(experiment_id, body.command_key, started=True)
         return await self._dispatch(experiment_id, body.command_key, started=True)
 
     async def generate(self, body: GenerateIdeaRequest) -> dict:
-        experiment_id = await self._roots(body.command_key, None, draft=True)
+        experiment_id = await self._roots(
+            body.command_key,
+            None,
+            draft=True,
+            generation_guidance=body.generation_guidance,
+        )
         if not await self.store.claim(
             experiment_id, body.command_key, "GENERATE", body.model_dump(mode="json")
         ):
-            return await self._result(experiment_id, body.command_key)
+            return await self._dispatch(experiment_id, body.command_key, discovery=True)
         return await self._dispatch(experiment_id, body.command_key, discovery=True)
 
     async def snapshot(self, experiment_id: UUID) -> dict:
@@ -356,6 +404,37 @@ class IntakeService:
             blocked_reason=blocked_reason,
             proposal_history=history_payload,
         )
+        latest_run = await AgentRunRepository(self.context.engine).latest(
+            experiment_id, self.context.operator_id
+        )
+        if (
+            latest_run is not None
+            and snapshot["latest_run_id"] != latest_run["run_id"]
+            and latest_run["status"]
+            in {
+                "QUEUED",
+                "RUNNING",
+                "BLOCKED",
+                "FAILED",
+                "CANCELLED",
+                "OUTCOME_UNKNOWN",
+            }
+        ):
+            snapshot["latest_run_id"] = latest_run["run_id"]
+            if snapshot["blocked_reason"]:
+                pass
+            elif latest_run["status"] in {"QUEUED", "RUNNING"}:
+                snapshot["state"] = (
+                    "DISCOVERY_IN_PROGRESS"
+                    if latest_run["task_kind"] == "IDEA_DISCOVERY"
+                    else "REFINEMENT_IN_PROGRESS"
+                )
+                snapshot["stage_status"] = "RUNNING"
+            else:
+                snapshot["stage_status"] = "BLOCKED"
+                snapshot["blocked_reason"] = (
+                    latest_run["blocked_reason"] or latest_run["status"]
+                )
         return snapshot
 
     async def revise(self, experiment_id: UUID, body: ReviseProposalRequest) -> dict:

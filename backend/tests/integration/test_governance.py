@@ -89,6 +89,7 @@ async def seed(
     gate="NONE",
     capability=Capability.BRAVE_WEB_COVERAGE,
     transient=False,
+    personal_use_approved=False,
     price_components=(UsageComponent.REQUEST,),
 ):
     from alon_ai.db.repositories.accounting import (
@@ -125,8 +126,14 @@ async def seed(
         if CAPABILITIES[capability].nature == Nature.WRITE
         else Purpose.GENERATION
         if capability is Capability.OPENAI_GENERATE
+        else Purpose.R01A_PERSONAL_NONCOMMERCIAL_TEST
+        if personal_use_approved
         else Purpose.RESEARCH,
-        required_fields=frozenset() if transient else frozenset({ContentField.TEXT}),
+        required_fields=frozenset()
+        if transient
+        else frozenset({ContentField.URL, ContentField.TEXT})
+        if personal_use_approved
+        else frozenset({ContentField.TEXT}),
     )
     policy = ControlPolicy(
         id=uuid4(),
@@ -193,6 +200,12 @@ async def seed(
         await admin.price(p)
     await register(admin, f.evidence_id, "FX", now)
     await admin.fx(f)
+    if personal_use_approved:
+        use = use.model_copy(
+            update={
+                "personal_noncommercial_approval_ref": grant.supporting_evidence_ref
+            }
+        )
     config = CapabilityConfig(
         id=uuid4(),
         version=attr.config_version,

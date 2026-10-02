@@ -23,12 +23,14 @@ from alon_ai.agents.runtime import (
 )
 from alon_ai.agents.schemas.openai import RoutingFacts, canonical_json, sha256
 from alon_ai.db.repositories import experiments as experiment_repository
+from alon_ai.db.repositories.agent_runs import AgentRunRepository
 from alon_ai.db.repositories.experiments import ExperimentError
 from alon_ai.db.repositories.openai_idea import OpenAIIdeaInputRepository
 from alon_ai.db.repositories.openai_run import OpenAIRunOutcome, OpenAIRunStore
 from alon_ai.db.repositories.records import ProductRecordsRepository
 from alon_ai.integrations.schemas.provider import CallAttribution
 from alon_ai.services.agent_runs import OpenAIRuntime
+from alon_ai.services.combined_idea import CombinedIdeaRuntime
 from alon_ai.services.experiments import (
     AcceptRequest,
     ExperimentContext,
@@ -40,6 +42,8 @@ from alon_ai.services.experiments import (
     _read_experiment,
     _read_persisted_advice,
 )
+from alon_ai.services.idea_safety import IdeaSafetyError, validate_idea_advice
+from alon_ai.services.run_diagnostics import record_diagnostic
 from alon_ai.services.schemas.records import (
     ArtifactDraft,
     ArtifactInput,
@@ -272,17 +276,32 @@ async def discover_experiment(
         "budget_usd": Decimal(detail["brief"]["budget_usd"]),
     }
     claimed_operation_id: UUID | None = None
+    service = None
+    execution_started = False
+    diagnostic_recorded = False
     try:
-        if settings.provider_mode == "fake":
-            service, attribution = await request.recorded_runtime_provisioner(
-                engine, **runtime_args
+        try:
+            if settings.provider_mode == "fake":
+                service, attribution = await request.recorded_runtime_provisioner(
+                    engine, **runtime_args
+                )
+                advice_source = "RECORDED_FAKE"
+            else:
+                provider = request.idea_runtime_provider
+                if provider is None:
+                    raise ExperimentError(409, "LIVE_CONFIG_REQUIRED")
+                service, attribution, advice_source = await provider(
+                    engine, **runtime_args
+                )
+        except Exception as error:
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "PROVIDER_PROVISIONING",
+                error,
             )
-            advice_source = "RECORDED_FAKE"
-        else:
-            provider = request.idea_runtime_provider
-            if provider is None:
-                raise ExperimentError(409, "LIVE_CONFIG_REQUIRED")
-            service, attribution, advice_source = await provider(engine, **runtime_args)
+            diagnostic_recorded = True
+            raise
         await experiment_repository.claim_discovery(
             engine,
             experiment_id,
@@ -292,6 +311,7 @@ async def discover_experiment(
             advice_source,
         )
         claimed_operation_id = attribution.operation_run_id
+        execution_started = True
         execution = await service.discover_system(
             attribution,
             facts=RoutingFacts(needs_ai=True),
@@ -307,11 +327,12 @@ async def discover_experiment(
             advice.model_dump(mode="json") if success and advice is not None else None
         )
         durable = await OpenAIRunStore(engine).get(body.idempotency_key)
-        if (
-            not success
-            or durable is None
-            or durable.output_hash != sha256(canonical_json(payload))
-        ):
+        durable_hash = (
+            service.output_hash
+            if isinstance(service, CombinedIdeaRuntime)
+            else (durable.output_hash if durable else None)
+        )
+        if not success or durable_hash != sha256(canonical_json(payload)):
             retry_safe = await _confirmed_safe_retry(
                 engine,
                 body.idempotency_key,
@@ -347,7 +368,9 @@ async def discover_experiment(
                         "hypothesis": candidate.hypothesis,
                     },
                     created_by=request.operator_id,
-                    created_at=datetime.now(UTC),
+                    created_at=service.row["created_at"]
+                    if isinstance(service, CombinedIdeaRuntime)
+                    else datetime.now(UTC),
                 ),
                 command_key=_id(body.idempotency_key, f"candidate-command-{index}"),
             )
@@ -364,9 +387,22 @@ async def discover_experiment(
             "state": "AWAITING_SELECTION",
             "candidates": snapshot["candidates"],
         }
-    except ExperimentError:
+    except ExperimentError as error:
+        if error.detail == "RESEARCH_INCOMPLETE" and claimed_operation_id is not None:
+            await experiment_repository.block_discovery(
+                engine, body.idempotency_key, experiment_id, claimed_operation_id
+            )
         raise
     except Exception as error:
+        if not diagnostic_recorded and not (
+            execution_started and isinstance(service, CombinedIdeaRuntime)
+        ):
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "AGENT_EXECUTION" if execution_started else "OPERATION_CLAIM",
+                error,
+            )
         if claimed_operation_id is not None:
             await experiment_repository.block_discovery(
                 engine, body.idempotency_key, experiment_id, claimed_operation_id
@@ -386,6 +422,16 @@ async def select_experiment_candidate(
         raise ExperimentError(404, "EXPERIMENT_NOT_FOUND")
     if detail["mode"] != "SYSTEM_DISCOVERY":
         raise ExperimentError(409, "DISCOVERY_MODE_REQUIRED")
+    discovery_run_id = detail["latest_run_id"]
+    if discovery_run_id is not None:
+        discovery_run = await AgentRunRepository(request.engine).get(discovery_run_id)
+        if (
+            discovery_run is not None
+            and discovery_run["experiment_id"] == experiment_id
+            and discovery_run["task_kind"] == "IDEA_DISCOVERY"
+            and discovery_run["review_status"] == "REJECTED"
+        ):
+            raise ExperimentError(409, "DISCOVERY_RUN_REJECTED")
     from alon_ai.db.repositories.intake import IntakeRepository
 
     revisions = await IntakeRepository(request.engine).history(experiment_id)
@@ -397,6 +443,7 @@ async def select_experiment_candidate(
         candidate,
         selection,
         selection_command,
+        candidate_discovery_run_id,
     ) = await experiment_repository.candidate_selection_rows(
         request.engine,
         experiment_id,
@@ -405,6 +452,12 @@ async def select_experiment_candidate(
     )
     if candidate is None:
         raise ExperimentError(409, "CANDIDATE_NOT_IN_DISCOVERY")
+    if candidate_discovery_run_id is not None:
+        source_run = await AgentRunRepository(request.engine).get(
+            candidate_discovery_run_id
+        )
+        if source_run is not None and source_run["review_status"] == "REJECTED":
+            raise ExperimentError(409, "DISCOVERY_RUN_REJECTED")
     if selection is None and detail["state"] != "AWAITING_SELECTION":
         raise ExperimentError(409, "CANDIDATE_SELECTION_UNAVAILABLE")
     if selection and (
@@ -431,19 +484,22 @@ async def select_experiment_candidate(
         role="SELECTED_CANDIDATE",
     )
     try:
-        receipt = await repository.select_idea_candidate(
-            experiment_id,
-            candidate_input,
-            selected_by=request.operator_id,
-            reason=body.reason,
-            command_key=_id(body.command_key, "candidate-selection-command"),
-        )
-        cycle = await repository.create_cycle(
-            experiment_id,
-            candidate=candidate_input,
-            selection_id=receipt.result_id,
-            command_key=_id(body.command_key, "selected-cycle-command"),
-        )
+        async with AgentRunRepository(request.engine).review_scope(
+            candidate_discovery_run_id, request.operator_id
+        ):
+            receipt = await repository.select_idea_candidate(
+                experiment_id,
+                candidate_input,
+                selected_by=request.operator_id,
+                reason=body.reason,
+                command_key=_id(body.command_key, "candidate-selection-command"),
+            )
+            cycle = await repository.create_cycle(
+                experiment_id,
+                candidate=candidate_input,
+                selection_id=receipt.result_id,
+                command_key=_id(body.command_key, "selected-cycle-command"),
+            )
     except ProductRecordsDenied as error:
         raise ExperimentError(409, error.reason) from None
     return {
@@ -539,6 +595,9 @@ async def refine_experiment(
     if roots is None:
         raise ExperimentError(409, "EXPERIMENT_NOT_READY")
     claimed_operation_id: UUID | None = None
+    service = None
+    execution_started = False
+    diagnostic_recorded = False
     try:
         runtime_args = {
             "experiment_id": experiment_id,
@@ -548,16 +607,28 @@ async def refine_experiment(
             "run_id": body.idempotency_key,
             "budget_usd": Decimal(detail["brief"]["budget_usd"]),
         }
-        if settings.provider_mode == "fake":
-            service, attribution = await request.recorded_runtime_provisioner(
-                engine, **runtime_args
+        try:
+            if settings.provider_mode == "fake":
+                service, attribution = await request.recorded_runtime_provisioner(
+                    engine, **runtime_args
+                )
+                advice_source = "RECORDED_FAKE"
+            else:
+                provider = request.idea_runtime_provider
+                if provider is None:
+                    raise ExperimentError(409, "LIVE_CONFIG_REQUIRED")
+                service, attribution, advice_source = await provider(
+                    engine, **runtime_args
+                )
+        except Exception as error:
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "PROVIDER_PROVISIONING",
+                error,
             )
-            advice_source = "RECORDED_FAKE"
-        else:
-            provider = request.idea_runtime_provider
-            if provider is None:
-                raise ExperimentError(409, "LIVE_CONFIG_REQUIRED")
-            service, attribution, advice_source = await provider(engine, **runtime_args)
+            diagnostic_recorded = True
+            raise
         await _claim_refinement(
             request,
             experiment_id=experiment_id,
@@ -567,6 +638,7 @@ async def refine_experiment(
             advice_source=advice_source,
         )
         claimed_operation_id = attribution.operation_run_id
+        execution_started = True
         execution = await service.refine_cycle(
             attribution,
             cycle_id=detail["cycle_id"],
@@ -585,9 +657,12 @@ async def refine_experiment(
         payload = advice.model_dump(mode="json") if success and advice else None
         if success and payload:
             durable_run = await OpenAIRunStore(engine).get(body.idempotency_key)
-            if durable_run is None or durable_run.output_hash != sha256(
-                canonical_json(payload)
-            ):
+            durable_hash = (
+                service.output_hash
+                if isinstance(service, CombinedIdeaRuntime)
+                else (durable_run.output_hash if durable_run else None)
+            )
+            if durable_hash != sha256(canonical_json(payload)):
                 success = False
                 payload = None
         retry_safe = not success and await _confirmed_safe_retry(
@@ -615,10 +690,23 @@ async def refine_experiment(
             if success and advice
             else None,
         }
-    except ExperimentError:
+    except ExperimentError as error:
+        if error.detail == "RESEARCH_INCOMPLETE" and claimed_operation_id is not None:
+            await experiment_repository.block_refinement(
+                engine, body.idempotency_key, experiment_id, claimed_operation_id
+            )
         raise
     except Exception as error:
         # No output can be accepted after an interrupted or denied run.
+        if not diagnostic_recorded and not (
+            execution_started and isinstance(service, CombinedIdeaRuntime)
+        ):
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "AGENT_EXECUTION" if execution_started else "OPERATION_CLAIM",
+                error,
+            )
         if claimed_operation_id is not None:
             await experiment_repository.block_refinement(
                 engine, body.idempotency_key, experiment_id, claimed_operation_id
@@ -633,6 +721,9 @@ async def accept_experiment_idea(
     if detail is None:
         raise ExperimentError(404, "EXPERIMENT_NOT_FOUND")
     engine = request.engine
+    operator_run = await AgentRunRepository(engine).get(body.run_id)
+    if operator_run is not None and operator_run["review_status"] == "REJECTED":
+        raise ExperimentError(409, "IDEA_RUN_REJECTED")
     (
         reviewed,
         seed,
@@ -675,6 +766,25 @@ async def accept_experiment_idea(
         or body.intent_relationship == "MATERIAL_PIVOT"
     ):
         raise ExperimentError(409, "MATERIAL_PIVOT_REQUIRES_APPROVAL")
+    if operator_run is not None:
+        profile_row = await AgentRunRepository(engine).profile_projection(operator_run)
+        if profile_row is None:
+            raise ExperimentError(409, "IDEA_INPUT_STALE")
+        origin = seed["payload"]
+        source_text = (
+            origin.get("statement")
+            or origin.get("hypothesis")
+            or origin.get("core_intent")
+            or ""
+        )
+        try:
+            validate_idea_advice(
+                advice.model_dump(mode="json"),
+                seed=source_text,
+                capabilities=profile_row["capabilities"],
+            )
+        except IdeaSafetyError as error:
+            raise ExperimentError(409, str(error)) from None
     repository = ProductRecordsRepository(engine)
     brief_id = _id(body.command_key, "accepted-idea-brief")
     advice_payload = advice.model_dump(mode="json")
@@ -720,6 +830,10 @@ async def accept_experiment_idea(
         "confirmed_by": request.operator_id,
         "command_key": body.command_key,
     }
+    if operator_run is not None:
+        await AgentRunRepository(engine).claim_acceptance(
+            body.run_id, experiment_id, request.operator_id, body.command_key
+        )
     await experiment_repository.save_intent_review(
         engine, experiment_id, body.run_id, expected_review
     )
@@ -730,6 +844,10 @@ async def accept_experiment_idea(
             and accepted["artifact_id"] == brief_id
             and accepted["accepted_by"] == request.operator_id
         ):
+            if operator_run is not None:
+                await AgentRunRepository(engine).complete_acceptance(
+                    body.run_id, body.command_key
+                )
             return {
                 "experiment_id": experiment_id,
                 "idea_brief_artifact_id": brief_id,
@@ -798,6 +916,10 @@ async def accept_experiment_idea(
         )
     except ProductRecordsDenied as error:
         raise ExperimentError(409, error.reason) from None
+    if operator_run is not None:
+        await AgentRunRepository(engine).complete_acceptance(
+            body.run_id, body.command_key
+        )
     return {
         "experiment_id": experiment_id,
         "idea_brief_artifact_id": artifact.artifact_id,

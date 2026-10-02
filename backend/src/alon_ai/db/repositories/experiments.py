@@ -879,6 +879,17 @@ async def candidate_selection_rows(
             .mappings()
             .one_or_none()
         )
+        discovery_run_id = (
+            await connection.scalar(
+                select(records.idea_discoveries.c.run_id).where(
+                    records.idea_discoveries.c.experiment_id == experiment_id,
+                    records.idea_discoveries.c.operation_id
+                    == candidate["operation_id"],
+                )
+            )
+            if candidate is not None
+            else None
+        )
         selection = (
             (
                 await connection.execute(
@@ -904,7 +915,7 @@ async def candidate_selection_rows(
             .one_or_none()
         )
 
-    return candidate, selection, selection_command
+    return candidate, selection, selection_command, discovery_run_id
 
 
 async def claim_refinement(

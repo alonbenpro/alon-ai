@@ -9,6 +9,7 @@ from uuid import uuid4
 import pytest
 from pydantic import ValidationError
 
+from alon_ai.agents.market_research import market_evidence_permitted
 from alon_ai.integrations.schemas.provider import (
     Capability,
     ContentField,
@@ -138,6 +139,64 @@ def test_transient_exception_requires_exact_licensed_purpose_and_no_fields():
         ).mode
         is RightsMode.DENIED
     )
+
+
+def test_personal_firecrawl_requires_reviewed_local_approval_reference():
+    personal = Purpose.__members__.get("R01A_PERSONAL_NONCOMMERCIAL_TEST")
+    assert personal is not None
+    page_grant = grant(
+        provider=Provider.FIRECRAWL,
+        capability=Capability.FIRECRAWL_PAGE_CAPTURE,
+        purpose=personal,
+        storage_fields=frozenset({ContentField.URL, ContentField.TEXT}),
+    )
+    page_use = use(
+        provider=Provider.FIRECRAWL,
+        capability=Capability.FIRECRAWL_PAGE_CAPTURE,
+        purpose=personal,
+        required_fields=frozenset({ContentField.URL, ContentField.TEXT}),
+    )
+
+    assert evaluate_rights(page_grant, (), page_use, now=NOW).mode is RightsMode.DENIED
+    approved_use = page_use.model_copy(
+        update={
+            "personal_noncommercial_approval_ref": page_grant.supporting_evidence_ref
+        }
+    )
+    assert (
+        evaluate_rights(page_grant, (), approved_use, now=NOW).mode
+        is RightsMode.RETAIN_SCOPED_CONTENT
+    )
+    assert not market_evidence_permitted(page_grant, ContentField.TEXT)
+    mismatched_use = page_use.model_copy(
+        update={"personal_noncommercial_approval_ref": uuid4()}
+    )
+    assert (
+        evaluate_rights(page_grant, (), mismatched_use, now=NOW).mode
+        is RightsMode.DENIED
+    )
+    pdf_grant = grant(
+        provider=Provider.FIRECRAWL,
+        capability=Capability.FIRECRAWL_PDF_CAPTURE,
+        purpose=personal,
+        storage_fields=frozenset({ContentField.URL, ContentField.TEXT}),
+    )
+    pdf_use = use(
+        provider=Provider.FIRECRAWL,
+        capability=Capability.FIRECRAWL_PDF_CAPTURE,
+        purpose=personal,
+        required_fields=frozenset({ContentField.URL, ContentField.TEXT}),
+    )
+    approved_pdf_use = pdf_use.model_copy(
+        update={
+            "personal_noncommercial_approval_ref": pdf_grant.supporting_evidence_ref
+        }
+    )
+    assert (
+        evaluate_rights(pdf_grant, (), approved_pdf_use, now=NOW).mode
+        is RightsMode.DENIED
+    )
+    assert not market_evidence_permitted(pdf_grant, ContentField.TEXT)
 
 
 def test_runtime_content_refuses_serialization_and_expired_retention():

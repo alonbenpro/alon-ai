@@ -26,6 +26,7 @@ from alon_ai.integrations.schemas.provider import (
     CAPABILITIES,
     AgentActor,
     CallAttribution,
+    Capability,
     CostKnowledge,
     Nature,
     Provider,
@@ -312,7 +313,7 @@ class GovernanceProvisioner:
                     account=config.intended_use.account_handle,
                     capability=config.intended_use.capability,
                     fx_id=config.fx_id,
-                    data=config.model_dump(mode="json"),
+                    data=config.database_data(),
                 )
             )
             for bound in config.prices:
@@ -425,6 +426,48 @@ class GovernanceRepository:
         self.engine = engine
         self.clock = clock
         self._hooks = dict(admission_hooks or {})
+
+    @safe_errors
+    async def quota_snapshot(self, scopes: tuple[tuple[str, Capability], ...]):
+        """Advisory remaining counts; dispatch still owns atomic admission."""
+        now = self.clock()
+        quotas = []
+        async with self.engine.connect() as connection:
+            for account, capability in scopes:
+                authority = (
+                    (
+                        await connection.execute(
+                            select(s.authorities).where(
+                                s.authorities.c.account == account,
+                                s.authorities.c.capability == capability,
+                            )
+                        )
+                    )
+                    .mappings()
+                    .one_or_none()
+                )
+                if authority is None:
+                    raise AccountingDenied(Reason.CONFIG)
+                policy = await self._policy(connection, authority, now)
+                elapsed = (now - policy.effective_at) // timedelta(
+                    seconds=policy.window_seconds
+                )
+                window = policy.effective_at + timedelta(
+                    seconds=elapsed * policy.window_seconds
+                )
+                used = (
+                    authority["quota_used"]
+                    if authority["window_start"] == window
+                    else 0
+                )
+                quotas.append(
+                    {
+                        "capability": capability.value,
+                        "quota_limit": policy.quota_limit,
+                        "remaining_calls": max(0, policy.quota_limit - used),
+                    }
+                )
+        return quotas
 
     async def _config(self, c, config_id):
         row = (

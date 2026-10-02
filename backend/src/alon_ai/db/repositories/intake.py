@@ -101,6 +101,21 @@ class IntakeRepository:
                 )
             ) is not None
 
+    async def command(self, experiment_id, key):
+        async with self.engine.connect() as c:
+            return (
+                (
+                    await c.execute(
+                        select(commands).where(
+                            commands.c.experiment_id == experiment_id,
+                            commands.c.command_key == key,
+                        )
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+
     async def pending(self, experiment_id):
         async with self.engine.connect() as c:
             return (

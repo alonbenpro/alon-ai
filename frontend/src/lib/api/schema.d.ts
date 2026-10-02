@@ -123,6 +123,91 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operator/agent-runs/{run_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run */
+        get: operations["get_run_operator_agent_runs__run_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/agent-runs/{run_id}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel Run */
+        post: operations["cancel_run_operator_agent_runs__run_id__cancel_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/agent-runs/{run_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run Events */
+        get: operations["get_run_events_operator_agent_runs__run_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/agent-runs/{run_id}/reject": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Reject Run */
+        post: operations["reject_run_operator_agent_runs__run_id__reject_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/agent-runs/{run_id}/result": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Run Result */
+        get: operations["get_run_result_operator_agent_runs__run_id__result_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operator/experiments": {
         parameters: {
             query?: never;
@@ -191,6 +276,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operator/experiments/{experiment_id}/agent-runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Admit Run */
+        post: operations["admit_run_operator_experiments__experiment_id__agent_runs_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operator/experiments/{experiment_id}/discover": {
         parameters: {
             query?: never;
@@ -219,6 +321,23 @@ export interface paths {
         put?: never;
         /** Refine Experiment */
         post: operations["refine_experiment_operator_experiments__experiment_id__refine_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/experiments/{experiment_id}/research-case": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Research Case */
+        get: operations["get_research_case_operator_experiments__experiment_id__research_case_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -256,6 +375,24 @@ export interface paths {
         put?: never;
         /** Select Experiment Candidate */
         post: operations["select_experiment_candidate_operator_experiments__experiment_id__select_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/operator/idea-profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Idea Profile */
+        get: operations["get_idea_profile_operator_idea_profile_get"];
+        put?: never;
+        /** Setup Idea Profile */
+        post: operations["setup_idea_profile_operator_idea_profile_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -402,6 +539,100 @@ export interface components {
             /** Items */
             items: components["schemas"]["ActivityItem"][];
         };
+        /** AgentRunRequest */
+        AgentRunRequest: {
+            /**
+             * Command Key
+             * Format: uuid
+             */
+            command_key: string;
+            /**
+             * Task Kind
+             * @enum {string}
+             */
+            task_kind: "IDEA_DISCOVERY" | "IDEA_REFINEMENT";
+        };
+        /** ArtifactInput */
+        ArtifactInput: {
+            /**
+             * Artifact Id
+             * Format: uuid
+             */
+            artifact_id: string;
+            /** Content Hash */
+            content_hash: string;
+            kind: components["schemas"]["ArtifactKind"];
+            /** Role */
+            role: string;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
+            /** Version */
+            version: number;
+        };
+        /**
+         * ArtifactKind
+         * @enum {string}
+         */
+        ArtifactKind: "EXPERIMENT_BRIEF" | "IDEA_SEED" | "IDEA_CANDIDATE" | "IDEA_BRIEF" | "RESEARCH_PLAN" | "RESEARCH_EVIDENCE" | "COMPETITOR_PROFILE" | "SERVICE_PROFILE" | "PRICE_OBSERVATION" | "MARKET_RESEARCH_REPORT" | "MARKET_RESEARCH_RECOMMENDATION" | "RESEARCH_FEEDBACK_BRIEF" | "OFFER_RESEARCH_GAP_BRIEF" | "DELIVERY_SCOPE_ESTIMATE" | "OFFER_DESIGN_INPUT_BUNDLE" | "COMMERCIAL_DESIGN_ENVELOPE" | "OFFER_DESIGN_PROPOSAL" | "OFFER_PACKAGE" | "OFFER_QUALIFICATION_PROFILE" | "INITIAL_OUTREACH_POLICY" | "OUTREACH_PROMPT_CONFIGURATION" | "OUTREACH_CONTEXT_BUNDLE" | "LEAD_OPPORTUNITY_NARRATIVE" | "CONVERSATION_STRATEGY" | "OUTREACH_SEQUENCE_PLAN" | "EMAIL_DRAFT" | "DRAFT_VALIDATION_RESULT" | "INBOUND_CONTENT_SAFETY_ASSESSMENT" | "SENDER_IDENTITY_DECISION" | "CONVERSATION_TURN_CONTEXT" | "REPLY_INTERPRETATION" | "CONVERSATION_FACT_LEDGER" | "CONVERSATION_DECISION" | "CONVERSION_READINESS_DECISION" | "ALLOWED_RESPONSE_OBJECTIVE" | "COMMERCIAL_DISCLOSURE_DECISION" | "NEGOTIATION_OPTION_SET" | "RESPONSE_PLAN" | "RESPONSE_DRAFT" | "RESPONSE_VALIDATION_RESULT" | "RECIPIENT_REFERRAL_EVIDENCE" | "LEAD_REQUESTED_FOLLOW_UP" | "INVOICE_HANDOFF_BRIEF" | "DEMO_REQUEST_BRIEF" | "MEETING_HANDOFF_BRIEF" | "OPERATOR_ACTION_REQUIRED" | "MANUAL_OUTCOME_EVENT" | "OPERATOR_AUTHORED_MESSAGE" | "VALIDATION_RESULT" | "ACCEPTANCE_RECEIPT";
+        /** CancelRunRequest */
+        CancelRunRequest: {
+            /**
+             * Command Key
+             * Format: uuid
+             */
+            command_key: string;
+        };
+        /** CancelRunResult */
+        CancelRunResult: {
+            /** Confirmed */
+            confirmed: boolean;
+            /** Requested */
+            requested: boolean;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+        };
+        /** CommercialInput */
+        "CommercialInput-Input": {
+            /** Currency */
+            currency: string;
+            /** Hourly Cost */
+            hourly_cost: number | string;
+            /** Maximum Discount Rate */
+            maximum_discount_rate: number | string;
+            /** Minimum Deposit Rate */
+            minimum_deposit_rate: number | string;
+            /** Minimum Margin Rate */
+            minimum_margin_rate: number | string;
+            /** Minimum Project Price */
+            minimum_project_price: number | string;
+        };
+        /** CommercialInput */
+        "CommercialInput-Output": {
+            /** Currency */
+            currency: string;
+            /** Hourly Cost */
+            hourly_cost: string;
+            /** Maximum Discount Rate */
+            maximum_discount_rate: string;
+            /** Minimum Deposit Rate */
+            minimum_deposit_rate: string;
+            /** Minimum Margin Rate */
+            minimum_margin_rate: string;
+            /** Minimum Project Price */
+            minimum_project_price: string;
+        };
         /** CreateExperimentRequest */
         CreateExperimentRequest: {
             /**
@@ -411,6 +642,24 @@ export interface components {
             command_key: string;
             /** Idea Seed */
             idea_seed?: string | null;
+        };
+        /** DeliveryInput */
+        "DeliveryInput-Input": {
+            /** Concurrent Projects */
+            concurrent_projects: number;
+            /** Hours Per Week */
+            hours_per_week: number | string;
+            /** Max Project Hours */
+            max_project_hours: number | string;
+        };
+        /** DeliveryInput */
+        "DeliveryInput-Output": {
+            /** Concurrent Projects */
+            concurrent_projects: number;
+            /** Hours Per Week */
+            hours_per_week: string;
+            /** Max Project Hours */
+            max_project_hours: string;
         };
         /** ExperimentRuntimeStatus */
         ExperimentRuntimeStatus: {
@@ -497,6 +746,8 @@ export interface components {
              * Format: uuid
              */
             command_key: string;
+            /** Generation Guidance */
+            generation_guidance?: string | null;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -520,6 +771,59 @@ export interface components {
         LoginRequest: {
             /** Password */
             password: string;
+        };
+        /** MarketResearchCase */
+        MarketResearchCase: {
+            /**
+             * Experiment Id
+             * Format: uuid
+             */
+            experiment_id: string;
+            /** Finding Count */
+            finding_count: number;
+            /** Limitations */
+            limitations: string[];
+            /**
+             * Progress
+             * @enum {string}
+             */
+            progress: "NOT_STARTED" | "PARTIAL";
+            /** Subjects */
+            subjects: components["schemas"]["SubjectResearchCase"][];
+        };
+        /** OperatorProfileInput */
+        "OperatorProfileInput-Input": {
+            /** Capabilities */
+            capabilities: string[];
+            commercial: components["schemas"]["CommercialInput-Input"];
+            /** Constraints */
+            constraints: string[];
+            delivery: components["schemas"]["DeliveryInput-Input"];
+        };
+        /** OperatorProfileInput */
+        "OperatorProfileInput-Output": {
+            /** Capabilities */
+            capabilities: string[];
+            commercial: components["schemas"]["CommercialInput-Output"];
+            /** Constraints */
+            constraints: string[];
+            delivery: components["schemas"]["DeliveryInput-Output"];
+        };
+        /** OperatorProfileProjection */
+        OperatorProfileProjection: {
+            /** Capabilities */
+            capabilities: string[];
+            /** Constraints */
+            constraints: string[];
+            /** Content Hash */
+            content_hash: string;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Version */
+            version: number;
         };
         /** OperatorSession */
         OperatorSession: {
@@ -618,6 +922,98 @@ export interface components {
              * Format: uuid
              */
             command_key: string;
+            /** Generation Guidance */
+            generation_guidance?: string | null;
+        };
+        /** RejectRunRequest */
+        RejectRunRequest: {
+            /**
+             * Command Key
+             * Format: uuid
+             */
+            command_key: string;
+            /** Reason */
+            reason: string;
+        };
+        /** ResearchCoverage */
+        ResearchCoverage: {
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "CUSTOMER_PAIN" | "BUYER" | "DEMAND" | "ALTERNATIVES" | "COMPETITION" | "PRICING" | "REACHABILITY" | "DELIVERY";
+            /** Finding Ids */
+            finding_ids: string[];
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "UNRESEARCHED" | "SUPPORTED" | "CONTRADICTED" | "INCONCLUSIVE" | "UNAVAILABLE" | "MIXED";
+        };
+        /** ResearchSourceView */
+        ResearchSourceView: {
+            /**
+             * Availability
+             * @default REFERENCE_ONLY
+             * @enum {string}
+             */
+            availability: "CURRENT_SOURCE" | "REFERENCE_ONLY";
+            /** Available Until */
+            available_until?: string | null;
+            /** Provider */
+            provider?: "FIRECRAWL" | null;
+            /** SourceReference */
+            reference: {
+                /** Call Id */
+                call_id?: string | null;
+                /** Evidence Id */
+                evidence_id?: string | null;
+                /** Expires At */
+                expires_at?: string | null;
+                /** Field */
+                field?: string | null;
+                /** Grant Id */
+                grant_id?: string | null;
+                /** Grant Version */
+                grant_version?: number | null;
+                /**
+                 * Kind
+                 * @enum {string}
+                 */
+                kind: "RETAINED_CONTENT" | "GOVERNANCE_EVIDENCE";
+                /** Retained Id */
+                retained_id?: string | null;
+                /**
+                 * Schema Version
+                 * @default 1
+                 * @constant
+                 */
+                schema_version: 1;
+            };
+            /** Title */
+            title?: string | null;
+            /** Url */
+            url?: string | null;
+        };
+        /** ResolvedInput */
+        ResolvedInput: {
+            /**
+             * Artifact Id
+             * Format: uuid
+             */
+            artifact_id: string;
+            /** Content Hash */
+            content_hash: string;
+            /** Kind */
+            kind: string;
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            } | null;
+            /** Role */
+            role: string;
+            /** Version */
+            version: number;
         };
         /** ReturnFeedbackInput */
         ReturnFeedbackInput: {
@@ -656,6 +1052,291 @@ export interface components {
             /** Idea Seed */
             idea_seed: string;
         };
+        /**
+         * RunDiagnostic
+         * @description A stable error projection that is safe to retain and show to an operator.
+         */
+        RunDiagnostic: {
+            /** Code */
+            code: string;
+            /** Error Type */
+            error_type: string;
+            /** Frames */
+            frames: string[];
+            /** Message */
+            message: string;
+            /** Stage */
+            stage: string;
+        };
+        /** RunEvent */
+        RunEvent: {
+            /**
+             * At
+             * Format: date-time
+             */
+            at: string;
+            /** Detail */
+            detail?: string | null;
+            diagnostic?: components["schemas"]["RunDiagnostic"] | null;
+            /** Sequence */
+            sequence: number;
+            /** Type */
+            type: string;
+        };
+        /** RunEvents */
+        RunEvents: {
+            /** Events */
+            events: components["schemas"]["RunEvent"][];
+        };
+        /** RunReceipt */
+        RunReceipt: {
+            /** Accrued */
+            accrued: string;
+            /** Currency */
+            currency: string;
+            /** Model Identifier */
+            model_identifier?: string | null;
+            /** Provider */
+            provider: string;
+            /**
+             * Receipt Id
+             * Format: uuid
+             */
+            receipt_id: string;
+            /** Reserved */
+            reserved: string;
+            /** State */
+            state: string;
+            /** Usage */
+            usage?: components["schemas"]["UsageItem"][];
+        };
+        /** RunRef */
+        RunRef: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Experiment Id
+             * Format: uuid
+             */
+            experiment_id: string;
+            /**
+             * Provider Mode
+             * @enum {string}
+             */
+            provider_mode: "live" | "fake" | "disabled";
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /**
+             * Task Kind
+             * @enum {string}
+             */
+            task_kind: "IDEA_DISCOVERY" | "IDEA_REFINEMENT";
+        };
+        /** RunResult */
+        RunResult: {
+            /** Actual Cost Usd */
+            actual_cost_usd?: string | null;
+            /** Advice Source */
+            advice_source?: string | null;
+            diagnostic?: components["schemas"]["RunDiagnostic"] | null;
+            /** Output */
+            output?: {
+                [key: string]: unknown;
+            } | null;
+            /** Partial Options */
+            partial_options?: {
+                [key: string]: unknown;
+            }[];
+            /** Receipt Id */
+            receipt_id?: string | null;
+            /** Receipts */
+            receipts?: components["schemas"]["RunReceipt"][];
+            /** Research Gaps */
+            research_gaps?: string[];
+            /**
+             * Research Status
+             * @default NOT_STARTED
+             * @enum {string}
+             */
+            research_status: "NOT_STARTED" | "RUNNING" | "ASSESSED" | "INCOMPLETE" | "OUTCOME_UNKNOWN";
+            /** Research Summary */
+            research_summary?: {
+                [key: string]: unknown;
+            } | null;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /** Steps */
+            steps?: components["schemas"]["RunStep"][];
+            /** Usage */
+            usage?: components["schemas"]["UsageItem"][];
+        };
+        /** RunStep */
+        RunStep: {
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Kind */
+            kind: string;
+            /** Ordinal */
+            ordinal: number;
+            /** Provider Call Id */
+            provider_call_id?: string | null;
+            /** Reason Code */
+            reason_code?: string | null;
+            /** Result Artifact Id */
+            result_artifact_id?: string | null;
+            /** Status */
+            status: string;
+            /**
+             * Step Key
+             * Format: uuid
+             */
+            step_key: string;
+        };
+        /** RunView */
+        RunView: {
+            /** Actual Cost Usd */
+            actual_cost_usd?: string | null;
+            /** Advice Source */
+            advice_source?: string | null;
+            /** Blocked Reason */
+            blocked_reason?: string | null;
+            /**
+             * Cancel Confirmed
+             * @default false
+             */
+            cancel_confirmed: boolean;
+            /**
+             * Cancel Requested
+             * @default false
+             */
+            cancel_requested: boolean;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            diagnostic?: components["schemas"]["RunDiagnostic"] | null;
+            /**
+             * Experiment Id
+             * Format: uuid
+             */
+            experiment_id: string;
+            /** Finished At */
+            finished_at?: string | null;
+            /** Input Refs */
+            input_refs?: components["schemas"]["ResolvedInput"][];
+            /** Model Identifier */
+            model_identifier?: string | null;
+            operator_profile: components["schemas"]["OperatorProfileProjection"];
+            /** Outcome */
+            outcome?: string | null;
+            /** Output */
+            output?: {
+                [key: string]: unknown;
+            } | null;
+            /** Partial Options */
+            partial_options?: {
+                [key: string]: unknown;
+            }[];
+            /** Pending Cost Usd */
+            pending_cost_usd?: string | null;
+            /**
+             * Phase
+             * @enum {string}
+             */
+            phase: "ADMITTED" | "EXECUTING" | "WAITING_FOR_OPERATOR" | "ACCEPTED" | "REJECTED" | "BLOCKED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Profile Version */
+            profile_version: number;
+            /**
+             * Provider Mode
+             * @enum {string}
+             */
+            provider_mode: "live" | "fake" | "disabled";
+            /** Receipt Id */
+            receipt_id?: string | null;
+            /** Receipts */
+            receipts?: components["schemas"]["RunReceipt"][];
+            /** Research Gaps */
+            research_gaps?: string[];
+            /**
+             * Research Status
+             * @default NOT_STARTED
+             * @enum {string}
+             */
+            research_status: "NOT_STARTED" | "RUNNING" | "ASSESSED" | "INCOMPLETE" | "OUTCOME_UNKNOWN";
+            /** Research Summary */
+            research_summary?: {
+                [key: string]: unknown;
+            } | null;
+            /** Resolved Inputs */
+            resolved_inputs?: components["schemas"]["ResolvedInput"][];
+            /**
+             * Review Status
+             * @default PENDING
+             * @enum {string}
+             */
+            review_status: "PENDING" | "ACCEPTED" | "REJECTED";
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /** Started At */
+            started_at?: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /** Steps */
+            steps?: components["schemas"]["RunStep"][];
+            /**
+             * Task Kind
+             * @enum {string}
+             */
+            task_kind: "IDEA_DISCOVERY" | "IDEA_REFINEMENT";
+            /** Usage */
+            usage?: components["schemas"]["UsageItem"][];
+        };
+        /** SavedIdeaProfileResult */
+        SavedIdeaProfileResult: {
+            /** Budget Usd */
+            budget_usd: string | null;
+            profile: components["schemas"]["OperatorProfileInput-Output"] | null;
+            /** Profile Id */
+            profile_id: string | null;
+            /** Profile Version */
+            profile_version: number | null;
+        };
         /** SelectCandidateRequest */
         SelectCandidateRequest: {
             /**
@@ -679,6 +1360,135 @@ export interface components {
              */
             authenticated: boolean;
             operator: components["schemas"]["OperatorSession"];
+        };
+        /** SetupIdeaProfileRequest */
+        SetupIdeaProfileRequest: {
+            profile: components["schemas"]["OperatorProfileInput-Input"];
+        };
+        /** SetupIdeaProfileResult */
+        SetupIdeaProfileResult: {
+            /** Budget Usd */
+            budget_usd: string | null;
+            /**
+             * Profile Id
+             * Format: uuid
+             */
+            profile_id: string;
+            /** Profile Version */
+            profile_version: number;
+        };
+        /**
+         * SourceFindingPayload
+         * @description Original analytical observations only; quotations stay in licensed storage.
+         */
+        SourceFindingPayload: {
+            /** Claim */
+            claim: string;
+            /**
+             * Dimension
+             * @enum {string}
+             */
+            dimension: "CUSTOMER_PAIN" | "BUYER" | "DEMAND" | "ALTERNATIVES" | "COMPETITION" | "PRICING" | "REACHABILITY" | "DELIVERY";
+            /**
+             * Evidence Status
+             * @enum {string}
+             */
+            evidence_status: "SUPPORTED" | "CONTRADICTED" | "INCONCLUSIVE" | "UNAVAILABLE";
+            /** Finding */
+            finding: string;
+            /** Limitations */
+            limitations: string[];
+            /**
+             * Research Schema
+             * @default SOURCE_FINDING_V1
+             * @constant
+             */
+            research_schema: "SOURCE_FINDING_V1";
+            /** Run Id */
+            run_id: string;
+            /** Step Key */
+            step_key: string;
+        };
+        /** SourceFindingView */
+        SourceFindingView: {
+            /** ArtifactInput */
+            artifact: {
+                /**
+                 * Artifact Id
+                 * Format: uuid
+                 */
+                artifact_id: string;
+                /** Content Hash */
+                content_hash: string;
+                kind: components["schemas"]["ArtifactKind"];
+                /** Role */
+                role: string;
+                /**
+                 * Schema Version
+                 * @default 1
+                 * @constant
+                 */
+                schema_version: 1;
+                /** Version */
+                version: number;
+            };
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            observation: components["schemas"]["SourceFindingPayload"];
+            /** Sources */
+            sources: components["schemas"]["ResearchSourceView"][];
+            /** ArtifactInput */
+            subject: {
+                /**
+                 * Artifact Id
+                 * Format: uuid
+                 */
+                artifact_id: string;
+                /** Content Hash */
+                content_hash: string;
+                kind: components["schemas"]["ArtifactKind"];
+                /** Role */
+                role: string;
+                /**
+                 * Schema Version
+                 * @default 1
+                 * @constant
+                 */
+                schema_version: 1;
+                /** Version */
+                version: number;
+            };
+        };
+        /** SourceReference */
+        SourceReference: {
+            /** Call Id */
+            call_id?: string | null;
+            /** Evidence Id */
+            evidence_id?: string | null;
+            /** Expires At */
+            expires_at?: string | null;
+            /** Field */
+            field?: string | null;
+            /** Grant Id */
+            grant_id?: string | null;
+            /** Grant Version */
+            grant_version?: number | null;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "RETAINED_CONTENT" | "GOVERNANCE_EVIDENCE";
+            /** Retained Id */
+            retained_id?: string | null;
+            /**
+             * Schema Version
+             * @default 1
+             * @constant
+             */
+            schema_version: 1;
         };
         /** StartProposalRequest */
         StartProposalRequest: {
@@ -707,6 +1517,43 @@ export interface components {
              */
             verdict_id: string;
         };
+        /** SubjectResearchCase */
+        SubjectResearchCase: {
+            /** Coverage */
+            coverage: components["schemas"]["ResearchCoverage"][];
+            /** Current */
+            current: boolean;
+            /** Findings */
+            findings: components["schemas"]["SourceFindingView"][];
+            /** Gaps */
+            gaps: ("CUSTOMER_PAIN" | "BUYER" | "DEMAND" | "ALTERNATIVES" | "COMPETITION" | "PRICING" | "REACHABILITY" | "DELIVERY")[];
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "CANDIDATE" | "SELECTED" | "SUPPLIED" | "REFINED";
+            /** ArtifactInput */
+            subject: {
+                /**
+                 * Artifact Id
+                 * Format: uuid
+                 */
+                artifact_id: string;
+                /** Content Hash */
+                content_hash: string;
+                kind: components["schemas"]["ArtifactKind"];
+                /** Role */
+                role: string;
+                /**
+                 * Schema Version
+                 * @default 1
+                 * @constant
+                 */
+                schema_version: 1;
+                /** Version */
+                version: number;
+            };
+        };
         /** SystemStatus */
         SystemStatus: {
             /** Counts */
@@ -721,6 +1568,22 @@ export interface components {
             readiness: {
                 [key: string]: "ready" | "not_ready";
             };
+        };
+        /** UsageItem */
+        UsageItem: {
+            /** Component */
+            component: string;
+            /** Cost */
+            cost: string | null;
+            /** Currency */
+            currency: string;
+            /**
+             * Knowledge
+             * @enum {string}
+             */
+            knowledge: "ESTIMATE" | "FINAL" | "UNAVAILABLE";
+            /** Quantity */
+            quantity: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -926,6 +1789,169 @@ export interface operations {
             };
         };
     };
+    get_run_operator_agent_runs__run_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    cancel_run_operator_agent_runs__run_id__cancel_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CancelRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CancelRunResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_events_operator_agent_runs__run_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunEvents"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    reject_run_operator_agent_runs__run_id__reject_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RejectRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_run_result_operator_agent_runs__run_id__result_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                run_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunResult"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     create_experiment_operator_experiments_post: {
         parameters: {
             query?: never;
@@ -1047,6 +2073,41 @@ export interface operations {
             };
         };
     };
+    admit_run_operator_experiments__experiment_id__agent_runs_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AgentRunRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunRef"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     discover_experiment_operator_experiments__experiment_id__discover_post: {
         parameters: {
             query?: never;
@@ -1121,6 +2182,37 @@ export interface operations {
             };
         };
     };
+    get_research_case_operator_experiments__experiment_id__research_case_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MarketResearchCase"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
     start_return_refinement_operator_experiments__experiment_id__returns_refine_post: {
         parameters: {
             query?: never;
@@ -1182,6 +2274,59 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_idea_profile_operator_idea_profile_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedIdeaProfileResult"];
+                };
+            };
+        };
+    };
+    setup_idea_profile_operator_idea_profile_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetupIdeaProfileRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SetupIdeaProfileResult"];
                 };
             };
             /** @description Validation Error */

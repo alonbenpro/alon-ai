@@ -82,7 +82,9 @@ class LiveIdeaSetupManifest(StrictDTO):
     fx_reference: str = Field(min_length=1, max_length=500)
     control_reference: str = Field(min_length=1, max_length=500)
     model_identifier: str = Field(pattern=r"^[A-Za-z0-9_.:-]{1,100}$")
-    reasoning_effort: Literal["none", "minimal", "low", "medium", "high", "xhigh"]
+    reasoning_effort: Literal[
+        "none", "minimal", "low", "medium", "high", "xhigh", "max"
+    ]
     max_output_tokens: int = Field(ge=1, le=32768)
     timeout_seconds: int = Field(ge=1, le=3600)
     budget_cap_usd: Decimal = Field(gt=0, allow_inf_nan=False)
@@ -196,7 +198,13 @@ def make_authority_bundle(manifest: LiveIdeaSetupManifest) -> LiveAuthorityBundl
     grant = ProviderUsageGrant(
         grant_id=identity("grant"),
         version=1,
-        **use.model_dump(exclude={"schema_version", "required_fields"}),
+        **use.model_dump(
+            exclude={
+                "schema_version",
+                "required_fields",
+                "personal_noncommercial_approval_ref",
+            }
+        ),
         outbound_use_permitted=False,
         storage_fields=frozenset({ContentField.TEXT}),
         retention_rule_id=identity("retention"),

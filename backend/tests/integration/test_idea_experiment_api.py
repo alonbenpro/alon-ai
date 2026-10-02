@@ -178,36 +178,42 @@ async def test_live_mode_uses_only_explicit_startup_provider_with_recorded_test_
 ):
     app, _ = await _app(governance_engine)
     data_dir = tmp_path / "private"
+    data_dir.mkdir(mode=0o700)
+    config_path = data_dir / "combined-idea.json"
+    config_path.write_text("{}", encoding="utf-8")
+    config_path.chmod(0o600)
     app.state.settings = app.state.settings.model_copy(
         update={
             "provider_mode": "live",
-            "l07_live_config_path": data_dir / "live-idea.json",
-            "l07_secret_root": data_dir / "secrets",
-            "l07_secret_key_file": data_dir / "live-secret.key",
-            "l07_secret_key_version": "v1",
+            "r01a_live_config_path": config_path,
         }
     )
-    app_module = importlib.import_module("alon_ai.bootstrap")
+    combined_idea = importlib.import_module("alon_ai.services.combined_idea")
+    provision = importlib.import_module("alon_ai.services.combined_idea_provision")
     observed = []
+    config = SimpleNamespace(secret_handle="recorded-only")
+    secrets = SimpleNamespace(get=lambda handle: "recorded-secret")
 
-    def load_config(path):
-        observed.append(("config", path))
-        return SimpleNamespace(secret_handle="recorded-only")
+    def load_runtime_config(path):
+        observed.append(("config", path.read_text(encoding="utf-8")))
+        return config
 
-    def load_secrets(path, *, allowed_handle):
-        observed.append(("secrets", path, allowed_handle))
-        return SimpleNamespace(get=lambda handle: "recorded-secret")
+    def load_secrets(path, loaded_config):
+        observed.append(("secrets", path, loaded_config))
+        return secrets
 
     async def recorded_live_provider(engine, **kwargs):
         service, attribution = await provision_recorded_seeded_runtime(engine, **kwargs)
         return service, attribution, "OPENAI"
 
-    monkeypatch.setattr(app_module, "load_live_idea_runtime_config", load_config)
-    monkeypatch.setattr(app_module, "load_live_secret_store", load_secrets)
     monkeypatch.setattr(
-        app_module,
-        "build_live_idea_runtime_provider",
-        lambda config, secrets: recorded_live_provider,
+        provision, "load_combined_idea_runtime_config", load_runtime_config
+    )
+    monkeypatch.setattr(provision, "load_combined_secret_store", load_secrets)
+    monkeypatch.setattr(
+        combined_idea,
+        "build_combined_idea_provider",
+        lambda loaded_config, loaded_secrets, settings: recorded_live_provider,
     )
     with TestClient(app) as client:
         assert (
@@ -232,8 +238,8 @@ async def test_live_mode_uses_only_explicit_startup_provider_with_recorded_test_
         assert refined.json()["state"] == "AWAITING_REVIEW"
         assert refined.json()["advice_source"] == "OPENAI"
     assert observed == [
-        ("config", data_dir / "live-idea.json"),
-        ("secrets", data_dir, "recorded-only"),
+        ("config", "{}"),
+        ("secrets", data_dir, config),
     ]
 
 

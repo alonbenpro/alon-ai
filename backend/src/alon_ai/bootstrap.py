@@ -11,14 +11,8 @@ from alon_ai.api.operator_stream import OperatorStreamFactory
 from alon_ai.config import Settings, get_settings
 from alon_ai.db.engine import DatabaseHealthChecker, create_engine
 from alon_ai.db.repositories.operator_activity import OperatorActivityRepository
-from alon_ai.integrations.live_idea import (
-    load_live_idea_runtime_config,
-    load_live_secret_store,
-)
-from alon_ai.provider_usage.live_idea import build_live_idea_runtime_provider
 from alon_ai.provider_usage.recorded_idea import provision_recorded_seeded_runtime
-from alon_ai.provider_usage.schemas.accounting import AccountingDenied
-from alon_ai.security.secrets import SecretStoreError
+from alon_ai.services.agent_run_service import AgentRunService
 from alon_ai.services.auth import (
     AuthService,
     AuthUseCases,
@@ -34,6 +28,40 @@ from alon_ai.services.research import ResearchService
 async def recorded_runtime_provisioner(*args, **kwargs):
     """Resolve the configured recorded provider when an Idea command starts."""
     return await provision_recorded_seeded_runtime(*args, **kwargs)
+
+
+def load_idea_runtime_provider(settings: Settings):
+    """Load the same governed live provider for API and Idea worker processes."""
+    if settings.provider_mode != "live":
+        return None
+    import os
+    import stat
+
+    from alon_ai.services.combined_idea import (
+        build_combined_idea_provider,
+    )
+    from alon_ai.services.combined_idea_provision import (
+        load_combined_idea_runtime_config,
+        load_combined_secret_store,
+    )
+
+    config_path = settings.r01a_live_config_path
+    if config_path is None:
+        return None
+    try:
+        info = config_path.lstat()
+        if (
+            not stat.S_ISREG(info.st_mode)
+            or info.st_uid != os.getuid()
+            or stat.S_IMODE(info.st_mode) != 0o600
+            or info.st_size > 262144
+        ):
+            raise ValueError("private configuration required")
+        config = load_combined_idea_runtime_config(config_path)
+        secrets = load_combined_secret_store(config_path.parent, config)
+        return build_combined_idea_provider(config, secrets, settings)
+    except Exception:  # noqa: BLE001 - never expose configuration or key details
+        raise RuntimeError("R01A live runtime configuration invalid") from None
 
 
 @asynccontextmanager
@@ -73,6 +101,9 @@ class ExperimentServiceFactory:
     def idea_for_operator(self, operator_id: UUID) -> IdeaService:
         return IdeaService(self._context(operator_id))
 
+    def agent_runs_for_operator(self, operator_id: UUID) -> AgentRunService:
+        return AgentRunService(self._context(operator_id))
+
     def research_for_operator(self, operator_id: UUID) -> ResearchService:
         return ResearchService(self._context(operator_id))
 
@@ -111,36 +142,7 @@ async def api_resource_scope(settings: Settings) -> AsyncIterator[APIResources]:
         await engine.dispose()
         raise RuntimeError("Operator authentication is not configured")
     try:
-        provider = None
-        if settings.provider_mode == "live":
-            config_path = settings.l07_live_config_path
-            secret_root = settings.l07_secret_root
-            key_file = settings.l07_secret_key_file
-            key_version = settings.l07_secret_key_version
-            if any(
-                value is not None
-                for value in (config_path, secret_root, key_file, key_version)
-            ):
-                if (
-                    config_path is None
-                    or secret_root is None
-                    or key_file is None
-                    or key_version != "v1"
-                    or config_path != key_file.parent / "live-idea.json"
-                    or secret_root != key_file.parent / "secrets"
-                ):
-                    raise RuntimeError("L07 live runtime configuration invalid")
-                try:
-                    config = load_live_idea_runtime_config(config_path)
-                    secrets = load_live_secret_store(
-                        key_file.parent, allowed_handle=config.secret_handle
-                    )
-                    secrets.get(config.secret_handle)
-                    provider = build_live_idea_runtime_provider(config, secrets)
-                except (AccountingDenied, SecretStoreError):
-                    raise RuntimeError(
-                        "L07 live runtime configuration invalid"
-                    ) from None
+        provider = load_idea_runtime_provider(settings)
         database_health = DatabaseHealthChecker(engine)
         operator_service = OperatorService(OperatorActivityRepository(engine))
         yield APIResources(
