@@ -313,7 +313,7 @@ class GovernanceProvisioner:
                     account=config.intended_use.account_handle,
                     capability=config.intended_use.capability,
                     fx_id=config.fx_id,
-                    data=config.model_dump(mode="json"),
+                    data=config.database_data(),
                 )
             )
             for bound in config.prices:

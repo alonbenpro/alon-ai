@@ -139,10 +139,12 @@ def port(
 
 
 @pytest.mark.parametrize(
-    "price", [Decimal(".001"), Decimal(0)], ids=["metered", "included-credit"]
+    ("price", "personal_use"),
+    [(Decimal(".001"), False), (Decimal(0), False), (Decimal(0), True)],
+    ids=["metered", "included-credit", "personal-included-credit"],
 )
 async def test_search_capture_two_receipts_replay_and_current_rights(
-    governance_engine, price
+    governance_engine, price, personal_use
 ):
     values = await setup(governance_engine, price=price)
     repo, admin, attr, binding, now, run_id, operator_id, policy = values
@@ -151,6 +153,7 @@ async def test_search_capture_two_receipts_replay_and_current_rights(
         capability=Capability.FIRECRAWL_PAGE_CAPTURE,
         price=price,
         price_components=(UsageComponent.CAPTURE_PAGE,),
+        personal_use_approved=personal_use,
     )
     capture_config = capture_config.model_copy(
         update={
@@ -161,6 +164,30 @@ async def test_search_capture_two_receipts_replay_and_current_rights(
         }
     )
     await admin.config(capture_config)
+    restored, _ = await repo.generation_config_and_prices(capture_config.id)
+    assert restored == capture_config
+    if personal_use:
+        from alon_ai.db.repositories.openai_live import _ensure_exact_config
+
+        assert (
+            restored.intended_use.personal_noncommercial_approval_ref
+            == capture_grant.supporting_evidence_ref
+        )
+        assert (
+            "personal_noncommercial_approval_ref"
+            not in capture_config.model_dump(mode="json")["intended_use"]
+        )
+        await _ensure_exact_config(governance_engine, capture_config)
+        changed = capture_config.model_copy(
+            update={
+                "intended_use": capture_config.intended_use.model_copy(
+                    update={"personal_noncommercial_approval_ref": uuid4()}
+                )
+            }
+        )
+        with pytest.raises(AccountingDenied) as denied:
+            await _ensure_exact_config(governance_engine, changed)
+        assert denied.value.reason.value == "CONFIG"
     await admin.budgets(
         attr,
         provider=capture_grant.provider,

@@ -131,6 +131,14 @@ class CapabilityConfig(StrictDTO):
         default=None, pattern=r"^[A-Za-z0-9_.:-]{1,100}$"
     )
 
+    def database_data(self):
+        """Owned persistence retains the reviewed approval; public DTOs omit it."""
+        data = self.model_dump(mode="json")
+        approval = self.intended_use.personal_noncommercial_approval_ref
+        if approval is not None:
+            data["intended_use"]["personal_noncommercial_approval_ref"] = str(approval)
+        return data
+
 
 class ControlPolicy(Version):
     capability: Capability
