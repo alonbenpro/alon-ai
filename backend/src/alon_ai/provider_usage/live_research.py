@@ -278,6 +278,7 @@ class _RequestAdapter:
             prices,
             key,
         )
+        self.failure: ProviderFailure | None = None
 
     async def invoke(
         self, config: CapabilityConfig, secret: SecretStr | None, /
@@ -299,29 +300,39 @@ class _RequestAdapter:
                 "events": lambda: events,
                 "clock": owner._repository.clock,
             }
-            if isinstance(self.request, BraveSearchRequest):
-                result = await BraveSearchAdapter(
-                    secret, **kwargs, transport=owner._brave_transport
-                ).search(self.request)
-            else:
-                extra = {} if owner._resolver is None else {"resolver": owner._resolver}
-                adapter = FirecrawlAdapter(
-                    secret,
-                    **kwargs,
-                    **extra,
-                    transport=owner._firecrawl_transport,
-                    max_pdf_bytes=owner._policy.max_pdf_bytes,
-                    max_pdf_pages=owner._policy.max_pdf_pages,
-                    max_text_chars=owner._policy.max_text_chars,
-                    pdf_cpu_seconds=owner._policy.pdf_cpu_seconds,
-                    pdf_memory_bytes=owner._policy.pdf_memory_bytes,
-                    pdf_wall_seconds=owner._policy.pdf_wall_seconds,
+            try:
+                if isinstance(self.request, BraveSearchRequest):
+                    result = await BraveSearchAdapter(
+                        secret, **kwargs, transport=owner._brave_transport
+                    ).search(self.request)
+                else:
+                    extra = (
+                        {} if owner._resolver is None else {"resolver": owner._resolver}
+                    )
+                    adapter = FirecrawlAdapter(
+                        secret,
+                        **kwargs,
+                        **extra,
+                        transport=owner._firecrawl_transport,
+                        max_pdf_bytes=owner._policy.max_pdf_bytes,
+                        max_pdf_pages=owner._policy.max_pdf_pages,
+                        max_text_chars=owner._policy.max_text_chars,
+                        pdf_cpu_seconds=owner._policy.pdf_cpu_seconds,
+                        pdf_memory_bytes=owner._policy.pdf_memory_bytes,
+                        pdf_wall_seconds=owner._policy.pdf_wall_seconds,
+                    )
+                    result = await (
+                        adapter.map(self.request)
+                        if isinstance(self.request, FirecrawlMapRequest)
+                        else adapter.capture(self.request)
+                    )
+            except ProviderFailure as error:
+                # Keep only the classified code/status in memory after the executor
+                # quarantines this dispatched attempt. Never retain the response.
+                self.failure = ProviderFailure(
+                    error.code, http_status=error.http_status
                 )
-                result = await (
-                    adapter.map(self.request)
-                    if isinstance(self.request, FirecrawlMapRequest)
-                    else adapter.capture(self.request)
-                )
+                raise
             observations = []
             for observed in result.metadata.usage:
                 if config.intended_use.capability is Capability.FIRECRAWL_MAP:
@@ -447,11 +458,21 @@ class GovernedLiveResearchPort:
         try:
             result = await self._execute_request(experiment_id, request)
         except AccountingDenied as error:
+            failure = error.__cause__
+            detail = error.reason.value
+            if isinstance(failure, ProviderFailure):
+                detail = (
+                    f"HTTP_{failure.http_status}"
+                    if failure.http_status is not None
+                    else failure.code.value
+                )
+            if error.reason is Reason.UNCERTAIN:
+                detail += " · accounting pending reconciliation"
             await asyncio.shield(
                 activity.record_activity(
                     self._run_id,
                     "RESEARCH_RESPONSE",
-                    f"{capability} blocked · {error.reason.value}",
+                    f"{capability} blocked · {detail}",
                 )
             )
             raise
@@ -573,7 +594,9 @@ class GovernedLiveResearchPort:
             await self._steps.finish(
                 key, status="OUTCOME_UNKNOWN", reason="PROVIDER_OUTCOME_UNKNOWN"
             )
-            raise AccountingDenied(Reason.UNCERTAIN) from ProviderFailure(result.error)
+            raise AccountingDenied(Reason.UNCERTAIN) from (
+                adapter.failure or ProviderFailure(result.error)
+            )
         async with self._steps.dispatch_scope():
             if config.intended_use.purpose is Purpose.OFFICIAL_SOURCE_IDENTIFICATION:
                 if result.content is None:

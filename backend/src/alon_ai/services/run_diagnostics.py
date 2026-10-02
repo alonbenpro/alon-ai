@@ -166,11 +166,19 @@ def diagnostic_for_error(stage: str, error: Exception) -> RunDiagnostic:
     elif isinstance(classified, AccountingDenied):
         code = classified.reason.value
     elif isinstance(classified, ProviderFailure):
-        code = classified.code.value
+        code = (
+            f"HTTP_{classified.http_status}"
+            if classified.http_status is not None
+            else classified.code.value
+        )
     elif isinstance(classified, ExperimentError):
         code = _experiment_code(classified)
     elif isinstance(classified, ResearchToolError):
-        code = classified.code
+        code = (
+            f"HTTP_{classified.http_status}"
+            if classified.http_status is not None
+            else classified.code
+        )
     elif isinstance(classified, httpx.HTTPStatusError):
         status = classified.response.status_code
         code = f"HTTP_{status}" if 100 <= status <= 599 else "HTTP_REQUEST_FAILED"
@@ -186,8 +194,8 @@ def diagnostic_for_error(stage: str, error: Exception) -> RunDiagnostic:
         code=code,
         message=_MESSAGES.get(
             code,
-            _MESSAGES["HTTP_REQUEST_FAILED"]
-            if code.startswith("HTTP_")
+            f"The provider returned HTTP {code[5:]}."
+            if code.startswith("HTTP_") and code[5:].isdigit()
             else _MESSAGES["UNEXPECTED_ERROR"],
         ),
         frames=[*frames, *_source_frames(chain)][:16],

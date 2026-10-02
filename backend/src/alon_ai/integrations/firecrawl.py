@@ -177,9 +177,14 @@ class FirecrawlAdapter:
                 ) as response,
             ):
                 if response.is_redirect:
-                    raise ProviderFailure(ProviderErrorCode.DENIED)
+                    raise ProviderFailure(
+                        ProviderErrorCode.DENIED, http_status=response.status_code
+                    )
                 if response.status_code != 200:
-                    raise ProviderFailure(ProviderErrorCode.UNAVAILABLE)
+                    raise ProviderFailure(
+                        ProviderErrorCode.UNAVAILABLE,
+                        http_status=response.status_code,
+                    )
                 raw = bytearray()
                 async for chunk in response.aiter_bytes():
                     raw.extend(chunk)

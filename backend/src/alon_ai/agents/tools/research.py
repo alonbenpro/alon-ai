@@ -30,8 +30,15 @@ from alon_ai.services.schemas.records import SourceReference
 class ResearchToolError(Exception):
     """Safe error marker with no provider response or request text."""
 
-    def __init__(self, code: str = "RESEARCH_TOOL_UNAVAILABLE") -> None:
+    def __init__(
+        self, code: str = "RESEARCH_TOOL_UNAVAILABLE", *, http_status: int | None = None
+    ) -> None:
         self.code = code if code in _SAFE_CODES else "RESEARCH_TOOL_UNAVAILABLE"
+        self.http_status = (
+            http_status
+            if type(http_status) is int and 100 <= http_status <= 599
+            else None
+        )
         super().__init__(self.code)
 
 
@@ -46,16 +53,18 @@ _SAFE_CODES = frozenset(
 
 def _research_tool_error(error: Exception) -> ResearchToolError:
     if isinstance(error, AccountingDenied):
-        provider_code = _provider_cause_code(error)
-        if error.reason is Reason.UNCERTAIN and provider_code is not None:
-            return ResearchToolError(provider_code)
+        provider = _provider_cause(error)
+        if error.reason is Reason.UNCERTAIN and provider is not None:
+            return ResearchToolError(
+                provider.code.value, http_status=provider.http_status
+            )
         return ResearchToolError(error.reason.value)
     if isinstance(error, ProviderFailure):
-        return ResearchToolError(error.code.value)
+        return ResearchToolError(error.code.value, http_status=error.http_status)
     return ResearchToolError()
 
 
-def _provider_cause_code(error: Exception) -> str | None:
+def _provider_cause(error: Exception) -> ProviderFailure | None:
     """Read only a classified nested provider code, never an exception message."""
 
     initial = error.__cause__ or error.__context__
@@ -64,7 +73,7 @@ def _provider_cause_code(error: Exception) -> str | None:
     while current is not None and id(current) not in seen and len(seen) < 4:
         seen.add(id(current))
         if isinstance(current, ProviderFailure):
-            return current.code.value
+            return current
         next_error = current.__cause__ or current.__context__
         current = next_error if isinstance(next_error, Exception) else None
     return None

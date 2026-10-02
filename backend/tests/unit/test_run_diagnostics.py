@@ -82,6 +82,22 @@ def test_diagnostic_classifies_known_provider_and_experiment_codes():
     assert experiment.frames == ["ExperimentError:IDEA_INPUT_STALE"]
 
 
+def test_diagnostic_classifies_typed_http_status_without_body():
+    try:
+        try:
+            raise ProviderFailure(ProviderErrorCode.UNAVAILABLE, http_status=502)
+        except ProviderFailure as provider:
+            raise ResearchToolError(
+                provider.code.value, http_status=provider.http_status
+            ) from None
+    except ResearchToolError as error:
+        diagnostic = diagnostic_for_error("AGENT_EXECUTION", error)
+
+    assert diagnostic.code == "HTTP_502"
+    assert diagnostic.message == "The provider returned HTTP 502."
+    assert "SECRET" not in diagnostic.model_dump_json()
+
+
 async def test_diagnostic_includes_sanitized_project_traceback_location():
     class DeniedPort:
         async def search(self, experiment_id, request):

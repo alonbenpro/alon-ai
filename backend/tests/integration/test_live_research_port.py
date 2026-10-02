@@ -18,6 +18,7 @@ from alon_ai.db.repositories.accounting import (
     GovernanceProvisioner,
     GovernanceRepository,
 )
+from alon_ai.db.repositories.agent_runs import AgentRunRepository
 from alon_ai.db.tables import accounting as gov
 from alon_ai.db.tables.agent_run_steps import steps
 from alon_ai.db.tables.agent_runs import runs
@@ -37,6 +38,7 @@ from alon_ai.integrations.schemas.provider import (
 from alon_ai.policies.provider_rights import GrantEvent, GrantEventKind
 from alon_ai.provider_usage.live_research import GovernedLiveResearchPort
 from alon_ai.provider_usage.schemas.accounting import AccountingDenied
+from alon_ai.services.run_diagnostics import diagnostic_for_error
 
 pytestmark = pytest.mark.integration
 
@@ -371,14 +373,49 @@ async def test_denial_and_unknown_outcome_stop_network_replay(governance_engine)
     with pytest.raises(AccountingDenied, match="UNCERTAIN") as error:
         await service.search(values[2].experiment_id, search())
     assert isinstance(error.value.__cause__, ProviderFailure)
-    # The executor classifies thrown adapter errors as unavailable while the
-    # paid outcome remains unknown; the diagnostic must preserve that code.
-    assert error.value.__cause__.code is ProviderErrorCode.UNAVAILABLE
+    # The adapter's safe timeout classification survives unknown accounting.
+    assert error.value.__cause__.code is ProviderErrorCode.TIMEOUT
     with pytest.raises(AccountingDenied, match="UNCERTAIN"):
         await port(values, httpx.MockTransport(fail)).search(
             values[2].experiment_id, search()
         )
     assert len(requests) == 1
+    async with governance_engine.connect() as connection:
+        call = (await connection.execute(select(gov.calls))).mappings().one()
+        assert call["state"] == "RECONCILING" and call["reserved"] > 0
+        assert (
+            await connection.execute(select(steps.c.status))
+        ).scalar_one() == "OUTCOME_UNKNOWN"
+
+
+async def test_http_502_is_visible_but_unknown_call_cannot_replay(governance_engine):
+    values = await setup(governance_engine)
+    requests = []
+
+    def fail(request):
+        requests.append(request)
+        return httpx.Response(502, text="SECRET provider response")
+
+    service = port(values, httpx.MockTransport(fail))
+    with pytest.raises(AccountingDenied, match="UNCERTAIN") as raised:
+        await service.search(values[2].experiment_id, search())
+    assert isinstance(raised.value.__cause__, ProviderFailure)
+    assert raised.value.__cause__.http_status == 502
+    diagnostic = diagnostic_for_error("AGENT_EXECUTION", raised.value)
+    assert diagnostic.code == "HTTP_502"
+    assert diagnostic.message == "The provider returned HTTP 502."
+    with pytest.raises(AccountingDenied, match="UNCERTAIN"):
+        await port(values, httpx.MockTransport(fail)).search(
+            values[2].experiment_id, search()
+        )
+    assert len(requests) == 1
+    run = await AgentRunRepository(governance_engine).get(values[5])
+    assert run is not None
+    details = [event.get("detail") or "" for event in run["events"]]
+    assert any(
+        "HTTP_502 · accounting pending reconciliation" in detail for detail in details
+    )
+    assert "SECRET" not in str(details) + diagnostic.model_dump_json()
     async with governance_engine.connect() as connection:
         call = (await connection.execute(select(gov.calls))).mappings().one()
         assert call["state"] == "RECONCILING" and call["reserved"] > 0

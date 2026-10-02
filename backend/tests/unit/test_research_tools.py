@@ -98,6 +98,19 @@ def authority(capability: Capability, fields: frozenset[ContentField]):
     return grant, use
 
 
+def test_provider_failure_accepts_only_classified_http_status():
+    for status in (100, 502, 599):
+        assert (
+            ProviderFailure(
+                ProviderErrorCode.UNAVAILABLE, http_status=status
+            ).http_status
+            == status
+        )
+    for status in (0, 600, True, "502"):
+        with pytest.raises(ValueError):
+            ProviderFailure(ProviderErrorCode.UNAVAILABLE, http_status=status)
+
+
 def firecrawl(capability, body, *, resolver=lambda _: ("93.184.215.14",), **policy):
     fields = (
         frozenset({ContentField.URL})
@@ -207,6 +220,7 @@ async def test_brave_denied_rights_and_redirects_before_exposing_content():
             )
         )
     assert error.value.code is ProviderErrorCode.DENIED
+    assert error.value.http_status == 302
     assert len(seen) == 1
     adapter._clock = lambda: NOW + timedelta(hours=2)
     with pytest.raises(ProviderFailure) as expired:
@@ -218,6 +232,31 @@ async def test_brave_denied_rights_and_redirects_before_exposing_content():
         )
     assert expired.value.code is ProviderErrorCode.DENIED
     assert len(seen) == 1
+
+
+@pytest.mark.asyncio
+async def test_brave_http_failure_exposes_status_without_response_body():
+    grant, use = authority(Capability.BRAVE_WEB_COVERAGE, frozenset({ContentField.URL}))
+    adapter = BraveSearchAdapter(
+        SecretStr("never-log-this"),
+        grant=grant,
+        intended_use=use,
+        events=lambda: (),
+        clock=lambda: NOW,
+        transport=httpx.MockTransport(
+            lambda _: httpx.Response(502, text="SECRET provider response")
+        ),
+    )
+    with pytest.raises(ProviderFailure) as raised:
+        await adapter.search(
+            BraveSearchRequest(
+                capability=Capability.BRAVE_WEB_COVERAGE,
+                query=SecretStr("test"),
+            )
+        )
+    assert raised.value.code is ProviderErrorCode.UNAVAILABLE
+    assert raised.value.http_status == 502
+    assert "SECRET" not in repr(raised.value)
 
 
 @pytest.mark.asyncio
@@ -235,6 +274,7 @@ async def test_firecrawl_map_denies_private_dns_and_redirect():
     with pytest.raises(ProviderFailure) as error:
         await adapter.map(FirecrawlMapRequest(url="https://example.com"))
     assert error.value.code is ProviderErrorCode.DENIED
+    assert error.value.http_status == 302
     assert len(seen) == 1
     adapter, _, _ = firecrawl(
         Capability.FIRECRAWL_MAP,
@@ -243,6 +283,24 @@ async def test_firecrawl_map_denies_private_dns_and_redirect():
     with pytest.raises(ProviderFailure) as error:
         await adapter.map(FirecrawlMapRequest(url="https://example.com"))
     assert error.value.code is ProviderErrorCode.DENIED
+
+
+@pytest.mark.asyncio
+async def test_firecrawl_http_failure_exposes_status_without_response_body():
+    adapter, _, _ = firecrawl(Capability.FIRECRAWL_PAGE_CAPTURE, {})
+    adapter._transport = httpx.MockTransport(
+        lambda _: httpx.Response(502, text="SECRET provider response")
+    )
+    with pytest.raises(ProviderFailure) as raised:
+        await adapter.capture(
+            FirecrawlCaptureRequest(
+                capability=Capability.FIRECRAWL_PAGE_CAPTURE,
+                url="https://example.com/",
+            )
+        )
+    assert raised.value.code is ProviderErrorCode.UNAVAILABLE
+    assert raised.value.http_status == 502
+    assert "SECRET" not in repr(raised.value)
 
 
 @pytest.mark.asyncio
@@ -492,6 +550,21 @@ async def test_research_tools_preserve_safe_provider_cause_of_uncertain_outcome(
         await ResearchTools(uuid4(), Port()).search_web("clinic workflows")
 
     assert raised.value.code == "UNAVAILABLE"
+
+
+@pytest.mark.asyncio
+async def test_research_tools_preserve_typed_http_status_without_provider_body():
+    class Port:
+        async def capture(self, experiment_id, request):
+            raise AccountingDenied(Reason.UNCERTAIN) from ProviderFailure(
+                ProviderErrorCode.UNAVAILABLE, http_status=502
+            )
+
+    with pytest.raises(ResearchToolError) as raised:
+        await ResearchTools(uuid4(), Port()).capture_page("https://example.com/")
+    assert raised.value.code == "UNAVAILABLE"
+    assert raised.value.http_status == 502
+    assert "SECRET" not in repr(raised.value)
 
 
 @pytest.mark.asyncio

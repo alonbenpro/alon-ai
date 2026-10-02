@@ -303,10 +303,15 @@ class ProviderErrorCode(StrEnum):
 class ProviderFailure(Exception):
     """Only classified codes, never upstream bodies or arbitrary exception text."""
 
-    def __init__(self, code: ProviderErrorCode):
+    def __init__(self, code: ProviderErrorCode, *, http_status: int | None = None):
         if not isinstance(code, ProviderErrorCode):
             raise TypeError("provider error code required")
+        if http_status is not None and (
+            type(http_status) is not int or not 100 <= http_status <= 599
+        ):
+            raise ValueError("valid HTTP status required")
         self.code = code
+        self.http_status = http_status
         super().__init__(code.value)
 
 
