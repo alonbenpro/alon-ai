@@ -5,6 +5,8 @@ import { ExperimentCreation } from "@/components/experiments/experiment-creation
 import { RunInspector } from "@/components/agent-lab/run-inspector";
 import type { components } from "@/lib/api/schema";
 
+vi.mock("next/navigation", () => ({ useRouter: () => ({ replace: vi.fn() }) }));
+
 const runtime = { provider_mode: "live", ready: true } as const;
 const idea = "Help clinics reduce missed appointments.\nStart with independent practices in Israel.";
 const advice = {

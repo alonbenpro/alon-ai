@@ -1,8 +1,13 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { useState } from "react";
+import Link from "next/link";
 
 import { ExperimentCreation } from "@/components/experiments/experiment-creation";
 import type { components } from "@/lib/api/schema";
+
+const router = vi.hoisted(() => ({ replace: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => router }));
 
 const runtime = { provider_mode: "fake", ready: true } as const;
 const advice = {
@@ -55,9 +60,48 @@ function stubSavedSnapshot(snapshot: unknown) {
     throw new Error(`Unexpected request: ${String(input)}`);
   });
 }
-afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); sessionStorage.clear(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); router.replace.mockReset(); sessionStorage.clear(); });
 
 describe("experiment creation checkpoint", () => {
+  it("opens a fresh creation form when navigating back after a successful start", async () => {
+    vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
+    const blocked = { ...saved, state: "REFINEMENT_BLOCKED", stage: "IDEA_REFINEMENT",
+      stage_status: "BLOCKED", blocked_reason: "RESEARCH_INCOMPLETE" };
+    const requests: { path: string; method: string }[] = [];
+    stubExperimentFetch(async (input, init) => {
+      const path = String(input);
+      const method = init?.method ?? "GET";
+      requests.push({ path, method });
+      if ((path === "/api/operator/experiments" && method === "POST") ||
+        (path === "/api/operator/experiments/exp-1" && method === "GET")) return Response.json(blocked);
+      throw new Error(`Unexpected request: ${method} ${path}`);
+    });
+    function ExperimentRoutes() {
+      const [route, setRoute] = useState("/experiments/new");
+      router.replace.mockImplementation(setRoute);
+      // A URL-only history update does not replace the App Router's page tree.
+      return <><Link href="/experiments/new" onClick={(event) => {
+        event.preventDefault(); setRoute("/experiments/new");
+      }}>New experiment</Link><ExperimentCreation key={route}
+        experimentId={route === "/experiments/new" ? undefined : "exp-1"} runtime={runtime} /></>;
+    }
+    render(<ExperimentRoutes />);
+    await act(async () => {});
+    fireEvent.change(screen.getByRole("textbox", { name: "Your idea" }), { target: { value: "Clinic idea" } });
+    fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
+    expect(await screen.findByText("Blocked")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("link", { name: "New experiment" }));
+
+    expect(await screen.findByRole("heading", { name: "New experiment" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Your idea" })).toHaveValue("");
+    expect(screen.queryByText("Blocked")).not.toBeInTheDocument();
+    expect(sessionStorage.getItem("experiment-create-pending")).toBeNull();
+    expect(requests.filter(({ method }) => method === "POST")).toEqual([
+      { path: "/api/operator/experiments", method: "POST" },
+    ]);
+  });
+
   it("restores an unsent idea after profile setup without starting a run", async () => {
     sessionStorage.setItem("experiment-profile-setup-draft", JSON.stringify({ ideaSeed: "  Exact idea\nwith details  ", generationGuidance: "Israel" }));
     const fetcher = vi.fn();

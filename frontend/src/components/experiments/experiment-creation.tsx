@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 import type { components } from "@/lib/api/schema";
 import { RunInspector } from "@/components/agent-lab/run-inspector";
@@ -164,6 +165,7 @@ function returnReviewMessage(reason: ReturnReview["reason_code"]) {
 }
 
 export function ExperimentCreation({ experimentId, runtime }: { experimentId?: string; runtime: RuntimeReadiness | null }) {
+  const router = useRouter();
   const [ideaSeed, setIdeaSeed] = useState("");
   const [generationGuidance, setGenerationGuidance] = useState("");
   const [researchCase, setResearchCase] = useState<ResearchCase | null>(null);
@@ -343,7 +345,7 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       if (typeof result.experiment_id !== "string" || !result.state) throw new Error("CREATE_UNCONFIRMED");
       sessionStorage.removeItem(draftKey); createPayload.current = null; pendingIdeaCommand.current = null; setCreateUncertain(false);
       apply(result);
-      window.history.replaceState(null, "", `/experiments/${encodeURIComponent(result.experiment_id)}`);
+      router.replace(`/experiments/${encodeURIComponent(result.experiment_id)}`);
     } catch (error) {
       setBusy("");
       if (error instanceof Error && /^(FIELD:|OPERATOR_PROFILE_REQUIRED|INTAKE_BUDGET_REQUIRED|LIVE_CONFIG_REQUIRED|IDEA_REQUIRED)/.test(error.message)) {
