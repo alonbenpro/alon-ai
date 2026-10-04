@@ -44,7 +44,22 @@ _MESSAGES = {
     "SCOPE": "This request exceeded the approved provider scope.",
     "RIGHTS": "The provider permission for this request was not active.",
     "PRICE": "The approved price configuration could not be used.",
-    "QUOTA": "The provider quota denied this request.",
+    "QUOTA": (
+        "The app's local request allowance is exhausted. This request was blocked "
+        "before contacting the provider. Renew the approved allowance before retrying."
+    ),
+    "MODEL_ALLOWANCE_EXHAUSTED": (
+        "The local OpenAI allowance cannot cover research and synthesis. "
+        "Renew the approved allowance before starting another run."
+    ),
+    "MODEL_REQUEST_LIMIT_TOO_LOW": (
+        "The approved per-run model request limit cannot cover research and synthesis. "
+        "Configure at least two model requests before starting another run."
+    ),
+    "CAPTURE_ALLOWANCE_EXHAUSTED": (
+        "The local Firecrawl capture allowance is exhausted. "
+        "Renew the approved allowance before starting another run."
+    ),
     "CONCURRENCY": "The provider concurrency limit denied this request.",
     "CIRCUIT": "The provider is temporarily unavailable.",
     "DEADLINE": "The approved request deadline was reached.",

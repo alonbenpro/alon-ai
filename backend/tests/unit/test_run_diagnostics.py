@@ -12,6 +12,38 @@ from alon_ai.provider_usage.schemas.accounting import AccountingDenied, Reason
 from alon_ai.services.run_diagnostics import diagnostic_for_error
 
 
+def test_model_request_limit_diagnostic_requires_configuration_change():
+    diagnostic = diagnostic_for_error(
+        "PROVIDER_PROVISIONING", ExperimentError(409, "MODEL_REQUEST_LIMIT_TOO_LOW")
+    )
+
+    assert "per-run" in diagnostic.message
+    assert "at least two" in diagnostic.message
+    assert "renew" not in diagnostic.message.lower()
+
+
+@pytest.mark.parametrize(
+    "error,provider",
+    [
+        (AccountingDenied(Reason.QUOTA), None),
+        (ResearchToolError("QUOTA"), None),
+        (ExperimentError(409, "MODEL_ALLOWANCE_EXHAUSTED"), "OpenAI"),
+        (ExperimentError(409, "CAPTURE_ALLOWANCE_EXHAUSTED"), "Firecrawl"),
+    ],
+)
+def test_local_allowance_diagnostic_identifies_local_block_and_recovery(
+    error, provider
+):
+    diagnostic = diagnostic_for_error("PROVISIONING", error)
+
+    assert "local" in diagnostic.message.lower()
+    assert "allowance" in diagnostic.message.lower()
+    assert "renew" in diagnostic.message.lower()
+    assert "before" in diagnostic.message.lower()
+    if provider:
+        assert provider in diagnostic.message
+
+
 @pytest.mark.parametrize(
     "code,message",
     [

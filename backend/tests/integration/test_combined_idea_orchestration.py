@@ -33,6 +33,248 @@ from alon_ai.services.schemas.intake import GenerateIdeaRequest
 pytestmark = pytest.mark.integration
 
 
+@pytest.mark.parametrize(
+    "model_remaining,search_remaining,capture_remaining,model_request_limit,pdf_remaining,expected_code",
+    [
+        (0, 1, 1, 2, None, "MODEL_ALLOWANCE_EXHAUSTED"),
+        (1, 1, 1, 2, None, "MODEL_ALLOWANCE_EXHAUSTED"),
+        (2, 1, 1, 1, None, "MODEL_REQUEST_LIMIT_TOO_LOW"),
+        (2, 0, 1, 2, None, None),
+        (2, 1, 0, 2, None, "CAPTURE_ALLOWANCE_EXHAUSTED"),
+        (2, 1, 1, 2, None, None),
+        (2, 1, 1, 2, 0, None),
+        (2, 0, 1, 2, 0, None),
+        (2, 1, 0, 2, 0, "CAPTURE_ALLOWANCE_EXHAUSTED"),
+    ],
+)
+async def test_startup_allowance_blocks_before_any_provider_dispatch(
+    governance_engine,
+    monkeypatch,
+    model_remaining,
+    search_remaining,
+    capture_remaining,
+    model_request_limit,
+    pdf_remaining,
+    expected_code,
+):
+    from datetime import timedelta
+
+    import httpx
+    import test_governance
+    from pydantic_ai.messages import ToolCallPart
+    from sqlalchemy import select, update
+
+    from alon_ai.db.tables import accounting as gov
+    from alon_ai.integrations.live_research import (
+        ResearchCapabilityBinding,
+        ResearchRunPolicy,
+    )
+    from alon_ai.integrations.schemas.provider import Capability, UsageComponent
+    from alon_ai.provider_usage.live_research import GovernedLiveResearchPort
+    from alon_ai.provider_usage.schemas.accounting import ControlPolicy
+    from alon_ai.services import combined_idea
+
+    _, owner, _ = await owner_and_profile(governance_engine)
+    now = datetime.now(UTC)
+    monkeypatch.setattr(test_governance, "datetime", lambda *args, **kwargs: now)
+    _, _, _, search_config, search_grant, _ = await test_governance.seed(
+        governance_engine, transient=True
+    )
+    _, _, _, capture_config, capture_grant, _ = await test_governance.seed(
+        governance_engine,
+        capability=Capability.FIRECRAWL_PAGE_CAPTURE,
+        price_components=(UsageComponent.CAPTURE_PAGE,),
+    )
+    research_templates = [
+        (search_config, search_grant),
+        (capture_config, capture_grant),
+    ]
+    if pdf_remaining is not None:
+        _, _, _, pdf_config, pdf_grant, _ = await test_governance.seed(
+            governance_engine,
+            capability=Capability.FIRECRAWL_PDF_CAPTURE,
+            price_components=(UsageComponent.REQUEST,),
+        )
+        research_templates.append((pdf_config, pdf_grant))
+    manifest = reviewed_manifest(owner.id, now)
+    manifest = manifest.model_copy(
+        update={
+            "prices": (
+                manifest.prices[0].model_copy(update={"max_quantity": Decimal(100000)}),
+                manifest.prices[1],
+            )
+        }
+    )
+    bundle = make_authority_bundle(manifest)
+    await register_authority(governance_engine, bundle)
+    config = combined_idea.CombinedIdeaConfig(
+        version=1,
+        model=bundle.config,
+        limits=explicit_limits(model_request_limit=model_request_limit),
+        research_policy=ResearchRunPolicy(
+            approved_by=owner.id,
+            effective_at=now - timedelta(seconds=1),
+            expires_at=now + timedelta(hours=1),
+            max_calls=2,
+            max_pages=1,
+            timeout_seconds=90,
+            max_spend_usd=Decimal("0.25"),
+            max_results=2,
+            max_pdf_bytes=100000,
+            max_pdf_pages=1,
+            max_text_chars=10000,
+            pdf_cpu_seconds=2,
+            pdf_memory_bytes=256000000,
+            pdf_wall_seconds=5,
+        ),
+        research_bindings=tuple(
+            ResearchCapabilityBinding(
+                config=cfg.model_copy(update={"secret_handle": "synthetic-research"}),
+                grant=grant,
+            )
+            for cfg, grant in research_templates
+        ),
+    )
+    remaining = {
+        Capability.OPENAI_GENERATE: model_remaining,
+        Capability.BRAVE_WEB_COVERAGE: search_remaining,
+        Capability.FIRECRAWL_PAGE_CAPTURE: capture_remaining,
+    }
+    if pdf_remaining is not None:
+        remaining[Capability.FIRECRAWL_PDF_CAPTURE] = pdf_remaining
+    async with governance_engine.begin() as connection:
+        authorities = (
+            (await connection.execute(select(gov.authorities))).mappings().all()
+        )
+        for authority in authorities:
+            policy = ControlPolicy.model_validate_json(
+                json.dumps(
+                    await connection.scalar(
+                        select(gov.policies.c.data).where(
+                            gov.policies.c.id == authority["policy_id"]
+                        )
+                    )
+                )
+            )
+            window = policy.effective_at + (
+                (now - policy.effective_at) // timedelta(seconds=policy.window_seconds)
+            ) * timedelta(seconds=policy.window_seconds)
+            await connection.execute(
+                update(gov.authorities)
+                .where(
+                    gov.authorities.c.account == authority["account"],
+                    gov.authorities.c.capability == authority["capability"],
+                )
+                .values(
+                    quota_used=policy.quota_limit - remaining[policy.capability],
+                    window_start=window,
+                )
+            )
+
+    model_calls, network, captured = [], [], []
+
+    async def respond(messages, info):
+        model_calls.append(messages)
+        if len(model_calls) == 1:
+            parts = [
+                ToolCallPart(
+                    "capture_page",
+                    {"url": "https://example.com/"},
+                    tool_call_id="capture",
+                )
+            ]
+        else:
+            prompt = next(
+                part.content
+                for message in messages
+                for part in message.parts
+                if isinstance(part, UserPromptPart)
+            )
+            assert isinstance(prompt, str)
+            output = assessment(json.loads(prompt)["idea_version_ref"])
+            output["source_refs"] = [str(captured[0].retained_id)]
+            parts = [TextPart(json.dumps(output))]
+        return ModelResponse(
+            parts, usage=RequestUsage(input_tokens=20, output_tokens=5)
+        )
+
+    def transport(request):
+        network.append(request.url.host)
+        return httpx.Response(
+            200,
+            json={"success": True, "data": {"markdown": "Public clinic workflow."}},
+        )
+
+    class ControlledPort(GovernedLiveResearchPort):
+        def __init__(self, *args, **kwargs):
+            super().__init__(
+                *args,
+                **kwargs,
+                firecrawl_transport=httpx.MockTransport(transport),
+                resolver=lambda _: ("8.8.8.8",),
+            )
+
+        async def capture(self, experiment_id, request):
+            result = await super().capture(experiment_id, request)
+            captured.extend(result)
+            return result
+
+    monkeypatch.setattr(combined_idea, "GovernedLiveResearchPort", ControlledPort)
+    monkeypatch.setattr(
+        combined_idea,
+        "build_live_combined_model_provider",
+        lambda config, secrets, **kwargs: build_live_combined_model_provider(
+            config, secrets, **kwargs, model_factory=lambda _: FunctionModel(respond)
+        ),
+    )
+
+    class ScopedSyntheticSecrets(TestSecrets):
+        def for_consumer(self, consumer):
+            return self
+
+        def research_store(self):
+            return self
+
+    settings = Settings(
+        _env_file=None, provider_mode="live", idea_intake_budget_usd=Decimal("0.50")
+    )
+    provider = combined_idea.build_combined_idea_provider(
+        config, ScopedSyntheticSecrets(), settings
+    )
+    context = ExperimentContext(
+        governance_engine, settings, owner.id, idea_runtime_provider=provider
+    )
+    key = uuid4()
+    snapshot = await IntakeService(context).create(
+        CreateExperimentRequest(command_key=key, idea_seed="Appointment reminders")
+    )
+    run = await AgentRunRepository(governance_engine).by_command(key)
+    async with governance_engine.connect() as connection:
+        before = (await connection.execute(select(gov.authorities))).mappings().all()
+    await AgentRunService(context).execute(run["run_id"])
+    view = await AgentRunService(context).get(run["run_id"])
+    if expected_code is not None:
+        assert view.blocked_reason == expected_code
+        assert not model_calls and not network
+        assert not view.steps
+        assert view.diagnostic is not None
+        assert view.diagnostic.code == expected_code
+        async with governance_engine.connect() as connection:
+            assert not (
+                await connection.execute(
+                    select(gov.calls).where(
+                        gov.calls.c.experiment_id == snapshot["experiment_id"]
+                    )
+                )
+            ).all()
+            after = (await connection.execute(select(gov.authorities))).mappings().all()
+        assert after == before
+    else:
+        assert view.status == "SUCCEEDED", view.blocked_reason
+        assert len(model_calls) == 2
+        assert network == ["api.firecrawl.dev"]
+
+
 class NoResearchPort:
     async def resolve_references(self, refs):
         assert not refs

@@ -785,6 +785,33 @@ def build_combined_idea_provider(config, secrets, settings):
     async def provision(engine, **arguments):
         store = AgentRunRepository(engine)
         row = await store.owned(arguments["run_id"], arguments["operator_id"])
+        scopes = (
+            (config.model.intended_use.account_handle, Capability.OPENAI_GENERATE),
+            *(
+                (
+                    binding.config.intended_use.account_handle,
+                    binding.config.intended_use.capability,
+                )
+                for binding in config.research_bindings
+            ),
+        )
+        quotas = await GovernanceRepository(engine).quota_snapshot(scopes)
+        # Starting fresh research requires a model request to choose tools and
+        # another to synthesize their results. This snapshot is advisory;
+        # every actual dispatch still rechecks admission atomically.
+        if config.limits.model_request_limit < 2:
+            raise ExperimentError(409, "MODEL_REQUEST_LIMIT_TOO_LOW")
+        if quotas[0]["remaining_calls"] < 2:
+            raise ExperimentError(409, "MODEL_ALLOWANCE_EXHAUSTED")
+        # A known public URL can be captured directly. Exhausted search or an
+        # optional capture route must not block an available capture tool.
+        if not any(
+            capability
+            in {Capability.FIRECRAWL_PAGE_CAPTURE, Capability.FIRECRAWL_PDF_CAPTURE}
+            and quota["remaining_calls"] >= 1
+            for (_, capability), quota in zip(scopes[1:], quotas[1:], strict=True)
+        ):
+            raise ExperimentError(409, "CAPTURE_ALLOWANCE_EXHAUSTED")
         port = None
 
         @asynccontextmanager
