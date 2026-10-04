@@ -204,15 +204,21 @@ def setup_model():
         dispatch_guard=guard,
         run_key=None,
         production=False,
+        model_identifier="gpt-4.1-mini",
+        step_checkpoint=None,
         reasoning_effort: Literal[
             "none", "minimal", "low", "medium", "high", "xhigh", "max"
         ] = "low",
     ):
+        ledger.config = config.model_copy(update={"model_identifier": model_identifier})
         return GovernedPydanticModel(
             repository=cast(GovernanceRepository, ledger),
             attribution=attribution,
-            config=config,
-            prices=prices,
+            config=config.model_copy(update={"model_identifier": model_identifier}),
+            prices=tuple(
+                p.model_copy(update={"model_identifier": model_identifier})
+                for p in prices
+            ),
             secrets=Secrets(),
             run_key=run_key or uuid4(),
             max_output_tokens=1000,
@@ -221,6 +227,7 @@ def setup_model():
             else lambda secret: FunctionModel(function),
             reasoning_effort=reasoning_effort,
             dispatch_guard=dispatch_guard,
+            step_checkpoint=step_checkpoint,
         )
 
     return build, ledger, responses
@@ -617,3 +624,214 @@ async def test_default_factory_uses_shared_integration_builder_after_dispatch_an
     assert constructed[0].settings["openai_store"] is False
     assert constructed[0].settings["openai_background"] is False
     assert model.receipts[0].state is CallState.RECONCILING
+
+
+async def test_gpt6_luna_replays_encrypted_reasoning_across_native_tool_turns(
+    setup_model,
+):
+    import json
+
+    import httpx2
+    from pydantic_ai import Agent
+
+    from alon_ai.integrations.pydantic_openai import openai_model_factory
+
+    build, ledger, _ = setup_model
+    payloads = []
+
+    async def handler(request):
+        payloads.append(json.loads(request.content))
+        output = (
+            [
+                {
+                    "type": "reasoning",
+                    "id": "rs_1",
+                    "summary": [],
+                    "encrypted_content": "opaque-test-reasoning",
+                },
+                {
+                    "type": "message",
+                    "id": "msg_1",
+                    "role": "assistant",
+                    "phase": "commentary",
+                    "status": "completed",
+                    "content": [
+                        {
+                            "type": "output_text",
+                            "text": "Checking evidence",
+                            "annotations": [],
+                        }
+                    ],
+                },
+                {
+                    "type": "function_call",
+                    "id": "fc_1",
+                    "call_id": "call_1",
+                    "name": "lookup",
+                    "arguments": "{}",
+                    "status": "completed",
+                },
+            ]
+            if len(payloads) == 1
+            else [
+                {
+                    "type": "message",
+                    "id": "msg_2",
+                    "role": "assistant",
+                    "status": "completed",
+                    "content": [
+                        {"type": "output_text", "text": "grounded", "annotations": []}
+                    ],
+                }
+            ]
+        )
+        return httpx2.Response(
+            200,
+            json={
+                "id": f"resp_{len(payloads)}",
+                "created_at": 1720000000,
+                "object": "response",
+                "model": "gpt-6-luna",
+                "status": "completed",
+                "output": output,
+                "usage": {
+                    "input_tokens": 20,
+                    "output_tokens": 5,
+                    "total_tokens": 25,
+                    "input_tokens_details": {"cached_tokens": 0},
+                    "output_tokens_details": {"reasoning_tokens": 2},
+                },
+            },
+        )
+
+    model = build(model_identifier="gpt-6-luna", reasoning_effort="max")
+    model._model_factory = openai_model_factory(
+        "gpt-6-luna", http_transport=httpx2.MockTransport(handler)
+    )
+    agent = Agent(model, retries=0)
+
+    @agent.tool_plain
+    def lookup() -> str:
+        return "controlled evidence"
+
+    assert (await agent.run("use lookup")).output == "grounded"
+    assert len(payloads) == len(model.receipts) == 2
+    assert len(ledger.observations) == 6
+    reasoning = [
+        item for item in payloads[1]["input"] if item.get("type") == "reasoning"
+    ]
+    assert len(reasoning) == 1
+    assert reasoning[0]["encrypted_content"] == "opaque-test-reasoning"
+    commentary = next(
+        item for item in payloads[1]["input"] if item.get("id") == "msg_1"
+    )
+    assert commentary.get("phase") == "commentary"
+    assert any(
+        item.get("type") == "function_call_output" for item in payloads[1]["input"]
+    )
+    assert all(
+        p["reasoning"] == {"effort": "max", "context": "all_turns"} for p in payloads
+    )
+    assert all(p["store"] is False for p in payloads)
+    assert model.profile.get("openai_supports_encrypted_reasoning_content") is True
+
+
+@pytest.mark.parametrize("finish_reason", ["length", "stop"])
+async def test_response_activity_reports_safe_counts_even_when_truncated(
+    setup_model, monkeypatch, finish_reason
+):
+    from pydantic_ai.messages import ThinkingPart
+
+    from alon_ai.db.repositories.agent_run_steps import AgentRunStepRepository
+    from alon_ai.provider_usage import pydantic_model
+
+    build, ledger, _ = setup_model
+    activity = []
+
+    class Activity:
+        def __init__(self, engine):
+            pass
+
+        async def record_activity(self, run_id, kind, detail):
+            activity.append((kind, detail))
+
+    class Steps:
+        async def claim_once(self, **kwargs):
+            return None, True
+
+        async def bind(self, *args, **kwargs):
+            pass
+
+        async def finish(self, *args, **kwargs):
+            pass
+
+    ledger.engine = object()
+    monkeypatch.setattr(pydantic_model, "AgentRunRepository", Activity)
+
+    async def respond(messages, info):
+        return ModelResponse(
+            [
+                TextPart("private text"),
+                ThinkingPart("private reasoning", signature="secret"),
+            ],
+            finish_reason=finish_reason,
+            provider_details={"finish_reason": "max_output_tokens", "unsafe": "secret"},
+            usage=RequestUsage(
+                input_tokens=20,
+                output_tokens=1000,
+                cache_read_tokens=0,
+                details={"reasoning_tokens": 990},
+            ),
+        )
+
+    model = build(
+        function=respond,
+        step_checkpoint=pydantic_model.ModelStepCheckpoint(
+            cast(AgentRunStepRepository, Steps()), uuid4()
+        ),
+    )
+    if finish_reason == "length":
+        with pytest.raises(ProviderFailure, match="INCOMPLETE_RESULT"):
+            await request(model)
+    else:
+        await request(model)
+    detail = next(detail for kind, detail in activity if kind == "MODEL_RESPONSE")
+    for expected in (
+        "input tokens: 20",
+        "output tokens: 1000",
+        "reasoning tokens: 990",
+        "text characters: 12",
+        "tool calls: 0",
+        f"finish: {finish_reason}",
+        "provider finish: max_output_tokens",
+    ):
+        assert expected in detail
+    assert "private" not in detail
+    assert "secret" not in detail
+
+
+@pytest.mark.parametrize("raw_reason", ["private provider message", ["secret"], None])
+def test_response_diagnostics_omit_unknown_usage_and_unrecognized_provider_details(
+    raw_reason,
+):
+    from alon_ai.provider_usage.pydantic_model import _response_diagnostics
+
+    response = ModelResponse(
+        [], provider_details={"finish_reason": raw_reason}, usage=RequestUsage()
+    )
+    detail = _response_diagnostics(response)
+    assert "input tokens: unavailable" in detail
+    assert "output tokens: unavailable" in detail
+    assert "reasoning tokens: unavailable" in detail
+    assert "provider finish: unavailable" in detail
+    assert "private" not in detail
+    assert "secret" not in detail
+
+
+def test_reasoning_profile_override_does_not_guess_support_for_other_models():
+    from alon_ai.integrations.pydantic_openai import approved_openai_model_profile
+
+    for name in ("gpt-4.1-mini", "gpt-6-unreviewed"):
+        profile = approved_openai_model_profile(name)
+        assert profile.get("openai_supports_encrypted_reasoning_content") is False
+        assert profile.get("openai_responses_supports_reasoning_context") is False

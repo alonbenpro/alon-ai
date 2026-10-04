@@ -25,19 +25,22 @@ from pydantic_ai.messages import (
     ModelMessagesTypeAdapter,
     ModelRequest,
     ModelResponse,
+    TextPart,
     ToolCallPart,
     UserPromptPart,
 )
 from pydantic_ai.models import Model, ModelRequestParameters
 from pydantic_ai.models.openai import OpenAIResponsesModelSettings
-from pydantic_ai.profiles.openai import openai_model_profile
 from pydantic_ai.settings import ModelSettings
 
 from alon_ai.agents.schemas.openai import canonical_json, sha256
 from alon_ai.db.repositories.accounting import GovernanceRepository
 from alon_ai.db.repositories.agent_run_steps import AgentRunStepRepository
 from alon_ai.db.repositories.agent_runs import AgentRunRepository
-from alon_ai.integrations.pydantic_openai import openai_model_factory
+from alon_ai.integrations.pydantic_openai import (
+    approved_openai_model_profile,
+    openai_model_factory,
+)
 from alon_ai.integrations.schemas.provider import (
     CallAttribution,
     Capability,
@@ -73,6 +76,44 @@ _COMPONENTS = {
     UsageComponent.CACHED_TOKEN,
     UsageComponent.REQUEST,
 }
+
+
+def _response_diagnostics(response: ModelResponse) -> str:
+    """Counts and allowlisted reasons only; never emit model text or signatures."""
+
+    raw = vars(response.usage)
+    reasoning = raw.get("output_reasoning_tokens")
+    if reasoning is None:
+        reasoning = response.usage.details.get("reasoning_tokens")
+
+    def count(value: object) -> str:
+        return str(value) if type(value) is int and value >= 0 else "unavailable"
+
+    finish = response.finish_reason
+    if finish not in {"stop", "length", "tool_call", "content_filter", "error"}:
+        finish = "unavailable"
+    provider_finish = (response.provider_details or {}).get("finish_reason")
+    if not isinstance(provider_finish, str) or provider_finish not in {
+        "max_output_tokens",
+        "content_filter",
+        "completed",
+        "cancelled",
+        "failed",
+        "incomplete",
+        "queued",
+        "in_progress",
+    }:
+        provider_finish = "unavailable"
+    text_chars = sum(
+        len(part.content) for part in response.parts if isinstance(part, TextPart)
+    )
+    tool_calls = sum(isinstance(part, ToolCallPart) for part in response.parts)
+    return (
+        f"input tokens: {count(raw.get('input_tokens'))} · "
+        f"output tokens: {count(raw.get('output_tokens'))} · "
+        f"reasoning tokens: {count(reasoning)} · text characters: {text_chars} · "
+        f"tool calls: {tool_calls} · finish: {finish} · provider finish: {provider_finish}"
+    )
 
 
 @dataclass(frozen=True)
@@ -310,7 +351,7 @@ class GovernedPydanticModel(Model):
             )
         ):
             raise AccountingDenied(Reason.PRICE)
-        super().__init__(profile=openai_model_profile(config.model_identifier))
+        super().__init__(profile=approved_openai_model_profile(config.model_identifier))
         self._repository, self._attribution, self._config = (
             repository,
             attribution,
@@ -539,11 +580,7 @@ class GovernedPydanticModel(Model):
                         )
                         else "output returned"
                     )
-                    detail = (
-                        f"OpenAI response {self._ordinal} received · {summary} · "
-                        f"input tokens: {response.usage.input_tokens} · "
-                        f"output tokens: {response.usage.output_tokens}"
-                    )
+                    detail = f"OpenAI response {self._ordinal} received · {summary}"
                 else:
                     code = (
                         result.error.value
@@ -551,6 +588,8 @@ class GovernedPydanticModel(Model):
                         else failure_reason
                     )
                     detail = f"OpenAI request {self._ordinal} stopped · {code}"
+                if response is not None:
+                    detail += " · " + _response_diagnostics(response)
                 await asyncio.shield(
                     activity.record_activity(
                         self._step_checkpoint.run_id, "MODEL_RESPONSE", detail

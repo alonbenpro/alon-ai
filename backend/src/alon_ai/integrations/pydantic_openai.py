@@ -8,14 +8,34 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from types import TracebackType
-from typing import Literal
+from typing import Literal, cast
 
 import httpx2 as httpx
 from openai import AsyncOpenAI
 from pydantic import SecretStr
 from pydantic_ai.models import Model
 from pydantic_ai.models.openai import OpenAIResponsesModel, OpenAIResponsesModelSettings
+from pydantic_ai.profiles import ModelProfile
+from pydantic_ai.profiles.openai import OpenAIModelProfile, openai_model_profile
 from pydantic_ai.providers.openai import OpenAIProvider
+
+
+def approved_openai_model_profile(model_identifier: str) -> ModelProfile:
+    """Preserve stateless reasoning for the approved model absent from SDK profiles."""
+
+    profile = cast(OpenAIModelProfile, openai_model_profile(model_identifier))
+    if model_identifier == "gpt-6-luna":
+        # The installed SDK recognizes reasoning families only through GPT-5.6.
+        # Without these supported flags, it drops encrypted reasoning on replay.
+        # https://developers.openai.com/api/docs/guides/deployment-checklist
+        profile.update(
+            supports_thinking=True,
+            openai_supports_reasoning=True,
+            openai_supports_encrypted_reasoning_content=True,
+            openai_responses_supports_reasoning_context=True,
+            openai_supports_phase=True,
+        )
+    return profile
 
 
 class _OwnedOpenAIModel(OpenAIResponsesModel):
@@ -67,7 +87,12 @@ def build_openai_model(
         timeout=timeout_seconds,
         openai_reasoning_effort=reasoning_effort,
     )
-    return _OwnedOpenAIModel(model_identifier, provider=provider, settings=settings)
+    return _OwnedOpenAIModel(
+        model_identifier,
+        provider=provider,
+        profile=approved_openai_model_profile(model_identifier),
+        settings=settings,
+    )
 
 
 def openai_model_factory(
