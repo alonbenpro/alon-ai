@@ -6,10 +6,14 @@ from uuid import uuid4
 
 import pytest
 from pydantic import SecretStr, ValidationError
+from pydantic_ai.exceptions import UnexpectedModelBehavior, UsageLimitExceeded
+from pydantic_ai.messages import ModelMessage, ModelResponse, RetryPromptPart, TextPart
+from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.openai import OpenAIResponsesModel, OpenAIResponsesModelSettings
 from pydantic_ai.models.test import TestModel
 from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.toolsets import FunctionToolset
+from pydantic_ai.usage import UsageLimits
 
 from alon_ai.agents.idea_agent import run_idea_agent
 from alon_ai.agents.schemas.idea import (
@@ -92,6 +96,128 @@ def _assessment(version_ref: str) -> dict[str, object]:
         "source_refs": ["src-a"],
         "recommendation": "INCONCLUSIVE",
     }
+
+
+def _deepening_input() -> IdeaAgentInput:
+    return IdeaAgentInput(
+        operation=IdeaOperation.SELECTED_DEEPEN,
+        operator_profile_ref=uuid4(),
+        profile_context="Python developer in Israel",
+        approved_limits_ref=uuid4(),
+        idea_version_ref=uuid4(),
+        idea_text="Clinic appointment reminders",
+    )
+
+
+def _assessment_correction_outputs(
+    input: IdeaAgentInput,
+) -> tuple[dict[str, object], dict[str, object]]:
+    corrected = _assessment(str(input.idea_version_ref))
+    observed = cast(list[dict[str, object]], corrected["findings"])[0]
+    unknown = {
+        "topic": "DEMAND_AND_SPENDING",
+        "basis": "UNKNOWN",
+        "claim": "Clinic willingness to pay is unknown.",
+        "source_refs": [],
+        "confidence": "LOW",
+        "limitations": ["No buyer spending evidence retained"],
+    }
+    inferred = {
+        "topic": "ALTERNATIVES",
+        "basis": "INFERRED",
+        "claim": "Manual reminders may be an alternative.",
+        "source_refs": [],
+        "confidence": "LOW",
+        "limitations": ["Prevalence has not been established"],
+    }
+    corrected["findings"] = [observed, unknown, inferred]
+    invalid = {
+        **corrected,
+        "findings": [
+            {**observed, "source_refs": []},
+            {**unknown, "source_refs": ["src-a"]},
+            inferred,
+        ],
+    }
+    return invalid, corrected
+
+
+def _scripted_native_model(
+    outputs: list[dict[str, object]],
+) -> tuple[FunctionModel, list[list[ModelMessage]]]:
+    requests: list[list[ModelMessage]] = []
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        requests.append(list(messages))
+        return ModelResponse(parts=[TextPart(json.dumps(outputs[len(requests) - 1]))])
+
+    return (
+        FunctionModel(respond, profile={"supports_json_schema_output": True}),
+        requests,
+    )
+
+
+async def test_native_assessment_corrects_source_basis_errors_once():
+    input = _deepening_input()
+    invalid, corrected = _assessment_correction_outputs(input)
+    model, requests = _scripted_native_model([invalid, corrected])
+
+    result = await run_idea_agent(input, model=model, toolset=FunctionToolset())
+
+    assert isinstance(result.output, MarketResearchAssessment)
+    assert result.output.idea_version_ref == input.idea_version_ref
+    assert result.output.findings[0].source_refs == ("src-a",)
+    assert result.output.findings[1].source_refs == ()
+    assert result.usage.requests == len(requests) == 2
+    feedback = [
+        part
+        for message in requests[1]
+        for part in message.parts
+        if isinstance(part, RetryPromptPart)
+    ]
+    assert len(feedback) == 1
+    assert isinstance(feedback[0].content, list)
+    assert [
+        (error["type"], error["loc"], error["msg"]) for error in feedback[0].content
+    ] == [
+        (
+            "value_error",
+            ("findings", 0),
+            "Value error, observed finding requires a source",
+        ),
+        (
+            "value_error",
+            ("findings", 1),
+            "Value error, unknown finding cannot claim source support",
+        ),
+    ]
+
+
+async def test_native_assessment_stops_after_one_failed_correction():
+    input = _deepening_input()
+    invalid, _ = _assessment_correction_outputs(input)
+    model, requests = _scripted_native_model([invalid, invalid])
+
+    with pytest.raises(UnexpectedModelBehavior, match="output retries"):
+        await run_idea_agent(input, model=model, toolset=FunctionToolset())
+
+    assert len(requests) == 2
+
+
+async def test_native_assessment_correction_respects_request_limit():
+    input = _deepening_input()
+    invalid, corrected = _assessment_correction_outputs(input)
+    model, requests = _scripted_native_model([invalid, corrected])
+
+    with pytest.raises(UsageLimitExceeded, match="request_limit of 1"):
+        await run_idea_agent(
+            input,
+            model=model,
+            toolset=FunctionToolset(),
+            usage_limits=UsageLimits(request_limit=1),
+        )
+
+    assert len(requests) == 1
 
 
 def test_successful_discovery_requires_three_distinct_researched_options():

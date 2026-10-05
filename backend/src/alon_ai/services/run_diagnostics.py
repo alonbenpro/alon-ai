@@ -1,20 +1,21 @@
 """Durable, operator-safe summaries of agent-run failures.
 
-The diagnostic surface deliberately records classifications only. It never reads
-exception text, request payloads, provider bodies, prompts, or excerpts.
+The diagnostic surface records classifications only. Validation messages are
+compared to exact owned constants; arbitrary text, inputs and context are never retained.
 """
 
 from __future__ import annotations
 
 import re
 from collections.abc import Iterable
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, get_args
 from uuid import UUID
 
 import httpx
 import structlog
 from pydantic import BaseModel, ConfigDict, ValidationError
 from pydantic_ai.exceptions import UnexpectedModelBehavior, UsageLimitExceeded
+from pydantic_core.core_schema import ErrorType
 
 from alon_ai.agents.tools.research import ResearchToolError
 from alon_ai.db.repositories.experiments import ExperimentError
@@ -92,6 +93,129 @@ _MESSAGES = {
     "UNEXPECTED_ERROR": "The service stopped before it could complete this run.",
 }
 _SAFE_CODE = re.compile(r"^[A-Z][A-Z0-9_]{0,99}$")
+_VALIDATION_TYPES = frozenset(get_args(ErrorType))
+_OUTPUT_FIELDS = frozenset(
+    [
+        "result",
+        "data",
+        "kind",
+        "status",
+        "options",
+        "gaps",
+        "title",
+        "customer",
+        "problem",
+        "approach",
+        "commercial_reasoning",
+        "alternatives",
+        "risks",
+        "source_refs",
+        "findings",
+        "unknowns",
+        "topic",
+        "basis",
+        "claim",
+        "confidence",
+        "limitations",
+        "source_excerpt",
+        "captured_at",
+        "published_on",
+        "rights_ref",
+        "idea_version_ref",
+        "research_version_ref",
+        "subject",
+        "currency",
+        "amount_low",
+        "amount_high",
+        "unit",
+        "package",
+        "observed_date",
+        "brief",
+        "coverage",
+        "contradictions",
+        "price_observations",
+        "recommendation",
+        "core_intent",
+        "intent_relationship",
+        "material_pivot",
+        "buyer",
+        "segment",
+        "role",
+        "service_hypothesis",
+        "value_hypothesis",
+        "assumptions",
+        "exclusions",
+        "research_questions",
+        "grounding_refs",
+        "uncertainties",
+        "candidates",
+        "hypothesis",
+        "demand_status",
+    ]
+)
+# Exact owned validator messages only; no substring matching or arbitrary rendering.
+_VALIDATION_INVARIANTS = {
+    "Value error, " + message: code
+    for message, code in (
+        ("invalid provider contract", "PROVIDER_CONTRACT_INVALID"),
+        ("observed finding requires a source", "OBSERVED_FINDING_SOURCE_REQUIRED"),
+        (
+            "unknown finding cannot claim source support",
+            "UNKNOWN_FINDING_CANNOT_CITE_SOURCE",
+        ),
+        ("finding source references must be unique", "FINDING_DUPLICATE_SOURCES"),
+        ("not-found price cannot carry an amount", "NOT_FOUND_PRICE_HAS_AMOUNT"),
+        ("observed price requires a source", "OBSERVED_PRICE_SOURCE_REQUIRED"),
+        (
+            "numeric price requires amount, currency and unit",
+            "NUMERIC_PRICE_FIELDS_REQUIRED",
+        ),
+        (
+            "exact or starting price cannot have an upper bound",
+            "PRICE_UPPER_BOUND_FORBIDDEN",
+        ),
+        ("price range requires ordered bounds", "PRICE_RANGE_BOUNDS_INVALID"),
+        ("quote-only price cannot have an amount", "QUOTE_ONLY_PRICE_HAS_AMOUNT"),
+        ("option source references must be unique", "OPTION_DUPLICATE_SOURCES"),
+        (
+            "a researched option needs an observed finding",
+            "OPTION_OBSERVATION_REQUIRED",
+        ),
+        ("finding cites a source outside its option", "OPTION_UNDECLARED_SOURCE"),
+        (
+            "successful discovery requires three distinct options",
+            "DISCOVERY_OPTIONS_NOT_DISTINCT",
+        ),
+        ("assessment source references must be unique", "ASSESSMENT_DUPLICATE_SOURCES"),
+        ("assessment cites an undeclared source", "ASSESSMENT_UNDECLARED_SOURCE"),
+        (
+            "incomplete assessment requires named gaps",
+            "INCOMPLETE_ASSESSMENT_GAPS_REQUIRED",
+        ),
+        (
+            "inconclusive assessment requires named gaps",
+            "INCONCLUSIVE_ASSESSMENT_GAPS_REQUIRED",
+        ),
+        (
+            "pivot flag and intent relationship disagree",
+            "PIVOT_CLASSIFICATION_MISMATCH",
+        ),
+        (
+            "discovery grounding must cite the operator profile",
+            "DISCOVERY_PROFILE_GROUNDING_REQUIRED",
+        ),
+        ("discovery candidates must be distinct", "DISCOVERY_CANDIDATES_NOT_DISTINCT"),
+        ("seeded brief grounding must cite the seed", "BRIEF_SEED_GROUNDING_REQUIRED"),
+        (
+            "selected brief grounding must cite the candidate",
+            "BRIEF_CANDIDATE_GROUNDING_REQUIRED",
+        ),
+        (
+            "returned brief must cite prior brief and feedback",
+            "BRIEF_RETURN_GROUNDING_REQUIRED",
+        ),
+    )
+}
 
 
 def _experiment_code(error: ExperimentError) -> str:
@@ -123,12 +247,31 @@ def _frame(error: Exception) -> str:
 
 
 def _validation_frames(error: ValidationError) -> list[str]:
-    # Validation locations can include arbitrary input mapping keys. Preserve
-    # only Pydantic's controlled error type, never an untrusted location.
-    return [
-        item["type"]
-        for item in error.errors(include_input=False, include_url=False)[:4]
-    ]
+    frames = []
+    for item in error.errors(
+        include_input=False, include_url=False, include_context=False
+    )[:4]:
+        # Custom error types and mapping keys can both contain arbitrary input.
+        kind = item["type"] if item["type"] in _VALIDATION_TYPES else "validation_error"
+        parts = [kind]
+        location = item["loc"][:8]
+        if any(type(value) is str and value in _OUTPUT_FIELDS for value in location):
+            parts.append(
+                ".".join(
+                    value
+                    if type(value) is str and value in _OUTPUT_FIELDS
+                    else "[]"
+                    if type(value) is int
+                    else "?"
+                    for value in location
+                )
+            )
+        if kind == "value_error" and (
+            invariant := _VALIDATION_INVARIANTS.get(item["msg"])
+        ):
+            parts.append(invariant)
+        frames.append(":".join(parts))
+    return frames
 
 
 def _source_frames(chain: list[Exception]) -> list[str]:

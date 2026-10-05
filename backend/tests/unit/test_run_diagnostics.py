@@ -1,5 +1,6 @@
 """Sanitized, durable operator diagnostics for failed agent runs."""
 
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
@@ -131,6 +132,111 @@ def test_diagnostic_does_not_retain_untrusted_validation_field_names():
 
     assert diagnostic.frames == ["ValidationError", "extra_forbidden"]
     assert secret_field not in diagnostic.model_dump_json()
+
+
+def test_native_assessment_invariants_are_identified_without_returned_content():
+    from test_idea_market_research import _assessment
+
+    from alon_ai.agents.schemas.idea import MarketResearchAssessment
+
+    raw = cast(dict[str, Any], _assessment(str(uuid4())))
+    raw["findings"][0]["source_refs"] = []
+    raw["findings"][0]["claim"] = "SECRET patient records"
+    raw["findings"].append(
+        {**raw["findings"][0], "basis": "UNKNOWN", "source_refs": ["SECRET-source"]}
+    )
+    with pytest.raises(ValidationError) as raised:
+        MarketResearchAssessment.model_validate(raw)
+    diagnostic = diagnostic_for_error("AGENT_EXECUTION", raised.value)
+
+    assert (
+        "value_error:findings.[]:OBSERVED_FINDING_SOURCE_REQUIRED" in diagnostic.frames
+    )
+    assert (
+        "value_error:findings.[]:UNKNOWN_FINDING_CANNOT_CITE_SOURCE"
+        in diagnostic.frames
+    )
+    assert "SECRET" not in diagnostic.model_dump_json()
+
+
+def test_validation_diagnostics_redact_custom_types_locations_and_messages():
+    from pydantic_core import PydanticCustomError
+
+    error = ValidationError.from_exception_data(
+        "SECRET model name",
+        [
+            {
+                "type": PydanticCustomError("SECRET_type", "SECRET message"),
+                "loc": ("findings", 972501234567, "SECRET_mapping_key", "claim"),
+                "input": "SECRET input",
+            },
+            {
+                "type": "value_error",
+                "loc": ("brief",),
+                "ctx": {
+                    "error": ValueError("observed finding requires a source SECRET")
+                },
+                "input": "SECRET payload",
+            },
+        ],
+    )
+    diagnostic = diagnostic_for_error("AGENT_EXECUTION", error)
+
+    assert "validation_error:findings.[].?.claim" in diagnostic.frames
+    assert "value_error:brief" in diagnostic.frames
+    rendered = diagnostic.model_dump_json()
+    assert "SECRET" not in rendered
+    assert "972501234567" not in rendered
+
+
+def test_root_assessment_validator_has_actionable_controlled_code():
+    from test_idea_market_research import _assessment
+
+    from alon_ai.agents.schemas.idea import MarketResearchAssessment
+
+    raw = cast(dict[str, Any], _assessment(str(uuid4())))
+    raw["source_refs"] = []
+    with pytest.raises(ValidationError) as raised:
+        MarketResearchAssessment.model_validate(raw)
+
+    diagnostic = diagnostic_for_error("AGENT_EXECUTION", raised.value)
+
+    assert "value_error:ASSESSMENT_UNDECLARED_SOURCE" in diagnostic.frames
+
+
+@pytest.mark.parametrize(
+    "field,value,expected",
+    [
+        (
+            "brief",
+            {"material_pivot": True},
+            "value_error:brief:PROVIDER_CONTRACT_INVALID",
+        ),
+        (
+            "price_observations",
+            [{"subject": "SECRET price", "kind": "EXACT", "source_refs": ["src-a"]}],
+            "value_error:price_observations.[]:NUMERIC_PRICE_FIELDS_REQUIRED",
+        ),
+    ],
+)
+def test_nested_brief_and_price_invariants_have_controlled_codes(
+    field, value, expected
+):
+    from test_idea_market_research import _assessment
+
+    from alon_ai.agents.schemas.idea import MarketResearchAssessment
+
+    raw = cast(dict[str, Any], _assessment(str(uuid4())))
+    if field == "brief":
+        raw[field].update(value)
+    else:
+        raw[field] = value
+    with pytest.raises(ValidationError) as raised:
+        MarketResearchAssessment.model_validate(raw)
+    diagnostic = diagnostic_for_error("AGENT_EXECUTION", raised.value)
+
+    assert expected in diagnostic.frames
+    assert "SECRET" not in diagnostic.model_dump_json()
 
 
 def test_diagnostic_classifies_known_provider_and_experiment_codes():

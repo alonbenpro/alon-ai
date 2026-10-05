@@ -73,7 +73,7 @@ def build_idea_agent(
         output_type=output_type,
         instructions=f"{_SHARED_INSTRUCTIONS}\n{_OPERATION_INSTRUCTIONS[operation]}",
         toolsets=[toolset],
-        retries=0,
+        retries={"tools": 0, "output": 1},
         name="idea-market-research",
     )
 
