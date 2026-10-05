@@ -24,7 +24,13 @@ _SHARED_INSTRUCTIONS = (
     "claims; cite exact retained source references for observations. Never invent "
     "sources, prices, market size, buyer demand or certainty. Preserve contrary "
     "evidence and material gaps. Do not accept ideas, send messages, construct "
-    "an offer package, or specify executable lead filters."
+    "an offer package, or specify executable lead filters. Search results are "
+    "discovery URLs, not evidence: after one focused search batch, capture the "
+    "most relevant pages and read their saved evidence before searching again. "
+    "Use the current remaining tool allowances; a NOT_DISPATCHED result means "
+    "no research occurred, so move to another available tool or synthesize with "
+    "explicit gaps. Keep the final assessment concise: short findings, no repeated "
+    "source text, and only distinct claims needed for the required dimensions."
 )
 
 _OPERATION_INSTRUCTIONS = {

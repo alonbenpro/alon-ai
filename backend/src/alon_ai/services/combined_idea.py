@@ -48,6 +48,7 @@ from alon_ai.db.repositories.openai_run import OpenAIRunOutcome
 from alon_ai.db.repositories.records import ProductRecordsRepository
 from alon_ai.integrations.live_idea import LiveIdeaRuntimeConfig
 from alon_ai.integrations.live_research import (
+    RESEARCH_CAPABILITIES,
     ResearchCapabilityBinding,
     ResearchRunPolicy,
 )
@@ -334,11 +335,9 @@ class CombinedIdeaRuntime:
             revision_guidance=revision["payload"]["hypothesis"] if revision else None,
         )
 
-    async def _research_instructions(self, _context):
+    async def _research_allowance(self):
         # Refresh advisory counts before each model request. Dispatch still owns
         # atomic admission, so this snapshot never expands provider authority.
-        if not self.config.research_bindings:
-            return None
         repository = GovernanceRepository(self.context.engine)
         quotas = await repository.quota_snapshot(
             tuple(
@@ -350,7 +349,24 @@ class CombinedIdeaRuntime:
             )
         )
         policy = self.config.research_policy
-        limits = {
+        rows = await self.steps.list(self.row["run_id"])
+        kinds = {capability.value for capability in RESEARCH_CAPABILITIES} | {
+            "BRAVE_SEARCH"
+        }
+        research = [row for row in rows if row["kind"] in kinds]
+        discovery_used = sum(
+            row["kind"] in {"BRAVE_SEARCH", "FIRECRAWL_MAP"} for row in research
+        )
+        pages_used = sum(
+            policy.max_pdf_pages
+            if row["kind"] == "FIRECRAWL_PDF_CAPTURE"
+            else 1
+            if row["kind"] in {"FIRECRAWL_PAGE_CAPTURE", "FIRECRAWL_JS_RETRIEVAL"}
+            else 0
+            for row in research
+        )
+        remaining = max(0, policy.max_calls - len(research))
+        return {
             "run_limits": {
                 "max_calls": policy.max_calls,
                 "max_pages": policy.max_pages,
@@ -358,15 +374,117 @@ class CombinedIdeaRuntime:
                 "max_spend_usd": str(policy.max_spend_usd),
                 "timeout_seconds": policy.timeout_seconds,
             },
+            "run_usage": {
+                "calls_used": len(research),
+                "calls_remaining": remaining,
+                "pages_used": pages_used,
+                "pages_remaining": max(0, policy.max_pages - pages_used),
+                "discovery_calls_remaining": min(
+                    remaining, max(0, policy.max_calls // 2 - discovery_used)
+                ),
+            },
             "provider_quotas": quotas,
         }
+
+    async def _research_instructions(self, _context):
+        limits = await self._research_allowance()
         return (
             "Approved research limits and current provider quota: "
             + canonical_json(limits)
             + "\nUse a few high-yield searches; reserve calls for page captures and "
             "evidence inspection. These counts are upper bounds, not targets. "
             "Do not request more provider calls than the remaining allowance. "
+            "Discovery is limited to half the research calls to preserve capture capacity. "
+            "Search URLs are discovery hints, not evidence: capture promising sources and "
+            "read their retained evidence before searching again. A NOT_DISPATCHED result "
+            "provides no evidence and consumes no provider call; follow its guidance. "
+            "When provider quota or calls are zero, stop that capability and synthesize "
+            "from retained evidence in the required native result shape with named gaps. "
             "Finish with a truthful assessment or named gaps before limits are exhausted."
+        )
+
+    async def _scheduled_research(self, capability, method, *args, **kwargs):
+        # This local scheduling stop is not an admission decision. Governed
+        # errors still propagate; dispatch retains atomic quota/rights checks.
+        snapshot = await self._research_allowance()
+        usage = snapshot["run_usage"]
+        quota = min(
+            (
+                item["remaining_calls"]
+                for item in snapshot["provider_quotas"]
+                if item["capability"] == capability.value
+            ),
+            default=0,
+        )
+        discovery = capability in {
+            Capability.BRAVE_WEB_COVERAGE,
+            Capability.FIRECRAWL_MAP,
+        }
+        pages = (
+            self.config.research_policy.max_pdf_pages
+            if capability is Capability.FIRECRAWL_PDF_CAPTURE
+            else 1
+        )
+        if (
+            not quota
+            or not usage["calls_remaining"]
+            or discovery
+            and not usage["discovery_calls_remaining"]
+            or not discovery
+            and pages > usage["pages_remaining"]
+        ):
+            return {
+                "status": "NOT_DISPATCHED",
+                "capability": capability.value,
+                "remaining": usage,
+                "provider_calls_remaining": quota,
+                "guidance": "Use an available capture capability on discovered URLs, then read retained evidence. "
+                "If captures are unavailable, synthesize the required native result with named gaps; do not claim unsupported findings. "
+                "Do not retry an exhausted capability; this result is not evidence.",
+            }
+        return await method(*args, **kwargs)
+
+    def _research_toolset(self, tools):
+        capabilities = {
+            binding.config.intended_use.capability
+            for binding in self.config.research_bindings
+        }
+
+        async def search_web(query: str, *, limit: int | None = None):
+            """Discover URLs within the remaining search allocation; then capture sources."""
+            return await self._scheduled_research(
+                Capability.BRAVE_WEB_COVERAGE, tools.search_web, query, limit=limit
+            )
+
+        async def map_site(url: str, *, limit: int | None = None):
+            return await self._scheduled_research(
+                Capability.FIRECRAWL_MAP, tools.map_site, url, limit=limit
+            )
+
+        async def capture_page(url: str):
+            """Capture a discovered page within remaining calls, pages and provider quota."""
+            return await self._scheduled_research(
+                Capability.FIRECRAWL_PAGE_CAPTURE, tools.capture_page, url
+            )
+
+        async def capture_pdf(url: str):
+            return await self._scheduled_research(
+                Capability.FIRECRAWL_PDF_CAPTURE, tools.capture_pdf, url
+            )
+
+        exposed: list[Any] = [tools.read_saved_evidence]
+        for capability, method in (
+            (Capability.BRAVE_WEB_COVERAGE, search_web),
+            (Capability.FIRECRAWL_MAP, map_site),
+            (Capability.FIRECRAWL_PAGE_CAPTURE, capture_page),
+            (Capability.FIRECRAWL_PDF_CAPTURE, capture_pdf),
+        ):
+            if capability in capabilities:
+                exposed.append(method)
+        # A model may return several calls together; governed research admits
+        # one call at a time under the approved provider concurrency limits.
+        return FunctionToolset(
+            tools=exposed, sequential=True, instructions=self._research_instructions
         )
 
     async def _run(self, operation, *, returned=False, revision_guidance=None):
@@ -459,29 +577,7 @@ class CombinedIdeaRuntime:
             self.port,
             max_results=self.config.research_policy.max_results,
         )
-        capabilities = {
-            binding.config.intended_use.capability
-            for binding in self.config.research_bindings
-        }
-
-        async def capture_page(url: str):
-            """Capture a page using the approved standard page capability."""
-            return await tools.capture_page(url)
-
-        exposed: list[Any] = [tools.read_saved_evidence]
-        for capability, method in (
-            (Capability.BRAVE_WEB_COVERAGE, tools.search_web),
-            (Capability.FIRECRAWL_MAP, tools.map_site),
-            (Capability.FIRECRAWL_PAGE_CAPTURE, capture_page),
-            (Capability.FIRECRAWL_PDF_CAPTURE, tools.capture_pdf),
-        ):
-            if capability in capabilities:
-                exposed.append(method)
-        # A model may return several calls together; governed research admits
-        # one call at a time under the approved provider concurrency limits.
-        toolset = FunctionToolset(
-            tools=exposed, sequential=True, instructions=self._research_instructions
-        )
+        toolset = self._research_toolset(tools)
         try:
             self._diagnostic_stage = "AGENT_EXECUTION"
             async with asyncio.timeout(self.provisioned.run_timeout_seconds):

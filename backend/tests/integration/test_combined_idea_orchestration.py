@@ -448,7 +448,14 @@ async def test_native_run_reuses_intake_and_persists_truthful_outcome(
         row = await AgentRunRepository(engine).get(arguments["run_id"])
         config = SimpleNamespace(
             research_bindings=(),
-            research_policy=SimpleNamespace(max_results=20),
+            research_policy=SimpleNamespace(
+                max_results=20,
+                max_calls=2,
+                max_pages=1,
+                max_pdf_pages=1,
+                max_spend_usd=Decimal("0.25"),
+                timeout_seconds=90,
+            ),
             model_dump_json=lambda: '{"test":"synthetic-only"}',
             model_dump=lambda **kwargs: {"test": "synthetic-only"},
         )
