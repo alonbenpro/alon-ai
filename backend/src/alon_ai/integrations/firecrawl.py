@@ -325,7 +325,30 @@ class FirecrawlAdapter:
             ):
                 raise ValueError
         except (ValueError, TypeError, KeyError, AttributeError):
-            raise ProviderFailure(ProviderErrorCode.MALFORMED_RESPONSE) from None
+            # _post completed HTTP 200/success:true. The returned content is
+            # unusable, but this is positive response-completion evidence.
+            # Neither a billed quantity nor a price is known at this layer.
+            finished = self._authorize(request.capability)
+            return ProviderCallResult(
+                ProviderResultMetadata(
+                    capability=request.capability,
+                    started_at=started,
+                    finished_at=finished,
+                    status=ResultStatus.FAILED,
+                    error_code=ProviderErrorCode.MALFORMED_RESPONSE,
+                    usage=(
+                        UsageObservation(
+                            component=UsageComponent.CAPTURE_PAGE,
+                            quantity=None,
+                            currency="USD",
+                            cost=None,
+                            knowledge=CostKnowledge.UNAVAILABLE,
+                            observation_key=uuid4(),
+                        ),
+                    ),
+                ),
+                None,
+            )
         return self._result(
             request.capability,
             started,

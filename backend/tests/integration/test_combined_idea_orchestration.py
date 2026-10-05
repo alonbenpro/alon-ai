@@ -216,6 +216,7 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
 
         async def capture(self, experiment_id, request):
             result = await super().capture(experiment_id, request)
+            assert isinstance(result, tuple)
             captured.extend(result)
             return result
 
@@ -728,6 +729,7 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
             max_active_requests = max(max_active_requests, active_requests)
             try:
                 result = await super().capture(experiment_id, request)
+                assert isinstance(result, tuple)
                 captured.extend(result)
                 return result
             finally:

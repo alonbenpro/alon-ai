@@ -8,7 +8,7 @@ return provider responses or credentials directly to an agent.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Annotated, Protocol
+from typing import Annotated, Literal, Protocol
 from uuid import UUID
 
 from pydantic import Field, SecretStr
@@ -88,6 +88,19 @@ class SavedEvidenceExcerpt:
     text: str
 
 
+@dataclass(frozen=True)
+class UnavailableResearchResult:
+    """Completed, financially settled capture with no usable evidence."""
+
+    status: Literal["SOURCE_UNAVAILABLE"] = "SOURCE_UNAVAILABLE"
+    reason: Literal["MALFORMED_RESPONSE"] = "MALFORMED_RESPONSE"
+    guidance: str = (
+        "This completed capture is not evidence and produced no source reference. "
+        "Do not repeat this request. Choose a different URL within remaining limits, "
+        "or use saved evidence and report the gap in the required native result."
+    )
+
+
 @dataclass(frozen=True, repr=False)
 class TransientSearchUrls:
     """Runtime-only discovery hints; never evidence or a durable checkpoint."""
@@ -112,7 +125,7 @@ class GovernedResearchPort(Protocol):
 
     async def capture(
         self, experiment_id: UUID, request: FirecrawlCaptureRequest
-    ) -> tuple[SourceReference, ...]: ...
+    ) -> tuple[SourceReference, ...] | UnavailableResearchResult: ...
 
     async def read_saved_evidence(
         self, experiment_id: UUID, retained_id: UUID, *, max_chars: int
@@ -171,7 +184,7 @@ class ResearchTools:
 
     async def capture_page(
         self, url: str, *, js_wait_ms: int = 0
-    ) -> tuple[SourceReference, ...]:
+    ) -> tuple[SourceReference, ...] | UnavailableResearchResult:
         try:
             if not 0 <= js_wait_ms <= 5000:
                 raise ValueError
@@ -183,21 +196,29 @@ class ResearchTools:
                 formats=(CaptureFormat.MARKDOWN,),
                 wait_ms=js_wait_ms,
             )
-            return self._references(
-                await self._port.capture(self._experiment_id, request)
+            result = await self._port.capture(self._experiment_id, request)
+            return (
+                result
+                if isinstance(result, UnavailableResearchResult)
+                else self._references(result)
             )
         except Exception as error:  # noqa: BLE001 - no request/provider details cross tool boundary
             raise _research_tool_error(error) from None
 
-    async def capture_pdf(self, url: str) -> tuple[SourceReference, ...]:
+    async def capture_pdf(
+        self, url: str
+    ) -> tuple[SourceReference, ...] | UnavailableResearchResult:
         try:
             request = FirecrawlCaptureRequest(
                 capability=Capability.FIRECRAWL_PDF_CAPTURE,
                 url=public_url(url),
                 formats=(CaptureFormat.MARKDOWN,),
             )
-            return self._references(
-                await self._port.capture(self._experiment_id, request)
+            result = await self._port.capture(self._experiment_id, request)
+            return (
+                result
+                if isinstance(result, UnavailableResearchResult)
+                else self._references(result)
             )
         except Exception as error:  # noqa: BLE001 - no request/provider details cross tool boundary
             raise _research_tool_error(error) from None

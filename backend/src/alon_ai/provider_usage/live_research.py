@@ -20,7 +20,11 @@ import httpx
 from pydantic import SecretStr
 from sqlalchemy import select
 
-from alon_ai.agents.tools.research import SavedEvidenceExcerpt, TransientSearchUrls
+from alon_ai.agents.tools.research import (
+    SavedEvidenceExcerpt,
+    TransientSearchUrls,
+    UnavailableResearchResult,
+)
 from alon_ai.db.repositories.accounting import GovernanceRepository
 from alon_ai.db.repositories.agent_run_steps import AgentRunStepRepository
 from alon_ai.db.repositories.agent_runs import AgentRunRepository
@@ -41,8 +45,10 @@ from alon_ai.integrations.schemas.provider import (
     FirecrawlCaptureRequest,
     FirecrawlMapRequest,
     ProviderCallResult,
+    ProviderErrorCode,
     ProviderFailure,
     Purpose,
+    ResultStatus,
     SafeRequestMetadata,
     UsageComponent,
     UsageObservation,
@@ -51,6 +57,7 @@ from alon_ai.policies.provider_rights import RuntimeContent
 from alon_ai.provider_usage.schemas.accounting import (
     AccountingDenied,
     CallReceipt,
+    CallState,
     CapabilityConfig,
     Reason,
     reserve_amount,
@@ -279,6 +286,7 @@ class _RequestAdapter:
             key,
         )
         self.failure: ProviderFailure | None = None
+        self.completed_rejection = False
 
     async def invoke(
         self, config: CapabilityConfig, secret: SecretStr | None, /
@@ -333,6 +341,16 @@ class _RequestAdapter:
                     error.code, http_status=error.http_status
                 )
                 raise
+            self.completed_rejection = (
+                config.intended_use.capability
+                in {
+                    Capability.FIRECRAWL_PAGE_CAPTURE,
+                    Capability.FIRECRAWL_JS_RETRIEVAL,
+                }
+                and result.metadata.status is ResultStatus.FAILED
+                and result.metadata.error_code is ProviderErrorCode.MALFORMED_RESPONSE
+                and result.content is None
+            )
             observations = []
             for observed in result.metadata.usage:
                 if config.intended_use.capability is Capability.FIRECRAWL_MAP:
@@ -344,6 +362,25 @@ class _RequestAdapter:
                     p for p in self.prices if p.component == observed.component
                 )
                 bound = next(b for b in config.prices if b.price_id == price.id)
+                if observed.quantity is None and self.completed_rejection:
+                    # Exact immutable included-credit prices prove cash zero,
+                    # not consumed credits. Keep quantity unknown and quota used.
+                    zero_cash = all(p.unit_price == 0 for p in self.prices)
+                    observations.append(
+                        observed.model_copy(
+                            update={
+                                "currency": price.currency,
+                                "cost": Decimal(0) if zero_cash else None,
+                                "knowledge": CostKnowledge.FINAL
+                                if zero_cash
+                                else CostKnowledge.UNAVAILABLE,
+                                "observation_key": uuid5(
+                                    self.key, observed.component.value
+                                ),
+                            }
+                        )
+                    )
+                    continue
                 if observed.quantity is None or observed.quantity > bound.max_quantity:
                     raise AccountingDenied(Reason.USAGE)
                 with localcontext() as context:
@@ -361,8 +398,20 @@ class _RequestAdapter:
                         observation_key=uuid5(self.key, observed.component.value),
                     )
                 )
+            unresolved = any(
+                item.knowledge is CostKnowledge.UNAVAILABLE for item in observations
+            )
             return ProviderCallResult(
-                result.metadata.model_copy(update={"usage": tuple(observations)}),
+                result.metadata.model_copy(
+                    update={
+                        "usage": tuple(observations),
+                        **(
+                            {"status": ResultStatus.UNKNOWN}
+                            if self.completed_rejection and unresolved
+                            else {}
+                        ),
+                    }
+                ),
                 result.content,
             )
 
@@ -425,7 +474,10 @@ class GovernedLiveResearchPort:
     ) -> tuple[SourceReference, ...] | TransientSearchUrls:
         if not isinstance(request, BraveSearchRequest):
             raise AccountingDenied(Reason.CONFIG)
-        return await self._execute(experiment_id, request)
+        result = await self._execute(experiment_id, request)
+        if isinstance(result, UnavailableResearchResult):
+            raise AccountingDenied(Reason.CONFIG)
+        return result
 
     async def map(
         self, experiment_id: UUID, request: FirecrawlMapRequest
@@ -439,10 +491,12 @@ class GovernedLiveResearchPort:
 
     async def capture(
         self, experiment_id: UUID, request: FirecrawlCaptureRequest
-    ) -> tuple[SourceReference, ...]:
+    ) -> tuple[SourceReference, ...] | UnavailableResearchResult:
         if not isinstance(request, FirecrawlCaptureRequest):
             raise AccountingDenied(Reason.CONFIG)
         result = await self._execute(experiment_id, request)
+        if isinstance(result, UnavailableResearchResult):
+            return result
         if not isinstance(result, tuple):
             raise AccountingDenied(Reason.CONFIG)
         return result
@@ -476,6 +530,13 @@ class GovernedLiveResearchPort:
                 )
             )
             raise
+        if isinstance(result, UnavailableResearchResult):
+            await activity.record_activity(
+                self._run_id,
+                "RESEARCH_RESPONSE",
+                f"{capability} completed with unusable content · no evidence · cash reconciled",
+            )
+            return result
         count = (
             len(result.urls) if isinstance(result, TransientSearchUrls) else len(result)
         )
@@ -540,6 +601,18 @@ class GovernedLiveResearchPort:
             candidate=self._candidate,
         )
         if step["status"] != "CLAIMED":
+            if (
+                step["status"] == "FAILED"
+                and step["reason_code"] == "MALFORMED_RESPONSE"
+                and request.capability
+                in {
+                    Capability.FIRECRAWL_PAGE_CAPTURE,
+                    Capability.FIRECRAWL_JS_RETRIEVAL,
+                }
+            ):
+                receipt = await self._repository.receipt_for_idempotency_key(key)
+                if receipt is not None and receipt.state is CallState.FINAL:
+                    return UnavailableResearchResult()
             if step["status"] != "SUCCEEDED" or step["provider_call_id"] is None:
                 raise AccountingDenied(Reason.UNCERTAIN)
             if config.intended_use.purpose is Purpose.OFFICIAL_SOURCE_IDENTIFICATION:
@@ -591,6 +664,11 @@ class GovernedLiveResearchPort:
             if receipt is not None:
                 await asyncio.shield(self._steps.bind_receipt(key, receipt))
         if result.error is not None:
+            if adapter.completed_rejection and result.receipt.state is CallState.FINAL:
+                await self._steps.finish(
+                    key, status="FAILED", reason="MALFORMED_RESPONSE"
+                )
+                return UnavailableResearchResult()
             await self._steps.finish(
                 key, status="OUTCOME_UNKNOWN", reason="PROVIDER_OUTCOME_UNKNOWN"
             )

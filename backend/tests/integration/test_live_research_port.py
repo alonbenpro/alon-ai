@@ -13,7 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 from test_governance import add_event, seed
 from test_idea_run_steps import _run
 
-from alon_ai.agents.tools.research import TransientSearchUrls
+from alon_ai.agents.tools.research import TransientSearchUrls, UnavailableResearchResult
 from alon_ai.db.repositories.accounting import (
     GovernanceProvisioner,
     GovernanceRepository,
@@ -61,11 +61,21 @@ class Secrets:
 
 
 async def setup(
-    engine: AsyncEngine, *, transient: bool = False, price: Decimal = Decimal(".001")
+    engine: AsyncEngine,
+    *,
+    transient: bool = False,
+    price: Decimal = Decimal(".001"),
+    capability: Capability = Capability.BRAVE_WEB_COVERAGE,
 ) -> ResearchFixture:
     run_id, experiment_id, context = await _run(engine)
     repo, admin, original, config, grant, now = await seed(
-        engine, transient=transient, price=price
+        engine,
+        transient=transient,
+        price=price,
+        capability=capability,
+        price_components=(UsageComponent.CAPTURE_PAGE,)
+        if capability is Capability.FIRECRAWL_PAGE_CAPTURE
+        else (UsageComponent.REQUEST,),
     )
     attr = original.model_copy(
         update={
@@ -243,6 +253,7 @@ async def test_search_capture_two_receipts_replay_and_current_rights(
         ),
     )
     assert isinstance(refs, tuple)
+    assert isinstance(captured, tuple)
     assert captured[0].retained_id is not None
     assert refs[0].call_id != captured[0].call_id
     assert (
@@ -383,6 +394,154 @@ async def test_denial_and_unknown_outcome_stop_network_replay(governance_engine)
     async with governance_engine.connect() as connection:
         call = (await connection.execute(select(gov.calls))).mappings().one()
         assert call["state"] == "RECONCILING" and call["reserved"] > 0
+        assert (
+            await connection.execute(select(steps.c.status))
+        ).scalar_one() == "OUTCOME_UNKNOWN"
+
+
+async def test_zero_price_completed_rejection_is_recoverable_without_inventing_usage(
+    governance_engine,
+):
+    from alon_ai.agents.tools.research import ResearchTools
+
+    values = await setup(
+        governance_engine,
+        price=Decimal(0),
+        capability=Capability.FIRECRAWL_PAGE_CAPTURE,
+    )
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "data": {"markdown": "" if len(calls) == 2 else "usable evidence"},
+            },
+        )
+
+    transport = httpx.MockTransport(respond)
+    service = port(
+        values,
+        transport,
+        firecrawl_transport=transport,
+        resolver=lambda _: ("8.8.8.8",),
+    )
+    tools = ResearchTools(values[2].experiment_id, service)
+    first = await tools.capture_page("https://example.com/good")
+    rejected = await tools.capture_page("https://example.com/bad")
+    assert isinstance(rejected, UnavailableResearchResult)
+    assert rejected.status == "SOURCE_UNAVAILABLE"
+    assert "not evidence" in rejected.guidance
+    # Same failed request returns the same explicit unavailability, never retries.
+    assert await tools.capture_page("https://example.com/bad") == rejected
+    assert len(calls) == 2
+    assert isinstance(first, tuple) and first[0].retained_id is not None
+    assert (
+        await tools.read_saved_evidence(first[0].retained_id)
+    ).text == "usable evidence"
+    async with governance_engine.connect() as connection:
+        failed = (
+            (
+                await connection.execute(
+                    select(gov.calls).where(
+                        gov.calls.c.result_metadata["status"].astext == "FAILED"
+                    )
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert (
+            failed["state"] == "FINAL"
+            and failed["accrued"] == 0
+            and failed["reserved"] == 0
+        )
+        usage = (
+            (
+                await connection.execute(
+                    select(gov.usage).where(gov.usage.c.call_id == failed["id"])
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert (
+            usage["quantity"] is None
+            and usage["cost"] == 0
+            and usage["knowledge"] == "FINAL"
+        )
+        assert not (
+            await connection.execute(
+                select(gov.retained).where(gov.retained.c.call_id == failed["id"])
+            )
+        ).first()
+        authority = (await connection.execute(select(gov.authorities))).mappings().one()
+        assert authority["active"] == 0 and authority["quota_used"] == 2
+        failed_step = (
+            (
+                await connection.execute(
+                    select(steps).where(steps.c.provider_call_id == failed["id"])
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert (
+            failed_step["status"] == "FAILED"
+            and failed_step["reason_code"] == "MALFORMED_RESPONSE"
+        )
+    assert await tools.capture_page("https://example.com/alternate")
+    assert len(calls) == 3
+
+
+@pytest.mark.parametrize(
+    "price,failure",
+    [
+        (Decimal(".001"), "content"),
+        (Decimal(0), "timeout"),
+        (Decimal(0), "envelope"),
+        (Decimal(0), "permission"),
+    ],
+)
+async def test_recovery_does_not_release_paid_unknown_transport_or_permission_failures(
+    governance_engine, price, failure
+):
+    values = await setup(
+        governance_engine, price=price, capability=Capability.FIRECRAWL_PAGE_CAPTURE
+    )
+    calls = []
+
+    def respond(request):
+        calls.append(request)
+        if failure == "timeout":
+            raise httpx.ReadTimeout("SECRET")
+        if failure == "permission":
+            return httpx.Response(302, headers={"Location": "https://other.example/"})
+        return httpx.Response(
+            200, json={"success": failure != "envelope", "data": {"markdown": ""}}
+        )
+
+    transport = httpx.MockTransport(respond)
+    service = port(
+        values,
+        transport,
+        firecrawl_transport=transport,
+        resolver=lambda _: ("8.8.8.8",),
+    )
+    request = FirecrawlCaptureRequest(
+        capability=Capability.FIRECRAWL_PAGE_CAPTURE, url="https://example.com/bad"
+    )
+    with pytest.raises(AccountingDenied, match="UNCERTAIN"):
+        await service.capture(values[2].experiment_id, request)
+    with pytest.raises(AccountingDenied, match="UNCERTAIN"):
+        await service.capture(values[2].experiment_id, request)
+    assert len(calls) == 1
+    async with governance_engine.connect() as connection:
+        call = (await connection.execute(select(gov.calls))).mappings().one()
+        assert call["state"] == "RECONCILING"
+        assert not (await connection.execute(select(gov.retained))).first()
         assert (
             await connection.execute(select(steps.c.status))
         ).scalar_one() == "OUTCOME_UNKNOWN"

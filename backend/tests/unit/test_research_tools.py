@@ -49,7 +49,7 @@ class _NoopReadPort:
     async def map(self, experiment_id, request):
         raise AssertionError("not used by this test")
 
-    async def capture(self, experiment_id, request):
+    async def capture(self, experiment_id, request) -> Any:
         raise AssertionError("not used by this test")
 
     async def read_saved_evidence(
@@ -905,8 +905,75 @@ async def test_firecrawl_rejects_unsafe_reported_fetch_metadata(metadata):
         Capability.FIRECRAWL_PAGE_CAPTURE,
         {"success": True, "data": {"markdown": "Evidence", "metadata": metadata}},
     )
-    with pytest.raises(ProviderFailure):
+    result = await adapter.capture(FirecrawlCaptureRequest(url="https://example.com/a"))
+    assert result.metadata.status == "FAILED"
+    assert result.metadata.error_code is ProviderErrorCode.MALFORMED_RESPONSE
+    assert result.content is None
+    assert result.metadata.usage[0].quantity is None
+    assert result.metadata.usage[0].cost is None
+    assert result.metadata.usage[0].knowledge is CostKnowledge.UNAVAILABLE
+
+
+async def test_completed_rejection_still_fails_when_rights_expire_after_response():
+    adapter, grant, seen = firecrawl(
+        Capability.FIRECRAWL_PAGE_CAPTURE,
+        {"success": True, "data": {"markdown": ""}},
+    )
+    adapter._clock = lambda: grant.expires_at if seen else NOW
+
+    with pytest.raises(ProviderFailure) as raised:
         await adapter.capture(FirecrawlCaptureRequest(url="https://example.com/a"))
+
+    assert raised.value.code is ProviderErrorCode.DENIED
+    assert len(seen) == 1
+
+
+async def test_source_unavailable_is_explicit_non_evidence_in_native_tool_loop():
+    from pydantic_ai import Agent
+    from pydantic_ai.messages import (
+        ModelMessagesTypeAdapter,
+        ModelResponse,
+        TextPart,
+        ToolCallPart,
+    )
+    from pydantic_ai.models.function import FunctionModel
+
+    from alon_ai.agents.tools.research import UnavailableResearchResult
+
+    class Port(_NoopReadPort):
+        calls = 0
+
+        async def capture(self, experiment_id, request):
+            self.calls += 1
+            return UnavailableResearchResult()
+
+    port = Port()
+    turns = 0
+
+    async def model(messages, info):
+        nonlocal turns
+        turns += 1
+        if turns == 1:
+            return ModelResponse(
+                [
+                    ToolCallPart(
+                        "capture_page", {"url": "https://example.com"}, tool_call_id="c"
+                    )
+                ]
+            )
+        serialized = ModelMessagesTypeAdapter.dump_json(messages).decode()
+        assert "SOURCE_UNAVAILABLE" in serialized and "not evidence" in serialized
+        assert "retained_id" not in serialized
+        return ModelResponse([TextPart("Named gap: source unavailable")])
+
+    tools = ResearchTools(uuid4(), port)
+    result = await Agent(
+        FunctionModel(model),
+        toolsets=[FunctionToolset([tools.capture_page])],
+        retries=0,
+    ).run("capture")
+    assert result.output == "Named gap: source unavailable"
+    assert port.calls == 1
 
 
 @pytest.mark.asyncio
