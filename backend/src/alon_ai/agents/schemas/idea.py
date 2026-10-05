@@ -22,7 +22,7 @@ from pydantic import (
     model_validator,
 )
 
-from alon_ai.agents.idea_discovery import IdeaBriefAdvice
+from alon_ai.agents.idea_discovery import IdeaBriefAdvice, IdeaStage
 
 Text = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)
@@ -52,6 +52,7 @@ class IdeaAgentInput(_AdvisoryModel):
 
     schema_version: Literal[1] = 1
     operation: IdeaOperation
+    origin_stage: IdeaStage | None = None
     operator_profile_ref: UUID
     profile_context: ProfileContext
     approved_limits_ref: UUID

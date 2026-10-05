@@ -16,6 +16,7 @@ from alon_ai.agents.idea_agent import run_idea_agent
 from alon_ai.agents.idea_discovery import (
     IdeaCandidateAdvice,
     IdeaCandidateSetAdvice,
+    IdeaStage,
     ReturnedIdeaBriefAdvice,
     SeededIdeaBriefAdvice,
     SelectedCandidateIdeaBriefAdvice,
@@ -528,6 +529,15 @@ class CombinedIdeaRuntime:
         payload = command["payload"] if command else {}
         input = IdeaAgentInput(
             operation=operation,
+            origin_stage=(
+                IdeaStage.SYSTEM_DISCOVERY
+                if operation is IdeaOperation.DISCOVER
+                else IdeaStage.RESEARCH_FEEDBACK_REFINEMENT
+                if returned
+                else IdeaStage.USER_SEEDED_REFINEMENT
+                if subject and subject["kind"] == "IDEA_SEED"
+                else IdeaStage.SYSTEM_CANDIDATE_REFINEMENT
+            ),
             operator_profile_ref=row["profile_id"],
             profile_context=profile_context_text(profile, row),
             approved_limits_ref=self.provisioned.attribution.config_version,

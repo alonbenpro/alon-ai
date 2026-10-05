@@ -90,15 +90,25 @@ class SavedEvidenceExcerpt:
 
 @dataclass(frozen=True)
 class UnavailableResearchResult:
-    """Completed, financially settled capture with no usable evidence."""
+    """A settled unusable capture or a proven undispatched circuit stop; no evidence."""
 
-    status: Literal["SOURCE_UNAVAILABLE"] = "SOURCE_UNAVAILABLE"
-    reason: Literal["MALFORMED_RESPONSE"] = "MALFORMED_RESPONSE"
+    status: Literal["SOURCE_UNAVAILABLE", "NOT_DISPATCHED"] = "SOURCE_UNAVAILABLE"
+    reason: Literal["MALFORMED_RESPONSE", "CIRCUIT"] = "MALFORMED_RESPONSE"
     guidance: str = (
         "This completed capture is not evidence and produced no source reference. "
         "Do not repeat this request. Choose a different URL within remaining limits, "
         "or use saved evidence and report the gap in the required native result."
     )
+
+    @classmethod
+    def circuit_open(cls) -> UnavailableResearchResult:
+        return cls(
+            status="NOT_DISPATCHED",
+            reason="CIRCUIT",
+            guidance="The provider circuit blocked this request before dispatch; this is not evidence. "
+            "Do not retry this capability or bypass its circuit. Use existing saved evidence, "
+            "or another approved capability within its limits, and report gaps in the required native result.",
+        )
 
 
 @dataclass(frozen=True, repr=False)
@@ -117,11 +127,13 @@ class TransientSearchUrls:
 class GovernedResearchPort(Protocol):
     async def search(
         self, experiment_id: UUID, request: BraveSearchRequest
-    ) -> tuple[SourceReference, ...] | TransientSearchUrls: ...
+    ) -> (
+        tuple[SourceReference, ...] | TransientSearchUrls | UnavailableResearchResult
+    ): ...
 
     async def map(
         self, experiment_id: UUID, request: FirecrawlMapRequest
-    ) -> tuple[SourceReference, ...]: ...
+    ) -> tuple[SourceReference, ...] | UnavailableResearchResult: ...
 
     async def capture(
         self, experiment_id: UUID, request: FirecrawlCaptureRequest
@@ -146,7 +158,7 @@ class ResearchTools:
 
     async def search_web(
         self, query: str, *, limit: int | None = None
-    ) -> tuple[SourceReference, ...] | tuple[str, ...]:
+    ) -> tuple[SourceReference, ...] | tuple[str, ...] | UnavailableResearchResult:
         try:
             limit = 10 if limit is None else limit
             if not query.strip() or len(query) > 600 or not 1 <= limit <= 20:
@@ -158,6 +170,8 @@ class ResearchTools:
                 limit=limit,
             )
             result = await self._port.search(self._experiment_id, request)
+            if isinstance(result, UnavailableResearchResult):
+                return result
             if isinstance(result, TransientSearchUrls):
                 if not isinstance(result.urls, tuple) or len(result.urls) > limit:
                     raise ValueError
@@ -171,14 +185,19 @@ class ResearchTools:
 
     async def map_site(
         self, url: str, *, limit: int | None = None
-    ) -> tuple[SourceReference, ...]:
+    ) -> tuple[SourceReference, ...] | UnavailableResearchResult:
         try:
             limit = 10 if limit is None else limit
             if not 1 <= limit <= 20:
                 raise ValueError
             limit = min(limit, self._max_results)
             request = FirecrawlMapRequest(url=public_url(url), limit=limit)
-            return self._references(await self._port.map(self._experiment_id, request))
+            result = await self._port.map(self._experiment_id, request)
+            return (
+                result
+                if isinstance(result, UnavailableResearchResult)
+                else self._references(result)
+            )
         except Exception as error:  # noqa: BLE001 - no request/provider details cross tool boundary
             raise _research_tool_error(error) from None
 

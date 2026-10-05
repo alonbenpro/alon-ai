@@ -471,20 +471,19 @@ class GovernedLiveResearchPort:
 
     async def search(
         self, experiment_id: UUID, request: BraveSearchRequest
-    ) -> tuple[SourceReference, ...] | TransientSearchUrls:
+    ) -> tuple[SourceReference, ...] | TransientSearchUrls | UnavailableResearchResult:
         if not isinstance(request, BraveSearchRequest):
             raise AccountingDenied(Reason.CONFIG)
-        result = await self._execute(experiment_id, request)
-        if isinstance(result, UnavailableResearchResult):
-            raise AccountingDenied(Reason.CONFIG)
-        return result
+        return await self._execute(experiment_id, request)
 
     async def map(
         self, experiment_id: UUID, request: FirecrawlMapRequest
-    ) -> tuple[SourceReference, ...]:
+    ) -> tuple[SourceReference, ...] | UnavailableResearchResult:
         if not isinstance(request, FirecrawlMapRequest):
             raise AccountingDenied(Reason.CONFIG)
         result = await self._execute(experiment_id, request)
+        if isinstance(result, UnavailableResearchResult):
+            return result
         if not isinstance(result, tuple):
             raise AccountingDenied(Reason.CONFIG)
         return result
@@ -534,7 +533,9 @@ class GovernedLiveResearchPort:
             await activity.record_activity(
                 self._run_id,
                 "RESEARCH_RESPONSE",
-                f"{capability} completed with unusable content · no evidence · cash reconciled",
+                f"{capability} blocked · CIRCUIT · not dispatched"
+                if result.status == "NOT_DISPATCHED"
+                else f"{capability} completed with unusable content · no evidence · cash reconciled",
             )
             return result
         count = (
@@ -601,6 +602,10 @@ class GovernedLiveResearchPort:
             candidate=self._candidate,
         )
         if step["status"] != "CLAIMED":
+            if step["status"] == "BLOCKED" and step["reason_code"] == "CIRCUIT":
+                receipt = await self._repository.receipt_for_idempotency_key(key)
+                if receipt is not None and receipt.state is CallState.RELEASED:
+                    return UnavailableResearchResult.circuit_open()
             if (
                 step["status"] == "FAILED"
                 and step["reason_code"] == "MALFORMED_RESPONSE"
@@ -656,6 +661,13 @@ class GovernedLiveResearchPort:
                     else error.reason.value,
                 )
             )
+            if (
+                isinstance(error, AccountingDenied)
+                and error.reason is Reason.CIRCUIT
+                and receipt is not None
+                and receipt.state is CallState.RELEASED
+            ):
+                return UnavailableResearchResult.circuit_open()
             raise
         finally:
             receipt = await asyncio.shield(

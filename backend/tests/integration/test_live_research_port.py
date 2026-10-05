@@ -496,6 +496,130 @@ async def test_zero_price_completed_rejection_is_recoverable_without_inventing_u
     assert len(calls) == 3
 
 
+async def test_capture_circuit_release_allows_agent_to_finish_using_saved_evidence(
+    governance_engine,
+):
+    from pydantic_ai import Agent
+    from pydantic_ai.messages import ModelResponse, TextPart, ToolCallPart
+    from pydantic_ai.models.function import FunctionModel
+    from pydantic_ai.toolsets import FunctionToolset
+
+    from alon_ai.agents.tools.research import ResearchTools
+
+    values = await setup(
+        governance_engine,
+        price=Decimal(0),
+        capability=Capability.FIRECRAWL_PAGE_CAPTURE,
+    )
+    network, results = [], []
+
+    def respond(request):
+        network.append(request)
+        return httpx.Response(
+            200,
+            json={
+                "success": True,
+                "data": {"markdown": "saved evidence" if len(network) == 1 else ""},
+            },
+        )
+
+    transport = httpx.MockTransport(respond)
+    service = port(
+        values,
+        transport,
+        firecrawl_transport=transport,
+        resolver=lambda _: ("8.8.8.8",),
+    )
+    tools = ResearchTools(values[2].experiment_id, service)
+
+    async def capture_page(url: str):
+        result = await tools.capture_page(url)
+        results.append(result)
+        return result
+
+    turns = 0
+
+    async def model(messages, info):
+        nonlocal turns
+        turns += 1
+        if turns == 1:
+            return ModelResponse(
+                [
+                    ToolCallPart(
+                        "capture_page",
+                        {"url": f"https://example.com/{index}"},
+                        tool_call_id=f"c{index}",
+                    )
+                    for index in range(4)
+                ]
+            )
+        if turns == 2:
+            assert results[-1].status == "NOT_DISPATCHED"
+            return ModelResponse(
+                [
+                    ToolCallPart(
+                        "read_saved_evidence",
+                        {"retained_id": str(results[0][0].retained_id)},
+                        tool_call_id="read",
+                    )
+                ]
+            )
+        return ModelResponse(
+            [TextPart("Assessment uses saved evidence and names unavailable sources.")]
+        )
+
+    result = await Agent(
+        FunctionModel(model),
+        toolsets=[
+            FunctionToolset([capture_page, tools.read_saved_evidence], sequential=True)
+        ],
+        retries=0,
+    ).run("research")
+    assert (
+        result.output == "Assessment uses saved evidence and names unavailable sources."
+    )
+    assert len(network) == 3
+    assert results[-1].reason == "CIRCUIT"
+    assert "Do not retry this capability" in results[-1].guidance
+    assert await tools.capture_page("https://example.com/3") == results[-1]
+    assert len(network) == 3
+    async with governance_engine.connect() as connection:
+        calls = (await connection.execute(select(gov.calls))).mappings().all()
+        blocked = next(call for call in calls if call["state"] == "RELEASED")
+        assert blocked["dispatch_at"] is None and blocked["accrued"] == 0
+        step = (
+            (
+                await connection.execute(
+                    select(steps).where(steps.c.provider_call_id == blocked["id"])
+                )
+            )
+            .mappings()
+            .one()
+        )
+        assert step["status"] == "BLOCKED" and step["reason_code"] == "CIRCUIT"
+        authority = (await connection.execute(select(gov.authorities))).mappings().one()
+        assert (
+            authority["active"] == 0
+            and authority["quota_used"] == 3
+            and authority["failures"] == 2
+        )
+        assert not (
+            await connection.execute(
+                select(gov.usage).where(gov.usage.c.call_id == blocked["id"])
+            )
+        ).first()
+        assert not (
+            await connection.execute(
+                select(gov.retained).where(gov.retained.c.call_id == blocked["id"])
+            )
+        ).first()
+    run = await AgentRunRepository(governance_engine).get(values[5])
+    assert any(
+        "blocked · CIRCUIT · not dispatched" in (event.get("detail") or "")
+        for event in run["events"]
+    )
+
+
 @pytest.mark.parametrize(
     "price,failure",
     [

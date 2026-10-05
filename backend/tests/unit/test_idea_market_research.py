@@ -7,7 +7,13 @@ from uuid import uuid4
 import pytest
 from pydantic import SecretStr, ValidationError
 from pydantic_ai.exceptions import UnexpectedModelBehavior, UsageLimitExceeded
-from pydantic_ai.messages import ModelMessage, ModelResponse, RetryPromptPart, TextPart
+from pydantic_ai.messages import (
+    ModelMessage,
+    ModelRequest,
+    ModelResponse,
+    RetryPromptPart,
+    TextPart,
+)
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.openai import OpenAIResponsesModel, OpenAIResponsesModelSettings
 from pydantic_ai.models.test import TestModel
@@ -16,6 +22,7 @@ from pydantic_ai.toolsets import FunctionToolset
 from pydantic_ai.usage import UsageLimits
 
 from alon_ai.agents.idea_agent import run_idea_agent
+from alon_ai.agents.idea_discovery import IdeaStage
 from alon_ai.agents.schemas.idea import (
     IdeaAgentInput,
     IdeaOperation,
@@ -109,6 +116,17 @@ def _deepening_input() -> IdeaAgentInput:
     )
 
 
+@pytest.mark.parametrize("stage", list(IdeaStage))
+def test_native_input_retains_trusted_origin_stage(stage: IdeaStage):
+    input = _input() if stage is IdeaStage.SYSTEM_DISCOVERY else _deepening_input()
+
+    resolved = IdeaAgentInput.model_validate(
+        {**input.model_dump(), "origin_stage": stage}
+    )
+
+    assert resolved.origin_stage is stage
+
+
 def _assessment_correction_outputs(
     input: IdeaAgentInput,
 ) -> tuple[dict[str, object], dict[str, object]]:
@@ -155,6 +173,119 @@ def _scripted_native_model(
         FunctionModel(respond, profile={"supports_json_schema_output": True}),
         requests,
     )
+
+
+def _grounded_assessment(
+    input: IdeaAgentInput, grounding_refs: list[str]
+) -> dict[str, object]:
+    output = _assessment(str(input.idea_version_ref))
+    output["brief"] = {
+        **cast(dict[str, object], output["brief"]),
+        "grounding_refs": grounding_refs,
+    }
+    return output
+
+
+@pytest.mark.parametrize(
+    "stage,invalid_refs,corrected_refs",
+    [
+        (IdeaStage.USER_SEEDED_REFINEMENT, ["src-a"], ["SEED"]),
+        (
+            IdeaStage.USER_SEEDED_REFINEMENT,
+            ["SELECTED_CANDIDATE"],
+            ["SEED", "OPERATOR_PROFILE"],
+        ),
+        (
+            IdeaStage.SYSTEM_CANDIDATE_REFINEMENT,
+            ["SEED"],
+            ["SELECTED_CANDIDATE", "OPERATOR_PROFILE"],
+        ),
+        (
+            IdeaStage.RESEARCH_FEEDBACK_REFINEMENT,
+            ["SELECTED_CANDIDATE"],
+            ["PRIOR_IDEA_BRIEF", "RESEARCH_FEEDBACK"],
+        ),
+        (
+            IdeaStage.RESEARCH_FEEDBACK_REFINEMENT,
+            ["PRIOR_IDEA_BRIEF", "RESEARCH_FEEDBACK", "RESEARCH_FEEDBACK"],
+            ["PRIOR_IDEA_BRIEF", "RESEARCH_FEEDBACK"],
+        ),
+    ],
+)
+async def test_native_assessment_corrects_origin_grounding_before_completion(
+    stage: IdeaStage, invalid_refs: list[str], corrected_refs: list[str]
+):
+    input = IdeaAgentInput.model_validate(
+        {**_deepening_input().model_dump(), "origin_stage": stage}
+    )
+    model, requests = _scripted_native_model(
+        [
+            _grounded_assessment(input, invalid_refs),
+            _grounded_assessment(input, corrected_refs),
+        ]
+    )
+
+    result = await run_idea_agent(input, model=model, toolset=FunctionToolset())
+
+    assert isinstance(result.output, MarketResearchAssessment)
+    assert result.output.brief.grounding_refs == tuple(corrected_refs)
+    assert result.output.source_refs == ("src-a",)
+    assert result.usage.requests == len(requests) == 2
+    instructions = "\n".join(
+        message.instructions or ""
+        for message in requests[0]
+        if isinstance(message, ModelRequest)
+    )
+    assert "brief.grounding_refs" in instructions
+    assert all(ref in instructions for ref in corrected_refs)
+    assert str(input.idea_version_ref) in instructions
+
+
+@pytest.mark.parametrize(
+    "stage",
+    [
+        IdeaStage.USER_SEEDED_REFINEMENT,
+        IdeaStage.SYSTEM_CANDIDATE_REFINEMENT,
+        IdeaStage.RESEARCH_FEEDBACK_REFINEMENT,
+    ],
+)
+async def test_native_assessment_rejects_persistently_wrong_origin_grounding(
+    stage: IdeaStage,
+):
+    input = IdeaAgentInput.model_validate(
+        {**_deepening_input().model_dump(), "origin_stage": stage}
+    )
+    invalid = _grounded_assessment(input, ["invented-source"])
+    model, requests = _scripted_native_model([invalid, invalid])
+
+    with pytest.raises(UnexpectedModelBehavior, match="output retries"):
+        await run_idea_agent(input, model=model, toolset=FunctionToolset())
+
+    assert len(requests) == 2
+
+
+async def test_native_assessment_corrects_wrong_idea_version_before_completion():
+    input = _deepening_input()
+    corrected = _assessment(str(input.idea_version_ref))
+    invalid = {**corrected, "idea_version_ref": str(uuid4())}
+    model, requests = _scripted_native_model([invalid, corrected])
+
+    result = await run_idea_agent(input, model=model, toolset=FunctionToolset())
+
+    assert isinstance(result.output, MarketResearchAssessment)
+    assert result.output.idea_version_ref == input.idea_version_ref
+    assert result.usage.requests == len(requests) == 2
+
+
+async def test_native_assessment_rejects_persistently_wrong_idea_version():
+    input = _deepening_input()
+    invalid = _assessment(str(uuid4()))
+    model, requests = _scripted_native_model([invalid, invalid])
+
+    with pytest.raises(UnexpectedModelBehavior, match="output retries"):
+        await run_idea_agent(input, model=model, toolset=FunctionToolset())
+
+    assert len(requests) == 2
 
 
 async def test_native_assessment_corrects_source_basis_errors_once():
