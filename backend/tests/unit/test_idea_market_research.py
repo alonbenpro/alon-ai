@@ -688,6 +688,61 @@ async def test_deepening_and_refinement_return_exact_version_assessment(
     assert result.output.gaps == ("Willingness to pay remains unknown",)
 
 
+@pytest.mark.parametrize(
+    "operation", [IdeaOperation.SELECTED_DEEPEN, IdeaOperation.REFINE]
+)
+@pytest.mark.parametrize("status", ["ASSESSED", "INCOMPLETE"])
+async def test_native_assessment_separates_completion_from_commercial_confidence(
+    operation, status
+):
+    from alon_ai.services.combined_idea import mapped_advice
+    from alon_ai.services.schemas.records import ArtifactKind
+
+    input = _deepening_input().model_copy(update={"operation": operation})
+    _, output = _assessment_correction_outputs(input)
+    source = str(uuid4())
+    output["status"] = status
+    output["source_refs"] = [source]
+    cast(list[dict[str, object]], output["findings"])[0]["source_refs"] = [source]
+    requests = []
+
+    def respond(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        requests.append(messages)
+        assert info.instructions is not None
+        assert "ASSESSED may be INCONCLUSIVE" in info.instructions
+        assert "remaining relevant permitted research" in info.instructions
+        assert "reasonably resolve material market-evidence gaps" in info.instructions
+        assert "Do not spend calls merely to exhaust allowances" in info.instructions
+        schema = info.model_request_parameters.output_object
+        assert schema is not None
+        description = schema.json_schema["properties"]["status"]["description"]
+        assert "completed evidence-backed assessment" in description
+        assert "not validated demand or sales" in description
+        return ModelResponse([TextPart(json.dumps(output))])
+
+    result = await run_idea_agent(
+        input,
+        model=FunctionModel(respond, profile={"supports_json_schema_output": True}),
+        toolset=FunctionToolset(),
+    )
+
+    assert isinstance(result.output, MarketResearchAssessment)
+    assert result.output.status == status
+    assert result.output.recommendation == "INCONCLUSIVE"
+    assert result.output.gaps == ("Willingness to pay remains unknown",)
+    assert [finding.basis for finding in result.output.findings] == [
+        "OBSERVED",
+        "UNKNOWN",
+        "INFERRED",
+    ]
+    assert (
+        len(result.output.coverage) == 1
+    )  # Optional dimensions need not all be observed.
+    advice = mapped_advice(result.output, seed_kind=ArtifactKind.IDEA_CANDIDATE)
+    assert (advice is not None) is (status == "ASSESSED")
+    assert result.usage.requests == len(requests) == 1
+
+
 def test_openai_model_uses_responses_with_no_sdk_retries_or_storage():
     model = build_openai_model(
         model_identifier="gpt-5",

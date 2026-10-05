@@ -297,7 +297,14 @@ class MarketRecommendation(StrEnum):
 class MarketResearchAssessment(_AdvisoryModel):
     """Version-bound market case, with no offer package or lead-filter authority."""
 
-    status: Literal["ASSESSED", "INCOMPLETE"]
+    status: Literal["ASSESSED", "INCOMPLETE"] = Field(
+        description=(
+            "ASSESSED means a completed evidence-backed assessment, not validated demand or sales. "
+            "It may recommend INCONCLUSIVE with named gaps and unavailable optional dimensions. "
+            "INCOMPLETE means collected evidence cannot support an assessment. "
+            "Preserve supported findings and material uncertainty in either result."
+        )
+    )
     idea_version_ref: UUID
     brief: IdeaBriefAdvice
     findings: tuple[ResearchFinding, ...] = Field(min_length=1)

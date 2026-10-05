@@ -140,7 +140,16 @@ async def run_idea_agent(
             f"Return idea_version_ref exactly {input.idea_version_ref}. {grounding} "
             "Brief grounding labels identify supplied input context; they are not "
             "market evidence. Cite retained evidence in assessment.source_refs and "
-            "findings[].source_refs separately."
+            "findings[].source_refs separately. ASSESSED means a completed "
+            "evidence-backed assessment, not validated demand or sales. ASSESSED may be INCONCLUSIVE "
+            "with named material gaps; unavailable optional dimensions or uncertain "
+            "commercial viability alone do not require INCOMPLETE. Use INCOMPLETE "
+            "when collected evidence cannot support an assessment. Before choosing "
+            "INCOMPLETE, use remaining relevant permitted research when it can "
+            "reasonably resolve material market-evidence gaps. When limits are reached "
+            "or no useful permitted research remains, preserve supported findings and "
+            "name unresolved gaps in the appropriate result. Do not spend calls merely to exhaust allowances, "
+            "pad coverage, invent evidence, or turn uncertainty into confidence."
         )
 
     @agent.output_validator
