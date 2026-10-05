@@ -210,7 +210,7 @@ def test_root_assessment_validator_has_actionable_controlled_code():
         (
             "brief",
             {"material_pivot": True},
-            "value_error:brief:PROVIDER_CONTRACT_INVALID",
+            "value_error:brief:PIVOT_CLASSIFICATION_MISMATCH",
         ),
         (
             "price_observations",

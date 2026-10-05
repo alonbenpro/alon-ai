@@ -22,7 +22,7 @@ from pydantic_ai.toolsets import FunctionToolset
 from pydantic_ai.usage import UsageLimits
 
 from alon_ai.agents.idea_agent import run_idea_agent
-from alon_ai.agents.idea_discovery import IdeaStage
+from alon_ai.agents.idea_discovery import IdeaBriefAdvice, IdeaStage
 from alon_ai.agents.schemas.idea import (
     IdeaAgentInput,
     IdeaOperation,
@@ -322,6 +322,182 @@ async def test_native_assessment_corrects_source_basis_errors_once():
             "Value error, unknown finding cannot claim source support",
         ),
     ]
+
+
+@pytest.mark.parametrize(
+    "changes,kind,location",
+    [
+        ({"material_pivot": True}, "value_error", ("brief",)),
+        ({"title": "   "}, "string_too_short", ("brief", "title")),
+        (
+            {"title": {"PRIVATE_KEY": "PRIVATE_VALUE"}},
+            "string_type",
+            ("brief", "title"),
+        ),
+        ({"material_pivot": "false"}, "bool_type", ("brief", "material_pivot")),
+        ({"PRIVATE_KEY": "PRIVATE_VALUE"}, "extra_forbidden", ("brief", 0)),
+        (
+            {"buyer": {"PRIVATE_KEY": "PRIVATE_VALUE"}},
+            "literal_error",
+            ("brief", "buyer", 0, 0),
+        ),
+    ],
+)
+async def test_native_brief_correction_feedback_preserves_safe_field_reason(
+    changes: dict[str, object], kind: str, location: tuple[str | int, ...]
+):
+    input = _deepening_input()
+    corrected = _assessment(str(input.idea_version_ref))
+    invalid = {
+        **corrected,
+        "brief": {**cast(dict[str, object], corrected["brief"]), **changes},
+    }
+    model, requests = _scripted_native_model([invalid, corrected])
+
+    result = await run_idea_agent(input, model=model, toolset=FunctionToolset())
+
+    assert isinstance(result.output, MarketResearchAssessment)
+    assert result.output.brief == IdeaBriefAdvice.model_validate_json(
+        json.dumps(corrected["brief"])
+    )
+    assert result.usage.requests == len(requests) == 2
+    feedback = [
+        part
+        for message in requests[1]
+        for part in message.parts
+        if isinstance(part, RetryPromptPart)
+    ]
+    assert len(feedback) == 1
+    assert isinstance(feedback[0].content, list)
+    assert [(error["type"], error["loc"]) for error in feedback[0].content] == [
+        (kind, location)
+    ]
+    assert all(error["input"] is None for error in feedback[0].content)
+    assert all("ctx" not in error for error in feedback[0].content)
+    serialized = json.dumps(feedback[0].content)
+    assert "PRIVATE" not in serialized
+    assert "Clinic appointment reminders" not in serialized
+    if kind == "value_error":
+        assert feedback[0].content[0]["msg"] == (
+            "Value error, pivot flag and intent relationship disagree"
+        )
+
+
+async def test_native_brief_shape_error_can_be_corrected():
+    input = _deepening_input()
+    corrected = _assessment(str(input.idea_version_ref))
+    model, requests = _scripted_native_model(
+        [{**corrected, "brief": ["PRIVATE_VALUE"]}, corrected]
+    )
+
+    result = await run_idea_agent(input, model=model, toolset=FunctionToolset())
+
+    assert isinstance(result.output, MarketResearchAssessment)
+    assert result.usage.requests == len(requests) == 2
+
+
+@pytest.mark.parametrize(
+    "changes,frame",
+    [
+        ({"material_pivot": True}, "value_error:brief:PIVOT_CLASSIFICATION_MISMATCH"),
+        ({"title": {"PRIVATE_KEY": "PRIVATE_VALUE"}}, "string_type:brief.title"),
+        (
+            {"buyer": {"PRIVATE_KEY": "PRIVATE_VALUE"}},
+            "literal_error:brief.buyer.[].[]",
+        ),
+    ],
+)
+def test_native_brief_diagnostic_preserves_reason_without_raw_context(
+    changes: dict[str, object], frame: str
+):
+    from alon_ai.services.run_diagnostics import diagnostic_for_error
+
+    output = _assessment(str(uuid4()))
+    output["brief"] = {
+        **cast(dict[str, object], output["brief"]),
+        "title": "PRIVATE_VALUE",
+        **changes,
+    }
+    with pytest.raises(ValidationError) as raised:
+        MarketResearchAssessment.model_validate_json(json.dumps(output))
+
+    assert raised.value.__context__ is None
+    assert raised.value.__cause__ is None
+    assert all(error["input"] is None for error in raised.value.errors())
+    assert "PRIVATE" not in str(raised.value)
+    diagnostic = diagnostic_for_error("AGENT_EXECUTION", raised.value)
+    assert frame in diagnostic.frames
+    assert "PRIVATE" not in diagnostic.model_dump_json()
+
+
+async def test_invalid_native_brief_stops_after_one_correction_with_safe_diagnostic():
+    from alon_ai.services.run_diagnostics import diagnostic_for_error
+
+    input = _deepening_input()
+    invalid = _assessment(str(input.idea_version_ref))
+    invalid["brief"] = {
+        **cast(dict[str, object], invalid["brief"]),
+        "title": {"PRIVATE_KEY": "PRIVATE_VALUE"},
+    }
+    model, requests = _scripted_native_model([invalid, invalid])
+
+    with pytest.raises(UnexpectedModelBehavior, match="output retries") as raised:
+        await run_idea_agent(input, model=model, toolset=FunctionToolset())
+
+    assert len(requests) == 2
+    diagnostic = diagnostic_for_error("AGENT_EXECUTION", raised.value)
+    assert "string_type:brief.title" in diagnostic.frames
+    assert "PRIVATE" not in diagnostic.model_dump_json()
+
+
+def test_original_brief_provider_contract_still_hides_field_errors():
+    brief = cast(dict[str, object], _assessment(str(uuid4()))["brief"])
+    with pytest.raises(ValidationError) as raised:
+        IdeaBriefAdvice.model_validate_json(
+            json.dumps({**brief, "title": {"PRIVATE_KEY": "PRIVATE_VALUE"}})
+        )
+
+    assert raised.value.errors(include_url=False, include_context=False) == [
+        {
+            "type": "value_error",
+            "loc": (),
+            "msg": "Value error, invalid provider contract",
+            "input": None,
+        }
+    ]
+    assert "PRIVATE" not in str(raised.value)
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"title": "  Clinic workflow  "},
+        {"title": "   "},
+        {"title": 123},
+        {"material_pivot": "false"},
+        {"material_pivot": True},
+        {"intent_relationship": "UNRECOGNIZED"},
+        {"assumptions": []},
+        {"assumptions": "not an array"},
+        {"PRIVATE_KEY": "PRIVATE_VALUE"},
+        {"buyer": {"PRIVATE_KEY": "PRIVATE_VALUE"}},
+    ],
+)
+def test_native_brief_acceptance_matches_existing_strict_contract(
+    changes: dict[str, object],
+):
+    output = _assessment(str(uuid4()))
+    raw = {**cast(dict[str, object], output["brief"]), **changes}
+    output["brief"] = raw
+    try:
+        expected = IdeaBriefAdvice.model_validate_json(json.dumps(raw))
+    except ValidationError:
+        with pytest.raises(ValidationError):
+            MarketResearchAssessment.model_validate_json(json.dumps(output))
+    else:
+        actual = MarketResearchAssessment.model_validate_json(json.dumps(output))
+        assert actual.brief == expected
+        assert actual.brief.title == "Clinic workflow"
 
 
 async def test_native_assessment_stops_after_one_failed_correction():

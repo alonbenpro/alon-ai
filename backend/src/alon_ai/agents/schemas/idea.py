@@ -10,7 +10,7 @@ import json
 from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated, Literal, Self
+from typing import Annotated, Literal, LiteralString, Self, cast, get_args
 from uuid import UUID
 
 from pydantic import (
@@ -18,11 +18,73 @@ from pydantic import (
     ConfigDict,
     Field,
     StringConstraints,
+    ValidationError,
     field_validator,
     model_validator,
 )
+from pydantic_core import InitErrorDetails, PydanticCustomError, SchemaValidator
+from pydantic_core.core_schema import ErrorType
 
 from alon_ai.agents.idea_discovery import IdeaBriefAdvice, IdeaStage
+from alon_ai.integrations.schemas.provider import _native_json_schema
+
+_NATIVE_BRIEF_VALIDATOR = SchemaValidator(
+    _native_json_schema(IdeaBriefAdvice.__pydantic_core_schema__)
+)
+_BRIEF_ERROR_TYPES = frozenset(get_args(ErrorType))
+_BRIEF_ERROR_REASONS: dict[str, LiteralString] = {
+    "model_type": "Brief must be a JSON object.",
+    "string_type": "A string is required.",
+    "string_too_short": "Non-empty text is required after trimming whitespace.",
+    "string_too_long": "Text exceeds the brief field's allowed length.",
+    "bool_type": "A JSON boolean is required.",
+    "literal_error": "Use only the literal values permitted by the brief schema.",
+    "missing": "A required brief field is missing.",
+    "extra_forbidden": "Remove fields not permitted by the brief schema.",
+    "dict_type": "A JSON object is required.",
+    "tuple_type": "A JSON array is required.",
+    "too_short": "The required array must not be empty.",
+}
+
+
+def _safe_brief_errors(error: ValidationError) -> list[InitErrorDetails]:
+    """Keep schema-owned feedback only; input and arbitrary mapping keys stay local."""
+    errors: list[InitErrorDetails] = []
+    pivot_error: LiteralString = (
+        "Value error, pivot flag and intent relationship disagree"
+    )
+    for detail in error.errors(
+        include_input=False, include_context=False, include_url=False
+    ):
+        kind = detail["type"] if detail["type"] in _BRIEF_ERROR_TYPES else "value_error"
+        location = detail["loc"]
+        safe_location = tuple(
+            part
+            if type(part) is str
+            and (
+                index == 0
+                and part in IdeaBriefAdvice.model_fields
+                or index == 1
+                and location[0] == "buyer"
+                and part in {"segment", "role"}
+            )
+            else 0
+            for index, part in enumerate(location)
+        )
+        reason = (
+            pivot_error
+            if detail["msg"] == pivot_error
+            else _BRIEF_ERROR_REASONS.get(kind, "Invalid brief field.")
+        )
+        errors.append(
+            {
+                "type": PydanticCustomError(cast(LiteralString, kind), reason),
+                "loc": safe_location,
+                "input": None,
+            }
+        )
+    return errors
+
 
 Text = Annotated[
     str, StringConstraints(strip_whitespace=True, min_length=1, max_length=4000)
@@ -251,11 +313,18 @@ class MarketResearchAssessment(_AdvisoryModel):
     def parse_historical_rich_brief(cls, value: object) -> IdeaBriefAdvice:
         if isinstance(value, IdeaBriefAdvice):
             return value
-        if not isinstance(value, dict):
-            raise TypeError("brief must be the rich IdeaBriefAdvice object")
         # The retained StrictDTO intentionally validates JSON arrays into tuples
         # only through its JSON entry point. Native agent output arrives nested.
-        return IdeaBriefAdvice.model_validate_json(json.dumps(value))
+        # Use the same core schema without its generic error wrappers, retaining
+        # all strict field/model validators while exposing safe correction detail.
+        try:
+            return _NATIVE_BRIEF_VALIDATOR.validate_json(json.dumps(value))
+        except ValidationError as error:
+            safe_error = ValidationError.from_exception_data(
+                "Idea brief", _safe_brief_errors(error), hide_input=True
+            )
+        # Raise outside the handler so raw inputs cannot survive in __context__.
+        raise safe_error from None
 
     @model_validator(mode="after")
     def assessment_citations_and_status(self) -> Self:
