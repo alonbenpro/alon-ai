@@ -322,6 +322,73 @@ async def test_firecrawl_http_failure_exposes_status_without_response_body():
     assert "SECRET" not in repr(raised.value)
 
 
+@pytest.mark.parametrize(
+    "capability",
+    [
+        Capability.FIRECRAWL_PAGE_CAPTURE,
+        Capability.FIRECRAWL_JS_RETRIEVAL,
+        Capability.FIRECRAWL_PDF_CAPTURE,
+    ],
+)
+async def test_firecrawl_capture_deadlines_leave_time_for_completed_response(
+    capability, monkeypatch
+):
+    async def extracted(*args, **kwargs):
+        return "Evidence"
+
+    monkeypatch.setattr(
+        "alon_ai.integrations.firecrawl.pdf_sandbox_supported", lambda: True
+    )
+    monkeypatch.setattr("alon_ai.integrations.firecrawl.extract_pdf", extracted)
+    body = {
+        "success": True,
+        "data": {
+            "markdown": "Evidence",
+            "rawBase64": base64.b64encode(b"%PDF-test").decode(),
+        },
+    }
+    adapter, _, seen = firecrawl(capability, body)
+    result = await adapter.capture(
+        FirecrawlCaptureRequest(capability=capability, url="https://example.com/a")
+    )
+
+    assert result.content is not None
+    assert len(seen) == 1
+    server_timeout = json.loads(seen[0].content)["timeout"] / 1000
+    client_timeout = seen[0].extensions["timeout"]["read"]
+    assert server_timeout == 60
+    assert client_timeout == 75
+    assert server_timeout < client_timeout
+
+
+async def test_firecrawl_map_keeps_existing_deadlines():
+    adapter, _, seen = firecrawl(
+        Capability.FIRECRAWL_MAP, {"success": True, "links": []}
+    )
+    await adapter.map(FirecrawlMapRequest(url="https://example.com/a"))
+
+    assert json.loads(seen[0].content)["timeout"] == 15000
+    assert seen[0].extensions["timeout"]["read"] == 15
+
+
+async def test_firecrawl_true_read_timeout_remains_classified_without_retry():
+    adapter, _, _ = firecrawl(Capability.FIRECRAWL_PAGE_CAPTURE, {})
+    seen = []
+
+    def timeout(request):
+        seen.append(request)
+        raise httpx.ReadTimeout("SECRET upstream details")
+
+    adapter._transport = httpx.MockTransport(timeout)
+    with pytest.raises(ProviderFailure) as raised:
+        await adapter.capture(FirecrawlCaptureRequest(url="https://example.com/a"))
+
+    assert raised.value.code is ProviderErrorCode.TIMEOUT
+    assert raised.value.http_status is None
+    assert len(seen) == 1
+    assert "SECRET" not in str(raised.value)
+
+
 @pytest.mark.asyncio
 async def test_firecrawl_map_and_page_use_fixed_options():
     adapter, grant, seen = firecrawl(

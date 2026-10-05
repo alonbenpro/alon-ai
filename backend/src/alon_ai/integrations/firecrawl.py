@@ -56,6 +56,10 @@ from alon_ai.policies.provider_rights import (
 
 _MAP_ENDPOINT = "https://api.firecrawl.dev/v2/map"
 _SCRAPE_ENDPOINT = "https://api.firecrawl.dev/v2/scrape"
+_SCRAPE_TIMEOUT_MS = 60_000
+# Let Firecrawl finish its server deadline and deliver the response before the
+# local read deadline expires. The governed executor still bounds the attempt.
+_SCRAPE_CLIENT_TIMEOUT_SECONDS = 75.0
 _MAX_RESPONSE_BYTES = 256_000
 
 
@@ -178,11 +182,14 @@ class FirecrawlAdapter:
         body: dict[str, object],
         *,
         max_bytes: int = _MAX_RESPONSE_BYTES,
+        timeout_seconds: float = 15.0,
     ) -> dict:
         try:
             async with (
                 httpx.AsyncClient(
-                    transport=self._transport, follow_redirects=False, timeout=15.0
+                    transport=self._transport,
+                    follow_redirects=False,
+                    timeout=timeout_seconds,
                 ) as client,
                 client.stream(
                     "POST",
@@ -320,13 +327,14 @@ class FirecrawlAdapter:
                 "formats": [field],
                 "onlyMainContent": True,
                 "waitFor": request.wait_ms,
-                "timeout": 15000,
+                "timeout": _SCRAPE_TIMEOUT_MS,
                 "proxy": "basic",
                 "storeInCache": False,
                 "skipTlsVerification": False,
                 "removeBase64Images": True,
                 "parsers": [],
             },
+            timeout_seconds=_SCRAPE_CLIENT_TIMEOUT_SECONDS,
         )
         content = title = None
         metadata = {}
@@ -420,12 +428,13 @@ class FirecrawlAdapter:
                 "url": request.url,
                 "formats": ["rawBase64"],
                 "parsers": [],
-                "timeout": 15000,
+                "timeout": _SCRAPE_TIMEOUT_MS,
                 "proxy": "basic",
                 "storeInCache": False,
                 "skipTlsVerification": False,
             },
             max_bytes=(self._max_pdf_bytes * 4 // 3) + 4096,
+            timeout_seconds=_SCRAPE_CLIENT_TIMEOUT_SECONDS,
         )
         try:
             data = payload["data"]
