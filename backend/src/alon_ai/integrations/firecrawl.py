@@ -32,8 +32,10 @@ from alon_ai.integrations.schemas.provider import (
     CaptureFormat,
     ContentField,
     CostKnowledge,
+    FirecrawlCaptureRejection,
     FirecrawlCaptureRequest,
     FirecrawlMapRequest,
+    FirecrawlRejectionReason,
     ProviderCallResult,
     ProviderErrorCode,
     ProviderFailure,
@@ -55,6 +57,12 @@ from alon_ai.policies.provider_rights import (
 _MAP_ENDPOINT = "https://api.firecrawl.dev/v2/map"
 _SCRAPE_ENDPOINT = "https://api.firecrawl.dev/v2/scrape"
 _MAX_RESPONSE_BYTES = 256_000
+
+
+class _CaptureRejected(ValueError):
+    def __init__(self, reason: FirecrawlRejectionReason):
+        self.reason = reason
+        super().__init__(reason.value)
 
 
 def _resolve(host: str) -> tuple[str, ...]:
@@ -137,20 +145,30 @@ class FirecrawlAdapter:
         # has no documented redirect-disable option. Validate reported URLs as
         # defense in depth; this cannot prevent a provider-side internal fetch.
         status = metadata.get("statusCode", 200)
-        if type(status) is not int or not 200 <= status < 300 or metadata.get("error"):
-            raise ValueError
+        if type(status) is not int:
+            raise _CaptureRejected(FirecrawlRejectionReason.TARGET_STATUS_INVALID)
+        if not 200 <= status < 300:
+            raise _CaptureRejected(FirecrawlRejectionReason.TARGET_STATUS_UNSUCCESSFUL)
+        if metadata.get("error"):
+            raise _CaptureRejected(FirecrawlRejectionReason.TARGET_ERROR_REPORTED)
         source = metadata.get("sourceURL", requested)
         origin = urlsplit(requested)
         for reported in (source, metadata.get("url", source)):
             if not isinstance(reported, str):
-                raise TypeError
-            target = urlsplit(reported)
-            if (
-                target.scheme != origin.scheme
-                or target.hostname != origin.hostname
-                or (target.port or 443) != (origin.port or 443)
-            ):
-                raise ValueError
+                raise _CaptureRejected(FirecrawlRejectionReason.SOURCE_URL_TYPE_INVALID)
+            try:
+                target = urlsplit(reported)
+                same_origin = (
+                    target.scheme == origin.scheme
+                    and target.hostname == origin.hostname
+                    and (target.port or 443) == (origin.port or 443)
+                )
+            except ValueError:
+                raise _CaptureRejected(
+                    FirecrawlRejectionReason.SOURCE_URL_INVALID
+                ) from None
+            if not same_origin:
+                raise _CaptureRejected(FirecrawlRejectionReason.SOURCE_ORIGIN_MISMATCH)
             await self._public_target(reported)
         return source
 
@@ -310,25 +328,49 @@ class FirecrawlAdapter:
                 "parsers": [],
             },
         )
+        content = title = None
+        metadata = {}
         try:
             data = payload["data"]
+            if not isinstance(data, dict):
+                raise _CaptureRejected(FirecrawlRejectionReason.DATA_SHAPE_INVALID)
+            if field not in data:
+                raise _CaptureRejected(FirecrawlRejectionReason.CONTENT_MISSING)
             content = data[field]
             metadata = data.get("metadata", {})
+            if not isinstance(metadata, dict):
+                raise _CaptureRejected(FirecrawlRejectionReason.METADATA_SHAPE_INVALID)
             title = metadata.get("title", "")
             source = await self._capture_source(metadata, request.url)
-            if (
-                not isinstance(content, str)
-                or not content
-                or len(content) > self._max_text_chars
-                or not isinstance(title, str)
-                or len(title) > 500
-            ):
-                raise ValueError
-        except (ValueError, TypeError, KeyError, AttributeError):
+            if not isinstance(content, str):
+                raise _CaptureRejected(FirecrawlRejectionReason.CONTENT_TYPE_INVALID)
+            if not content:
+                raise _CaptureRejected(FirecrawlRejectionReason.CONTENT_EMPTY)
+            if len(content) > self._max_text_chars:
+                raise _CaptureRejected(FirecrawlRejectionReason.CONTENT_LIMIT_EXCEEDED)
+            if not isinstance(title, str):
+                raise _CaptureRejected(FirecrawlRejectionReason.TITLE_TYPE_INVALID)
+            if len(title) > 500:
+                raise _CaptureRejected(FirecrawlRejectionReason.TITLE_LIMIT_EXCEEDED)
+        except (ValueError, TypeError, KeyError, AttributeError) as error:
             # _post completed HTTP 200/success:true. The returned content is
             # unusable, but this is positive response-completion evidence.
             # Neither a billed quantity nor a price is known at this layer.
             finished = self._authorize(request.capability)
+            target_status = (
+                metadata.get("statusCode") if isinstance(metadata, dict) else None
+            )
+            rejection = FirecrawlCaptureRejection(
+                reason=error.reason
+                if isinstance(error, _CaptureRejected)
+                else FirecrawlRejectionReason.DATA_SHAPE_INVALID,
+                content_chars=len(content) if isinstance(content, str) else None,
+                title_chars=len(title) if isinstance(title, str) else None,
+                text_char_limit=self._max_text_chars,
+                target_status=target_status
+                if type(target_status) is int and 100 <= target_status <= 599
+                else None,
+            )
             return ProviderCallResult(
                 ProviderResultMetadata(
                     capability=request.capability,
@@ -336,6 +378,7 @@ class FirecrawlAdapter:
                     finished_at=finished,
                     status=ResultStatus.FAILED,
                     error_code=ProviderErrorCode.MALFORMED_RESPONSE,
+                    rejection=rejection,
                     usage=(
                         UsageObservation(
                             component=UsageComponent.CAPTURE_PAGE,

@@ -287,6 +287,7 @@ class _RequestAdapter:
         )
         self.failure: ProviderFailure | None = None
         self.completed_rejection = False
+        self.rejection = None
 
     async def invoke(
         self, config: CapabilityConfig, secret: SecretStr | None, /
@@ -350,6 +351,9 @@ class _RequestAdapter:
                 and result.metadata.status is ResultStatus.FAILED
                 and result.metadata.error_code is ProviderErrorCode.MALFORMED_RESPONSE
                 and result.content is None
+            )
+            self.rejection = (
+                result.metadata.rejection if self.completed_rejection else None
             )
             observations = []
             for observed in result.metadata.usage:
@@ -530,12 +534,25 @@ class GovernedLiveResearchPort:
             )
             raise
         if isinstance(result, UnavailableResearchResult):
+            detail = ""
+            if result.rejection is not None:
+                diagnostic = result.rejection
+                detail = f" · {diagnostic.reason.value}"
+                for name in (
+                    "content_chars",
+                    "text_char_limit",
+                    "title_chars",
+                    "target_status",
+                ):
+                    value = getattr(diagnostic, name)
+                    if value is not None:
+                        detail += f" · {name}={value}"
             await activity.record_activity(
                 self._run_id,
                 "RESEARCH_RESPONSE",
                 f"{capability} blocked · CIRCUIT · not dispatched"
                 if result.status == "NOT_DISPATCHED"
-                else f"{capability} completed with unusable content · no evidence · cash reconciled",
+                else f"{capability} completed with unusable content · no evidence · cash reconciled{detail}",
             )
             return result
         count = (
@@ -680,7 +697,7 @@ class GovernedLiveResearchPort:
                 await self._steps.finish(
                     key, status="FAILED", reason="MALFORMED_RESPONSE"
                 )
-                return UnavailableResearchResult()
+                return UnavailableResearchResult(rejection=adapter.rejection)
             await self._steps.finish(
                 key, status="OUTCOME_UNKNOWN", reason="PROVIDER_OUTCOME_UNKNOWN"
             )

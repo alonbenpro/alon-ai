@@ -433,6 +433,8 @@ async def test_zero_price_completed_rejection_is_recoverable_without_inventing_u
     rejected = await tools.capture_page("https://example.com/bad")
     assert isinstance(rejected, UnavailableResearchResult)
     assert rejected.status == "SOURCE_UNAVAILABLE"
+    assert rejected.rejection is not None
+    assert rejected.rejection.reason.value == "CONTENT_EMPTY"
     assert "not evidence" in rejected.guidance
     # Same failed request returns the same explicit unavailability, never retries.
     assert await tools.capture_page("https://example.com/bad") == rejected
@@ -457,6 +459,18 @@ async def test_zero_price_completed_rejection_is_recoverable_without_inventing_u
             failed["state"] == "FINAL"
             and failed["accrued"] == 0
             and failed["reserved"] == 0
+        )
+        assert "rejection" not in failed["result_metadata"]
+        events = (
+            await connection.execute(
+                select(runs.c.events).where(runs.c.run_id == values[5])
+            )
+        ).scalar_one()
+        assert any(
+            event["type"] == "RESEARCH_RESPONSE"
+            and "CONTENT_EMPTY" in (event.get("detail") or "")
+            and "content_chars=0" in (event.get("detail") or "")
+            for event in events
         )
         usage = (
             (

@@ -322,6 +322,33 @@ class ResultStatus(StrEnum):
     UNKNOWN = "UNKNOWN"
 
 
+class FirecrawlRejectionReason(StrEnum):
+    DATA_SHAPE_INVALID = "DATA_SHAPE_INVALID"
+    CONTENT_MISSING = "CONTENT_MISSING"
+    CONTENT_TYPE_INVALID = "CONTENT_TYPE_INVALID"
+    CONTENT_EMPTY = "CONTENT_EMPTY"
+    CONTENT_LIMIT_EXCEEDED = "CONTENT_LIMIT_EXCEEDED"
+    METADATA_SHAPE_INVALID = "METADATA_SHAPE_INVALID"
+    TITLE_TYPE_INVALID = "TITLE_TYPE_INVALID"
+    TITLE_LIMIT_EXCEEDED = "TITLE_LIMIT_EXCEEDED"
+    TARGET_STATUS_INVALID = "TARGET_STATUS_INVALID"
+    TARGET_STATUS_UNSUCCESSFUL = "TARGET_STATUS_UNSUCCESSFUL"
+    TARGET_ERROR_REPORTED = "TARGET_ERROR_REPORTED"
+    SOURCE_URL_TYPE_INVALID = "SOURCE_URL_TYPE_INVALID"
+    SOURCE_ORIGIN_MISMATCH = "SOURCE_ORIGIN_MISMATCH"
+    SOURCE_URL_INVALID = "SOURCE_URL_INVALID"
+
+
+class FirecrawlCaptureRejection(StrictDTO):
+    """Content-free diagnosis of a completed but unusable page capture."""
+
+    reason: FirecrawlRejectionReason
+    content_chars: int | None = Field(default=None, ge=0, le=256_000)
+    title_chars: int | None = Field(default=None, ge=0, le=256_000)
+    text_char_limit: int = Field(ge=1, le=100_000)
+    target_status: int | None = Field(default=None, ge=100, le=599)
+
+
 class ProviderResultMetadata(StrictDTO):
     capability: Capability
     external_request_id: str | None = Field(
@@ -332,6 +359,9 @@ class ProviderResultMetadata(StrictDTO):
     status: ResultStatus
     error_code: ProviderErrorCode | None = None
     usage: tuple[UsageObservation, ...] = ()
+    # Runtime-only context; the governed result JSON contract stays unchanged.
+    # Safe rejection details are persisted through existing run activity instead.
+    rejection: FirecrawlCaptureRejection | None = Field(default=None, exclude=True)
 
     @model_validator(mode="after")
     def valid_result(self) -> ProviderResultMetadata:

@@ -8,6 +8,7 @@ return provider responses or credentials directly to an agent.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from dataclasses import field as dataclass_field
 from typing import Annotated, Literal, Protocol
 from uuid import UUID
 
@@ -17,6 +18,7 @@ from alon_ai.integrations.schemas.provider import (
     BraveSearchRequest,
     Capability,
     CaptureFormat,
+    FirecrawlCaptureRejection,
     FirecrawlCaptureRequest,
     FirecrawlMapRequest,
     ProviderErrorCode,
@@ -98,6 +100,10 @@ class UnavailableResearchResult:
         "This completed capture is not evidence and produced no source reference. "
         "Do not repeat this request. Choose a different URL within remaining limits, "
         "or use saved evidence and report the gap in the required native result."
+    )
+    # Safe diagnostic context does not change terminal unavailability/replay identity.
+    rejection: FirecrawlCaptureRejection | None = dataclass_field(
+        default=None, compare=False
     )
 
     @classmethod

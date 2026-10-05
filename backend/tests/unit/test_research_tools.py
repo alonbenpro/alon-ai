@@ -2,10 +2,11 @@
 
 import asyncio
 import base64
+import json
 import sys
 import time
 from datetime import UTC, datetime, timedelta
-from typing import Any
+from typing import Any, cast
 from uuid import uuid4
 
 import httpx
@@ -912,6 +913,219 @@ async def test_firecrawl_rejects_unsafe_reported_fetch_metadata(metadata):
     assert result.metadata.usage[0].quantity is None
     assert result.metadata.usage[0].cost is None
     assert result.metadata.usage[0].knowledge is CostKnowledge.UNAVAILABLE
+
+
+@pytest.mark.parametrize(
+    "data,reason",
+    [
+        ([], "DATA_SHAPE_INVALID"),
+        ({}, "CONTENT_MISSING"),
+        ({"markdown": None}, "CONTENT_TYPE_INVALID"),
+        ({"markdown": ""}, "CONTENT_EMPTY"),
+        ({"markdown": "x" * 4001}, "CONTENT_LIMIT_EXCEEDED"),
+        ({"markdown": "PRIVATE", "metadata": []}, "METADATA_SHAPE_INVALID"),
+        ({"markdown": "PRIVATE", "metadata": {"title": None}}, "TITLE_TYPE_INVALID"),
+        (
+            {"markdown": "PRIVATE", "metadata": {"title": "x" * 501}},
+            "TITLE_LIMIT_EXCEEDED",
+        ),
+        (
+            {"markdown": "PRIVATE", "metadata": {"statusCode": "PRIVATE"}},
+            "TARGET_STATUS_INVALID",
+        ),
+        (
+            {"markdown": "PRIVATE", "metadata": {"statusCode": 403}},
+            "TARGET_STATUS_UNSUCCESSFUL",
+        ),
+        (
+            {"markdown": "PRIVATE", "metadata": {"error": "PRIVATE"}},
+            "TARGET_ERROR_REPORTED",
+        ),
+        (
+            {"markdown": "PRIVATE", "metadata": {"sourceURL": None}},
+            "SOURCE_URL_TYPE_INVALID",
+        ),
+        (
+            {
+                "markdown": "PRIVATE",
+                "metadata": {"sourceURL": "https://www.example.com/PRIVATE"},
+            },
+            "SOURCE_ORIGIN_MISMATCH",
+        ),
+        (
+            {
+                "markdown": "PRIVATE",
+                "metadata": {"sourceURL": "https://example.com:PRIVATE/a"},
+            },
+            "SOURCE_URL_INVALID",
+        ),
+    ],
+)
+async def test_firecrawl_completed_rejection_has_safe_exact_reason(
+    data, reason, caplog
+):
+    adapter, _, seen = firecrawl(
+        Capability.FIRECRAWL_PAGE_CAPTURE, {"success": True, "data": data}
+    )
+
+    result = await adapter.capture(
+        FirecrawlCaptureRequest(url="https://example.com/PRIVATE")
+    )
+
+    metadata = result.metadata.model_dump(mode="json")
+    assert result.metadata.rejection is not None
+    assert result.metadata.rejection.reason.value == reason
+    assert result.content is None
+    assert result.metadata.error_code is ProviderErrorCode.MALFORMED_RESPONSE
+    assert result.metadata.status == "FAILED"
+    assert result.metadata.usage[0].quantity is None
+    assert result.metadata.usage[0].cost is None
+    assert len(seen) == 1
+    safe = (
+        json.dumps(metadata)
+        + result.metadata.rejection.model_dump_json()
+        + repr(result)
+    )
+    assert "PRIVATE" not in safe
+    assert "never-log-this" not in safe
+    assert "https://" not in safe
+    assert "PRIVATE" not in caplog.text and "never-log-this" not in caplog.text
+
+
+@pytest.mark.parametrize("length", [40000, 40001])
+async def test_firecrawl_text_boundary_preserves_limit_and_safe_lengths(length):
+    adapter, _, seen = firecrawl(
+        Capability.FIRECRAWL_PAGE_CAPTURE,
+        {
+            "success": True,
+            "data": {"markdown": "x" * length, "metadata": {"statusCode": 200}},
+        },
+        max_text_chars=40000,
+    )
+
+    result = await adapter.capture(FirecrawlCaptureRequest(url="https://example.com/a"))
+
+    assert len(seen) == 1
+    if length == 40000:
+        assert result.content is not None
+        assert result.metadata.status == "SUCCEEDED"
+    else:
+        assert result.content is None
+        assert result.metadata.rejection is not None
+        assert result.metadata.rejection.model_dump(mode="json") == {
+            "schema_version": 1,
+            "reason": "CONTENT_LIMIT_EXCEEDED",
+            "content_chars": 40001,
+            "title_chars": 0,
+            "text_char_limit": 40000,
+            "target_status": 200,
+        }
+
+
+async def test_completed_capture_rejection_is_safe_in_operator_activity(monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import AsyncMock
+
+    from alon_ai.agents.tools.research import UnavailableResearchResult
+    from alon_ai.provider_usage import live_research
+
+    adapter, _, seen = firecrawl(
+        Capability.FIRECRAWL_PAGE_CAPTURE,
+        {"success": True, "data": {"markdown": "x" * 40001}},
+        max_text_chars=40000,
+    )
+    capture = await adapter.capture(
+        FirecrawlCaptureRequest(url="https://example.com/PRIVATE")
+    )
+    unavailable = UnavailableResearchResult(rejection=capture.metadata.rejection)
+    activities = []
+
+    async def record_activity(run_id, kind, detail):
+        activities.append((kind, detail))
+
+    monkeypatch.setattr(
+        live_research,
+        "AgentRunRepository",
+        lambda _: SimpleNamespace(record_activity=record_activity),
+    )
+    port = live_research.GovernedLiveResearchPort.__new__(
+        live_research.GovernedLiveResearchPort
+    )
+    port._repository = cast(
+        live_research.GovernanceRepository, SimpleNamespace(engine=None)
+    )
+    port._run_id = uuid4()
+    monkeypatch.setattr(port, "_execute_request", AsyncMock(return_value=unavailable))
+
+    result = await port.capture(
+        uuid4(), FirecrawlCaptureRequest(url="https://example.com/PRIVATE")
+    )
+
+    assert result is unavailable
+    assert len(seen) == 1
+    response = activities[-1][1]
+    assert "CONTENT_LIMIT_EXCEEDED" in response
+    assert "content_chars=40001" in response
+    assert "text_char_limit=40000" in response
+    assert "PRIVATE" not in response and "https://" not in response
+    assert "never-log-this" not in response
+
+
+async def test_firecrawl_rejection_does_not_change_persisted_metadata_contract():
+    from alon_ai.integrations.schemas.provider import ProviderResultMetadata
+
+    adapter, _, _ = firecrawl(
+        Capability.FIRECRAWL_PAGE_CAPTURE,
+        {"success": True, "data": {"markdown": ""}},
+    )
+    result = await adapter.capture(FirecrawlCaptureRequest(url="https://example.com/a"))
+
+    restored = ProviderResultMetadata.model_validate_json(
+        result.metadata.model_dump_json()
+    )
+    assert result.metadata.rejection is not None
+    assert restored.rejection is None
+    assert restored.model_dump(mode="json") == result.metadata.model_dump(mode="json")
+    historical = result.metadata.model_dump(mode="json")
+    assert set(historical) == {
+        "schema_version",
+        "capability",
+        "external_request_id",
+        "started_at",
+        "finished_at",
+        "status",
+        "error_code",
+        "usage",
+    }
+    assert (
+        ProviderResultMetadata.model_validate_json(json.dumps(historical)).rejection
+        is None
+    )
+
+
+@pytest.mark.parametrize(
+    "changes",
+    [
+        {"reason": "PRIVATE"},
+        {"content_chars": -1},
+        {"content_chars": 256001},
+        {"content_chars": "PRIVATE"},
+        {"title_chars": 256001},
+        {"text_char_limit": 0},
+        {"text_char_limit": 100001},
+        {"target_status": True},
+        {"target_status": 600},
+        {"url": "PRIVATE"},
+    ],
+)
+def test_firecrawl_diagnostic_rejects_unbounded_or_private_values(changes):
+    from alon_ai.integrations.schemas.provider import FirecrawlCaptureRejection
+
+    with pytest.raises(ValidationError) as raised:
+        FirecrawlCaptureRejection.model_validate_json(
+            json.dumps({"reason": "CONTENT_EMPTY", "text_char_limit": 40000, **changes})
+        )
+    assert "PRIVATE" not in str(raised.value)
 
 
 async def test_completed_rejection_still_fails_when_rights_expire_after_response():
