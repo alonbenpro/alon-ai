@@ -56,6 +56,9 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
     model_request_limit,
     pdf_remaining,
     expected_code,
+    capture_failures=0,
+    finalization_error=False,
+    proof_checks=None,
 ):
     from datetime import timedelta
 
@@ -84,6 +87,7 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
         governance_engine,
         capability=Capability.FIRECRAWL_PAGE_CAPTURE,
         price_components=(UsageComponent.CAPTURE_PAGE,),
+        price=Decimal(0) if capture_failures else Decimal(".001"),
     )
     research_templates = [
         (search_config, search_grant),
@@ -115,8 +119,8 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
             approved_by=owner.id,
             effective_at=now - timedelta(seconds=1),
             expires_at=now + timedelta(hours=1),
-            max_calls=2,
-            max_pages=1,
+            max_calls=4 if capture_failures else 2,
+            max_pages=4 if capture_failures else 1,
             timeout_seconds=90,
             max_spend_usd=Decimal("0.25"),
             max_results=2,
@@ -179,8 +183,11 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
             parts = [
                 ToolCallPart(
                     "capture_page",
-                    {"url": "https://example.com/"},
-                    tool_call_id="capture",
+                    {"url": f"https://example.com/{index}"},
+                    tool_call_id=f"capture{index}",
+                )
+                for index in range(
+                    4 if capture_failures == 2 else 2 if capture_failures else 1
                 )
             ]
         else:
@@ -202,7 +209,14 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
         network.append(request.url.host)
         return httpx.Response(
             200,
-            json={"success": True, "data": {"markdown": "Public clinic workflow."}},
+            json={
+                "success": True,
+                "data": {
+                    "markdown": ""
+                    if capture_failures and len(network) > 1
+                    else "Public clinic workflow."
+                },
+            },
         )
 
     class ControlledPort(GovernedLiveResearchPort):
@@ -216,8 +230,8 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
 
         async def capture(self, experiment_id, request):
             result = await super().capture(experiment_id, request)
-            assert isinstance(result, tuple)
-            captured.extend(result)
+            if isinstance(result, tuple):
+                captured.extend(result)
             return result
 
     monkeypatch.setattr(combined_idea, "GovernedLiveResearchPort", ControlledPort)
@@ -235,6 +249,31 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
 
         def research_store(self):
             return self
+
+    if finalization_error or proof_checks is not None:
+        from alon_ai.db.repositories import experiments as experiment_repository
+
+        original_finish = experiment_repository.finish_refinement
+
+        async def finish(
+            engine, run_id, experiment_id, operation_id, success, retry_safe, payload
+        ):
+            if success:
+                if finalization_error:
+                    raise RuntimeError("SECRET synthetic handoff error")
+                assert proof_checks is not None
+                await proof_checks(engine, run_id, experiment_id, operation_id, payload)
+            return await original_finish(
+                engine,
+                run_id,
+                experiment_id,
+                operation_id,
+                success,
+                retry_safe,
+                payload,
+            )
+
+        monkeypatch.setattr(experiment_repository, "finish_refinement", finish)
 
     settings = Settings(
         _env_file=None, provider_mode="live", idea_intake_budget_usd=Decimal("0.50")
@@ -254,7 +293,16 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
         before = (await connection.execute(select(gov.authorities))).mappings().all()
     await AgentRunService(context).execute(run["run_id"])
     view = await AgentRunService(context).get(run["run_id"])
-    if expected_code is not None:
+    if finalization_error:
+        assert view.status == "BLOCKED" and view.output is None
+        assert view.diagnostic is not None
+        assert view.diagnostic.stage == "RESULT_FINALIZATION"
+        assert "SECRET" not in view.diagnostic.model_dump_json()
+        durable = await AgentRunRepository(governance_engine).get(run["run_id"])
+        assert (
+            sum(event.get("diagnostic") is not None for event in durable["events"]) == 1
+        )
+    elif expected_code is not None:
         assert view.blocked_reason == expected_code
         assert not model_calls and not network
         assert not view.steps
@@ -273,7 +321,19 @@ async def test_startup_allowance_blocks_before_any_provider_dispatch(
     else:
         assert view.status == "SUCCEEDED", view.blocked_reason
         assert len(model_calls) == 2
-        assert network == ["api.firecrawl.dev"]
+        assert network == ["api.firecrawl.dev"] * (
+            3 if capture_failures == 2 else 2 if capture_failures else 1
+        )
+        if capture_failures:
+            assert view.phase == "WAITING_FOR_OPERATOR"
+            assert view.review_status != "ACCEPTED"
+            assert view.output is not None and view.research_status == "ASSESSED"
+            assert (
+                sum(step.status == "FAILED" for step in view.steps) == capture_failures
+            )
+            assert any(step.reason_code == "CIRCUIT" for step in view.steps) is (
+                capture_failures == 2
+            )
 
 
 class NoResearchPort:
@@ -1212,3 +1272,246 @@ async def test_candidate_selection_holds_source_run_lock_through_publication(
         release.set()
     assert (await selecting)["state"] == "AWAITING_REFINEMENT"
     assert (await rejecting)["review_status"] == "REJECTED"
+
+
+@pytest.mark.parametrize("capture_failures", [1, 2])
+async def test_recovered_capture_failures_reach_operator_review(
+    governance_engine, monkeypatch, capture_failures
+):
+    await test_startup_allowance_blocks_before_any_provider_dispatch(
+        governance_engine,
+        monkeypatch,
+        10,
+        10,
+        10,
+        3,
+        None,
+        None,
+        capture_failures=capture_failures,
+    )
+
+
+async def test_combined_post_runtime_failure_gets_one_safe_diagnostic(
+    governance_engine, monkeypatch
+):
+    await test_startup_allowance_blocks_before_any_provider_dispatch(
+        governance_engine,
+        monkeypatch,
+        10,
+        10,
+        10,
+        3,
+        None,
+        None,
+        finalization_error=True,
+    )
+
+
+async def test_recovered_publication_proof_rejects_untrusted_child_facts(
+    governance_engine, monkeypatch
+):
+    from datetime import timedelta
+
+    from sqlalchemy import insert, select, text, update
+    from sqlalchemy.exc import IntegrityError
+
+    from alon_ai.agents.schemas.openai import canonical_json, sha256
+    from alon_ai.db.tables import accounting as gov
+    from alon_ai.db.tables.agent_run_steps import steps
+
+    async def check(engine, run_id, experiment_id, operation_id, payload):
+        query = text(
+            "SELECT record_combined_idea_proof(:run,:experiment,:operation,:kind,:hash)"
+        )
+        params = {
+            "run": run_id,
+            "experiment": experiment_id,
+            "operation": operation_id,
+            "kind": "IDEA_REFINEMENT",
+            "hash": sha256(canonical_json(payload)),
+        }
+        async with engine.connect() as connection:
+            children = (
+                (
+                    await connection.execute(
+                        select(steps).where(steps.c.run_id == run_id)
+                    )
+                )
+                .mappings()
+                .all()
+            )
+            calls = {
+                row["id"]: row
+                for row in (
+                    await connection.execute(
+                        select(gov.calls).where(
+                            gov.calls.c.experiment_id == experiment_id
+                        )
+                    )
+                ).mappings()
+            }
+            failed = next(row for row in children if row["status"] == "FAILED")
+            blocked = next(row for row in children if row["status"] == "BLOCKED")
+            model = next(row for row in children if row["kind"] == "MODEL_REQUEST")
+            retained = (await connection.execute(select(gov.retained))).mappings().one()
+            observed = (
+                (
+                    await connection.execute(
+                        select(gov.usage).where(
+                            gov.usage.c.call_id == failed["provider_call_id"]
+                        )
+                    )
+                )
+                .mappings()
+                .one()
+            )
+            assert await connection.scalar(query, params) is True
+            for changed in (
+                {"run": uuid4()},
+                {"experiment": uuid4()},
+                {"operation": uuid4()},
+                {"kind": "IDEA_DISCOVERY"},
+                {"hash": "0" * 64},
+            ):
+                assert await connection.scalar(query, {**params, **changed}) is False
+
+        failed_call = calls[failed["provider_call_id"]]
+        blocked_call = calls[blocked["provider_call_id"]]
+        mutations = [
+            (
+                steps,
+                steps.c.step_key == failed["step_key"],
+                {"status": "OUTCOME_UNKNOWN"},
+            ),
+            (steps, steps.c.step_key == failed["step_key"], {"reason_code": "RIGHTS"}),
+            (steps, steps.c.step_key == failed["step_key"], {"provider_call_id": None}),
+            (steps, steps.c.step_key == failed["step_key"], {"config_ref": uuid4()}),
+            (
+                steps,
+                steps.c.step_key == model["step_key"],
+                {"status": "FAILED", "reason_code": "MALFORMED_RESPONSE"},
+            ),
+            (steps, steps.c.step_key == blocked["step_key"], {"reason_code": "QUOTA"}),
+            (gov.calls, gov.calls.c.id == failed_call["id"], {"state": "RECONCILING"}),
+            (
+                gov.calls,
+                gov.calls.c.id == failed_call["id"],
+                {"accrued": Decimal(".01")},
+            ),
+            (
+                gov.calls,
+                gov.calls.c.id == failed_call["id"],
+                {"idempotency_key": uuid4()},
+            ),
+            (
+                gov.calls,
+                gov.calls.c.id == failed_call["id"],
+                {"created_at": failed_call["created_at"] - timedelta(days=1)},
+            ),
+            (
+                gov.calls,
+                gov.calls.c.id == failed_call["id"],
+                {
+                    "result_metadata": {
+                        **failed_call["result_metadata"],
+                        "status": "UNKNOWN",
+                    }
+                },
+            ),
+            (
+                gov.calls,
+                gov.calls.c.id == failed_call["id"],
+                {
+                    "result_metadata": {
+                        **failed_call["result_metadata"],
+                        "capability": "BRAVE_WEB_COVERAGE",
+                    }
+                },
+            ),
+            (gov.calls, gov.calls.c.id == failed_call["id"], {"result_metadata": None}),
+            (
+                gov.calls,
+                gov.calls.c.id == blocked_call["id"],
+                {"accrued": Decimal(".01")},
+            ),
+            (
+                gov.calls,
+                gov.calls.c.id == blocked_call["id"],
+                {
+                    "state": "DISPATCHED",
+                    "dispatch_at": failed_call["dispatch_at"],
+                    "lease_until": failed_call["lease_until"],
+                    "token": uuid4(),
+                },
+            ),
+            (
+                gov.prices,
+                gov.prices.c.id == observed["price_id"],
+                {"unit_price": Decimal(".01")},
+            ),
+            (
+                gov.config_prices,
+                gov.config_prices.c.config_id == failed_call["config_id"],
+                {"max_quantity": Decimal(2)},
+            ),
+            (
+                gov.retained,
+                gov.retained.c.id == retained["id"],
+                {"call_id": failed_call["id"]},
+            ),
+            (
+                gov.retained,
+                gov.retained.c.id == retained["id"],
+                {"call_id": blocked_call["id"]},
+            ),
+        ]
+        for table, condition, values in mutations:
+            # Adversarial facts in this disposable test DB only. Roll back both
+            # the temporary immutable-guard bypass and mutation after each probe.
+            async with engine.connect() as connection:
+                transaction = await connection.begin()
+                await connection.execute(
+                    text(f"ALTER TABLE {table.name} DISABLE TRIGGER USER")
+                )
+                try:
+                    await connection.execute(
+                        update(table).where(condition).values(**values)
+                    )
+                    assert await connection.scalar(query, params) is False, (
+                        table.name,
+                        values,
+                    )
+                except IntegrityError:
+                    # A database constraint may reject the forged fact earlier.
+                    pass
+                finally:
+                    await transaction.rollback()
+        async with engine.connect() as connection:
+            transaction = await connection.begin()
+            await connection.execute(
+                insert(gov.usage).values(
+                    **{
+                        **dict(observed),
+                        "id": uuid4(),
+                        "observation_key": uuid4(),
+                        "call_id": blocked_call["id"],
+                    }
+                )
+            )
+            assert await connection.scalar(query, params) is False
+            await transaction.rollback()
+        async with engine.connect() as connection:
+            assert await connection.scalar(query, params) is True
+
+    await test_startup_allowance_blocks_before_any_provider_dispatch(
+        governance_engine,
+        monkeypatch,
+        10,
+        10,
+        10,
+        3,
+        None,
+        None,
+        capture_failures=2,
+        proof_checks=check,
+    )

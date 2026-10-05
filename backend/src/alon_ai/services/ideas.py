@@ -278,6 +278,7 @@ async def discover_experiment(
     claimed_operation_id: UUID | None = None
     service = None
     execution_started = False
+    execution_completed = False
     diagnostic_recorded = False
     try:
         try:
@@ -317,6 +318,7 @@ async def discover_experiment(
             facts=RoutingFacts(needs_ai=True),
             idempotency_key=body.idempotency_key,
         )
+        execution_completed = True
         advice = (
             execution.output
             if isinstance(execution.output, IdeaCandidateSetAdvice)
@@ -388,6 +390,13 @@ async def discover_experiment(
             "candidates": snapshot["candidates"],
         }
     except ExperimentError as error:
+        if execution_completed:
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "RESULT_FINALIZATION",
+                error,
+            )
         if error.detail == "RESEARCH_INCOMPLETE" and claimed_operation_id is not None:
             await experiment_repository.block_discovery(
                 engine, body.idempotency_key, experiment_id, claimed_operation_id
@@ -395,12 +404,18 @@ async def discover_experiment(
         raise
     except Exception as error:
         if not diagnostic_recorded and not (
-            execution_started and isinstance(service, CombinedIdeaRuntime)
+            execution_started
+            and not execution_completed
+            and isinstance(service, CombinedIdeaRuntime)
         ):
             await record_diagnostic(
                 AgentRunRepository(engine),
                 body.idempotency_key,
-                "AGENT_EXECUTION" if execution_started else "OPERATION_CLAIM",
+                "RESULT_FINALIZATION"
+                if execution_completed
+                else "AGENT_EXECUTION"
+                if execution_started
+                else "OPERATION_CLAIM",
                 error,
             )
         if claimed_operation_id is not None:
@@ -597,6 +612,7 @@ async def refine_experiment(
     claimed_operation_id: UUID | None = None
     service = None
     execution_started = False
+    execution_completed = False
     diagnostic_recorded = False
     try:
         runtime_args = {
@@ -645,6 +661,7 @@ async def refine_experiment(
             facts=RoutingFacts(needs_ai=True),
             idempotency_key=body.idempotency_key,
         )
+        execution_completed = True
         advice = execution.output
         success = execution.outcome is OpenAIRunOutcome.SUCCEEDED and isinstance(
             advice,
@@ -691,6 +708,13 @@ async def refine_experiment(
             else None,
         }
     except ExperimentError as error:
+        if execution_completed:
+            await record_diagnostic(
+                AgentRunRepository(engine),
+                body.idempotency_key,
+                "RESULT_FINALIZATION",
+                error,
+            )
         if error.detail == "RESEARCH_INCOMPLETE" and claimed_operation_id is not None:
             await experiment_repository.block_refinement(
                 engine, body.idempotency_key, experiment_id, claimed_operation_id
@@ -699,12 +723,18 @@ async def refine_experiment(
     except Exception as error:
         # No output can be accepted after an interrupted or denied run.
         if not diagnostic_recorded and not (
-            execution_started and isinstance(service, CombinedIdeaRuntime)
+            execution_started
+            and not execution_completed
+            and isinstance(service, CombinedIdeaRuntime)
         ):
             await record_diagnostic(
                 AgentRunRepository(engine),
                 body.idempotency_key,
-                "AGENT_EXECUTION" if execution_started else "OPERATION_CLAIM",
+                "RESULT_FINALIZATION"
+                if execution_completed
+                else "AGENT_EXECUTION"
+                if execution_started
+                else "OPERATION_CLAIM",
                 error,
             )
         if claimed_operation_id is not None:
