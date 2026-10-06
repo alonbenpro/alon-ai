@@ -31,7 +31,8 @@ class LocalDevTests(unittest.TestCase):
         docker = self.bin / "docker"
         docker.write_text(
             "#!/bin/sh\n"
-            "printf 'project=%s auth_env=%s/%s %s\\n' \"${COMPOSE_PROJECT_NAME:-default}\" \"${ALON_AI_OPERATOR_PASSWORD_HASH+set}\" \"${ALON_AI_SESSION_SIGNING_KEY+set}\" \"$*\" >> \"$FAKE_DOCKER_LOG\"\n"
+            "printf 'project=%s mode=%s budget=%s auth_env=%s/%s %s\\n' \"${COMPOSE_PROJECT_NAME:-default}\" \"${ALON_AI_PROVIDER_MODE:-unset}\" \"${ALON_AI_IDEA_INTAKE_BUDGET_USD:-unset}\" \"${ALON_AI_OPERATOR_PASSWORD_HASH+set}\" \"${ALON_AI_SESSION_SIGNING_KEY+set}\" \"$*\" >> \"$FAKE_DOCKER_LOG\"\n"
+            "if [ \"${FAKE_REQUIRE_DOCKER_CREDENTIAL_HELPER:-0}\" = 1 ]; then command -v docker-credential-desktop >/dev/null 2>&1 || exit 88; fi\n"
             "if [ \"$1\" = info ] && [ \"${FAKE_DOCKER_DOWN:-0}\" = 1 ]; then exit 1; fi\n"
             "case \"$*\" in\n"
             "  *'config --format json'*) printf 'volume=%s_postgres_data\\n' \"${COMPOSE_PROJECT_NAME:-default}\" >> \"$FAKE_DOCKER_LOG\"; printf '{\"volumes\":{\"postgres_data\":{\"name\":\"%s_postgres_data\"}}}\\n' \"${COMPOSE_PROJECT_NAME:-default}\"; exit 0;;\n"
@@ -39,10 +40,9 @@ class LocalDevTests(unittest.TestCase):
             "esac\n"
             "if [ \"$1 $2\" = 'volume ls' ] && [ \"${FAKE_VOLUME_PRESENT:-0}\" = 1 ]; then printf '%s_postgres_data\\n' \"${COMPOSE_PROJECT_NAME:-default}\"; exit 0; fi\n"
             "if [ -n \"${FAKE_FAIL_CONTAINS:-}\" ]; then case \"$*\" in *\"$FAKE_FAIL_CONTAINS\"*) exit 1;; esac; fi\n"
-            "case \"$*\" in *'live-provision test -d /app/.local/live'*) [ \"${FAKE_LIVE_UNPROVISIONED:-0}\" != 1 ]; exit $?;; esac\n"
-            "case \"$*\" in *'live-provision test -f /app/authority-manifest.json'*) [ \"${FAKE_BAD_LIVE_MOUNT:-0}\" != 1 ]; exit $?;; esac\n"
+            "case \"$*\" in *'live-provision python - live-authority.json'*) [ \"${FAKE_BAD_LIVE_MOUNT:-0}\" != 1 ]; exit $?;; esac\n"
             "case \"$*\" in *'ps --status running --services worker'*) [ \"${FAKE_WORKER_DOWN:-0}\" = 1 ] || printf '%s\\n' worker; exit 0;; esac\n"
-            "if [ \"$1\" = compose ] && [ \"$2\" = version ]; then exit 0; fi\n"
+            "if [ \"$1\" = compose ] && [ \"$2\" = version ]; then [ \"${FAKE_COMPOSE_PLUGIN_DOWN:-0}\" != 1 ]; exit $?; fi\n"
             "if [ \"$1\" = compose ] && [ \"$2\" = ps ]; then exit 0; fi\n"
             "exit 0\n"
         )
@@ -97,12 +97,121 @@ class LocalDevTests(unittest.TestCase):
         secret.chmod(0o600)
         return secret
 
+    def write_review_manifest(self):
+        manifest = self.root / ".local/live-authority.json"
+        manifest.write_text('{"proofs":[{"document":"proof.txt"}]}\n')
+        manifest.chmod(0o600)
+        proof = manifest.parent / "proof.txt"
+        proof.write_text("reviewed evidence\n")
+        proof.chmod(0o600)
+        return manifest
+
+    def write_live_keys(self):
+        local = self.root / ".local"
+        local.mkdir(mode=0o700, exist_ok=True)
+        keys = local / "live-keys.env"
+        keys.write_text(
+            "OPENAI_API_KEY=synthetic-openai\n"
+            "BRAVE_API_KEY=synthetic-brave\n"
+            "FIRECRAWL_API_KEY=synthetic-firecrawl\n"
+        )
+        keys.chmod(0o600)
+        return keys
+
     def test_help_lists_lifecycle_commands(self):
         result = self.run_script("help")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("up", result.stdout)
+        self.assertIn("disabled", result.stdout)
+        self.assertIn("fake", result.stdout)
+        self.assertIn("live", result.stdout)
         self.assertIn("down", result.stdout)
         self.assertIn("status", result.stdout)
+
+    def test_docker_desktop_helper_is_found_in_user_docker_bin(self):
+        home = self.root / "home"
+        helper_dir = home / ".docker/bin"
+        helper_dir.mkdir(parents=True)
+        helper = helper_dir / "docker-credential-desktop"
+        helper.write_text("#!/bin/sh\nexit 0\n")
+        helper.chmod(0o755)
+
+        result = self.run_script(
+            "status",
+            extra_env={
+                "HOME": str(home),
+                "FAKE_REQUIRE_DOCKER_CREDENTIAL_HELPER": "1",
+            },
+        )
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+
+    def test_disabled_command_forces_provider_mode_off(self):
+        self.write_auth()
+        result = self.run_script(
+            "disabled",
+            extra_env={
+                "ALON_AI_PROVIDER_MODE": "live",
+                "ALON_AI_R01A_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
+            },
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        commands = self.log.read_text()
+        self.assertIn("mode=disabled budget=unset", commands)
+        self.assertNotIn("combined_idea_provision", commands)
+
+    def test_fake_command_uses_recorded_mode_and_fixed_test_budget(self):
+        self.write_auth()
+        result = self.run_script(
+            "fake", extra_env={"ALON_AI_PROVIDER_MODE": "live"}
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("mode=fake budget=0.25", self.log.read_text())
+
+    def test_live_command_reads_local_keys_without_exported_setup_values(self):
+        self.write_auth()
+        manifest = self.write_review_manifest()
+        self.write_live_keys()
+        result = self.run_script("live")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        commands = self.log.read_text()
+        self.assertIn("mode=live budget=0.20", commands)
+        self.assertIn("--keys-file /app/.local/.combined-review-input/live-keys.env", commands)
+        self.assertIn(":/app/reviewed-input:ro", commands)
+        self.assertIn("python - live-authority.json", commands)
+        self.assertNotIn("synthetic-openai", commands)
+        self.assertNotIn("synthetic-brave", commands)
+        self.assertNotIn("synthetic-firecrawl", commands)
+
+    def test_live_command_requires_private_key_file_before_docker(self):
+        self.write_auth()
+        self.write_review_manifest()
+        result = self.run_script("live")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn(".local/live-keys.env", result.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_live_command_rejects_public_key_file_before_docker(self):
+        self.write_auth()
+        self.write_review_manifest()
+        keys_file = self.write_live_keys()
+        keys_file.chmod(0o644)
+        result = self.run_script("live")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("mode 0600", result.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_live_command_rejects_unfilled_key_template_before_docker(self):
+        self.write_auth()
+        self.write_review_manifest()
+        keys_file = self.write_live_keys()
+        keys_file.write_text(
+            "OPENAI_API_KEY=\nBRAVE_API_KEY=\nFIRECRAWL_API_KEY=\n"
+        )
+        keys_file.chmod(0o600)
+        result = self.run_script("live")
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("all three provider keys", result.stderr)
+        self.assertFalse(self.log.exists())
 
     def test_help_does_not_need_python_or_docker(self):
         (self.bin / "python3").write_text("#!/bin/sh\nexit 86\n")
@@ -115,7 +224,7 @@ class LocalDevTests(unittest.TestCase):
             "up", extra_env={"ALON_AI_PROVIDER_MODE": "live"}
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("ALON_AI_L07_LIVE_ACK", result.stderr)
+        self.assertIn("explicit local-live command", result.stderr)
         self.assertFalse(self.log.exists())
 
     def test_live_provider_requires_manifest_before_first_provisioning(self):
@@ -124,63 +233,120 @@ class LocalDevTests(unittest.TestCase):
             "up",
             extra_env={
                 "ALON_AI_PROVIDER_MODE": "live",
-                "ALON_AI_L07_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
+                "ALON_AI_R01A_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
                 "ALON_AI_POSTGRES_PORT": "55432",
                 "ALON_AI_API_PORT": "18000",
                 "ALON_AI_FRONTEND_PORT": "13000",
             },
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("ALON_AI_L07_LIVE_MANIFEST", result.stderr)
+        self.assertIn("authority bundle is missing", result.stderr)
 
-    def test_live_provider_provisions_private_volume_once_after_explicit_ack(self):
-        self.write_auth()
-        manifest = self.root / "live-authority.json"
-        manifest.write_text("{}\n")
-        common = {
-            "ALON_AI_PROVIDER_MODE": "live",
-            "ALON_AI_L07_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
-            "ALON_AI_L07_LIVE_MANIFEST": str(manifest),
-            "ALON_AI_POSTGRES_PORT": "55432",
-            "ALON_AI_API_PORT": "18000",
-            "ALON_AI_FRONTEND_PORT": "13000",
-        }
-        result = self.run_script(
-            "up", extra_env={**common, "FAKE_LIVE_UNPROVISIONED": "1"}
-        )
-        self.assertEqual(result.returncode, 0, result.stderr)
-        commands = self.log.read_text()
-        self.assertIn("live-provision sh -c chown 10001:10001", commands)
-        self.assertIn("python -m alon_ai.services.live_idea_provision", commands)
-        self.assertNotIn("OPENAI_API_KEY", commands)
-        self.log.unlink()
-        result = self.run_script("up", extra_env=common)
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertNotIn(
-            "python -m alon_ai.services.live_idea_provision", self.log.read_text()
-        )
-
-    def test_live_manifest_mount_must_be_a_regular_file(self):
-        self.write_auth()
-        manifest = self.root / "live-authority.json"
-        manifest.write_text("{}\n")
+    def test_legacy_openai_setup_does_not_enable_combined_live_mode(self):
         result = self.run_script(
             "up",
             extra_env={
                 "ALON_AI_PROVIDER_MODE": "live",
                 "ALON_AI_L07_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
-                "ALON_AI_L07_LIVE_MANIFEST": str(manifest),
+                "ALON_AI_L07_LIVE_MANIFEST": "/tmp/old-live-authority.json",
+            },
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("explicit local-live command", result.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_live_provider_requires_finite_budget(self):
+        self.write_auth()
+        manifest = self.write_review_manifest()
+        keys_file = self.write_live_keys()
+        for value in ("", "NaN", "Infinity", "0", "1.001"):
+            with self.subTest(value=value):
+                result = self.run_script(
+                    "up",
+                    extra_env={
+                        "ALON_AI_PROVIDER_MODE": "live",
+                        "ALON_AI_R01A_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
+                        "ALON_AI_R01A_LIVE_MANIFEST": str(manifest),
+                        "ALON_AI_R01A_LIVE_KEYS_FILE": str(keys_file),
+                        "ALON_AI_IDEA_INTAKE_BUDGET_USD": value,
+                    },
+                )
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn("Live budget" if not value else "budget", result.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_live_provider_rejects_nonprivate_evidence_before_docker(self):
+        self.write_auth()
+        manifest = self.write_review_manifest()
+        keys_file = self.write_live_keys()
+        (manifest.parent / "proof.txt").chmod(0o644)
+        result = self.run_script(
+            "up",
+            extra_env={
+                "ALON_AI_PROVIDER_MODE": "live",
+                "ALON_AI_R01A_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
+                "ALON_AI_R01A_LIVE_MANIFEST": str(manifest),
+                "ALON_AI_R01A_LIVE_KEYS_FILE": str(keys_file),
+                "ALON_AI_IDEA_INTAKE_BUDGET_USD": "1.00",
+            },
+        )
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("reviewed evidence", result.stderr)
+        self.assertFalse(self.log.exists())
+
+    def test_live_provider_replays_combined_provisioning_after_explicit_ack(self):
+        self.write_auth()
+        manifest = self.write_review_manifest()
+        keys_file = self.write_live_keys()
+        common = {
+            "ALON_AI_PROVIDER_MODE": "live",
+            "ALON_AI_R01A_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
+            "ALON_AI_R01A_LIVE_MANIFEST": str(manifest),
+            "ALON_AI_R01A_LIVE_KEYS_FILE": str(keys_file),
+            "ALON_AI_IDEA_INTAKE_BUDGET_USD": "1.00",
+            "ALON_AI_POSTGRES_PORT": "55432",
+            "ALON_AI_API_PORT": "18000",
+            "ALON_AI_FRONTEND_PORT": "13000",
+        }
+        result = self.run_script("up", extra_env=common)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        commands = self.log.read_text()
+        self.assertIn("live-provision sh -c chown 10001:10001", commands)
+        self.assertIn("python -m alon_ai.services.combined_idea_provision", commands)
+        self.assertNotIn("python -m alon_ai.services.live_idea_provision", commands)
+        self.assertIn("/app/.local/.combined-review-input/live-authority.json", commands)
+        self.assertIn("--keys-file /app/.local/.combined-review-input/live-keys.env", commands)
+        self.assertIn(":/app/reviewed-input:ro", commands)
+        self.assertNotIn("OPENAI_API_KEY", commands)
+        self.log.unlink()
+        result = self.run_script("up", extra_env=common)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn(
+            "python -m alon_ai.services.combined_idea_provision", self.log.read_text()
+        )
+
+    def test_live_manifest_import_must_succeed_before_provisioning(self):
+        self.write_auth()
+        manifest = self.write_review_manifest()
+        keys_file = self.write_live_keys()
+        result = self.run_script(
+            "up",
+            extra_env={
+                "ALON_AI_PROVIDER_MODE": "live",
+                "ALON_AI_R01A_LIVE_ACK": "I_ACCEPT_PAID_CALLS",
+                "ALON_AI_R01A_LIVE_MANIFEST": str(manifest),
+                "ALON_AI_R01A_LIVE_KEYS_FILE": str(keys_file),
+                "ALON_AI_IDEA_INTAKE_BUDGET_USD": "1.00",
                 "ALON_AI_POSTGRES_PORT": "55432",
                 "ALON_AI_API_PORT": "18000",
                 "ALON_AI_FRONTEND_PORT": "13000",
-                "FAKE_LIVE_UNPROVISIONED": "1",
                 "FAKE_BAD_LIVE_MOUNT": "1",
             },
         )
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("not a regular file inside Docker", result.stderr)
+        self.assertIn("authority/evidence import failed", result.stderr)
         self.assertNotIn(
-            "python -m alon_ai.services.live_idea_provision", self.log.read_text()
+            "python -m alon_ai.services.combined_idea_provision", self.log.read_text()
         )
 
     def test_down_preserves_database_volume(self):
@@ -337,6 +503,22 @@ class LocalDevTests(unittest.TestCase):
         result = self.run_script("down", extra_env={"COMPOSE": "docker-compose"})
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertIn("down", self.log.read_text())
+
+    def test_standalone_compose_is_detected_without_override(self):
+        result = self.run_script("down", extra_env={"FAKE_COMPOSE_PLUGIN_DOWN": "1"})
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("compose version", self.log.read_text())
+        self.assertIn("down", self.log.read_text())
+
+    def test_live_provisioner_uses_configured_local_operator_subject(self):
+        compose = (ROOT / "infra/compose.yaml").read_text()
+        provisioner = compose.split("  live-provision:\n", 1)[1].split(
+            "\n  frontend:", 1
+        )[0]
+
+        self.assertIn(
+            "ALON_AI_OPERATOR_AUTH_SUBJECT: local-operator@alon.ai", provisioner
+        )
 
     def test_isolated_project_and_secret_path(self):
         private = self.root / "private"

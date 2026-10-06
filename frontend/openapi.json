@@ -115,6 +115,316 @@
         "title": "ActivityResponse",
         "type": "object"
       },
+      "AgentRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "task_kind": {
+            "enum": [
+              "IDEA_DISCOVERY",
+              "IDEA_REFINEMENT"
+            ],
+            "title": "Task Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "task_kind",
+          "command_key"
+        ],
+        "title": "AgentRunRequest",
+        "type": "object"
+      },
+      "ArtifactInput": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "format": "uuid",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ArtifactKind"
+          },
+          "role": {
+            "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+            "title": "Role",
+            "type": "string"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          },
+          "version": {
+            "minimum": 1.0,
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "kind",
+          "version",
+          "content_hash",
+          "role"
+        ],
+        "title": "ArtifactInput",
+        "type": "object"
+      },
+      "ArtifactKind": {
+        "enum": [
+          "EXPERIMENT_BRIEF",
+          "IDEA_SEED",
+          "IDEA_CANDIDATE",
+          "IDEA_BRIEF",
+          "RESEARCH_PLAN",
+          "RESEARCH_EVIDENCE",
+          "COMPETITOR_PROFILE",
+          "SERVICE_PROFILE",
+          "PRICE_OBSERVATION",
+          "MARKET_RESEARCH_REPORT",
+          "MARKET_RESEARCH_RECOMMENDATION",
+          "RESEARCH_FEEDBACK_BRIEF",
+          "OFFER_RESEARCH_GAP_BRIEF",
+          "DELIVERY_SCOPE_ESTIMATE",
+          "OFFER_DESIGN_INPUT_BUNDLE",
+          "COMMERCIAL_DESIGN_ENVELOPE",
+          "OFFER_DESIGN_PROPOSAL",
+          "OFFER_PACKAGE",
+          "OFFER_QUALIFICATION_PROFILE",
+          "INITIAL_OUTREACH_POLICY",
+          "OUTREACH_PROMPT_CONFIGURATION",
+          "OUTREACH_CONTEXT_BUNDLE",
+          "LEAD_OPPORTUNITY_NARRATIVE",
+          "CONVERSATION_STRATEGY",
+          "OUTREACH_SEQUENCE_PLAN",
+          "EMAIL_DRAFT",
+          "DRAFT_VALIDATION_RESULT",
+          "INBOUND_CONTENT_SAFETY_ASSESSMENT",
+          "SENDER_IDENTITY_DECISION",
+          "CONVERSATION_TURN_CONTEXT",
+          "REPLY_INTERPRETATION",
+          "CONVERSATION_FACT_LEDGER",
+          "CONVERSATION_DECISION",
+          "CONVERSION_READINESS_DECISION",
+          "ALLOWED_RESPONSE_OBJECTIVE",
+          "COMMERCIAL_DISCLOSURE_DECISION",
+          "NEGOTIATION_OPTION_SET",
+          "RESPONSE_PLAN",
+          "RESPONSE_DRAFT",
+          "RESPONSE_VALIDATION_RESULT",
+          "RECIPIENT_REFERRAL_EVIDENCE",
+          "LEAD_REQUESTED_FOLLOW_UP",
+          "INVOICE_HANDOFF_BRIEF",
+          "DEMO_REQUEST_BRIEF",
+          "MEETING_HANDOFF_BRIEF",
+          "OPERATOR_ACTION_REQUIRED",
+          "MANUAL_OUTCOME_EVENT",
+          "OPERATOR_AUTHORED_MESSAGE",
+          "VALIDATION_RESULT",
+          "ACCEPTANCE_RECEIPT"
+        ],
+        "title": "ArtifactKind",
+        "type": "string"
+      },
+      "CancelRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key"
+        ],
+        "title": "CancelRunRequest",
+        "type": "object"
+      },
+      "CancelRunResult": {
+        "additionalProperties": false,
+        "properties": {
+          "confirmed": {
+            "title": "Confirmed",
+            "type": "boolean"
+          },
+          "requested": {
+            "title": "Requested",
+            "type": "boolean"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "requested",
+          "confirmed",
+          "status"
+        ],
+        "title": "CancelRunResult",
+        "type": "object"
+      },
+      "CommercialInput-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "hourly_cost": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Hourly Cost"
+          },
+          "maximum_discount_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Maximum Discount Rate"
+          },
+          "minimum_deposit_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Minimum Deposit Rate"
+          },
+          "minimum_margin_rate": {
+            "anyOf": [
+              {
+                "maximum": 1.0,
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Minimum Margin Rate"
+          },
+          "minimum_project_price": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Minimum Project Price"
+          }
+        },
+        "required": [
+          "currency",
+          "hourly_cost",
+          "minimum_project_price",
+          "minimum_margin_rate",
+          "maximum_discount_rate",
+          "minimum_deposit_rate"
+        ],
+        "title": "CommercialInput",
+        "type": "object"
+      },
+      "CommercialInput-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "currency": {
+            "pattern": "^[A-Z]{3}$",
+            "title": "Currency",
+            "type": "string"
+          },
+          "hourly_cost": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Hourly Cost",
+            "type": "string"
+          },
+          "maximum_discount_rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Maximum Discount Rate",
+            "type": "string"
+          },
+          "minimum_deposit_rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Minimum Deposit Rate",
+            "type": "string"
+          },
+          "minimum_margin_rate": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Minimum Margin Rate",
+            "type": "string"
+          },
+          "minimum_project_price": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,6}0*$",
+            "title": "Minimum Project Price",
+            "type": "string"
+          }
+        },
+        "required": [
+          "currency",
+          "hourly_cost",
+          "minimum_project_price",
+          "minimum_margin_rate",
+          "maximum_discount_rate",
+          "minimum_deposit_rate"
+        ],
+        "title": "CommercialInput",
+        "type": "object"
+      },
       "CreateExperimentRequest": {
         "additionalProperties": false,
         "properties": {
@@ -141,6 +451,80 @@
           "command_key"
         ],
         "title": "CreateExperimentRequest",
+        "type": "object"
+      },
+      "DeliveryInput-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "concurrent_projects": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Concurrent Projects",
+            "type": "integer"
+          },
+          "hours_per_week": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 168.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Hours Per Week"
+          },
+          "max_project_hours": {
+            "anyOf": [
+              {
+                "exclusiveMinimum": 0.0,
+                "maximum": 100000.0,
+                "type": "number"
+              },
+              {
+                "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+                "type": "string"
+              }
+            ],
+            "title": "Max Project Hours"
+          }
+        },
+        "required": [
+          "max_project_hours",
+          "hours_per_week",
+          "concurrent_projects"
+        ],
+        "title": "DeliveryInput",
+        "type": "object"
+      },
+      "DeliveryInput-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "concurrent_projects": {
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Concurrent Projects",
+            "type": "integer"
+          },
+          "hours_per_week": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+            "title": "Hours Per Week",
+            "type": "string"
+          },
+          "max_project_hours": {
+            "pattern": "^(?!^[-+.]*$)[+-]?0*\\d*\\.?\\d{0,2}0*$",
+            "title": "Max Project Hours",
+            "type": "string"
+          }
+        },
+        "required": [
+          "max_project_hours",
+          "hours_per_week",
+          "concurrent_projects"
+        ],
+        "title": "DeliveryInput",
         "type": "object"
       },
       "ExperimentRuntimeStatus": {
@@ -383,6 +767,18 @@
             "format": "uuid",
             "title": "Command Key",
             "type": "string"
+          },
+          "generation_guidance": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Guidance"
           }
         },
         "required": [
@@ -402,6 +798,106 @@
           }
         },
         "title": "HTTPValidationError",
+        "type": "object"
+      },
+      "IdeaRevisionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "instructions": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Instructions",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key",
+          "run_id",
+          "instructions"
+        ],
+        "title": "IdeaRevisionRequest",
+        "type": "object"
+      },
+      "IdeaRevisionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "provider_mode": {
+            "enum": [
+              "live",
+              "fake",
+              "disabled"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "revised_run_id": {
+            "format": "uuid",
+            "title": "Revised Run Id",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_kind": {
+            "enum": [
+              "IDEA_DISCOVERY",
+              "IDEA_REFINEMENT"
+            ],
+            "title": "Task Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "experiment_id",
+          "task_kind",
+          "status",
+          "provider_mode",
+          "created_at",
+          "command_key",
+          "revised_run_id"
+        ],
+        "title": "IdeaRevisionResult",
         "type": "object"
       },
       "LivenessResponse": {
@@ -437,6 +933,164 @@
           "password"
         ],
         "title": "LoginRequest",
+        "type": "object"
+      },
+      "MarketResearchCase": {
+        "additionalProperties": false,
+        "properties": {
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "finding_count": {
+            "title": "Finding Count",
+            "type": "integer"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Limitations",
+            "type": "array"
+          },
+          "progress": {
+            "enum": [
+              "NOT_STARTED",
+              "PARTIAL"
+            ],
+            "title": "Progress",
+            "type": "string"
+          },
+          "subjects": {
+            "items": {
+              "$ref": "#/components/schemas/SubjectResearchCase"
+            },
+            "title": "Subjects",
+            "type": "array"
+          }
+        },
+        "required": [
+          "experiment_id",
+          "subjects",
+          "finding_count",
+          "progress",
+          "limitations"
+        ],
+        "title": "MarketResearchCase",
+        "type": "object"
+      },
+      "OperatorProfileInput-Input": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "commercial": {
+            "$ref": "#/components/schemas/CommercialInput-Input"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Constraints",
+            "type": "array"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryInput-Input"
+          }
+        },
+        "required": [
+          "capabilities",
+          "constraints",
+          "delivery",
+          "commercial"
+        ],
+        "title": "OperatorProfileInput",
+        "type": "object"
+      },
+      "OperatorProfileInput-Output": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "commercial": {
+            "$ref": "#/components/schemas/CommercialInput-Output"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "title": "Constraints",
+            "type": "array"
+          },
+          "delivery": {
+            "$ref": "#/components/schemas/DeliveryInput-Output"
+          }
+        },
+        "required": [
+          "capabilities",
+          "constraints",
+          "delivery",
+          "commercial"
+        ],
+        "title": "OperatorProfileInput",
+        "type": "object"
+      },
+      "OperatorProfileProjection": {
+        "additionalProperties": false,
+        "properties": {
+          "capabilities": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Capabilities",
+            "type": "array"
+          },
+          "constraints": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Constraints",
+            "type": "array"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "profile_id": {
+            "format": "uuid",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile_id",
+          "version",
+          "content_hash",
+          "capabilities",
+          "constraints"
+        ],
+        "title": "OperatorProfileProjection",
         "type": "object"
       },
       "OperatorSession": {
@@ -639,12 +1293,314 @@
             "format": "uuid",
             "title": "Command Key",
             "type": "string"
+          },
+          "generation_guidance": {
+            "anyOf": [
+              {
+                "maxLength": 4000,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generation Guidance"
           }
         },
         "required": [
           "command_key"
         ],
         "title": "RegenerateIdeaRequest",
+        "type": "object"
+      },
+      "RejectRunRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key",
+          "reason"
+        ],
+        "title": "RejectRunRequest",
+        "type": "object"
+      },
+      "ResearchCoverage": {
+        "additionalProperties": false,
+        "properties": {
+          "dimension": {
+            "enum": [
+              "CUSTOMER_PAIN",
+              "BUYER",
+              "DEMAND",
+              "ALTERNATIVES",
+              "COMPETITION",
+              "PRICING",
+              "REACHABILITY",
+              "DELIVERY"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "finding_ids": {
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Finding Ids",
+            "type": "array"
+          },
+          "status": {
+            "enum": [
+              "UNRESEARCHED",
+              "SUPPORTED",
+              "CONTRADICTED",
+              "INCONCLUSIVE",
+              "UNAVAILABLE",
+              "MIXED"
+            ],
+            "title": "Status",
+            "type": "string"
+          }
+        },
+        "required": [
+          "dimension",
+          "status",
+          "finding_ids"
+        ],
+        "title": "ResearchCoverage",
+        "type": "object"
+      },
+      "ResearchSourceView": {
+        "additionalProperties": false,
+        "properties": {
+          "availability": {
+            "default": "REFERENCE_ONLY",
+            "enum": [
+              "CURRENT_SOURCE",
+              "REFERENCE_ONLY"
+            ],
+            "title": "Availability",
+            "type": "string"
+          },
+          "available_until": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Available Until"
+          },
+          "provider": {
+            "anyOf": [
+              {
+                "const": "FIRECRAWL",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider"
+          },
+          "reference": {
+            "additionalProperties": false,
+            "properties": {
+              "call_id": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Call Id"
+              },
+              "evidence_id": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Evidence Id"
+              },
+              "expires_at": {
+                "anyOf": [
+                  {
+                    "format": "date-time",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Expires At"
+              },
+              "field": {
+                "anyOf": [
+                  {
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Field"
+              },
+              "grant_id": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Grant Id"
+              },
+              "grant_version": {
+                "anyOf": [
+                  {
+                    "minimum": 1.0,
+                    "type": "integer"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Grant Version"
+              },
+              "kind": {
+                "enum": [
+                  "RETAINED_CONTENT",
+                  "GOVERNANCE_EVIDENCE"
+                ],
+                "title": "Kind",
+                "type": "string"
+              },
+              "retained_id": {
+                "anyOf": [
+                  {
+                    "format": "uuid",
+                    "type": "string"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ],
+                "title": "Retained Id"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "kind"
+            ],
+            "title": "SourceReference",
+            "type": "object"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "maxLength": 500,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "url": {
+            "anyOf": [
+              {
+                "maxLength": 2048,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Url"
+          }
+        },
+        "required": [
+          "reference"
+        ],
+        "title": "ResearchSourceView",
+        "type": "object"
+      },
+      "ResolvedInput": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact_id": {
+            "format": "uuid",
+            "title": "Artifact Id",
+            "type": "string"
+          },
+          "content_hash": {
+            "title": "Content Hash",
+            "type": "string"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "payload": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Payload"
+          },
+          "role": {
+            "title": "Role",
+            "type": "string"
+          },
+          "version": {
+            "title": "Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "artifact_id",
+          "kind",
+          "version",
+          "content_hash",
+          "role",
+          "payload"
+        ],
+        "title": "ResolvedInput",
         "type": "object"
       },
       "ReturnFeedbackInput": {
@@ -714,6 +1670,895 @@
         "title": "ReviseProposalRequest",
         "type": "object"
       },
+      "RunDiagnostic": {
+        "additionalProperties": false,
+        "description": "A stable error projection that is safe to retain and show to an operator.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "error_type": {
+            "title": "Error Type",
+            "type": "string"
+          },
+          "frames": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Frames",
+            "type": "array"
+          },
+          "message": {
+            "title": "Message",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          }
+        },
+        "required": [
+          "stage",
+          "error_type",
+          "code",
+          "message",
+          "frames"
+        ],
+        "title": "RunDiagnostic",
+        "type": "object"
+      },
+      "RunEvent": {
+        "additionalProperties": false,
+        "properties": {
+          "at": {
+            "format": "date-time",
+            "title": "At",
+            "type": "string"
+          },
+          "detail": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Detail"
+          },
+          "diagnostic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunDiagnostic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "exchange": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunExchange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "sequence": {
+            "title": "Sequence",
+            "type": "integer"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "sequence",
+          "at",
+          "type"
+        ],
+        "title": "RunEvent",
+        "type": "object"
+      },
+      "RunEvents": {
+        "additionalProperties": false,
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/RunEvent"
+            },
+            "title": "Events",
+            "type": "array"
+          }
+        },
+        "required": [
+          "events"
+        ],
+        "title": "RunEvents",
+        "type": "object"
+      },
+      "RunExchange": {
+        "additionalProperties": false,
+        "properties": {
+          "model_request_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Request Number"
+          },
+          "omissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Omissions",
+            "type": "array"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "PREPARED",
+              "COMPLETED",
+              "FAILED",
+              "NOT_DISPATCHED",
+              "UNAVAILABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Call Id"
+          },
+          "tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Name"
+          }
+        },
+        "required": [
+          "status",
+          "payload"
+        ],
+        "title": "RunExchange",
+        "type": "object"
+      },
+      "RunReceipt": {
+        "additionalProperties": false,
+        "properties": {
+          "accrued": {
+            "title": "Accrued",
+            "type": "string"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "model_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Identifier"
+          },
+          "provider": {
+            "title": "Provider",
+            "type": "string"
+          },
+          "receipt_id": {
+            "format": "uuid",
+            "title": "Receipt Id",
+            "type": "string"
+          },
+          "reserved": {
+            "title": "Reserved",
+            "type": "string"
+          },
+          "state": {
+            "title": "State",
+            "type": "string"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageItem"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "receipt_id",
+          "provider",
+          "state",
+          "currency",
+          "reserved",
+          "accrued"
+        ],
+        "title": "RunReceipt",
+        "type": "object"
+      },
+      "RunRef": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "provider_mode": {
+            "enum": [
+              "live",
+              "fake",
+              "disabled"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_kind": {
+            "enum": [
+              "IDEA_DISCOVERY",
+              "IDEA_REFINEMENT"
+            ],
+            "title": "Task Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "experiment_id",
+          "task_kind",
+          "status",
+          "provider_mode",
+          "created_at"
+        ],
+        "title": "RunRef",
+        "type": "object"
+      },
+      "RunResult": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Cost Usd"
+          },
+          "advice_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Source"
+          },
+          "diagnostic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunDiagnostic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "partial_options": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Partial Options",
+            "type": "array"
+          },
+          "receipt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Id"
+          },
+          "receipts": {
+            "items": {
+              "$ref": "#/components/schemas/RunReceipt"
+            },
+            "title": "Receipts",
+            "type": "array"
+          },
+          "research_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Research Gaps",
+            "type": "array"
+          },
+          "research_status": {
+            "default": "NOT_STARTED",
+            "enum": [
+              "NOT_STARTED",
+              "RUNNING",
+              "ASSESSED",
+              "INCOMPLETE",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Research Status",
+            "type": "string"
+          },
+          "research_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Research Summary"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RunStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageItem"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "status"
+        ],
+        "title": "RunResult",
+        "type": "object"
+      },
+      "RunStep": {
+        "additionalProperties": false,
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "kind": {
+            "title": "Kind",
+            "type": "string"
+          },
+          "ordinal": {
+            "title": "Ordinal",
+            "type": "integer"
+          },
+          "provider_call_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Provider Call Id"
+          },
+          "reason_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason Code"
+          },
+          "result_artifact_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Result Artifact Id"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "step_key": {
+            "format": "uuid",
+            "title": "Step Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "step_key",
+          "ordinal",
+          "kind",
+          "status",
+          "created_at"
+        ],
+        "title": "RunStep",
+        "type": "object"
+      },
+      "RunView": {
+        "additionalProperties": false,
+        "properties": {
+          "actual_cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Actual Cost Usd"
+          },
+          "advice_source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advice Source"
+          },
+          "blocked_reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Blocked Reason"
+          },
+          "cancel_confirmed": {
+            "default": false,
+            "title": "Cancel Confirmed",
+            "type": "boolean"
+          },
+          "cancel_requested": {
+            "default": false,
+            "title": "Cancel Requested",
+            "type": "boolean"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "diagnostic": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunDiagnostic"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "input_refs": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedInput"
+            },
+            "title": "Input Refs",
+            "type": "array"
+          },
+          "model_identifier": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Identifier"
+          },
+          "operator_profile": {
+            "$ref": "#/components/schemas/OperatorProfileProjection"
+          },
+          "outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outcome"
+          },
+          "output": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "partial_options": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Partial Options",
+            "type": "array"
+          },
+          "pending_cost_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pending Cost Usd"
+          },
+          "phase": {
+            "enum": [
+              "ADMITTED",
+              "EXECUTING",
+              "WAITING_FOR_OPERATOR",
+              "ACCEPTED",
+              "REJECTED",
+              "BLOCKED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Phase",
+            "type": "string"
+          },
+          "profile_id": {
+            "format": "uuid",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          },
+          "provider_mode": {
+            "enum": [
+              "live",
+              "fake",
+              "disabled"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "receipt_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Receipt Id"
+          },
+          "receipts": {
+            "items": {
+              "$ref": "#/components/schemas/RunReceipt"
+            },
+            "title": "Receipts",
+            "type": "array"
+          },
+          "research_gaps": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Research Gaps",
+            "type": "array"
+          },
+          "research_status": {
+            "default": "NOT_STARTED",
+            "enum": [
+              "NOT_STARTED",
+              "RUNNING",
+              "ASSESSED",
+              "INCOMPLETE",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Research Status",
+            "type": "string"
+          },
+          "research_summary": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Research Summary"
+          },
+          "resolved_inputs": {
+            "items": {
+              "$ref": "#/components/schemas/ResolvedInput"
+            },
+            "title": "Resolved Inputs",
+            "type": "array"
+          },
+          "review_status": {
+            "default": "PENDING",
+            "enum": [
+              "PENDING",
+              "ACCEPTED",
+              "REJECTED"
+            ],
+            "title": "Review Status",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/RunStep"
+            },
+            "title": "Steps",
+            "type": "array"
+          },
+          "task_kind": {
+            "enum": [
+              "IDEA_DISCOVERY",
+              "IDEA_REFINEMENT"
+            ],
+            "title": "Task Kind",
+            "type": "string"
+          },
+          "usage": {
+            "items": {
+              "$ref": "#/components/schemas/UsageItem"
+            },
+            "title": "Usage",
+            "type": "array"
+          }
+        },
+        "required": [
+          "run_id",
+          "experiment_id",
+          "task_kind",
+          "status",
+          "provider_mode",
+          "created_at",
+          "phase",
+          "profile_id",
+          "profile_version",
+          "operator_profile"
+        ],
+        "title": "RunView",
+        "type": "object"
+      },
+      "SavedIdeaProfileResult": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "profile": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/OperatorProfileInput-Output"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "profile_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Id"
+          },
+          "profile_version": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Profile Version"
+          }
+        },
+        "required": [
+          "profile_id",
+          "profile_version",
+          "profile",
+          "budget_usd"
+        ],
+        "title": "SavedIdeaProfileResult",
+        "type": "object"
+      },
       "SelectCandidateRequest": {
         "additionalProperties": false,
         "properties": {
@@ -757,6 +2602,355 @@
           "operator"
         ],
         "title": "SessionResponse",
+        "type": "object"
+      },
+      "SetupIdeaProfileRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "profile": {
+            "$ref": "#/components/schemas/OperatorProfileInput-Input"
+          }
+        },
+        "required": [
+          "profile"
+        ],
+        "title": "SetupIdeaProfileRequest",
+        "type": "object"
+      },
+      "SetupIdeaProfileResult": {
+        "additionalProperties": false,
+        "properties": {
+          "budget_usd": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Budget Usd"
+          },
+          "profile_id": {
+            "format": "uuid",
+            "title": "Profile Id",
+            "type": "string"
+          },
+          "profile_version": {
+            "title": "Profile Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "profile_id",
+          "profile_version",
+          "budget_usd"
+        ],
+        "title": "SetupIdeaProfileResult",
+        "type": "object"
+      },
+      "SourceFindingPayload": {
+        "additionalProperties": false,
+        "description": "Original analytical observations only; quotations stay in licensed storage.",
+        "properties": {
+          "claim": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Claim",
+            "type": "string"
+          },
+          "dimension": {
+            "enum": [
+              "CUSTOMER_PAIN",
+              "BUYER",
+              "DEMAND",
+              "ALTERNATIVES",
+              "COMPETITION",
+              "PRICING",
+              "REACHABILITY",
+              "DELIVERY"
+            ],
+            "title": "Dimension",
+            "type": "string"
+          },
+          "evidence_status": {
+            "enum": [
+              "SUPPORTED",
+              "CONTRADICTED",
+              "INCONCLUSIVE",
+              "UNAVAILABLE"
+            ],
+            "title": "Evidence Status",
+            "type": "string"
+          },
+          "finding": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "pattern": "\\S",
+            "title": "Finding",
+            "type": "string"
+          },
+          "limitations": {
+            "items": {
+              "maxLength": 4000,
+              "minLength": 1,
+              "pattern": "\\S",
+              "type": "string"
+            },
+            "maxItems": 30,
+            "title": "Limitations",
+            "type": "array"
+          },
+          "research_schema": {
+            "const": "SOURCE_FINDING_V1",
+            "default": "SOURCE_FINDING_V1",
+            "title": "Research Schema",
+            "type": "string"
+          },
+          "run_id": {
+            "title": "Run Id",
+            "type": "string"
+          },
+          "step_key": {
+            "maxLength": 36,
+            "minLength": 36,
+            "title": "Step Key",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "step_key",
+          "dimension",
+          "claim",
+          "finding",
+          "evidence_status",
+          "limitations"
+        ],
+        "title": "SourceFindingPayload",
+        "type": "object"
+      },
+      "SourceFindingView": {
+        "additionalProperties": false,
+        "properties": {
+          "artifact": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "format": "uuid",
+                "title": "Artifact Id",
+                "type": "string"
+              },
+              "content_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Content Hash",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/ArtifactKind"
+              },
+              "role": {
+                "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+                "title": "Role",
+                "type": "string"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "version": {
+                "minimum": 1.0,
+                "title": "Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "kind",
+              "version",
+              "content_hash",
+              "role"
+            ],
+            "title": "ArtifactInput",
+            "type": "object"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "observation": {
+            "$ref": "#/components/schemas/SourceFindingPayload"
+          },
+          "sources": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchSourceView"
+            },
+            "title": "Sources",
+            "type": "array"
+          },
+          "subject": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "format": "uuid",
+                "title": "Artifact Id",
+                "type": "string"
+              },
+              "content_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Content Hash",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/ArtifactKind"
+              },
+              "role": {
+                "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+                "title": "Role",
+                "type": "string"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "version": {
+                "minimum": 1.0,
+                "title": "Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "kind",
+              "version",
+              "content_hash",
+              "role"
+            ],
+            "title": "ArtifactInput",
+            "type": "object"
+          }
+        },
+        "required": [
+          "artifact",
+          "subject",
+          "observation",
+          "sources",
+          "created_at"
+        ],
+        "title": "SourceFindingView",
+        "type": "object"
+      },
+      "SourceReference": {
+        "additionalProperties": false,
+        "properties": {
+          "call_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Call Id"
+          },
+          "evidence_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Id"
+          },
+          "expires_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Expires At"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "grant_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Id"
+          },
+          "grant_version": {
+            "anyOf": [
+              {
+                "minimum": 1.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Version"
+          },
+          "kind": {
+            "enum": [
+              "RETAINED_CONTENT",
+              "GOVERNANCE_EVIDENCE"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "retained_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retained Id"
+          },
+          "schema_version": {
+            "const": 1,
+            "default": 1,
+            "title": "Schema Version",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "title": "SourceReference",
         "type": "object"
       },
       "StartProposalRequest": {
@@ -805,6 +2999,109 @@
         "title": "StartReturnRefinementRequest",
         "type": "object"
       },
+      "SubjectResearchCase": {
+        "additionalProperties": false,
+        "properties": {
+          "coverage": {
+            "items": {
+              "$ref": "#/components/schemas/ResearchCoverage"
+            },
+            "title": "Coverage",
+            "type": "array"
+          },
+          "current": {
+            "title": "Current",
+            "type": "boolean"
+          },
+          "findings": {
+            "items": {
+              "$ref": "#/components/schemas/SourceFindingView"
+            },
+            "title": "Findings",
+            "type": "array"
+          },
+          "gaps": {
+            "items": {
+              "enum": [
+                "CUSTOMER_PAIN",
+                "BUYER",
+                "DEMAND",
+                "ALTERNATIVES",
+                "COMPETITION",
+                "PRICING",
+                "REACHABILITY",
+                "DELIVERY"
+              ],
+              "type": "string"
+            },
+            "title": "Gaps",
+            "type": "array"
+          },
+          "mode": {
+            "enum": [
+              "CANDIDATE",
+              "SELECTED",
+              "SUPPLIED",
+              "REFINED"
+            ],
+            "title": "Mode",
+            "type": "string"
+          },
+          "subject": {
+            "additionalProperties": false,
+            "properties": {
+              "artifact_id": {
+                "format": "uuid",
+                "title": "Artifact Id",
+                "type": "string"
+              },
+              "content_hash": {
+                "pattern": "^[0-9a-f]{64}$",
+                "title": "Content Hash",
+                "type": "string"
+              },
+              "kind": {
+                "$ref": "#/components/schemas/ArtifactKind"
+              },
+              "role": {
+                "pattern": "^[A-Z][A-Z0-9_]{0,63}$",
+                "title": "Role",
+                "type": "string"
+              },
+              "schema_version": {
+                "const": 1,
+                "default": 1,
+                "title": "Schema Version",
+                "type": "integer"
+              },
+              "version": {
+                "minimum": 1.0,
+                "title": "Version",
+                "type": "integer"
+              }
+            },
+            "required": [
+              "artifact_id",
+              "kind",
+              "version",
+              "content_hash",
+              "role"
+            ],
+            "title": "ArtifactInput",
+            "type": "object"
+          }
+        },
+        "required": [
+          "subject",
+          "mode",
+          "current",
+          "findings",
+          "coverage",
+          "gaps"
+        ],
+        "title": "SubjectResearchCase",
+        "type": "object"
+      },
       "SystemStatus": {
         "properties": {
           "counts": {
@@ -848,6 +3145,59 @@
           "counts"
         ],
         "title": "SystemStatus",
+        "type": "object"
+      },
+      "UsageItem": {
+        "additionalProperties": false,
+        "properties": {
+          "component": {
+            "title": "Component",
+            "type": "string"
+          },
+          "cost": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cost"
+          },
+          "currency": {
+            "title": "Currency",
+            "type": "string"
+          },
+          "knowledge": {
+            "enum": [
+              "ESTIMATE",
+              "FINAL",
+              "UNAVAILABLE"
+            ],
+            "title": "Knowledge",
+            "type": "string"
+          },
+          "quantity": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Quantity"
+          }
+        },
+        "required": [
+          "component",
+          "quantity",
+          "cost",
+          "currency",
+          "knowledge"
+        ],
+        "title": "UsageItem",
         "type": "object"
       },
       "ValidationError": {
@@ -1103,6 +3453,226 @@
         "summary": "Activity Events"
       }
     },
+    "/operator/agent-runs/{run_id}": {
+      "get": {
+        "operationId": "get_run_operator_agent_runs__run_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run"
+      }
+    },
+    "/operator/agent-runs/{run_id}/cancel": {
+      "post": {
+        "operationId": "cancel_run_operator_agent_runs__run_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CancelRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CancelRunResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Run"
+      }
+    },
+    "/operator/agent-runs/{run_id}/events": {
+      "get": {
+        "operationId": "get_run_events_operator_agent_runs__run_id__events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunEvents"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run Events"
+      }
+    },
+    "/operator/agent-runs/{run_id}/reject": {
+      "post": {
+        "operationId": "reject_run_operator_agent_runs__run_id__reject_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RejectRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunView"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Reject Run"
+      }
+    },
+    "/operator/agent-runs/{run_id}/result": {
+      "get": {
+        "operationId": "get_run_result_operator_agent_runs__run_id__result_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Run Result"
+      }
+    },
     "/operator/experiments": {
       "post": {
         "operationId": "create_experiment_operator_experiments_post",
@@ -1251,6 +3821,56 @@
         "summary": "Accept Experiment Idea"
       }
     },
+    "/operator/experiments/{experiment_id}/agent-runs": {
+      "post": {
+        "operationId": "admit_run_operator_experiments__experiment_id__agent_runs_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AgentRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunRef"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Admit Run"
+      }
+    },
     "/operator/experiments/{experiment_id}/discover": {
       "post": {
         "operationId": "discover_experiment_operator_experiments__experiment_id__discover_post",
@@ -1303,6 +3923,56 @@
         "summary": "Discover Experiment"
       }
     },
+    "/operator/experiments/{experiment_id}/idea-revisions": {
+      "post": {
+        "operationId": "revise_idea_brief_operator_experiments__experiment_id__idea_revisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdeaRevisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaRevisionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revise Idea Brief"
+      }
+    },
     "/operator/experiments/{experiment_id}/refine": {
       "post": {
         "operationId": "refine_experiment_operator_experiments__experiment_id__refine_post",
@@ -1353,6 +4023,46 @@
           }
         },
         "summary": "Refine Experiment"
+      }
+    },
+    "/operator/experiments/{experiment_id}/research-case": {
+      "get": {
+        "operationId": "get_research_case_operator_experiments__experiment_id__research_case_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MarketResearchCase"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Research Case"
       }
     },
     "/operator/experiments/{experiment_id}/returns/refine": {
@@ -1458,6 +4168,60 @@
           }
         },
         "summary": "Select Experiment Candidate"
+      }
+    },
+    "/operator/idea-profile": {
+      "get": {
+        "operationId": "get_idea_profile_operator_idea_profile_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SavedIdeaProfileResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "summary": "Get Idea Profile"
+      },
+      "post": {
+        "operationId": "setup_idea_profile_operator_idea_profile_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetupIdeaProfileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SetupIdeaProfileResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Setup Idea Profile"
       }
     },
     "/operator/ideas/generate": {

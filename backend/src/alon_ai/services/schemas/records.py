@@ -227,6 +227,22 @@ def _nonempty(value: object) -> bool:
 
 
 def validate_payload(kind: ArtifactKind, payload: dict[str, Any]) -> dict[str, Any]:
+    if (
+        kind in {ArtifactKind.RESEARCH_EVIDENCE, ArtifactKind.MARKET_RESEARCH_REPORT}
+        and "research_schema" in payload
+    ):
+        from alon_ai.services.schemas.research import (
+            MarketResearchReportPayload,
+            SourceFindingPayload,
+        )
+
+        model = (
+            SourceFindingPayload
+            if kind is ArtifactKind.RESEARCH_EVIDENCE
+            else MarketResearchReportPayload
+        )
+        model.model_validate(payload)
+        return payload
     if kind is ArtifactKind.EXPERIMENT_BRIEF and "intake_policy" in payload:
         from alon_ai.services.schemas.intake import IntakePolicySnapshot
 

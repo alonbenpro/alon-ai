@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from decimal import Decimal
 from uuid import UUID
 
@@ -29,7 +30,7 @@ async def _ensure_exact_config(engine: AsyncEngine, config: CapabilityConfig) ->
         "account": config.intended_use.account_handle,
         "capability": config.intended_use.capability,
         "fx_id": config.fx_id,
-        "data": config.model_dump(mode="json"),
+        "data": config.database_data(),
     }
     async with engine.begin() as connection:
         await connection.execute(
@@ -46,7 +47,11 @@ async def _ensure_exact_config(engine: AsyncEngine, config: CapabilityConfig) ->
             .mappings()
             .one()
         )
-        if any(actual[key] != value for key, value in expected.items()):
+        if any(
+            actual[key] != value for key, value in expected.items() if key != "data"
+        ) or (
+            CapabilityConfig.model_validate_json(json.dumps(actual["data"])) != config
+        ):
             raise AccountingDenied(Reason.CONFIG)
         for bound in config.prices:
             await connection.execute(

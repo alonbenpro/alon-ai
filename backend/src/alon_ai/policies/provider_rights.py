@@ -98,6 +98,18 @@ class IntendedUse(StrictDTO):
     terms_version: str = Field(min_length=1, max_length=100)
     purpose: Purpose
     required_fields: frozenset[ContentField]
+    personal_noncommercial_approval_ref: UUID | None = Field(default=None, exclude=True)
+
+    @model_validator(mode="after")
+    def local_personal_firecrawl_scope(self) -> IntendedUse:
+        if self.personal_noncommercial_approval_ref is not None and (
+            self.provider is not Provider.FIRECRAWL
+            or self.capability is not Capability.FIRECRAWL_PAGE_CAPTURE
+            or self.purpose is not Purpose.R01A_PERSONAL_NONCOMMERCIAL_TEST
+            or self.required_fields != frozenset({ContentField.URL, ContentField.TEXT})
+        ):
+            raise ValueError("personal Firecrawl approval scope mismatch")
+        return self
 
 
 class RightsMode(StrEnum):
@@ -146,6 +158,9 @@ _PURPOSES = {
     Capability.BRAVE_WEB_COVERAGE: {
         Purpose.RESEARCH,
         Purpose.OFFICIAL_SOURCE_IDENTIFICATION,
+    },
+    Capability.FIRECRAWL_PAGE_CAPTURE: {
+        Purpose.RESEARCH,
     },
     Capability.GMAIL_READ: {Purpose.MAILBOX_READ},
     Capability.GOOGLE_CALENDAR_READ: {Purpose.CALENDAR_READ},
@@ -209,7 +224,14 @@ def evaluate_rights(
         }
     elif capability in _HUNTER_DISCOVERY:
         allowed_purposes = {Purpose.CONTACT_DISCOVERY}
-    if intended_use.purpose not in allowed_purposes:
+    personal_firecrawl_approved = (
+        grant.provider is Provider.FIRECRAWL
+        and grant.capability is Capability.FIRECRAWL_PAGE_CAPTURE
+        and intended_use.purpose is Purpose.R01A_PERSONAL_NONCOMMERCIAL_TEST
+        and intended_use.personal_noncommercial_approval_ref
+        == grant.supporting_evidence_ref
+    )
+    if intended_use.purpose not in allowed_purposes and not personal_firecrawl_approved:
         return deny(RightsReason.PURPOSE_DENIED)
     if (
         intended_use.purpose in {Purpose.LEAD_DISCOVERY, Purpose.CONTACT_DISCOVERY}

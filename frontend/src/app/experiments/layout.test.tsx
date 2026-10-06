@@ -7,7 +7,7 @@ import { getSession } from "@/lib/operator/server";
 vi.mock("next/image", () => ({
   default: function TestImage({ alt }: { alt: string }) { return <span role="img" aria-label={alt} />; },
 }));
-vi.mock("next/navigation", () => ({ redirect: vi.fn(), useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ redirect: vi.fn(), usePathname: () => "/experiments/new", useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/operator/server", () => ({ getSession: vi.fn() }));
 
 beforeEach(() => {

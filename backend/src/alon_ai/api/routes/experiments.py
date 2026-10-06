@@ -21,7 +21,17 @@ from alon_ai.api.schemas.experiments import (
 from alon_ai.services.experiments import ExperimentService
 from alon_ai.services.ideas import IdeaService
 from alon_ai.services.research import ResearchService
+from alon_ai.services.schemas.agent_runs import (
+    SavedIdeaProfileResult,
+    SetupIdeaProfileRequest,
+    SetupIdeaProfileResult,
+)
+from alon_ai.services.schemas.idea_revisions import (
+    IdeaRevisionRequest,
+    IdeaRevisionResult,
+)
 from alon_ai.services.schemas.intake import ExperimentSnapshot
+from alon_ai.services.schemas.research import MarketResearchCase
 
 router = APIRouter()
 ExperimentServiceDependency = Annotated[
@@ -29,6 +39,20 @@ ExperimentServiceDependency = Annotated[
 ]
 IdeaServiceDependency = Annotated[IdeaService, Depends(get_idea_service)]
 ResearchServiceDependency = Annotated[ResearchService, Depends(get_research_service)]
+
+
+@router.post("/idea-profile", response_model=SetupIdeaProfileResult)
+async def setup_idea_profile(
+    body: SetupIdeaProfileRequest, service: ExperimentServiceDependency
+) -> SetupIdeaProfileResult:
+    return await service.setup_profile(body)
+
+
+@router.get("/idea-profile", response_model=SavedIdeaProfileResult)
+async def get_idea_profile(
+    service: ExperimentServiceDependency,
+) -> SavedIdeaProfileResult:
+    return await service.get_profile()
 
 
 @router.post("/experiments", response_model=ExperimentSnapshot, status_code=201)
@@ -50,6 +74,15 @@ async def get_experiment(
     experiment_id: UUID, service: ExperimentServiceDependency
 ) -> dict:
     return await service.get(experiment_id)
+
+
+@router.get(
+    "/experiments/{experiment_id}/research-case", response_model=MarketResearchCase
+)
+async def get_research_case(
+    experiment_id: UUID, service: ResearchServiceDependency
+) -> MarketResearchCase:
+    return await service.get_case(experiment_id)
 
 
 @router.post(
@@ -90,3 +123,12 @@ async def accept_experiment_idea(
     experiment_id: UUID, body: AcceptRequest, service: IdeaServiceDependency
 ) -> dict:
     return await service.accept(experiment_id, body)
+
+
+@router.post(
+    "/experiments/{experiment_id}/idea-revisions", response_model=IdeaRevisionResult
+)
+async def revise_idea_brief(
+    experiment_id: UUID, body: IdeaRevisionRequest, service: IdeaServiceDependency
+) -> IdeaRevisionResult:
+    return await service.revise_brief(experiment_id, body)
