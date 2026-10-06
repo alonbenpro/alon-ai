@@ -17,6 +17,7 @@ from alon_ai.services.experiments import (
     _read_experiment,
 )
 from alon_ai.services.ideas import IdeaService
+from alon_ai.services.run_exchanges import resolve_exchange_evidence
 from alon_ai.services.schemas.agent_runs import (
     AgentRunRequest,
     CancelRunRequest,
@@ -110,7 +111,13 @@ class AgentRunService:
             reference,
         ]
 
-    async def admit(self, experiment_id: UUID, body: AgentRunRequest) -> RunRef:
+    async def admit(
+        self,
+        experiment_id: UUID,
+        body: AgentRunRequest,
+        *,
+        revision_inputs: list[dict] | None = None,
+    ) -> RunRef:
         previous = await self.store.by_command(body.command_key)
         if previous is not None:
             if (
@@ -125,17 +132,50 @@ class AgentRunService:
         detail = await _read_experiment(self.context, experiment_id)
         if detail is None:
             raise ExperimentError(404, "EXPERIMENT_NOT_FOUND")
+        if body.task_kind == "IDEA_REFINEMENT" and revision_inputs is None:
+            latest = await self.store.latest(experiment_id, self.context.operator_id)
+            if latest is not None and any(
+                ref["role"] == "OPERATOR_REVISION" for ref in latest["input_refs"]
+            ):
+                if detail["state"] == "REFINEMENT_FAILED" and not detail["retry_safe"]:
+                    raise ExperimentError(409, "REFINEMENT_RECONCILIATION_REQUIRED")
+                if (
+                    detail["state"] != "REFINEMENT_FAILED"
+                    or not detail["retry_safe"]
+                    or detail["latest_run_id"] != latest["run_id"]
+                    or latest["status"] != "FAILED"
+                ):
+                    raise ExperimentError(409, "REFINEMENT_NOT_ADMISSIBLE")
+                async with self.store.revision_scope(
+                    latest["run_id"], self.context.operator_id
+                ):
+                    current = await self.store.latest(
+                        experiment_id, self.context.operator_id
+                    )
+                    if current is None or current["run_id"] != latest["run_id"]:
+                        replay = await self.store.by_command(body.command_key)
+                        if replay is None:
+                            raise ExperimentError(409, "REFINEMENT_IN_PROGRESS")
+                    return await self.admit(
+                        experiment_id, body, revision_inputs=latest["input_refs"]
+                    )
         if self.context.settings.idea_intake_budget_usd is None:
             raise ExperimentError(409, "INTAKE_BUDGET_REQUIRED")
         if body.task_kind == "IDEA_DISCOVERY":
             if detail["mode"] != "SYSTEM_DISCOVERY" or detail["cycle_id"] is not None:
                 raise ExperimentError(409, "DISCOVERY_MODE_REQUIRED")
-        elif detail["cycle_id"] is None or detail["state"] not in {
-            "AWAITING_REFINEMENT",
-            "REFINEMENT_FAILED",
-        }:
+        elif revision_inputs is None and (
+            detail["cycle_id"] is None
+            or detail["state"]
+            not in {
+                "AWAITING_REFINEMENT",
+                "REFINEMENT_FAILED",
+            }
+        ):
             raise ExperimentError(409, "REFINEMENT_NOT_ADMISSIBLE")
         profile, input_refs = await self._pinned_inputs(experiment_id, body.task_kind)
+        if revision_inputs is not None:
+            input_refs = revision_inputs
         run_id = _id(body.command_key, "first-agent")
         request_hash = sha256(
             canonical_json(
@@ -417,9 +457,18 @@ class AgentRunService:
 
     async def events(self, run_id: UUID) -> RunEvents:
         row = await self.store.owned(run_id, self.context.operator_id)
-        return RunEvents(
-            events=[RunEvent.model_validate(event) for event in row["events"]]
-        )
+        events = []
+        for saved in row["events"]:
+            event = RunEvent.model_validate(saved)
+            if event.exchange is not None:
+                event.exchange = await resolve_exchange_evidence(
+                    event.exchange,
+                    engine=self.context.engine,
+                    run_id=run_id,
+                    experiment_id=row["experiment_id"],
+                )
+            events.append(event)
+        return RunEvents(events=events)
 
     async def cancel(self, run_id: UUID, body: CancelRunRequest) -> CancelRunResult:
         row = await self.store.cancel(

@@ -310,6 +310,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/operator/experiments/{experiment_id}/idea-revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revise Idea Brief */
+        post: operations["revise_idea_brief_operator_experiments__experiment_id__idea_revisions_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/operator/experiments/{experiment_id}/refine": {
         parameters: {
             query?: never;
@@ -754,6 +771,64 @@ export interface components {
             /** Detail */
             detail?: components["schemas"]["ValidationError"][];
         };
+        /** IdeaRevisionRequest */
+        IdeaRevisionRequest: {
+            /**
+             * Command Key
+             * Format: uuid
+             */
+            command_key: string;
+            /** Instructions */
+            instructions: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+        };
+        /** IdeaRevisionResult */
+        IdeaRevisionResult: {
+            /**
+             * Command Key
+             * Format: uuid
+             */
+            command_key: string;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /**
+             * Experiment Id
+             * Format: uuid
+             */
+            experiment_id: string;
+            /**
+             * Provider Mode
+             * @enum {string}
+             */
+            provider_mode: "live" | "fake" | "disabled";
+            /**
+             * Revised Run Id
+             * Format: uuid
+             */
+            revised_run_id: string;
+            /**
+             * Run Id
+             * Format: uuid
+             */
+            run_id: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "QUEUED" | "RUNNING" | "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
+            /**
+             * Task Kind
+             * @enum {string}
+             */
+            task_kind: "IDEA_DISCOVERY" | "IDEA_REFINEMENT";
+        };
         /** LivenessResponse */
         LivenessResponse: {
             /**
@@ -1078,6 +1153,7 @@ export interface components {
             /** Detail */
             detail?: string | null;
             diagnostic?: components["schemas"]["RunDiagnostic"] | null;
+            exchange?: components["schemas"]["RunExchange"] | null;
             /** Sequence */
             sequence: number;
             /** Type */
@@ -1087,6 +1163,26 @@ export interface components {
         RunEvents: {
             /** Events */
             events: components["schemas"]["RunEvent"][];
+        };
+        /** RunExchange */
+        RunExchange: {
+            /** Model Request Number */
+            model_request_number?: number | null;
+            /** Omissions */
+            omissions?: string[];
+            /** Payload */
+            payload: {
+                [key: string]: unknown;
+            };
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "PREPARED" | "COMPLETED" | "FAILED" | "NOT_DISPATCHED" | "UNAVAILABLE";
+            /** Tool Call Id */
+            tool_call_id?: string | null;
+            /** Tool Name */
+            tool_name?: string | null;
         };
         /** RunReceipt */
         RunReceipt: {
@@ -2132,6 +2228,41 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revise_idea_brief_operator_experiments__experiment_id__idea_revisions_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                experiment_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["IdeaRevisionRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["IdeaRevisionResult"];
                 };
             };
             /** @description Validation Error */

@@ -195,7 +195,11 @@ async def test_combined_model_uses_two_real_receipts_then_denies_third_before_ne
     ]
     assert "20" in activity[1]["detail"] and "5" in activity[1]["detail"]
     assert "BUDGET" in activity[-1]["detail"]
-    assert "native result" not in str(activity)
+    assert "native result" not in str([event["detail"] for event in activity])
+    assert activity[1]["exchange"]["payload"]["parts"] == [
+        {"part_kind": "text", "content": "native result"}
+    ]
+    assert activity[-1]["exchange"]["status"] == "FAILED"
     assert 80 < (result.attribution.deadline - datetime.now(UTC)).total_seconds() <= 90
     async with governance_engine.connect() as connection:
         rows = (await connection.execute(select(gov.calls))).mappings().all()

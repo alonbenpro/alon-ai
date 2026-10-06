@@ -1,11 +1,12 @@
 """The combined Idea agent's native typed output and bounded result contracts."""
 
 import json
-from typing import cast
+from typing import Any, cast
 from uuid import uuid4
 
 import pytest
 from pydantic import SecretStr, ValidationError
+from pydantic_ai.agent import AgentRunResult
 from pydantic_ai.exceptions import UnexpectedModelBehavior, UsageLimitExceeded
 from pydantic_ai.messages import (
     ModelMessage,
@@ -21,7 +22,7 @@ from pydantic_ai.providers.openai import OpenAIProvider
 from pydantic_ai.toolsets import FunctionToolset
 from pydantic_ai.usage import UsageLimits
 
-from alon_ai.agents.idea_agent import run_idea_agent
+from alon_ai.agents.idea_agent import RecoveredPriceAssessment, run_idea_agent
 from alon_ai.agents.idea_discovery import IdeaBriefAdvice, IdeaStage
 from alon_ai.agents.schemas.idea import (
     IdeaAgentInput,
@@ -230,6 +231,7 @@ async def test_native_assessment_corrects_origin_grounding_before_completion(
     assert isinstance(result.output, MarketResearchAssessment)
     assert result.output.brief.grounding_refs == tuple(corrected_refs)
     assert result.output.source_refs == ("src-a",)
+    assert isinstance(result, AgentRunResult)
     assert result.usage.requests == len(requests) == 2
     instructions = "\n".join(
         message.instructions or ""
@@ -274,6 +276,7 @@ async def test_native_assessment_corrects_wrong_idea_version_before_completion()
 
     assert isinstance(result.output, MarketResearchAssessment)
     assert result.output.idea_version_ref == input.idea_version_ref
+    assert isinstance(result, AgentRunResult)
     assert result.usage.requests == len(requests) == 2
 
 
@@ -299,6 +302,7 @@ async def test_native_assessment_corrects_source_basis_errors_once():
     assert result.output.idea_version_ref == input.idea_version_ref
     assert result.output.findings[0].source_refs == ("src-a",)
     assert result.output.findings[1].source_refs == ()
+    assert isinstance(result, AgentRunResult)
     assert result.usage.requests == len(requests) == 2
     feedback = [
         part
@@ -360,6 +364,7 @@ async def test_native_brief_correction_feedback_preserves_safe_field_reason(
     assert result.output.brief == IdeaBriefAdvice.model_validate_json(
         json.dumps(corrected["brief"])
     )
+    assert isinstance(result, AgentRunResult)
     assert result.usage.requests == len(requests) == 2
     feedback = [
         part
@@ -393,6 +398,7 @@ async def test_native_brief_shape_error_can_be_corrected():
     result = await run_idea_agent(input, model=model, toolset=FunctionToolset())
 
     assert isinstance(result.output, MarketResearchAssessment)
+    assert isinstance(result, AgentRunResult)
     assert result.usage.requests == len(requests) == 2
 
 
@@ -630,6 +636,7 @@ async def test_discovery_invokes_real_agent_with_toolset_and_native_typed_output
         "Scheduling",
     ]
     assert searches
+    assert isinstance(result, AgentRunResult)
     assert result.usage.requests >= 1
 
 
@@ -740,6 +747,7 @@ async def test_native_assessment_separates_completion_from_commercial_confidence
     )  # Optional dimensions need not all be observed.
     advice = mapped_advice(result.output, seed_kind=ArtifactKind.IDEA_CANDIDATE)
     assert (advice is not None) is (status == "ASSESSED")
+    assert isinstance(result, AgentRunResult)
     assert result.usage.requests == len(requests) == 1
 
 
@@ -759,3 +767,147 @@ def test_openai_model_uses_responses_with_no_sdk_retries_or_storage():
     provider = model.provider
     assert isinstance(provider, OpenAIProvider)
     assert provider.client.max_retries == 0
+
+
+def _range_assessment(input, upper=None) -> dict[str, Any]:
+    output = cast(dict[str, Any], _assessment(str(input.idea_version_ref)))
+    output["price_observations"] = [
+        {
+            "subject": "Malformed range",
+            "kind": "RANGE",
+            "currency": "USD",
+            "amount_low": "30",
+            "amount_high": upper,
+            "unit": "month",
+            "source_refs": ["src-a"],
+        },
+        {
+            "subject": "Valid exact price",
+            "kind": "EXACT",
+            "currency": "USD",
+            "amount_low": "20",
+            "unit": "month",
+            "source_refs": ["src-a"],
+        },
+    ]
+    return output
+
+
+@pytest.mark.parametrize("upper", [None, "10"])
+@pytest.mark.parametrize("status", ["ASSESSED", "INCOMPLETE"])
+async def test_exhausted_price_range_correction_preserves_valid_assessment(
+    upper, status
+):
+    input = _deepening_input()
+    invalid = _range_assessment(input, upper)
+    invalid["status"] = status
+    invalid["source_refs"].append("excluded-price-source")
+    invalid["price_observations"][0]["source_refs"] = ["excluded-price-source"]
+    model, requests = _scripted_native_model([invalid, invalid])
+    result = await run_idea_agent(input, model=model, toolset=FunctionToolset())
+    assert isinstance(result, RecoveredPriceAssessment)
+    assert len(requests) == 2
+    assert result.output.status == status
+    assert result.output.brief.title == invalid["brief"]["title"]
+    assert result.output.recommendation == invalid["recommendation"]
+    assert result.output.source_refs == ("src-a", "excluded-price-source")
+    assert result.output.gaps == (
+        *invalid["gaps"],
+        "Invalid price range observations excluded; source review required.",
+    )
+    assert [p.subject for p in result.output.price_observations] == [
+        "Valid exact price"
+    ]
+    assert [(x.index, x.code) for x in result.validation_issues] == [
+        (0, "PRICE_RANGE_BOUNDS_INVALID")
+    ]
+
+
+@pytest.mark.parametrize(
+    "fault",
+    [
+        "core",
+        "undeclared",
+        "wrong_version",
+        "wrong_stage",
+        "duplicate_refs",
+        "missing_gap",
+    ],
+)
+async def test_exhausted_price_recovery_does_not_hide_other_invalid_contracts(fault):
+    input = _deepening_input().model_copy(
+        update={"origin_stage": IdeaStage.USER_SEEDED_REFINEMENT}
+    )
+    invalid = _range_assessment(input)
+    invalid["brief"]["grounding_refs"] = ["SEED"]
+    if fault == "core":
+        invalid["brief"]["title"] = " "
+    elif fault == "undeclared":
+        invalid["price_observations"][0]["source_refs"] = ["undeclared"]
+    elif fault == "wrong_version":
+        invalid["idea_version_ref"] = str(uuid4())
+    elif fault == "wrong_stage":
+        invalid["brief"]["grounding_refs"] = ["SELECTED_CANDIDATE"]
+    elif fault == "duplicate_refs":
+        invalid["source_refs"] = ["src-a", "src-a"]
+    elif fault == "missing_gap":
+        invalid["gaps"] = []
+    model, requests = _scripted_native_model([invalid, invalid])
+    with pytest.raises(UnexpectedModelBehavior):
+        await run_idea_agent(input, model=model, toolset=FunctionToolset())
+    assert len(requests) == 2
+
+
+async def test_price_correction_success_keeps_sdk_result_and_all_prices():
+    input = _deepening_input()
+    model, requests = _scripted_native_model(
+        [_range_assessment(input), _range_assessment(input, "50")]
+    )
+    result = await run_idea_agent(input, model=model, toolset=FunctionToolset())
+    assert isinstance(result, AgentRunResult)
+    assert isinstance(result.output, MarketResearchAssessment)
+    assert len(result.output.price_observations) == 2
+    assert len(requests) == 2
+
+
+@pytest.mark.parametrize("response_kind", ["interrupted", "malformed", "length"])
+async def test_price_recovery_requires_complete_valid_final_json(response_kind):
+    input = _deepening_input()
+    invalid = _range_assessment(input)
+    requests = []
+
+    def respond(messages, info):
+        requests.append(messages)
+        return ModelResponse(
+            [TextPart("{" if response_kind == "malformed" else json.dumps(invalid))],
+            state="interrupted" if response_kind == "interrupted" else "complete",
+            finish_reason="length" if response_kind == "length" else None,
+        )
+
+    with pytest.raises(UnexpectedModelBehavior):
+        await run_idea_agent(
+            input,
+            model=FunctionModel(respond, profile={"supports_json_schema_output": True}),
+            toolset=FunctionToolset(),
+        )
+
+
+def test_price_native_schema_explains_range_bounds():
+    schema = PriceObservation.model_json_schema()["properties"]
+    assert "amount_low" in schema["amount_high"]["description"]
+    assert "RANGE" in schema["kind"]["description"]
+
+
+async def test_price_recovery_keeps_valid_not_found_with_default_source_refs():
+    input = _deepening_input()
+    invalid = _range_assessment(input)
+    invalid["price_observations"][1] = {
+        "subject": "No published price",
+        "kind": "NOT_FOUND",
+    }
+    model, requests = _scripted_native_model([invalid, invalid])
+    result = await run_idea_agent(input, model=model, toolset=FunctionToolset())
+    assert isinstance(result, RecoveredPriceAssessment)
+    assert len(requests) == 2
+    assert result.output.price_observations[0].kind == "NOT_FOUND"
+    assert result.output.price_observations[0].source_refs == ()

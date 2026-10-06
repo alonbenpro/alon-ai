@@ -639,7 +639,7 @@ async def test_capture_circuit_release_allows_agent_to_finish_using_saved_eviden
     [
         (Decimal(".001"), "content"),
         (Decimal(0), "timeout"),
-        (Decimal(0), "envelope"),
+        (Decimal(".001"), "envelope"),
         (Decimal(0), "permission"),
     ],
 )

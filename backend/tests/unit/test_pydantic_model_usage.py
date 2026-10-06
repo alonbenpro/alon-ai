@@ -747,13 +747,15 @@ async def test_response_activity_reports_safe_counts_even_when_truncated(
 
     build, ledger, _ = setup_model
     activity = []
+    exchanges = []
 
     class Activity:
         def __init__(self, engine):
             pass
 
-        async def record_activity(self, run_id, kind, detail):
+        async def record_activity(self, run_id, kind, detail, *, exchange=None):
             activity.append((kind, detail))
+            exchanges.append((kind, exchange))
 
     class Steps:
         async def claim_once(self, **kwargs):
@@ -808,6 +810,26 @@ async def test_response_activity_reports_safe_counts_even_when_truncated(
         assert expected in detail
     assert "private" not in detail
     assert "secret" not in detail
+    captured_request = next(
+        exchange for kind, exchange in exchanges if kind == "MODEL_REQUEST"
+    )
+    captured_response = next(
+        exchange for kind, exchange in exchanges if kind == "MODEL_RESPONSE"
+    )
+    assert captured_request.status == "PREPARED"
+    assert captured_request.payload["settings"]["max_tokens"] == 1000
+    assert captured_response.status == (
+        "FAILED" if finish_reason == "length" else "COMPLETED"
+    )
+    assert captured_response.payload["parts"] == [
+        {"part_kind": "text", "content": "private text"}
+    ]
+    assert "private reasoning" not in captured_response.model_dump_json()
+    assert "secret" not in captured_response.model_dump_json()
+    assert (
+        ledger.events.count("network") == 0
+    )  # this custom responder does not append network events
+    assert ledger.events.count("dispatch") == 1
 
 
 @pytest.mark.parametrize("raw_reason", ["private provider message", ["secret"], None])

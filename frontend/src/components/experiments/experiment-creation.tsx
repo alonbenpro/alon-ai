@@ -33,6 +33,8 @@ type ProposalRevision = components["schemas"]["ProposalRevisionSnapshot"];
 type SelectionCommand = { candidate_artifact_id: string; reason: string; command_key: string };
 type AcceptanceCommand = { run_id: string; command_key: string; intent_relationship: Relationship;
   intent_rationale: string; intent_confirmed: true };
+type IdeaRevisionCommand = components["schemas"]["IdeaRevisionRequest"];
+type IdeaRevisionResult = components["schemas"]["IdeaRevisionResult"];
 type ReturnAvailable = {
   verdict_id: string; research_cycle_id: string;
   prior_brief: { artifact_id: string; version: number; content_hash: string; payload: Brief };
@@ -76,11 +78,19 @@ function readPendingRunCommand(experiment: string, action: "discover" | "refine"
   } catch { return null; }
   return null;
 }
-const commandKey = (experiment: string, action: "select" | "accept" | "return") => `experiment-${experiment}-${action}-pending`;
+const commandKey = (experiment: string, action: "select" | "accept" | "return" | "revision") => `experiment-${experiment}-${action}-pending`;
 const draftCommandKey = (experiment: string) => `experiment-${experiment}-draft-command`;
-function pendingCommand<T>(experiment: string, action: "select" | "accept" | "return"): T | null {
+function pendingCommand<T>(experiment: string, action: "select" | "accept" | "return" | "revision"): T | null {
   try { return JSON.parse(sessionStorage.getItem(commandKey(experiment, action)) ?? "null") as T | null; }
   catch { return null; }
+}
+function pendingRevisionCommand(experiment: string): IdeaRevisionCommand | null {
+  const command = pendingCommand<Partial<IdeaRevisionCommand>>(experiment, "revision");
+  if (command && typeof command.command_key === "string" && typeof command.run_id === "string" &&
+    typeof command.instructions === "string" && command.instructions.trim() && command.instructions.length <= 4000) {
+    return { command_key: command.command_key, run_id: command.run_id, instructions: command.instructions };
+  }
+  return null;
 }
 const running = (state: ServerState | null) => state === "DISCOVERY_IN_PROGRESS" || state === "REFINEMENT_IN_PROGRESS";
 const failed = (state: ServerState | null) => state === "DISCOVERY_FAILED" || state === "REFINEMENT_FAILED";
@@ -198,6 +208,8 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
   const [intentRationale, setIntentRationale] = useState("");
   const [intentConfirmed, setIntentConfirmed] = useState(false);
   const [pendingAcceptance, setPendingAcceptance] = useState<AcceptanceCommand | null>(null);
+  const [refinementInstructions, setRefinementInstructions] = useState("");
+  const [pendingRevision, setPendingRevision] = useState<IdeaRevisionCommand | null>(null);
   const [returnAvailable, setReturnAvailable] = useState<ReturnAvailable | null>(null);
   const [pendingReturn, setPendingReturn] = useState<ReturnCommand | null>(null);
   const [returnReview, setReturnReview] = useState<ReturnReview | null>(null);
@@ -248,6 +260,9 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       if (selection) { setCandidateChoice(selection.candidate_artifact_id); setSelectionReason(selection.reason); }
     }
     setRunId(saved.latest_run_id ?? ""); setAdvice(saved.advice); setAdviceSource(saved.advice_source);
+    const revision = pendingRevisionCommand(saved.experiment_id);
+    setPendingRevision(revision);
+    if (revision) setRefinementInstructions(revision.instructions);
     setRunReviewStatus((current) => current?.runId === saved.latest_run_id ? current : null);
     setRunResearchStatus((current) => current?.runId === saved.latest_run_id ? current : null);
     for (const action of ["discover", "refine"] as const) {
@@ -453,8 +468,33 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
       setState("AWAITING_REFINEMENT"); setBusy("");
     } catch (error) { setBusy(""); setMessage(failure(error, "Return refinement")); await load(id, true); }
   };
+  const reviseIdea = async () => {
+    if (!id || busy || statusUnavailable || !runtime?.ready || running(state) || stageStatus === "RUNNING" || pendingAcceptance) return;
+    if (!pendingRevision && (!runId || state !== "AWAITING_REVIEW" || !advice ||
+      runReviewStatus?.runId !== runId || runReviewStatus.status !== "PENDING" || !refinementInstructions.trim())) return;
+    if (runtime.provider_mode === "live" && !liveConfirmed) { setMessage("Confirm the live call before continuing."); return; }
+    const command = pendingRevision ?? {
+      command_key: crypto.randomUUID(), run_id: runId, instructions: refinementInstructions,
+    };
+    if (!pendingRevision) {
+      sessionStorage.setItem(commandKey(id, "revision"), JSON.stringify(command));
+      setPendingRevision(command);
+    }
+    setBusy("Revising your idea and researching changes…"); setMessage("");
+    try {
+      const result = await post(`/api/operator/experiments/${encodeURIComponent(id)}/idea-revisions`, command) as IdeaRevisionResult;
+      if (result.experiment_id !== id || !result.run_id || result.run_id === command.run_id ||
+        result.command_key !== command.command_key || result.revised_run_id !== command.run_id) throw new Error("REVISION_UNCONFIRMED");
+      sessionStorage.removeItem(commandKey(id, "revision")); setPendingRevision(null); setRefinementInstructions("");
+      setRelationship(""); setIntentRationale(""); setIntentConfirmed(false);
+      setRunId(result.run_id); setRunReviewStatus(null); setRunResearchStatus(null);
+      setAdvice(null); setState("REFINEMENT_IN_PROGRESS"); setStage("IDEA_REFINEMENT"); setStageStatus("RUNNING");
+      setBusy(""); setRetrySafe(false);
+      await load(id);
+    } catch (error) { setBusy(""); setMessage(failure(error, "Idea revision")); await load(id, true); }
+  };
   const accept = async () => {
-    if (!id || !runId || !advice || statusUnavailable || advice.material_pivot || advice.intent_relationship === "MATERIAL_PIVOT" || advice.intent_relationship === "UNRELATED") return;
+    if (!id || !runId || !advice || statusUnavailable || pendingRevision || advice.material_pivot || advice.intent_relationship === "MATERIAL_PIVOT" || advice.intent_relationship === "UNRELATED") return;
     const payload: AcceptanceCommand | null = pendingAcceptance ?? (intentConfirmed && intentRationale.trim() && relationship && relationship !== "MATERIAL_PIVOT" && relationship !== "UNRELATED" ? {
       run_id: runId, command_key: crypto.randomUUID(), intent_relationship: relationship,
       intent_rationale: intentRationale.trim(), intent_confirmed: true,
@@ -485,6 +525,7 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
   const blockedIntent = relationship === "MATERIAL_PIVOT" || relationship === "UNRELATED" || advice?.material_pivot || advice?.intent_relationship === "MATERIAL_PIVOT" || advice?.intent_relationship === "UNRELATED";
   const canRetry = retrySafe && failed(state) && !statusUnavailable;
   const canRefine = !draft && !statusUnavailable && !blockedReason && state === "AWAITING_REFINEMENT";
+  const canRevise = !draft && state === "AWAITING_REVIEW" && !!advice && runReviewStatus?.runId === runId && runReviewStatus.status === "PENDING";
   const chosenDraft = candidates.find((candidate) => candidate.artifact_id === candidateChoice);
   const editChanged = !!chosenDraft && revisionText !== chosenDraft.hypothesis;
   const visibleCandidates = candidates.filter((candidate) => !proposalHistory.some((revision) =>
@@ -572,10 +613,22 @@ export function ExperimentCreation({ experimentId, runtime }: { experimentId?: s
         {state === "AWAITING_SELECTION" ? <><fieldset disabled={!!busy || !!pendingSelection}><legend>Choose one direction to refine</legend>{candidates.map((candidate) => <label key={candidate.artifact_id} className="experiment-candidate"><input type="radio" name="candidate" checked={candidateChoice === candidate.artifact_id} onChange={() => setCandidateChoice(candidate.artifact_id)} /><span><strong>{candidate.title}</strong><span>{candidate.hypothesis}</span></span></label>)}</fieldset>{pendingSelection ? <><p>Selection confirmation is pending. Retry the saved choice and reason with the same command.</p><p>Reason: {pendingSelection.reason}</p><button type="button" disabled={!!busy || statusUnavailable} onClick={() => void select()}>Retry selection</button></> : <><label className="experiment-field"><span>Why this direction?</span><textarea aria-label="Reason for selection" value={selectionReason} onChange={(event) => setSelectionReason(event.target.value)} rows={2} /></label><button type="button" disabled={!candidateChoice || !selectionReason.trim() || !!busy || statusUnavailable} onClick={() => void select()}>Select direction</button></>}</> :
           selectedCandidate && <p className="experiment-selected">Selected direction: <strong>{selectedCandidate.title}</strong></p>}</div>}
       {!busy && canRefine && <button type="button" disabled={!runtime?.ready} onClick={() => void run("refine")}>{returnAvailable ? "Refine returned idea" : "Retry deepening"}</button>}
+      {!draft && (canRevise || pendingRevision) && <section className="experiment-edit" aria-labelledby="idea-revision-heading">
+        <h3 id="idea-revision-heading">Refine this idea</h3>
+        <label className="experiment-field"><span>Refinement instructions</span><textarea aria-label="Refinement instructions" value={refinementInstructions}
+          maxLength={4000} rows={3} disabled={!!busy || !!pendingRevision || !!pendingAcceptance || running(state) || stageStatus === "RUNNING"}
+          placeholder="What should change, improve, or stay the same?" onChange={(event) => setRefinementInstructions(event.target.value)} /></label>
+        <p>Your instructions create a new idea and research version. The agent revisits affected evidence before you review it.</p>
+        {pendingRevision && <p role="status">Revision confirmation is pending. Check the saved status, then retry these exact instructions.</p>}
+        <button type="button" className="experiment-secondary-action" disabled={!!busy || statusUnavailable || !runtime?.ready || !!pendingAcceptance ||
+          running(state) || stageStatus === "RUNNING" || !pendingRevision && !refinementInstructions.trim()} onClick={() => void reviseIdea()}>
+          {pendingRevision ? "Retry revision" : "Revise and research"}
+        </button>
+      </section>}
       {advice && state === "AWAITING_REVIEW" && runReviewStatus?.runId === runId && runReviewStatus.status === "PENDING" && <div className="experiment-advice"><div className="experiment-advice__lead"><span className="eyebrow">{returnAvailable ? "Returned idea · awaiting approval" : adviceSource === "RECORDED_FAKE" ? "Recorded example · no live agent ran" : "Idea agent suggestion · awaiting approval"}</span><h3>{advice.title}</h3>{advice.core_intent !== advice.title && <p>{advice.core_intent}</p>}<small>This is suggested wording for your idea. It becomes the current version only if you approve it.</small></div><dl><div><dt>For</dt><dd>{advice.customer}</dd></div><div><dt>Problem</dt><dd>{advice.problem}</dd></div></dl>
         <details className="experiment-proposed-brief"><summary>Full suggested idea and open questions</summary><BriefDetails brief={advice} /><div className="experiment-uncertainties"><h4>Still unverified</h4><ul aria-label="Unknowns to test">{advice.uncertainties.map((item) => <li key={item}>{item}</li>)}</ul><p>Source references: {advice.grounding_refs.join(" · ")}</p></div></details>
-        <div className="experiment-intent"><div><h4>Approve this version?</h4><p>Suggested relationship: {relationshipLabels[advice.intent_relationship]}. Your classification decides whether it can be accepted.</p></div>{pendingAcceptance ? <><p>Acceptance confirmation is pending. Retry the exact saved review command.</p><p>Operator classification: {relationshipLabels[pendingAcceptance.intent_relationship]}</p><p>Reason: {pendingAcceptance.intent_rationale}</p><button type="button" disabled={!!busy || statusUnavailable || !!blockedIntent || pendingAcceptance.run_id !== runId} onClick={() => void accept()}>Retry acceptance</button></> : <><div className="experiment-intent__fields"><label className="experiment-field"><span>How does it relate to your idea?</span><select aria-label="Intent relationship" value={relationship} onChange={(event) => { setRelationship(event.target.value as Relationship); setIntentConfirmed(false); }}><option value="">Choose a relationship</option><option value="PRESERVES_CORE_INTENT">Preserves core intent</option><option value="CLARIFIES_CORE_INTENT">Clarifies core intent</option><option value="NARROWS_CORE_INTENT">Narrows core intent</option><option value="MATERIAL_PIVOT">Material pivot</option><option value="UNRELATED">Unrelated</option></select></label><label className="experiment-field"><span>Why?</span><textarea aria-label="Reason for classification" value={intentRationale} onChange={(event) => setIntentRationale(event.target.value)} rows={2} /></label></div><label className="experiment-confirm"><input type="checkbox" checked={intentConfirmed} disabled={!relationship || !!blockedIntent} onChange={(event) => setIntentConfirmed(event.target.checked)} /> I confirm this classification and approve accepting this idea</label></>}
-        {blockedIntent && <p className="experiment-error">{relationship === "UNRELATED" || advice.intent_relationship === "UNRELATED" ? "An unrelated proposal cannot be accepted here." : "A material pivot cannot be accepted here; it requires a separate approval decision."}</p>}{!pendingAcceptance && <button type="button" disabled={!relationship || !intentConfirmed || !intentRationale.trim() || !!blockedIntent || !!busy || statusUnavailable} onClick={() => void accept()}>Accept and save idea</button>}</div></div>}
+        <div className="experiment-intent"><div><h4>Approve this version?</h4><p>Suggested relationship: {relationshipLabels[advice.intent_relationship]}. Your classification decides whether it can be accepted.</p></div>{pendingAcceptance ? <><p>Acceptance confirmation is pending. Retry the exact saved review command.</p><p>Operator classification: {relationshipLabels[pendingAcceptance.intent_relationship]}</p><p>Reason: {pendingAcceptance.intent_rationale}</p><button type="button" disabled={!!busy || statusUnavailable || !!pendingRevision || !!blockedIntent || pendingAcceptance.run_id !== runId} onClick={() => void accept()}>Retry acceptance</button></> : <><div className="experiment-intent__fields"><label className="experiment-field"><span>How does it relate to your idea?</span><select aria-label="Intent relationship" value={relationship} onChange={(event) => { setRelationship(event.target.value as Relationship); setIntentConfirmed(false); }}><option value="">Choose a relationship</option><option value="PRESERVES_CORE_INTENT">Preserves core intent</option><option value="CLARIFIES_CORE_INTENT">Clarifies core intent</option><option value="NARROWS_CORE_INTENT">Narrows core intent</option><option value="MATERIAL_PIVOT">Material pivot</option><option value="UNRELATED">Unrelated</option></select></label><label className="experiment-field"><span>Why?</span><textarea aria-label="Reason for classification" value={intentRationale} onChange={(event) => setIntentRationale(event.target.value)} rows={2} /></label></div><label className="experiment-confirm"><input type="checkbox" checked={intentConfirmed} disabled={!relationship || !!blockedIntent} onChange={(event) => setIntentConfirmed(event.target.checked)} /> I confirm this classification and approve accepting this idea</label></>}
+        {blockedIntent && <p className="experiment-error">{relationship === "UNRELATED" || advice.intent_relationship === "UNRELATED" ? "An unrelated proposal cannot be accepted here." : "A material pivot cannot be accepted here; it requires a separate approval decision."}</p>}{!pendingAcceptance && <button type="button" disabled={!relationship || !intentConfirmed || !intentRationale.trim() || !!blockedIntent || !!busy || statusUnavailable || !!pendingRevision} onClick={() => void accept()}>Accept and save idea</button>}</div></div>}
       {state === "IDEA_ACCEPTED" && <div className="experiment-success" role="status"><strong>Experiment ready</strong>{acceptedBrief && <><h3>{acceptedBrief.title}</h3><p>{acceptedBrief.core_intent}</p></>}{adviceSource === "RECORDED_FAKE" && <p>Accepted from a recorded example. No live agent ran.</p>}<p>The accepted idea is saved as the current version.</p><a href={`/experiments/${encodeURIComponent(id)}`}>View experiment <span aria-hidden="true">↗</span></a></div>}
     </section>}
     {id && runId && <RunInspector key={`${runId}:${runReviewStatus?.runId === runId && runReviewStatus.status === "ACCEPTED" ? "accepted" : "review"}`} experimentId={id} runId={runId}

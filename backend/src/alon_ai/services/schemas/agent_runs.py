@@ -8,6 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field
 
 from alon_ai.services.experiments import OperatorProfileInput
 from alon_ai.services.run_diagnostics import RunDiagnostic
+from alon_ai.services.run_exchanges import RunExchange
 
 TaskKind = Literal["IDEA_DISCOVERY", "IDEA_REFINEMENT"]
 RunStatus = Literal[
@@ -153,6 +154,7 @@ class RunEvent(StrictRunDTO):
     type: str
     detail: str | None = None
     diagnostic: RunDiagnostic | None = None
+    exchange: RunExchange | None = None
 
 
 class RunEvents(StrictRunDTO):

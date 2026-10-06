@@ -183,6 +183,7 @@ class FirecrawlAdapter:
         *,
         max_bytes: int = _MAX_RESPONSE_BYTES,
         timeout_seconds: float = 15.0,
+        completed_capture_rejection: bool = False,
     ) -> dict:
         try:
             async with (
@@ -215,10 +216,21 @@ class FirecrawlAdapter:
                     raw.extend(chunk)
                     if len(raw) > max_bytes:
                         raise ProviderFailure(ProviderErrorCode.MALFORMED_RESPONSE)
-            payload = json.loads(raw)
+            try:
+                payload = json.loads(raw)
+            except (ValueError, TypeError):
+                if completed_capture_rejection:
+                    raise _CaptureRejected(
+                        FirecrawlRejectionReason.JSON_INVALID
+                    ) from None
+                raise
             if not isinstance(payload, dict) or payload.get("success") is not True:
+                if completed_capture_rejection:
+                    raise _CaptureRejected(FirecrawlRejectionReason.ENVELOPE_INVALID)
                 raise ValueError
             return payload
+        except _CaptureRejected:
+            raise
         except ProviderFailure:
             raise
         except (httpx.TimeoutException, TimeoutError):
@@ -320,25 +332,31 @@ class FirecrawlAdapter:
         started = self._authorize(request.capability)
         await self._public_target(request.url)
         field = "markdown" if request.formats[0] is CaptureFormat.MARKDOWN else "html"
-        payload = await self._post(
-            _SCRAPE_ENDPOINT,
-            {
-                "url": request.url,
-                "formats": [field],
-                "onlyMainContent": True,
-                "waitFor": request.wait_ms,
-                "timeout": _SCRAPE_TIMEOUT_MS,
-                "proxy": "basic",
-                "storeInCache": False,
-                "skipTlsVerification": False,
-                "removeBase64Images": True,
-                "parsers": [],
-            },
-            timeout_seconds=_SCRAPE_CLIENT_TIMEOUT_SECONDS,
-        )
         content = title = None
         metadata = {}
+        post_completed = False
         try:
+            payload = await self._post(
+                _SCRAPE_ENDPOINT,
+                {
+                    "url": request.url,
+                    "formats": [field],
+                    "onlyMainContent": True,
+                    "waitFor": request.wait_ms,
+                    "timeout": _SCRAPE_TIMEOUT_MS,
+                    "proxy": "basic",
+                    "storeInCache": False,
+                    "skipTlsVerification": False,
+                    "removeBase64Images": True,
+                    "parsers": [],
+                },
+                # JSON can encode one non-BMP character as two six-byte escapes.
+                # Keep a bounded allowance for metadata/envelope bytes.
+                max_bytes=12 * self._max_text_chars + _MAX_RESPONSE_BYTES,
+                timeout_seconds=_SCRAPE_CLIENT_TIMEOUT_SECONDS,
+                completed_capture_rejection=True,
+            )
+            post_completed = True
             data = payload["data"]
             if not isinstance(data, dict):
                 raise _CaptureRejected(FirecrawlRejectionReason.DATA_SHAPE_INVALID)
@@ -361,8 +379,10 @@ class FirecrawlAdapter:
             if len(title) > 500:
                 raise _CaptureRejected(FirecrawlRejectionReason.TITLE_LIMIT_EXCEEDED)
         except (ValueError, TypeError, KeyError, AttributeError) as error:
-            # _post completed HTTP 200/success:true. The returned content is
-            # unusable, but this is positive response-completion evidence.
+            if not post_completed and not isinstance(error, _CaptureRejected):
+                raise
+            # _post consumed HTTP 200 through EOF. The response is unusable,
+            # but this is positive response-completion evidence.
             # Neither a billed quantity nor a price is known at this layer.
             finished = self._authorize(request.capability)
             target_status = (
@@ -372,8 +392,12 @@ class FirecrawlAdapter:
                 reason=error.reason
                 if isinstance(error, _CaptureRejected)
                 else FirecrawlRejectionReason.DATA_SHAPE_INVALID,
-                content_chars=len(content) if isinstance(content, str) else None,
-                title_chars=len(title) if isinstance(title, str) else None,
+                content_chars=len(content)
+                if isinstance(content, str) and len(content) <= 256_000
+                else None,
+                title_chars=len(title)
+                if isinstance(title, str) and len(title) <= 256_000
+                else None,
                 text_char_limit=self._max_text_chars,
                 target_status=target_status
                 if type(target_status) is int and 100 <= target_status <= 599

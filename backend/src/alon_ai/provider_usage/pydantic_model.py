@@ -2,7 +2,8 @@
 
 The factory and dispatch guard are trusted composition, never agent tools. The
 guard must revalidate pinned inputs, current rights and cancellation under locks,
-and hold those locks across the request. Model messages remain process-local.
+and hold those locks across the request. Visible exchanges are projected into
+the admitted run's activity; licensed source bodies remain in governed retention.
 Only the ordinary non-streaming request path is supported; inherited Model
 methods fail closed for streaming, token counting and provider compaction.
 """
@@ -66,6 +67,11 @@ from alon_ai.provider_usage.schemas.accounting import (
 )
 from alon_ai.provider_usage.service import ExecutionResult, GovernedExecutor
 from alon_ai.security.secrets import SecretStore
+from alon_ai.services.run_exchanges import (
+    model_request_exchange,
+    model_response_exchange,
+    record_exchange,
+)
 
 ModelFactory = Callable[[SecretStr], Model]
 DispatchGuard = Callable[[], AbstractAsyncContextManager[None]]
@@ -525,9 +531,17 @@ class GovernedPydanticModel(Model):
             else None
         )
         if activity is not None and self._step_checkpoint is not None:
-            await activity.record_activity(
+            await record_exchange(
+                activity,
                 self._step_checkpoint.run_id,
                 "MODEL_REQUEST",
+                lambda: model_request_exchange(
+                    self._ordinal,
+                    self.model_name,
+                    messages,
+                    model_request_parameters,
+                    self._request_settings,
+                ),
                 f"OpenAI request {self._ordinal} prepared · {self.model_name}",
             )
         adapter = _RequestAdapter(self, messages, model_request_parameters, key)
@@ -591,8 +605,30 @@ class GovernedPydanticModel(Model):
                 if response is not None:
                     detail += " · " + _response_diagnostics(response)
                 await asyncio.shield(
-                    activity.record_activity(
-                        self._step_checkpoint.run_id, "MODEL_RESPONSE", detail
+                    record_exchange(
+                        activity,
+                        self._step_checkpoint.run_id,
+                        "MODEL_RESPONSE",
+                        lambda: model_response_exchange(
+                            self._ordinal,
+                            response,
+                            failed=result is None or result.error is not None,
+                            allowed_names={
+                                tool.name
+                                for tool in [
+                                    *model_request_parameters.function_tools,
+                                    *model_request_parameters.output_tools,
+                                ]
+                            },
+                            error_code=(
+                                result.error.value
+                                if result and result.error
+                                else failure_reason
+                                if result is None
+                                else None
+                            ),
+                        ),
+                        detail,
                     )
                 )
         assert result is not None

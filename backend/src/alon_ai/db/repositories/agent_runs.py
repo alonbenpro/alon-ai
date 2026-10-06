@@ -2,7 +2,8 @@
 
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime
-from uuid import UUID
+from typing import TYPE_CHECKING
+from uuid import UUID, uuid5
 
 import structlog
 from sqlalchemy import select, update
@@ -11,9 +12,13 @@ from sqlalchemy.dialects.postgresql import insert
 from alon_ai.db.repositories.experiments import ExperimentError
 from alon_ai.db.tables import accounting as gov
 from alon_ai.db.tables import records
+from alon_ai.db.tables.agent_run_steps import steps
 from alon_ai.db.tables.agent_runs import runs
 from alon_ai.db.tables.intake import commands, intakes
 from alon_ai.db.tables.openai import run_intents
+
+if TYPE_CHECKING:
+    from alon_ai.services.run_exchanges import RunExchange
 
 
 def _event(
@@ -22,6 +27,7 @@ def _event(
     now: datetime,
     detail: str | None = None,
     diagnostic: dict | None = None,
+    exchange: dict | None = None,
 ):
     event = {
         "sequence": len(row["events"]) + 1,
@@ -31,6 +37,8 @@ def _event(
     }
     if diagnostic is not None:
         event["diagnostic"] = diagnostic
+    if exchange is not None:
+        event["exchange"] = exchange
     return [*row["events"], event]
 
 
@@ -98,6 +106,70 @@ class AgentRunRepository:
         async with self.engine.connect() as connection:
             return (
                 (await connection.execute(select(runs).where(runs.c.run_id == run_id)))
+                .mappings()
+                .one_or_none()
+            )
+
+    async def scoped_evidence_reference(
+        self, run_id: UUID, experiment_id: UUID, reference
+    ):
+        """Scope exact evidence to this run or its pinned immutable prior report."""
+        current = await self.get(run_id)
+        if current is None or current["experiment_id"] != experiment_id:
+            return None
+        allowed_runs = [run_id]
+        revision_ref = next(
+            (
+                ref
+                for ref in current["input_refs"]
+                if ref["role"] == "OPERATOR_REVISION"
+            ),
+            None,
+        )
+        report_ref = next(
+            (ref for ref in current["input_refs"] if ref["role"] == "PRIOR_RESEARCH"),
+            None,
+        )
+        if revision_ref is not None and report_ref is not None:
+            revision = await self.artifact(experiment_id, revision_ref)
+            report = await self.artifact(experiment_id, report_ref)
+            if (
+                revision is not None
+                and report is not None
+                and report["kind"] == "MARKET_RESEARCH_REPORT"
+            ):
+                async with self.engine.connect() as connection:
+                    prior_run = await connection.scalar(
+                        select(records.idea_refinements.c.run_id).where(
+                            records.idea_refinements.c.experiment_id == experiment_id,
+                            records.idea_refinements.c.operation_id
+                            == report["operation_id"],
+                        )
+                    )
+                if prior_run is not None and report["id"] == uuid5(
+                    prior_run, "combined-case"
+                ):
+                    allowed_runs.append(prior_run)
+        async with self.engine.connect() as connection:
+            return (
+                (
+                    await connection.execute(
+                        select(gov.retained.c.id, gov.retained.c.expires_at)
+                        .join(gov.calls, gov.calls.c.id == gov.retained.c.call_id)
+                        .join(steps, steps.c.provider_call_id == gov.calls.c.id)
+                        .where(
+                            steps.c.run_id.in_(allowed_runs),
+                            steps.c.experiment_id == experiment_id,
+                            gov.calls.c.experiment_id == experiment_id,
+                            gov.retained.c.id == reference.retained_id,
+                            gov.retained.c.call_id == reference.call_id,
+                            gov.retained.c.grant_id == reference.grant_id,
+                            gov.retained.c.grant_version == reference.grant_version,
+                            gov.retained.c.field == reference.field,
+                            gov.retained.c.expires_at == reference.expires_at,
+                        )
+                    )
+                )
                 .mappings()
                 .one_or_none()
             )
@@ -328,7 +400,12 @@ class AgentRunRepository:
             )
 
     async def record_activity(
-        self, run_id: UUID, event_type: str, detail: str | None = None
+        self,
+        run_id: UUID,
+        event_type: str,
+        detail: str | None = None,
+        *,
+        exchange: "RunExchange | None" = None,
     ):
         """Append a safe operator-visible activity event without lifecycle changes."""
         try:
@@ -352,7 +429,17 @@ class AgentRunRepository:
                         await connection.execute(
                             update(runs)
                             .where(runs.c.run_id == run_id)
-                            .values(events=_event(row, event_type, now, detail))
+                            .values(
+                                events=_event(
+                                    row,
+                                    event_type,
+                                    now,
+                                    detail,
+                                    exchange=exchange.model_dump(mode="json")
+                                    if exchange
+                                    else None,
+                                )
+                            )
                             .returning(runs)
                         )
                     )
@@ -479,6 +566,27 @@ class AgentRunRepository:
             return updated
 
     @asynccontextmanager
+    async def revision_scope(self, run_id: UUID, operator_id: UUID):
+        """Serialize revision admission with acceptance, rejection and other revisions."""
+        async with self.engine.begin() as connection:
+            row = (
+                (
+                    await connection.execute(
+                        select(runs)
+                        .where(
+                            runs.c.run_id == run_id, runs.c.operator_id == operator_id
+                        )
+                        .with_for_update()
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            if row is None:
+                raise ExperimentError(404, "AGENT_RUN_NOT_FOUND")
+            yield row
+
+    @asynccontextmanager
     async def review_scope(self, run_id: UUID | None, operator_id: UUID):
         """Keep consuming a discovery result ordered before concurrent rejection."""
         if run_id is None:
@@ -600,6 +708,14 @@ class AgentRunRepository:
                 if row["review_key"] != key or row["review_reason"] is not None:
                     raise ExperimentError(409, "RUN_REVIEW_CONFLICT")
                 return row
+            latest = await connection.scalar(
+                select(runs.c.run_id)
+                .where(runs.c.experiment_id == experiment_id)
+                .order_by(runs.c.created_at.desc(), runs.c.run_id.desc())
+                .limit(1)
+            )
+            if latest != run_id:
+                raise ExperimentError(409, "IDEA_REVIEW_STALE")
             now = datetime.now(UTC)
             return (
                 (

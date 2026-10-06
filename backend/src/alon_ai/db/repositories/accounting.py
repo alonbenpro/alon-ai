@@ -326,6 +326,203 @@ class GovernanceProvisioner:
                 )
 
     @safe_errors
+    async def adjust_shared_budget(
+        self,
+        *,
+        command_id: UUID,
+        operator_id: UUID,
+        evidence_id: UUID,
+        scope: str,
+        provider: Provider | None,
+        usd_account_id: UUID,
+        ils_account_id: UUID,
+        expected_usd_limit: Decimal,
+        expected_ils_limit: Decimal,
+        new_usd_limit: Decimal,
+        fx_id: UUID,
+    ) -> dict[str, Any]:
+        """Trusted operator command; change one shared currency pair, never children.
+
+        Command replay returns its immutable receipt without reapplying a change.
+        Budget rows use the same sorted locks as admission and reconciliation.
+        This writer acquires no experiment/authority/call locks after those rows.
+        """
+        from alon_ai.db.tables.records_operator import operators
+
+        def valid_amount(value):
+            return (
+                type(value) is Decimal
+                and value.is_finite()
+                and 0 <= value < Decimal("1e24")
+                and value == value.quantize(Decimal("1e-24"))
+            )
+
+        if (
+            scope not in {"GLOBAL", "PROVIDER"}
+            or (scope == "GLOBAL" and provider is not None)
+            or (scope == "PROVIDER" and not isinstance(provider, Provider))
+            or usd_account_id == ils_account_id
+            or not all(
+                isinstance(value, UUID)
+                for value in (
+                    command_id,
+                    operator_id,
+                    evidence_id,
+                    usd_account_id,
+                    ils_account_id,
+                    fx_id,
+                )
+            )
+        ):
+            raise AccountingDenied(Reason.SCOPE)
+        if (
+            not all(
+                valid_amount(value)
+                for value in (expected_usd_limit, expected_ils_limit, new_usd_limit)
+            )
+            or new_usd_limit <= 0
+        ):
+            raise AccountingDenied(Reason.BUDGET)
+        request = {
+            "operator_id": str(operator_id),
+            "evidence_id": str(evidence_id),
+            "scope": scope,
+            "provider": provider.value if provider else None,
+            "usd_account_id": str(usd_account_id),
+            "ils_account_id": str(ils_account_id),
+            "expected_usd_limit": format(expected_usd_limit.normalize(), "f"),
+            "expected_ils_limit": format(expected_ils_limit.normalize(), "f"),
+            "new_usd_limit": format(new_usd_limit.normalize(), "f"),
+            "fx_id": str(fx_id),
+        }
+        async with self.engine.begin() as c:
+            await c.execute(
+                text("SELECT pg_advisory_xact_lock(:key)"),
+                {"key": command_id.int % (2**63 - 1)},
+            )
+            prior = (
+                (await c.execute(select(s.audit).where(s.audit.c.id == command_id)))
+                .mappings()
+                .one_or_none()
+            )
+            if prior is not None:
+                if prior["kind"] != "SHARED_BUDGET_ADJUSTED":
+                    raise AccountingDenied(Reason.CONFLICT)
+                receipt = json.loads(prior["reason"])
+                if receipt["request"] != request:
+                    raise AccountingDenied(Reason.CONFLICT)
+                return receipt
+            operator = (
+                (
+                    await c.execute(
+                        select(operators)
+                        .where(operators.c.id == operator_id)
+                        .with_for_update(read=True)
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            proof = (
+                (
+                    await c.execute(
+                        select(s.evidence).where(s.evidence.c.id == evidence_id)
+                    )
+                )
+                .mappings()
+                .one_or_none()
+            )
+            fx_row = (
+                (await c.execute(select(s.fx).where(s.fx.c.id == fx_id)))
+                .mappings()
+                .one_or_none()
+            )
+            if (
+                operator is None
+                or operator["status"] != "ACTIVE"
+                or proof is None
+                or (proof["kind"] != "CONTROL" or proof["registered_by"] != operator_id)
+            ):
+                raise AccountingDenied(Reason.CONFIG)
+            if fx_row is None:
+                raise AccountingDenied(Reason.PRICE)
+            fx = _dto(FxVersion, dict(fx_row))
+            now = datetime.now(UTC)
+            rows = (
+                (
+                    await c.execute(
+                        select(s.budget_accounts)
+                        .where(
+                            s.budget_accounts.c.scope == scope,
+                            s.budget_accounts.c.provider == provider,
+                            s.budget_accounts.c.currency.in_(("USD", "ILS")),
+                            s.budget_accounts.c.effective_at <= now,
+                            s.budget_accounts.c.expires_at > now,
+                        )
+                        .order_by(s.budget_accounts.c.id)
+                        .with_for_update()
+                    )
+                )
+                .mappings()
+                .all()
+            )
+            now = datetime.now(UTC)
+            if not current(fx, now) or fx.currency != "USD":
+                raise AccountingDenied(Reason.PRICE)
+            if proof["registered_at"] > now:
+                raise AccountingDenied(Reason.CONFIG)
+            pair = {row["currency"]: row for row in rows}
+            if (
+                len(rows) != 2
+                or set(pair) != {"USD", "ILS"}
+                or (
+                    pair["USD"]["id"] != usd_account_id
+                    or pair["ILS"]["id"] != ils_account_id
+                    or pair["USD"]["effective_at"] != pair["ILS"]["effective_at"]
+                    or pair["USD"]["expires_at"] != pair["ILS"]["expires_at"]
+                    or any(row["expires_at"] <= now for row in rows)
+                )
+            ):
+                raise AccountingDenied(Reason.SCOPE)
+            if (
+                pair["USD"]["limit"] != expected_usd_limit
+                or pair["ILS"]["limit"] != expected_ils_limit
+            ):
+                raise AccountingDenied(Reason.CONFLICT)
+            limits = {
+                "USD": new_usd_limit,
+                "ILS": exact_product(new_usd_limit, fx.rate),
+            }
+            if any(
+                not valid_amount(limits[row["currency"]])
+                or (limits[row["currency"]] < row["accrued"] + row["reserved"])
+                for row in rows
+            ):
+                raise AccountingDenied(Reason.BUDGET)
+            receipt = {
+                "request": request,
+                "before": {
+                    currency: str(row["limit"]) for currency, row in pair.items()
+                },
+                "after": {currency: str(limit) for currency, limit in limits.items()},
+            }
+            for row in rows:
+                await c.execute(
+                    update(s.budget_accounts)
+                    .where(s.budget_accounts.c.id == row["id"])
+                    .values(limit=limits[row["currency"]])
+                )
+            await c.execute(
+                insert(s.audit).values(
+                    id=command_id,
+                    kind="SHARED_BUDGET_ADJUSTED",
+                    created_at=now,
+                    reason=json.dumps(receipt, sort_keys=True, separators=(",", ":")),
+                )
+            )
+            return receipt
+
+    @safe_errors
     async def budgets(
         self,
         attr: CallAttribution,

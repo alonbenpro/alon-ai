@@ -7,6 +7,7 @@ import type { components } from "@/lib/api/schema";
 type RunView = components["schemas"]["RunView"];
 type RunEvents = components["schemas"]["RunEvents"];
 type RunResult = components["schemas"]["RunResult"];
+type RunEvent = RunEvents["events"][number];
 type TerminalStatus = "SUCCEEDED" | "BLOCKED" | "FAILED" | "CANCELLED" | "OUTCOME_UNKNOWN";
 const terminalStatuses = new Set<TerminalStatus>(["SUCCEEDED", "BLOCKED", "FAILED", "CANCELLED", "OUTCOME_UNKNOWN"]);
 
@@ -101,6 +102,62 @@ function firstIdeaInput(inputs: NonNullable<RunView["resolved_inputs"]>) {
     return payload.idea_seed;
   }
   return null;
+}
+
+const exchangeTypes = new Set(["MODEL_REQUEST", "MODEL_RESPONSE", "TOOL_REQUEST", "TOOL_RESPONSE"]);
+
+function exchangeTitle(event: RunEvent) {
+  const exchange = event.exchange;
+  const kind = label(event.type);
+  return event.type.startsWith("MODEL_")
+    ? `${kind}${exchange?.model_request_number != null ? ` #${exchange.model_request_number}` : ""}`
+    : [kind, exchange?.tool_name, exchange?.tool_call_id].filter(Boolean).join(" · ");
+}
+
+function ExchangePayload({ value }: { value: unknown }) {
+  if (Array.isArray(value)) return value.length
+    ? <div>{value.map((item, index) => <div className="agent-run-inspector__record" key={index}><ExchangePayload value={item} /></div>)}</div>
+    : <p>No entries.</p>;
+  if (value !== null && typeof value === "object") return <dl>{Object.entries(value).map(([key, child]) =>
+    <div key={key}><dt>{stepLabel(key)}</dt><dd><ExchangePayload value={child} /></dd></div>
+  )}</dl>;
+  // Structured model output is often returned as text. Keep its original form in
+  // the complete JSON while displaying its fields as readable text here.
+  if (typeof value === "string" && /^[\s]*[\[{]/.test(value)) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(value);
+    } catch { /* ordinary text remains intact */ }
+    if (parsed !== null && typeof parsed === "object") return <ExchangePayload value={parsed} />;
+  }
+  return <p>{value == null ? "Not provided" : String(value)}</p>;
+}
+
+function RunExchanges({ events, terminal }: { events: RunEvents["events"]; terminal: boolean }) {
+  const exchanges = events.filter((event) => exchangeTypes.has(event.type)).toSorted((a, b) => a.sequence - b.sequence);
+  const latestResponse = exchanges.findLast((event) => event.type.endsWith("_RESPONSE"))?.sequence;
+  return <section className="agent-run-inspector__events agent-run-inspector__exchanges" aria-labelledby="run-exchanges-heading">
+    <h3 id="run-exchanges-heading">Requests and responses</h3>
+    {exchanges.length ? exchanges.map((event) => {
+      const exchange = event.exchange;
+      const title = exchangeTitle(event);
+      const hasPayload = exchange && Object.keys(exchange.payload).length > 0;
+      return <article key={event.sequence} className="agent-run-inspector__record">
+        <div className="agent-run-inspector__exchange-heading"><h4>{title[0].toUpperCase() + title.slice(1)}</h4>
+          <small>{exchange ? stepLabel(exchange.status) : "Unavailable"} · <time dateTime={event.at}>{event.at}</time></small></div>
+        {event.type.startsWith("TOOL_") && exchange?.model_request_number != null && <small>Model request #{exchange.model_request_number}</small>}
+        {!exchange && <p>Actual exchange content is unavailable for this event. It was not retained and cannot be reconstructed from the saved result.</p>}
+        {exchange?.omissions?.length ? <div className="agent-run-inspector__omissions"><strong>Omitted content</strong>
+          {exchange.omissions.map((omission, index) => <p key={index}>{omission}</p>)}</div> : null}
+        <details open={event.sequence === latestResponse || exchange?.status === "FAILED" || !exchange}>
+          <summary>View {title}</summary>
+          {hasPayload ? <><div className="agent-run-inspector__payload"><ExchangePayload value={exchange.payload} /></div>
+            <details><summary>Complete {title} JSON</summary><pre>{JSON.stringify(exchange.payload, null, 2)}</pre></details></>
+            : <p>No payload was retained.</p>}
+        </details>
+      </article>;
+    }) : <p>{terminal ? "Actual model and tool exchange content was not retained for this run." : "Waiting for captured model and tool requests and responses."} Request context and saved result are shown separately below.</p>}
+  </section>;
 }
 
 export function RunInspector({ experimentId, runId, legacyPendingReview = false, onRejected, onReviewStatus, onResearchStatus }: {
@@ -295,24 +352,25 @@ export function RunInspector({ experimentId, runId, legacyPendingReview = false,
       {run.research_gaps?.length ? <p>Open gaps: {run.research_gaps.join(" · ")}</p> : null}
     </div>}
     {run.cancel_requested && <p className="agent-run-inspector__cancel" role="status">{run.cancel_confirmed ? "Cancellation confirmed by the service." : "Cancellation requested. The service has not confirmed that the run stopped."}</p>}
+    <RunExchanges events={events} terminal={isTerminal(run.status)} />
     <div className="agent-run-inspector__grid">
-      <section><h3>Agent request</h3>
+      <section><h3>Request context</h3>
         {suppliedIdea ? <p className="agent-run-inspector__idea">{suppliedIdea}</p> : <p>No saved idea input was returned.</p>}
         <details><summary>View retained request context</summary>
           {inputs.length ? inputs.map((input) => <article key={input.artifact_id} className="agent-run-inspector__record"><small>{input.kind} · v{input.version} · {input.role}</small><pre>{JSON.stringify(input.payload, null, 2)}</pre></article>) : null}
           {run.operator_profile && <article className="agent-run-inspector__record"><small>Operator profile · v{run.operator_profile.version}</small><pre>{JSON.stringify(run.operator_profile, null, 2)}</pre></article>}
         </details>
       </section>
-      <section><h3>Agent response</h3>{output ? <>
+      <section><h3>Saved result</h3>{output ? <>
         {typeof output.title === "string" && <strong>{output.title}</strong>}
         {(typeof output.core_intent === "string" || typeof output.customer === "string" || typeof output.problem === "string") && <dl className="agent-run-inspector__response">
           {typeof output.core_intent === "string" && <div><dt>Idea</dt><dd>{output.core_intent}</dd></div>}
           {typeof output.customer === "string" && <div><dt>For</dt><dd>{output.customer}</dd></div>}
           {typeof output.problem === "string" && <div><dt>Problem</dt><dd>{output.problem}</dd></div>}
         </dl>}
-        <details><summary>View saved response</summary><pre>{JSON.stringify(output, null, 2)}</pre></details>
+        <details><summary>View saved result</summary><pre>{JSON.stringify(output, null, 2)}</pre></details>
         {references.length > 0 && <p>Source references: {references.join(" · ")}</p>}
-      </> : <p>{isTerminal(run.status) ? "No response was recorded for this run." : "The response will appear when the agent finishes."}</p>}</section>
+      </> : <p>{isTerminal(run.status) ? "No result was saved for this run." : "The saved result will appear when the agent finishes."}</p>}</section>
     </div>
     <details className="agent-run-inspector__usage">
       <summary>Cost details</summary>

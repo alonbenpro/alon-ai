@@ -327,6 +327,21 @@
           "body"
         ],
         "kwargs": {},
+        "method": "revise_brief"
+      },
+      "handler": "alon_ai.api.routes.experiments.revise_idea_brief",
+      "method": "POST",
+      "owner": "alon_ai.services.ideas",
+      "path": "/operator/experiments/{experiment_id}/idea-revisions",
+      "test": "backend/tests/unit/architecture/test_api_routes.py"
+    },
+    {
+      "delegation": {
+        "args": [
+          "experiment_id",
+          "body"
+        ],
+        "kwargs": {},
         "method": "start_return_refinement"
       },
       "handler": "alon_ai.api.routes.experiments.start_return_refinement",

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { ExperimentCreation } from "@/components/experiments/experiment-creation";
@@ -82,9 +82,147 @@ const events = { events: [
   { sequence: 2, at: "2026-09-28T08:00:08Z", type: "RUN_SUCCEEDED", detail: "Idea proposal is ready for review" }
 ] } satisfies components["schemas"]["RunEvents"];
 
-afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks(); sessionStorage.clear(); });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); sessionStorage.clear(); });
 
 describe("R01A live idea run inspector", () => {
+  it("shows actual model messages and failed output separately from the saved result", async () => {
+    const exchangeEvents = { events: [
+      { sequence: 3, at: "2026-10-05T10:00:03Z", type: "MODEL_RESPONSE", detail: "Visible model output",
+        exchange: { model_request_number: 1, tool_name: null, tool_call_id: null, status: "FAILED",
+          payload: { parts: [{ part_kind: "text", content: "I could not verify clinic demand." }], finish_reason: "stop", state: "FAILED" },
+          omissions: ["Hidden reasoning and provider signatures are not included."] } },
+      { sequence: 2, at: "2026-10-05T10:00:02Z", type: "MODEL_REQUEST", detail: "Actual model request",
+        exchange: { model_request_number: 1, tool_name: null, tool_call_id: null, status: "PREPARED",
+          payload: { model_identifier: "gpt-live", messages: [{ kind: "request", instructions: "Evaluate the clinic market.",
+            parts: [{ part_kind: "user-prompt", content: "Explore independent clinics in Israel." }] }],
+            parameters: { function_tools: [{ name: "brave_search" }], output_object: { type: "object" } }, settings: { max_tokens: 4000 } },
+          omissions: [] } }
+    ] };
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method && init.method !== "GET") throw new Error("Opening a trace must not submit a command");
+      const path = String(input);
+      if (path.endsWith("/events")) return Response.json(exchangeEvents);
+      if (path.endsWith("/result")) return Response.json({ ...result, status: "FAILED", output: null });
+      return Response.json({ ...run, status: "FAILED", output: null });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    const view = render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+    const exchanges = await screen.findByRole("region", { name: "Requests and responses" });
+    const trace = within(exchanges);
+    expect(trace.getByText("I could not verify clinic demand.")).toBeVisible();
+    expect(trace.getByText("Hidden reasoning and provider signatures are not included.")).toBeVisible();
+    const request = trace.getByText("View model request #1").closest("details")!;
+    expect(request).not.toHaveAttribute("open");
+    fireEvent.click(within(request).getByText("View model request #1"));
+    expect(trace.getByText("Evaluate the clinic market.")).toBeVisible();
+    expect(trace.getByText("Explore independent clinics in Israel.")).toBeVisible();
+    fireEvent.click(within(request).getByText("Complete model request #1 JSON"));
+    expect(within(request).getByText(/"max_tokens": 4000/)).toBeVisible();
+    const cards = exchanges.querySelectorAll("article");
+    expect(cards[0]).toHaveTextContent("Model request #1");
+    expect(cards[1]).toHaveTextContent("Model response #1");
+    expect(screen.getByRole("heading", { name: "Request context" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Saved result" })).toBeInTheDocument();
+    view.unmount();
+    render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+    expect(await screen.findByRole("region", { name: "Requests and responses" })).toHaveTextContent("I could not verify clinic demand.");
+    expect(fetcher.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
+  });
+
+  it("exposes tool arguments, retained source text, and unavailable historical content honestly", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.endsWith("/events")) return Response.json({ events: [
+        { sequence: 1, at: "2026-10-05T10:00:01Z", type: "TOOL_REQUEST", exchange: {
+          model_request_number: 1, tool_name: "read_evidence", tool_call_id: "tool-clinic-1", status: "PREPARED",
+          payload: { arguments: { retained_id: "evidence-clinic-1", max_chars: 2500 } }, omissions: [] } },
+        { sequence: 2, at: "2026-10-05T10:00:02Z", type: "TOOL_RESPONSE", exchange: {
+          model_request_number: 1, tool_name: "read_evidence", tool_call_id: "tool-clinic-1", status: "COMPLETED",
+          payload: { result: { type: "retained_evidence_excerpt", reference: { retained_id: "evidence-clinic-1" },
+            text: "Clinic owners report missed appointments every week.", availability: "AVAILABLE" } }, omissions: [] } },
+        { sequence: 3, at: "2026-10-05T10:00:03Z", type: "TOOL_RESPONSE", exchange: {
+          model_request_number: 1, tool_name: "brave_search", tool_call_id: "tool-search-2", status: "UNAVAILABLE",
+          payload: { result: { observed_count: 4, availability: "TRANSIENT_RESULT_NOT_RETAINED" } },
+          omissions: ["Transient Brave search results were not retained."] } },
+        { sequence: 4, at: "2026-10-05T10:00:04Z", type: "MODEL_RESPONSE", detail: "Old response", exchange: null }
+      ] });
+      if (path.endsWith("/result")) return Response.json(result);
+      return Response.json(run);
+    }));
+    render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+    const trace = within(await screen.findByRole("region", { name: "Requests and responses" }));
+    fireEvent.click(trace.getByText("View tool request · read_evidence · tool-clinic-1"));
+    expect(trace.getByText("2500")).toBeVisible();
+    fireEvent.click(trace.getByText("View tool response · read_evidence · tool-clinic-1"));
+    expect(trace.getByText("Clinic owners report missed appointments every week.")).toBeVisible();
+    expect(trace.getByText("Transient Brave search results were not retained.")).toBeVisible();
+    expect(trace.getByText(/Actual exchange content is unavailable for this event/)).toBeVisible();
+    expect(trace.getByText("No payload was retained.")).toBeVisible();
+  });
+
+  it("replaces live exchange payloads when polling without starting a paid rerun", async () => {
+    vi.useFakeTimers();
+    let completed = false;
+    const fetcher = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (init?.method && init.method !== "GET") throw new Error("Polling must only read");
+      const path = String(input);
+      if (path.endsWith("/events")) return Response.json({ events: [{ sequence: 1, at: "2026-10-05T10:00:01Z",
+        type: "MODEL_RESPONSE", exchange: { model_request_number: 1, tool_name: null, tool_call_id: null,
+          status: completed ? "COMPLETED" : "PREPARED", payload: { parts: [{ part_kind: "text",
+            content: completed ? "Polling returned the completed model output." : "The model is still running." }] }, omissions: [] } }] });
+      if (path.endsWith("/result")) return Response.json(result);
+      return Response.json({ ...run, status: completed ? "SUCCEEDED" : "RUNNING", finished_at: completed ? run.finished_at : null });
+    });
+    vi.stubGlobal("fetch", fetcher);
+    render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+    await act(async () => { await vi.advanceTimersByTimeAsync(0); });
+    expect(screen.getByText("The model is still running.")).toBeVisible();
+    completed = true;
+    await act(async () => { await vi.advanceTimersByTimeAsync(2500); });
+    expect(screen.getByText("Polling returned the completed model output.")).toBeVisible();
+    expect(screen.queryByText("The model is still running.")).not.toBeInTheDocument();
+    expect(fetcher.mock.calls.every(([, init]) => !init?.method || init.method === "GET")).toBe(true);
+  });
+
+  it("keeps tool failure messages and structured model output readable", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.endsWith("/events")) return Response.json({ events: [
+        { sequence: 1, at: "2026-10-05T10:00:01Z", type: "TOOL_RESPONSE", exchange: {
+          model_request_number: 1, tool_name: "capture_url", tool_call_id: "tool-capture-1", status: "FAILED",
+          payload: { error: { stage: "capture", error_type: "ResearchToolError", code: "RESEARCH_UNAVAILABLE",
+            message: "The clinic source could not be captured.", frames: [] } }, omissions: [] } },
+        { sequence: 2, at: "2026-10-05T10:00:02Z", type: "MODEL_RESPONSE", exchange: {
+          model_request_number: 2, tool_name: null, tool_call_id: null, status: "COMPLETED",
+          payload: { parts: [{ part_kind: "text", content: '{"finding":"Demand remains uncertain.","open_questions":["Who pays?"]}' }] } } }
+      ] });
+      if (path.endsWith("/result")) return Response.json(result);
+      return Response.json(run);
+    }));
+    render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+    const trace = within(await screen.findByRole("region", { name: "Requests and responses" }));
+    expect(trace.getByText("The clinic source could not be captured.")).toBeVisible();
+    expect(trace.getByText("Demand remains uncertain.")).toBeVisible();
+    expect(trace.getByText("Who pays?")).toBeVisible();
+    const complete = trace.getByText("Complete model response #2 JSON").closest("details")!;
+    expect(complete).not.toHaveAttribute("open");
+    fireEvent.click(within(complete).getByText("Complete model response #2 JSON"));
+    expect(complete).toHaveTextContent('\\"finding\\":\\"Demand remains uncertain.\\"');
+  });
+
+  it("explains when an older run has no captured exchanges", async () => {
+    vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+      const path = String(input);
+      if (path.endsWith("/events")) return Response.json(events);
+      if (path.endsWith("/result")) return Response.json(result);
+      return Response.json(run);
+    }));
+    render(<RunInspector experimentId="exp-r01a" runId="run-r01a" />);
+    const trace = await screen.findByRole("region", { name: "Requests and responses" });
+    expect(trace).toHaveTextContent("Actual model and tool exchange content was not retained for this run.");
+    expect(trace).toHaveTextContent("Request context and saved result are shown separately below.");
+  });
+
   it("shows the retained IDEA_SEED statement without rendering an empty research count", async () => {
     const retainedStatement = "AI agents and workflows for small clinics";
     vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
@@ -218,9 +356,9 @@ describe("R01A live idea run inspector", () => {
     expect(inspector.getByText("$0.0000")).toBeInTheDocument();
     expect(inspector.getAllByText("$0.0123").length).toBeGreaterThan(0);
     expect(inspector.getByText(/250/)).toBeInTheDocument();
-    expect(inspector.getByText("Agent request")).toBeInTheDocument();
-    expect(inspector.getByText("Agent response")).toBeInTheDocument();
-    expect(inspector.getByText("View saved response").closest("details")).not.toHaveAttribute("open");
+    expect(inspector.getByText("Request context")).toBeInTheDocument();
+    expect(inspector.getByText("Saved result")).toBeInTheDocument();
+    expect(inspector.getByText("View saved result").closest("details")).not.toHaveAttribute("open");
     expect(inspector.getByText("Cost details").closest("details")).not.toHaveAttribute("open");
     expect(inspector.getByText(/SEED · OPERATOR_PROFILE/)).toBeInTheDocument();
     expect(inspector.getByText("RUN SUCCEEDED")).toBeInTheDocument();

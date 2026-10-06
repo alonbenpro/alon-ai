@@ -63,6 +63,7 @@ from alon_ai.provider_usage.schemas.accounting import CallState
 from alon_ai.services.experiments import ExperimentContext, _id
 from alon_ai.services.research import ResearchService
 from alon_ai.services.run_diagnostics import record_diagnostic
+from alon_ai.services.run_exchanges import ExchangeToolset
 from alon_ai.services.schemas.records import (
     ArtifactDraft,
     ArtifactInput,
@@ -320,8 +321,17 @@ class CombinedIdeaRuntime:
                 ),
                 None,
             )
+            operator_revision = next(
+                (
+                    ref
+                    for ref in self.row["input_refs"]
+                    if ref["role"] == "OPERATOR_REVISION"
+                ),
+                None,
+            )
             refinement = (
-                cycle["purpose"] == "SAME_INTENT_RETURN"
+                operator_revision is not None
+                or cycle["purpose"] == "SAME_INTENT_RETURN"
                 or revision is not None
                 or (command is not None and command["action"] == "REVISE")
             )
@@ -484,8 +494,12 @@ class CombinedIdeaRuntime:
                 exposed.append(method)
         # A model may return several calls together; governed research admits
         # one call at a time under the approved provider concurrency limits.
-        return FunctionToolset(
-            tools=exposed, sequential=True, instructions=self._research_instructions
+        return ExchangeToolset(
+            FunctionToolset(
+                tools=exposed, sequential=True, instructions=self._research_instructions
+            ),
+            self.runs,
+            self.row["run_id"],
         )
 
     async def _run(self, operation, *, returned=False, revision_guidance=None):
@@ -527,6 +541,56 @@ class CombinedIdeaRuntime:
             row["experiment_id"], row["command_key"]
         )
         payload = command["payload"] if command else {}
+        guidance = next(
+            (
+                item
+                for item, ref in zip(resolved, row["input_refs"], strict=True)
+                if ref["role"] == "REVISION_GUIDANCE"
+            ),
+            None,
+        )
+        if guidance is not None:
+            revision_guidance = guidance["payload"]["statement"]
+        prior_context = {
+            ref["role"]: item["payload"]
+            for item, ref in zip(resolved, row["input_refs"], strict=True)
+            if ref["role"] in {"PRIOR_IDEA_BRIEF", "PRIOR_RESEARCH"}
+        }
+        prior_brief = subject
+        if guidance is not None:
+            # References are hints only: the tool rechecks scope, retention and rights
+            # before any prior evidence can be consumed or cited by this new run.
+            prior_brief = next(
+                item
+                for item, ref in zip(resolved, row["input_refs"], strict=True)
+                if ref["role"] == "PRIOR_IDEA_BRIEF"
+            )
+            from alon_ai.db.repositories.experiments import refinement_run_for_operation
+
+            prior_run_id = await refinement_run_for_operation(
+                context.engine, row["experiment_id"], prior_brief["operation_id"]
+            )
+            case = await ResearchService(context).get_case(row["experiment_id"])
+            prior_context["saved_evidence_refs"] = sorted(
+                {
+                    str(source.reference.retained_id)
+                    for subject_case in case.subjects
+                    for finding in subject_case.findings
+                    if finding.observation.run_id == str(prior_run_id)
+                    for source in finding.sources
+                    if source.availability == "CURRENT_SOURCE"
+                    and source.reference.retained_id is not None
+                }
+            )
+        if returned and guidance is not None:
+            if prior_brief is None:
+                raise ExperimentError(409, "IDEA_INPUT_STALE")
+            prior_context["prior_idea_brief"] = prior_brief["payload"]
+            prior_context["research_feedback"] = next(
+                item["payload"]
+                for item in resolved
+                if item["kind"] == "RESEARCH_FEEDBACK_BRIEF"
+            )
         input = IdeaAgentInput(
             operation=operation,
             origin_stage=(
@@ -543,7 +607,9 @@ class CombinedIdeaRuntime:
             approved_limits_ref=self.provisioned.attribution.config_version,
             idea_version_ref=subject["id"] if subject else None,
             idea_text=exact_idea_text(subject) if subject else None,
-            prior_research_summary=return_context_text(subject, resolved)
+            prior_research_summary=canonical_json(prior_context)
+            if guidance is not None
+            else return_context_text(subject, resolved)
             if returned
             else None,
             revision_guidance=(

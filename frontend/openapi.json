@@ -800,6 +800,106 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "IdeaRevisionRequest": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "instructions": {
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Instructions",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "command_key",
+          "run_id",
+          "instructions"
+        ],
+        "title": "IdeaRevisionRequest",
+        "type": "object"
+      },
+      "IdeaRevisionResult": {
+        "additionalProperties": false,
+        "properties": {
+          "command_key": {
+            "format": "uuid",
+            "title": "Command Key",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "experiment_id": {
+            "format": "uuid",
+            "title": "Experiment Id",
+            "type": "string"
+          },
+          "provider_mode": {
+            "enum": [
+              "live",
+              "fake",
+              "disabled"
+            ],
+            "title": "Provider Mode",
+            "type": "string"
+          },
+          "revised_run_id": {
+            "format": "uuid",
+            "title": "Revised Run Id",
+            "type": "string"
+          },
+          "run_id": {
+            "format": "uuid",
+            "title": "Run Id",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "QUEUED",
+              "RUNNING",
+              "SUCCEEDED",
+              "BLOCKED",
+              "FAILED",
+              "CANCELLED",
+              "OUTCOME_UNKNOWN"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "task_kind": {
+            "enum": [
+              "IDEA_DISCOVERY",
+              "IDEA_REFINEMENT"
+            ],
+            "title": "Task Kind",
+            "type": "string"
+          }
+        },
+        "required": [
+          "run_id",
+          "experiment_id",
+          "task_kind",
+          "status",
+          "provider_mode",
+          "created_at",
+          "command_key",
+          "revised_run_id"
+        ],
+        "title": "IdeaRevisionResult",
+        "type": "object"
+      },
       "LivenessResponse": {
         "properties": {
           "service": {
@@ -1637,6 +1737,16 @@
               }
             ]
           },
+          "exchange": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RunExchange"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "sequence": {
             "title": "Sequence",
             "type": "integer"
@@ -1669,6 +1779,73 @@
           "events"
         ],
         "title": "RunEvents",
+        "type": "object"
+      },
+      "RunExchange": {
+        "additionalProperties": false,
+        "properties": {
+          "model_request_number": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Request Number"
+          },
+          "omissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Omissions",
+            "type": "array"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "status": {
+            "enum": [
+              "PREPARED",
+              "COMPLETED",
+              "FAILED",
+              "NOT_DISPATCHED",
+              "UNAVAILABLE"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "tool_call_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Call Id"
+          },
+          "tool_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Tool Name"
+          }
+        },
+        "required": [
+          "status",
+          "payload"
+        ],
+        "title": "RunExchange",
         "type": "object"
       },
       "RunReceipt": {
@@ -3744,6 +3921,56 @@
           }
         },
         "summary": "Discover Experiment"
+      }
+    },
+    "/operator/experiments/{experiment_id}/idea-revisions": {
+      "post": {
+        "operationId": "revise_idea_brief_operator_experiments__experiment_id__idea_revisions_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "experiment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Experiment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IdeaRevisionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/IdeaRevisionResult"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Revise Idea Brief"
       }
     },
     "/operator/experiments/{experiment_id}/refine": {

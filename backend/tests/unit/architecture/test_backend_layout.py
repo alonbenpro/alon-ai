@@ -197,7 +197,7 @@ def test_all_registered_handlers_have_checked_owner_dispositions() -> None:
         {key: value for key, value in row.items() if key != "delegation"}
         for row in json.loads(FIXTURE.read_text(encoding="utf-8"))["handlers"]
     ]
-    assert len(expected) == 29
+    assert len(expected) == 30
     actual = []
     for included in create_app().routes:
         router = getattr(included, "original_router", None)

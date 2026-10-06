@@ -63,6 +63,152 @@ function stubSavedSnapshot(snapshot: unknown) {
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); vi.restoreAllMocks(); router.replace.mockReset(); sessionStorage.clear(); });
 
 describe("experiment creation checkpoint", () => {
+  it("revises a pending idea with exact instructions and follows its new research run", async () => {
+    const review = { ...saved, state: "AWAITING_REVIEW", latest_run_id: "run-1", advice,
+      stage: "IDEA_REFINEMENT", stage_status: "WAITING_FOR_INPUT" };
+    const inProgress = { ...review, state: "REFINEMENT_IN_PROGRESS", latest_run_id: "run-2",
+      stage_status: "RUNNING", advice: null };
+    const revised = { ...review, latest_run_id: "run-2", advice: { ...advice,
+      title: "Clinic scheduling without medical-record integrations" } };
+    let revisionStarted = false;
+    let revisionFinished = false;
+    const requests: { path: string; method: string; body?: string }[] = [];
+    stubExperimentFetch(async (input, init) => {
+      const path = String(input);
+      requests.push({ path, method: init?.method ?? "GET", body: init?.body as string | undefined });
+      if (path.endsWith("/idea-revisions") && init?.method === "POST") {
+        revisionStarted = true;
+        const command = JSON.parse(String(init.body));
+        return Response.json({ run_id: "run-2", revised_run_id: "run-1", command_key: command.command_key,
+          experiment_id: "exp-1", task_kind: "IDEA_REFINEMENT", status: "QUEUED", provider_mode: "fake",
+          created_at: "2026-10-06T10:00:00Z" });
+      }
+      if (path === "/api/operator/experiments/exp-1") return Response.json(revisionFinished ? revised : revisionStarted ? inProgress : review);
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    const input = await screen.findByRole("textbox", { name: "Refinement instructions" });
+    const revise = screen.getByRole("button", { name: "Revise and research" });
+    expect(revise).toBeDisabled();
+    fireEvent.change(screen.getByRole("combobox", { name: "Intent relationship" }), {
+      target: { value: "CLARIFIES_CORE_INTENT" },
+    });
+    fireEvent.change(screen.getByRole("textbox", { name: "Reason for classification" }), {
+      target: { value: "The original version kept clinic scheduling." },
+    });
+    fireEvent.click(screen.getByRole("checkbox", { name: /confirm this classification/i }));
+    expect(screen.getByRole("button", { name: "Accept and save idea" })).toBeEnabled();
+    fireEvent.change(input, { target: { value: "  Avoid medical-record integrations.\nInvestigate independent clinics.  " } });
+    fireEvent.click(revise);
+    expect(revise).toBeDisabled();
+    expect(await screen.findByText(/Idea refinement in progress/)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Revise and research" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Accept and save idea" })).not.toBeInTheDocument();
+    expect(JSON.parse(requests.find((request) => request.method === "POST")!.body!)).toEqual({
+      run_id: "run-1", instructions: "  Avoid medical-record integrations.\nInvestigate independent clinics.  ", command_key: expect.any(String),
+    });
+    revisionFinished = true;
+    fireEvent.click(screen.getByRole("button", { name: "Check status" }));
+    expect(await screen.findByRole("heading", { name: revised.advice.title })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Accept and save idea" })).toBeDisabled();
+    expect(requests.filter((request) => request.method === "POST")).toHaveLength(1);
+    expect(requests[1].path).toBe("/api/operator/experiments/exp-1/idea-revisions");
+  });
+
+  it("restores uncertain refinement instructions and retries the exact command after reload", async () => {
+    const review = { ...saved, state: "AWAITING_REVIEW", latest_run_id: "run-1", advice };
+    const commands: string[] = [];
+    let confirmed = false;
+    stubExperimentFetch(async (input, init) => {
+      const path = String(input);
+      if (path.endsWith("/idea-revisions") && init?.method === "POST") {
+        commands.push(String(init.body));
+        if (commands.length === 1) throw new Error("Lost revision response");
+        confirmed = true;
+        const command = JSON.parse(String(init.body));
+        return Response.json({ run_id: "run-2", revised_run_id: "run-1", command_key: command.command_key,
+          experiment_id: "exp-1", task_kind: "IDEA_REFINEMENT", status: "RUNNING", provider_mode: "fake",
+          created_at: "2026-10-06T10:00:00Z" });
+      }
+      if (path === "/api/operator/experiments/exp-1") return Response.json(confirmed ? { ...review,
+        latest_run_id: "run-2", state: "REFINEMENT_IN_PROGRESS", advice: null } : review);
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    const first = render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Refinement instructions" }), {
+      target: { value: "  Keep clinic scheduling; avoid integrations.\n" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Revise and research" }));
+    expect(await screen.findByRole("button", { name: "Retry revision" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Refinement instructions" })).toBeDisabled();
+    expect(screen.getByRole("button", { name: "Accept and save idea" })).toBeDisabled();
+    first.unmount();
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    const retry = await screen.findByRole("button", { name: "Retry revision" });
+    expect(screen.getByRole("textbox", { name: "Refinement instructions" })).toHaveValue("  Keep clinic scheduling; avoid integrations.\n");
+    expect(commands).toHaveLength(1);
+    fireEvent.click(retry);
+    expect(await screen.findByText(/Idea refinement in progress/)).toBeInTheDocument();
+    expect(commands[1]).toBe(commands[0]);
+    expect(sessionStorage.getItem("experiment-exp-1-revision-pending")).toBeNull();
+  });
+
+  it("keeps a pending revision quarantined when its exact receipt is not confirmed", async () => {
+    const command = { command_key: "revision-command", run_id: "run-1", instructions: "Avoid integrations." };
+    sessionStorage.setItem("experiment-exp-1-revision-pending", JSON.stringify(command));
+    const review = { ...saved, state: "AWAITING_REVIEW", latest_run_id: "run-other", advice };
+    stubExperimentFetch(async (input, init) => {
+      if (init?.method === "POST") return Response.json({ run_id: "run-2", revised_run_id: "run-other",
+        command_key: "other-command", experiment_id: "exp-1", task_kind: "IDEA_REFINEMENT", status: "RUNNING" });
+      if (String(input) === "/api/operator/experiments/exp-1") return Response.json(review);
+      throw new Error("Unexpected request");
+    });
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    fireEvent.click(await screen.findByRole("button", { name: "Retry revision" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/could not finish/);
+    expect(sessionStorage.getItem("experiment-exp-1-revision-pending")).toBe(JSON.stringify(command));
+    expect(screen.getByRole("textbox", { name: "Refinement instructions" })).toBeDisabled();
+  });
+
+  it("requires live-cost confirmation before submitting a revision", async () => {
+    const requests: { path: string; method: string }[] = [];
+    stubExperimentFetch(async (input, init) => {
+      const path = String(input);
+      requests.push({ path, method: init?.method ?? "GET" });
+      if (path.endsWith("/research-case")) return Response.json({ experiment_id: "exp-1", progress: "NOT_STARTED",
+        finding_count: 0, limitations: [], subjects: [] });
+      if (path === "/api/operator/experiments/exp-1") return Response.json({ ...saved, state: "AWAITING_REVIEW",
+        latest_run_id: "run-1", advice });
+      throw new Error(`Unexpected request: ${path}`);
+    });
+    render(<ExperimentCreation experimentId="exp-1" runtime={{ provider_mode: "live", ready: true }} />);
+    fireEvent.change(await screen.findByRole("textbox", { name: "Refinement instructions" }), {
+      target: { value: "Avoid integrations." },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Revise and research" }));
+    expect(await screen.findByRole("alert")).toHaveTextContent(/confirm the live call/i);
+    expect(requests.every((request) => request.method === "GET")).toBe(true);
+    expect(sessionStorage.getItem("experiment-exp-1-revision-pending")).toBeNull();
+  });
+
+  it("keeps revision controls disabled while an uncertain child run is still running", async () => {
+    sessionStorage.setItem("experiment-exp-1-revision-pending", JSON.stringify({
+      command_key: "revision-command", run_id: "run-1", instructions: "Avoid integrations.",
+    }));
+    const requests: string[] = [];
+    stubExperimentFetch(async (input, init) => {
+      requests.push(init?.method ?? "GET");
+      if (String(input) === "/api/operator/experiments/exp-1") return Response.json({ ...saved,
+        state: "REFINEMENT_IN_PROGRESS", latest_run_id: "run-2", stage_status: "RUNNING" });
+      throw new Error("Unexpected request");
+    });
+    render(<ExperimentCreation experimentId="exp-1" runtime={runtime} />);
+    expect(await screen.findByRole("button", { name: "Retry revision" })).toBeDisabled();
+    expect(screen.getByRole("textbox", { name: "Refinement instructions" })).toBeDisabled();
+    expect(requests).toEqual(["GET"]);
+    expect(sessionStorage.getItem("experiment-exp-1-revision-pending")).not.toBeNull();
+  });
+
   it("opens a fresh creation form when navigating back after a successful start", async () => {
     vi.spyOn(window.history, "replaceState").mockImplementation(() => {});
     const blocked = { ...saved, state: "REFINEMENT_BLOCKED", stage: "IDEA_REFINEMENT",

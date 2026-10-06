@@ -205,10 +205,21 @@ class PriceKind(StrEnum):
 
 class PriceObservation(_AdvisoryModel):
     subject: Text
-    kind: PriceKind
+    kind: PriceKind = Field(
+        description=(
+            "RANGE requires two observed ordered bounds. EXACT and STARTING_AT use only "
+            "amount_low. QUOTE_ONLY and NOT_FOUND must have no amounts. Never invent bounds."
+        )
+    )
     currency: str | None = None
     amount_low: Decimal | None = None
-    amount_high: Decimal | None = None
+    amount_high: Decimal | None = Field(
+        default=None,
+        description=(
+            "Required for RANGE, and must be greater than or equal to amount_low. "
+            "Null for all other kinds. Never infer a missing upper bound."
+        ),
+    )
     unit: Text | None = None
     package: Text | None = None
     observed_date: date | None = None

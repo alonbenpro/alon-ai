@@ -26,6 +26,10 @@ from alon_ai.services.schemas.agent_runs import (
     SetupIdeaProfileRequest,
     SetupIdeaProfileResult,
 )
+from alon_ai.services.schemas.idea_revisions import (
+    IdeaRevisionRequest,
+    IdeaRevisionResult,
+)
 from alon_ai.services.schemas.intake import ExperimentSnapshot
 from alon_ai.services.schemas.research import MarketResearchCase
 
@@ -119,3 +123,12 @@ async def accept_experiment_idea(
     experiment_id: UUID, body: AcceptRequest, service: IdeaServiceDependency
 ) -> dict:
     return await service.accept(experiment_id, body)
+
+
+@router.post(
+    "/experiments/{experiment_id}/idea-revisions", response_model=IdeaRevisionResult
+)
+async def revise_idea_brief(
+    experiment_id: UUID, body: IdeaRevisionRequest, service: IdeaServiceDependency
+) -> IdeaRevisionResult:
+    return await service.revise_brief(experiment_id, body)

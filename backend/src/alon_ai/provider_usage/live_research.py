@@ -815,7 +815,7 @@ class GovernedLiveResearchPort:
     async def resolve_references(
         self, identifiers: tuple[str, ...]
     ) -> tuple[SourceReference, ...]:
-        """Resolve only source IDs produced by this run, with current rights."""
+        """Resolve this run’s captures or explicitly read prior sources, with current rights."""
         if len(identifiers) > 20 or len(set(identifiers)) != len(identifiers):
             raise AccountingDenied(Reason.SCOPE)
         references = []
@@ -837,7 +837,7 @@ class GovernedLiveResearchPort:
                         step_rows.c.status == "SUCCEEDED",
                     )
                 )
-            if allowed is None:
+            if allowed is None and retained_id not in self._served:
                 raise AccountingDenied(Reason.SCOPE)
             excerpt = await self.read_saved_evidence(
                 self._attribution.experiment_id, retained_id, max_chars=1

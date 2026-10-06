@@ -588,7 +588,12 @@ async def test_native_run_reuses_intake_and_persists_truthful_outcome(
     ],
 )
 async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_case(
-    governance_engine, monkeypatch, discovery, parallel_tools, read_size
+    governance_engine,
+    monkeypatch,
+    discovery,
+    parallel_tools,
+    read_size,
+    recover_price_range=False,
 ):
     import asyncio
     from datetime import timedelta
@@ -963,6 +968,18 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
                         "source_refs": [],
                     },
                 ]
+                if recover_price_range:
+                    output["price_observations"].append(
+                        {
+                            "subject": "Unusable optional range",
+                            "kind": "RANGE",
+                            "currency": "USD",
+                            "amount_low": "20",
+                            "amount_high": None,
+                            "unit": "month",
+                            "source_refs": [str(captured[-1].retained_id)],
+                        }
+                    )
                 output["contradictions"] = [
                     "Self-reported interest conflicts with the missing spending evidence."
                 ]
@@ -1058,14 +1075,22 @@ async def test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_
         len(calls),
         network,
     )
+    if recover_price_range:
+        assert result.output is not None
+        assert result.research_status == "ASSESSED"
+        assert (
+            "Invalid price range observations excluded; source review required."
+            in result.research_gaps
+        )
+        assert result.review_status == "PENDING"
     assert max_active_requests == 1
     assert network == (
         ["api.search.brave.com", "api.search.brave.com", "api.firecrawl.dev"]
         if parallel_tools
         else ["api.search.brave.com", "api.firecrawl.dev"]
     )
-    assert len(calls) == (3 if parallel_tools else 4)
-    assert len(result.receipts) == 6
+    assert len(calls) == (3 if parallel_tools else 4) + int(recover_price_range)
+    assert len(result.receipts) == 6 + int(recover_price_range)
     assert all(receipt.state == "FINAL" for receipt in result.receipts)
     assert {receipt.provider for receipt in result.receipts} == {
         "OPENAI",
@@ -1514,4 +1539,12 @@ async def test_recovered_publication_proof_rejects_untrusted_child_facts(
         None,
         capture_failures=2,
         proof_checks=check,
+    )
+
+
+async def test_exhausted_optional_price_ranges_publish_supported_research_with_gap(
+    governance_engine, monkeypatch
+):
+    await test_native_tool_loop_uses_governed_brave_and_firecrawl_and_publishes_case(
+        governance_engine, monkeypatch, False, False, None, recover_price_range=True
     )

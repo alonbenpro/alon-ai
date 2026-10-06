@@ -11,6 +11,7 @@ from pydantic_ai.models.function import FunctionModel
 
 from alon_ai.agents.tools.research import ResearchToolError
 from alon_ai.db.repositories.agent_run_steps import AgentRunStepRepository
+from alon_ai.db.repositories.agent_runs import AgentRunRepository
 from alon_ai.integrations.schemas.provider import Capability
 from alon_ai.services import combined_idea
 
@@ -38,6 +39,10 @@ def runtime(monkeypatch):
         async def quota_snapshot(self, scopes):
             return quotas
 
+    class Runs:
+        async def record_activity(self, run_id, kind, **kwargs):
+            pass
+
     monkeypatch.setattr(combined_idea, "GovernanceRepository", Governance)
     instance = combined_idea.CombinedIdeaRuntime.__new__(
         combined_idea.CombinedIdeaRuntime
@@ -45,6 +50,7 @@ def runtime(monkeypatch):
     instance.context = SimpleNamespace(engine=None)
     instance.row = {"run_id": uuid4()}
     instance.steps = cast(AgentRunStepRepository, Steps())
+    instance.runs = cast(AgentRunRepository, Runs())
     instance.config = SimpleNamespace(
         research_policy=SimpleNamespace(
             max_calls=14,

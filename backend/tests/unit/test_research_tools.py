@@ -389,6 +389,169 @@ async def test_firecrawl_true_read_timeout_remains_classified_without_retry():
     assert "SECRET" not in str(raised.value)
 
 
+@pytest.mark.parametrize(
+    "capability",
+    [Capability.FIRECRAWL_PAGE_CAPTURE, Capability.FIRECRAWL_JS_RETRIEVAL],
+)
+@pytest.mark.parametrize(
+    "character,ensure_ascii", [("漢", False), ("🙂", False), ("🙂", True)]
+)
+async def test_firecrawl_capture_byte_limit_allows_approved_unicode_text(
+    capability, character, ensure_ascii
+):
+    adapter, _, _ = firecrawl(capability, {}, max_text_chars=100000)
+    raw = json.dumps(
+        {"success": True, "data": {"markdown": character * 100000}},
+        ensure_ascii=ensure_ascii,
+    ).encode("utf-8")
+    assert len(raw) > 256000
+    seen = []
+
+    def respond(request):
+        seen.append(request)
+        return httpx.Response(200, content=raw)
+
+    adapter._transport = httpx.MockTransport(respond)
+    result = await adapter.capture(
+        FirecrawlCaptureRequest(capability=capability, url="https://example.com/a")
+    )
+
+    assert result.metadata.status == "SUCCEEDED"
+    assert result.content is not None
+    assert len(seen) == 1
+
+
+async def test_firecrawl_capture_keeps_hard_byte_limit_without_finishing_stream():
+    adapter, _, _ = firecrawl(
+        Capability.FIRECRAWL_PAGE_CAPTURE, {}, max_text_chars=100000
+    )
+    completed = False
+
+    class Stream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            nonlocal completed
+            yield b"x" * (12 * 100000 + 256000 + 1)
+            completed = True
+
+    adapter._transport = httpx.MockTransport(
+        lambda _: httpx.Response(200, stream=Stream())
+    )
+    with pytest.raises(ProviderFailure) as raised:
+        await adapter.capture(FirecrawlCaptureRequest(url="https://example.com/a"))
+
+    assert raised.value.code is ProviderErrorCode.MALFORMED_RESPONSE
+    assert not completed
+
+
+@pytest.mark.parametrize(
+    "data,reason,content_chars,title_chars",
+    [
+        ({"markdown": "🙂" * 100001}, "CONTENT_LIMIT_EXCEEDED", 100001, 0),
+        ({"markdown": "x" * 300000}, "CONTENT_LIMIT_EXCEEDED", None, 0),
+        (
+            {"markdown": "Evidence", "metadata": {"title": "x" * 300000}},
+            "TITLE_LIMIT_EXCEEDED",
+            8,
+            None,
+        ),
+    ],
+)
+async def test_firecrawl_aligned_byte_limit_keeps_text_limits_and_safe_counts(
+    data, reason, content_chars, title_chars
+):
+    adapter, _, _ = firecrawl(
+        Capability.FIRECRAWL_PAGE_CAPTURE,
+        {"success": True, "data": data},
+        max_text_chars=100000,
+    )
+    result = await adapter.capture(FirecrawlCaptureRequest(url="https://example.com/a"))
+
+    assert result.metadata.status == "FAILED"
+    assert result.metadata.error_code is ProviderErrorCode.MALFORMED_RESPONSE
+    assert result.content is None
+    assert result.metadata.rejection is not None
+    assert result.metadata.rejection.reason == reason
+    assert result.metadata.rejection.content_chars == content_chars
+    assert result.metadata.rejection.title_chars == title_chars
+
+
+@pytest.mark.parametrize(
+    "capability",
+    [Capability.FIRECRAWL_PAGE_CAPTURE, Capability.FIRECRAWL_JS_RETRIEVAL],
+)
+@pytest.mark.parametrize(
+    "raw,reason",
+    [
+        (b'{"PRIVATE"', "JSON_INVALID"),
+        (b"\xff", "JSON_INVALID"),
+        (b'{"success":false,"error":"PRIVATE"}', "ENVELOPE_INVALID"),
+        (b"[]", "ENVELOPE_INVALID"),
+    ],
+)
+async def test_firecrawl_completed_http_200_rejects_json_and_envelope_safely(
+    capability, raw, reason
+):
+    adapter, _, _ = firecrawl(capability, {})
+    completed = False
+
+    class Stream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            nonlocal completed
+            yield raw
+            completed = True
+
+    adapter._transport = httpx.MockTransport(
+        lambda _: httpx.Response(200, stream=Stream())
+    )
+    result = await adapter.capture(
+        FirecrawlCaptureRequest(
+            capability=capability, url="https://example.com/PRIVATE"
+        )
+    )
+
+    assert completed
+    assert result.metadata.status == "FAILED"
+    assert result.metadata.error_code is ProviderErrorCode.MALFORMED_RESPONSE
+    assert result.content is None
+    assert result.metadata.usage[0].quantity is None
+    assert result.metadata.usage[0].cost is None
+    assert result.metadata.rejection is not None
+    assert result.metadata.rejection.reason == reason
+    assert "PRIVATE" not in result.metadata.rejection.model_dump_json()
+    assert "rejection" not in result.metadata.model_dump(mode="json")
+
+
+async def test_firecrawl_incomplete_http_200_is_not_completed_rejection():
+    adapter, _, _ = firecrawl(Capability.FIRECRAWL_PAGE_CAPTURE, {})
+
+    class Stream(httpx.AsyncByteStream):
+        async def __aiter__(self):
+            yield b'{"success":true}'
+            raise httpx.ReadTimeout("PRIVATE")
+
+    adapter._transport = httpx.MockTransport(
+        lambda _: httpx.Response(200, stream=Stream())
+    )
+    with pytest.raises(ProviderFailure) as raised:
+        await adapter.capture(FirecrawlCaptureRequest(url="https://example.com/a"))
+
+    assert raised.value.code is ProviderErrorCode.TIMEOUT
+    assert "PRIVATE" not in str(raised.value)
+
+
+async def test_firecrawl_unexpected_pre_response_error_is_not_completed_rejection(
+    monkeypatch,
+):
+    adapter, _, _ = firecrawl(Capability.FIRECRAWL_PAGE_CAPTURE, {})
+
+    async def broken_post(*args, **kwargs):
+        raise TypeError("PRIVATE internal failure")
+
+    monkeypatch.setattr(adapter, "_post", broken_post)
+    with pytest.raises(TypeError):
+        await adapter.capture(FirecrawlCaptureRequest(url="https://example.com/a"))
+
+
 @pytest.mark.asyncio
 async def test_firecrawl_map_and_page_use_fixed_options():
     adapter, grant, seen = firecrawl(

@@ -919,7 +919,14 @@ async def candidate_selection_rows(
 
 
 async def claim_refinement(
-    engine, experiment_id, cycle_id, run_id, operation_id, advice_source
+    engine,
+    experiment_id,
+    cycle_id,
+    run_id,
+    operation_id,
+    advice_source,
+    *,
+    revision_of=None,
 ):
     async with engine.begin() as connection:
         await connection.execute(
@@ -957,7 +964,9 @@ async def claim_refinement(
                 raise ExperimentError(409, "REFINEMENT_IN_PROGRESS")
             if latest["state"] == "RUNNING":
                 raise ExperimentError(409, "REFINEMENT_IN_PROGRESS")
-            if latest["state"] == "SUCCEEDED":
+            if revision_of is not None and latest["run_id"] != revision_of:
+                raise ExperimentError(409, "IDEA_REVIEW_STALE")
+            if latest["state"] == "SUCCEEDED" and revision_of is None:
                 raise ExperimentError(409, "REVIEW_PENDING")
             if latest["state"] == "REFINEMENT_BLOCKED":
                 raise ExperimentError(409, "REFINEMENT_RECONCILIATION_REQUIRED")
@@ -1195,3 +1204,13 @@ async def accepted_row(engine, cycle_id):
         )
 
     return accepted
+
+
+async def refinement_run_for_operation(engine, experiment_id, operation_id):
+    async with engine.connect() as connection:
+        return await connection.scalar(
+            select(records.idea_refinements.c.run_id).where(
+                records.idea_refinements.c.experiment_id == experiment_id,
+                records.idea_refinements.c.operation_id == operation_id,
+            )
+        )
